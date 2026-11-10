@@ -1,0 +1,7 @@
+{
+  "gardens": [
+    { "title": "꽃길 소풍 마당", "hab": "meadow", "code": "TG1.EAKRAljOgMqICcOQT6GBjVATqyB7WIMKYCgTwIwUwGgKC_AvrYHRbRQpIF_BBMmQF_Qwx56GjSQlCL9iAnbXEeqAmbzEuhIcsLE4YwhUvDlkgkbZEYWYndaDSdgcVpDrjAZzYDmiIPAFwPABQC7INggBaz-AgAuxzAaAng-A2oYC4Bd0SRUAtRwAAd6zML5mYX7keQHJEguSI2aBxu0DgA", "photo": "gardens/meadow-picnic.jpg" },
+    { "title": "바람개비 작은 목장", "hab": "meadow", "code": "TG1.ECMRAxjOgMqICcOQT6GBjVATqyB7WIMKYCgTwUZsBcrwLuGhGD2A0BQX4F9bA6LaKFJAv4IJkyAv6GGPPQ0aSI7cxQ1UJhcQt6oKTaQlDb9iAnbXEeqAmbzEuhIcsLE4YwhUvDlkgkbZEYWYndaDSdgcVpDrjAZzYDmiIpMHD_uoe92FFcob1yFHZYosDC8ugpU6C5rISAKdXUP-3gyAZRWAAAUWqAjlaIEAwWxoMA4FTVAqunnVkWAM2pwOAGZWQEQC6rEB4Bf1nAB9N6FKcMY1HoUqQxjVehSrDGNZ6FK0MY13oUrwxjYehSxDGNl6FLMMY2noUA", "photo": "gardens/meadow-ranch.jpg" },
+    { "title": "연못가 오리 쉼터", "hab": "pond", "code": "TG1.EQKRAZjK4TlXCRKoMywBhz4TqzhGB2oqhClSG1agwqsKAvhJLUF_IgkAThqIeNnCUCzpiB31oMN6B02QTWtgEA3Q0A-G4XgxETALkdjBgFlMhFAC3G4AoBY75Q0AspwgBNexDLBiGWLEMsmIRZsQi0YhFqxCLZiCW7EEuGIJcsQS6Ygl2xBLxgEnrAJPmASfsAlAYBKCwCQ", "photo": "gardens/pond-rest.jpg" }
+  ]
+}

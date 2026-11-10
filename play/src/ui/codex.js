@@ -1,0 +1,145 @@
+// Codex: a tab per habitat; its cells are every variant of every species living there (counted from data.js,
+// never fixed), grouped by rarity, one row per species. Found (one of it out, inbox 14): the figure in its material, as
+// a baby till one has grown up; tapped, its baby and adult side by side (the adult a silhouette till then). Not found: the
+// species' silhouette and "?" (no name). A key not looked at yet: NEW when just registered, 새 칸 (sky blue) when an update added it.
+// Under a found cell, one dot per colour of that variant: filled = seen (colours never count toward the codex).
+// Last tab, 치장 앨범: one cell per secret accessory: the first animal seen wearing it (as it hatched) and the date, or a
+// "?" silhouette. Not part of the codex count.
+// inbox 20: any cell tapped says where it comes from (that habitat's nest, the egg's rarity) and where it lives; a bar per
+// habitat shows how much is found and, while the next habitat is shut, how many more cells and hearts open it.
+// 26-5: a found cell opens its figure in 3D (drag to turn, pinch or wheel to zoom; it turns slowly till touched), baby or
+// adult (the adult once one has grown up), in any material of that species the codex has; under it, the day the first
+// one came out and the habitat whose nest it hatched from (recorded since 0.60: older cells say 기록 없음).
+import * as THREE from 'three';
+import { OrbitControls } from '../../vendor/OrbitControls.js';
+import { makeFigure, loadModel } from '../animals/figure.js';
+import * as G from '../game/game.js';
+import { HABITATS, RARITIES, ACCESSORIES, SPECIES } from '../game/data.js';
+import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, displayColor, unlockInfo } from '../game/rules.js';
+import { toast, tip, lockText, josa } from './hud.js';
+import { DEBUG, calm } from '../config.js';
+import { figureThumb, silhouetteThumb, studio, nightLights } from './thumbs.js';
+
+const el = document.getElementById('codex');
+let tab = HABITATS[0].id, night = false, hab = null; // night: 21-1 밤에 보기 (this screen only, off each time it opens)
+const isNew = k => !G.S.seen.includes(k);
+const open = id => G.S.unlocked.includes(id) || codexCells(id).some(c => G.S.codex[c.key]); // or already has some there (19-2: ducks registered in the meadow)
+export const hasNew = () => HABITATS.some(h => open(h.id) && codexCells(h.id).some(c => isNew(c.key)));
+
+export function openCodex(habId, api) { if (habId) tab = habId; hab = api; night = false; el.hidden = false; draw(); tip('codex', '#codex .cbar'); }
+// live while open: redraw when what it shows changes (a variant registered, a habitat opened, someone stored), keeping the scroll
+const sig = () => [Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length].join();
+let shown = '';
+G.on(() => { if (el.hidden || sig() === shown) return; const body = el.querySelector('.cbody'), y = body?.scrollTop || 0, up = V?.box?.isConnected && V.box; draw(); el.querySelector('.cbody').scrollTop = y; if (up) el.append(up); }); // the 3D view stays up
+
+el.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.close != null) el.hidden = true;
+  else if (b.dataset.lock) toast(`${HAB[b.dataset.lock].name}: ${lockText(b.dataset.lock)}`, 3200);
+  else if (b.dataset.tab) { tab = b.dataset.tab; draw(); }
+  else if (b.dataset.night != null) { const y = el.querySelector('.cbody')?.scrollTop || 0; night = !night; draw(); el.querySelector('.cbody').scrollTop = y; }
+  else if (b.dataset.shut != null) b.closest('.cdet').remove();
+});
+// a cell, tapped. Found: the 3D view (below). Not found: the silhouette. Both: where it comes from and where it lives.
+el.addEventListener('click', e => {
+  const d = e.target.closest('.cell[data-k]'); if (!d || tab === 'album') return;
+  const c = codexCells(tab).find(c => c.key === d.dataset.k);
+  if (G.S.codex[c.key]) return detail(c);
+  const box = document.createElement('div'); box.className = 'cdet pop';
+  box.innerHTML = `<div><b>아직 못 찾은 ${RAR[c.rarity].name} 변종</b><p class="pair"><span><img alt="${c.species.name} 실루엣"><small>?</small></span></p>${from(c)}<br><button class="back" data-shut>닫기</button></div>`;
+  silhouetteThumb(c.species.id, null, night).then(u => { box.querySelector('img').src = u; });
+  el.append(box);
+});
+const from = c => { const h = HAB[c.species.habitat]; return `<p class="from">어디서 나와요: ${h.name} 둥지 · ${RAR[c.rarity].name} 알<br>사는 곳: ${h.name}</p>`; };
+
+// 26-5 the 3D view: one small renderer (made the first time), drawing only while the box is up; the habitat waits meanwhile
+let V = null;
+function stage3d() {
+  if (V) return V;
+  const s = studio(), cam = new THREE.PerspectiveCamera(28, 1, 0.05, 100), ctl = new OrbitControls(cam, s.R.domElement);
+  Object.assign(ctl, { enablePan: false, enableDamping: true, autoRotate: !calm(), autoRotateSpeed: 1.5, minPolarAngle: 0.3, maxPolarAngle: 1.62 });
+  ctl.addEventListener('start', () => { ctl.autoRotate = false; }); // a finger on it: it stays where it is turned
+  s.R.domElement.style.touchAction = 'none';
+  V = { ...s, cam, ctl, fig: null, box: null }; if (DEBUG) window.__c3d = V; return V;
+}
+function detail(c) {
+  const v = stage3d(), mats = codexCells(tab).filter(x => x.species === c.species && G.S.codex[x.key]); // the materials it has
+  let stage = G.S.codex[c.key].adult != null ? 'adult' : 'baby', fresh = true;
+  const box = document.createElement('div'); box.className = 'cdet pop c3dbox';
+  box.innerHTML = `<div><b></b><div class="c3d" role="img"></div><p class="sub">끌어서 돌리고, 두 손가락으로 크게 봐요</p>
+<span class="seg"><button data-st="baby">새끼</button><button data-st="adult">성체</button></span>${mats.length > 1 ? `<div class="cmat">${mats.map(x => `<button data-m="${x.key}">${x.variant.name}</button>`).join('')}</div>` : ''}
+<p class="crec"></p>${from(c)}<br><button class="back" data-shut>닫기</button></div>`;
+  const wrap = box.querySelector('.c3d');
+  const paint = async () => {
+    const e = G.S.codex[c.key], adult = e.adult != null; if (!adult) stage = 'baby';
+    box.querySelector('b').textContent = `${c.variant.name} ${c.species.name}`;
+    wrap.setAttribute('aria-label', `${c.variant.name} ${c.species.name} ${stage === 'baby' ? '새끼' : '성체'} 3D 모습`);
+    for (const b of box.querySelectorAll('[data-st]')) { b.classList.toggle('on', b.dataset.st === stage); b.disabled = b.dataset.st === 'adult' && !adult; b.textContent = b.dataset.st === 'baby' ? '새끼' : adult ? '성체' : '성체 · ?'; }
+    for (const b of box.querySelectorAll('[data-m]')) b.classList.toggle('on', b.dataset.m === c.key);
+    box.querySelector('.crec').innerHTML = `처음 만난 날: ${e.at ? new Date(e.at).toLocaleDateString('ko-KR') : '기록 없음'}<br>처음 깬 곳: ${HAB[e.h] ? HAB[e.h].name + ' 둥지' : '기록 없음'}${adult ? '' : '<br><small>다 자라면 성체 모습도 볼 수 있어요</small>'}`;
+    await loadModel(c.species.model); if (!box.isConnected) return;
+    if (v.fig) v.scene.remove(v.fig);
+    const f = v.fig = makeFigure(c.species.id, c.variant.id, stage, null, displayColor(G.S, c.key)).obj;
+    f.rotation.y = -Math.PI / 2 + 0.45; v.scene.add(f); // facing us, turned a little (as the cells' pictures)
+    const b3 = new THREE.Box3().setFromObject(f), mid = b3.getCenter(new THREE.Vector3()), d = b3.getSize(new THREE.Vector3()).length() / 2 / Math.tan(THREE.MathUtils.degToRad(14));
+    const dir = fresh ? new THREE.Vector3(0, 0.35, 1).normalize() : v.cam.position.clone().sub(v.ctl.target).normalize(); fresh = false; // baby ⇄ adult, another material: same side
+    v.ctl.target.copy(mid); v.cam.position.copy(mid).addScaledVector(dir, d); v.ctl.minDistance = d * 0.4; v.ctl.maxDistance = d * 1.4; v.ctl.update();
+  };
+  box.addEventListener('click', e => {
+    const d = e.target.closest('button')?.dataset; if (!d) return;
+    if (d.st && d.st !== stage) { stage = d.st; paint(); }
+    if (d.m && d.m !== c.key) { c = mats.find(x => x.key === d.m); paint(); }
+  });
+  v.box?.remove(); v.box = box; el.append(box);
+  wrap.append(v.R.domElement); v.ctl.autoRotate = !calm(); // 27-7d 움직임 줄이기: it turns only when dragged
+  nightLights(v, night); v.R.setClearColor(night ? '#2b3356' : '#f3e2c7', 1);
+  v.R.setPixelRatio(Math.min(devicePixelRatio, 2)); v.R.setSize(wrap.clientWidth, wrap.clientHeight); v.cam.aspect = wrap.clientWidth / wrap.clientHeight; v.cam.updateProjectionMatrix();
+  hab?.setActive(false); paint();
+  const frame = () => { // till the box goes (닫기, or the codex redrawn / closed)
+    if (!box.isConnected || el.hidden) { if (v.box === box) { v.box = null; box.remove(); hab?.setActive(true); } return; }
+    requestAnimationFrame(frame); v.ctl.update(); v.R.render(v.scene, v.cam);
+  };
+  requestAnimationFrame(frame);
+}
+// found / all for a habitat, and what is left to open the next one (rules.unlockInfo)
+function bar(habId, cells, n) {
+  const next = HABITATS[HABITATS.findIndex(h => h.id === habId) + 1], L = next && unlockInfo(G.S, next.id);
+  const left = L && !L.open && L.need ? `${next.name}${josa(next.name, '이', '가')} 열리기까지 도감 ${Math.max(0, L.need - L.have)}칸${G.S.hearts < L.hearts ? ` · 하트 ${L.hearts - G.S.hearts}개 더 <span style="white-space:nowrap">(친구를 쓰다듬으면 생겨요)</span>` : ''}` : '';
+  return `<div class="cbar">${HAB[habId].name} 도감 ${n}/${cells.length} (${Math.round(n / cells.length * 100)}%)<u><i style="width:${n / cells.length * 100}%"></i></u>${left ? `<small>${left}</small>` : ''}</div>`;
+}
+
+const tabs = () => `<div class="ctabs">${HABITATS.map(h => `<button ${open(h.id) ? `data-tab="${h.id}"` : `data-lock="${h.id}" class="lock"`}${h.id === tab ? ' class="on"' : ''}>${h.name}${open(h.id) ? '' : ' 🔒'}</button>`).join('')}<button data-tab="album"${tab === 'album' ? ' class="on"' : ''}>치장 앨범</button></div>`;
+function drawAlbum() {
+  const ids = Object.keys(ACCESSORIES), got = ids.filter(id => G.S.album[id]);
+  el.innerHTML = `<div class="chead"><b>치장 앨범</b><span>${got.length}/${ids.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>${tabs()}
+<div class="cbody"><div class="crow">${ids.map(id => { const e = G.S.album[id];
+    return `<div class="cell${e ? '' : ' unk'}"><img alt="${e ? ACCESSORIES[id].name : '아직 못 본 치장'}"><span>${e ? ACCESSORIES[id].name : '?'}</span>${e ? `<small>${variantOf(e.species, e.variant)?.name ?? ''} ${SP[e.species]?.name ?? ''}<br>${new Date(e.at).toLocaleDateString('ko-KR')}</small>` : ''}</div>`; }).join('')}</div>
+<p class="cnote">시크릿으로 처음 만난 동물이 남아요 · 도감 수에는 들어가지 않아요</p></div>`;
+  el.querySelectorAll('.cell img').forEach((img, i) => { const id = ids[i], e = G.S.album[id];
+    (e ? figureThumb(e.species, e.variant, e.color ?? null, id, 'adult', night) : silhouetteThumb(SPECIES[0].id, id, night)).then(u => { img.src = u; }); });
+}
+const nightBtn = () => `<button class="back" data-night>${night ? '낮에 보기' : '밤에 보기'}</button>`;
+function draw() {
+  shown = sig(); el.classList.toggle('night', night);
+  if (tab === 'album') return drawAlbum();
+  const cells = codexCells(tab), got = c => !!G.S.codex[c.key];
+  const stored = G.S.animals.filter(a => a.stored && known(a) && habitatOf(a) === tab).length;
+  const seen = c => G.S.colors[c.key] || [];
+  const dots = c => { const cs = colorsOf(c.species.id, c.variant.id); return got(c) && cs.length ? `<b class="dots" aria-label="색 ${cs.filter(x => seen(c).includes(x.id)).length}/${cs.length}">${cs.map(x => `<u${seen(c).includes(x.id) ? ' class="on"' : ''}></u>`).join('')}</b>` : ''; };
+  const cell = c => `<div class="cell${got(c) ? '' : ' unk'}" role="button" data-k="${c.key}"><img alt="${got(c) ? `${c.variant.name} ${c.species.name}` : '아직 못 찾은 변종'}">${!isNew(c.key) ? '' : got(c) ? '<i>NEW</i>' : '<i class="slot">새 칸</i>'}<span>${got(c) ? c.variant.name : '?'}</span>${dots(c)}</div>`;
+  const groups = RARITIES.map(r => {
+    const cs = cells.filter(c => c.rarity === r.id); if (!cs.length) return '';
+    const rows = [...new Set(cs.map(c => c.species))].map(sp => `<div class="crow">${cs.filter(c => c.species === sp).map(cell).join('')}</div>`);
+    return `<h3>${r.name} <small>${cs.filter(got).length}/${cs.length}</small></h3>${rows.join('')}`;
+  }).join('');
+  el.innerHTML = `<div class="chead"><b>도감</b><span>${cells.filter(got).length}/${cells.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>
+${tabs()}${cells.length ? bar(tab, cells, cells.filter(got).length) : ''}
+<div class="cbody">${groups || '<p class="cnote">준비 중이에요</p>'}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}</div>`;
+  for (const d of el.querySelectorAll('.cell')) {
+    const c = cells.find(c => c.key === d.dataset.k), img = d.firstChild;
+    const stage = G.S.codex[c.key]?.adult == null ? 'baby' : 'adult'; // registered, not seen grown up yet: its baby
+    (got(c) ? figureThumb(c.species.id, c.variant.id, displayColor(G.S, c.key), null, stage, night) : silhouetteThumb(c.species.id, null, night)).then(u => { img.src = u; }); // the colour picked in the cabinet (else the first found)
+  }
+  const fresh = cells.filter(c => isNew(c.key)).map(c => c.key);
+  if (fresh.length) G.markSeen(fresh); // badges stay on screen until the codex is opened again
+}

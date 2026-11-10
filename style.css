@@ -1,0 +1,75 @@
+:root{--bg:#fbf1e1;--paper:#fffaf0;--sand:#f3e2c7;--line:#e3cba6;--ink:#4a3626;--soft:#8a6a4c;--wood:#6b4a2b;--coral:#e8805f;--coral2:#d66b4a;color-scheme:light}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:linear-gradient(#fbf1e1,#f6e4c8 60%,#f1d8b4);color:var(--ink);font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;line-height:1.65;word-break:keep-all;overflow-wrap:break-word}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+/* first screen */
+.hero{padding:40px 0 24px;display:grid;gap:28px;justify-items:center;text-align:center}
+.logo{display:flex;align-items:center;gap:10px;margin:0;font-size:40px;line-height:1.1;letter-spacing:-.02em;color:var(--wood)}
+.logo svg{width:44px;height:44px;flex:none}
+.lead{margin:12px 0 0;font-size:18px;max-width:28em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:0 28px;border-radius:999px;background:var(--coral);color:#fff;font-weight:700;font-size:17px;text-decoration:none;box-shadow:0 6px 16px rgba(214,107,74,.3);transition:background .2s,transform .2s}
+.btn:hover{background:var(--coral2)}.btn:active{transform:scale(.97)}
+.btn.line{background:var(--paper);color:var(--wood);border:2px solid var(--line);box-shadow:none}
+.btn.line:hover{background:var(--sand)}
+.btn:focus-visible,.foot a:focus-visible{outline:3px solid var(--wood);outline-offset:3px}
+.note{margin:10px 0 0;font-size:14px;color:var(--soft)}
+.beta{display:inline-block;margin:0 0 12px;padding:3px 12px;border-radius:999px;background:var(--wood);color:#fff;font-size:13px;font-weight:700;letter-spacing:.04em}
+.hero .row{margin-top:24px}
+.rating{display:inline-flex;align-items:center;gap:8px;margin:14px 0 0;font-size:13px;color:var(--soft)}
+.rating[hidden]{display:none}.rating img{width:48px;height:48px}
+.box .fbline{margin:18px 0 0;font-size:15px}.fbline a{color:var(--coral2);font-weight:700;text-underline-offset:3px}
+.phone{width:min(300px,78vw);border-radius:30px;border:6px solid var(--paper);box-shadow:0 18px 40px rgba(107,74,43,.22);overflow:hidden;background:var(--sand)}
+/* what's in it */
+h2{margin:0 0 6px;font-size:24px;color:var(--wood);letter-spacing:-.01em}
+.sec{padding:40px 0}
+.sec>p{margin:0;color:var(--soft)}
+.cards{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:18px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:0 4px 14px rgba(107,74,43,.08)}
+.card img{width:100%;background:var(--sand)}
+.card div{padding:16px 20px 20px}
+.card h3{margin:0 0 4px;font-size:19px}
+.card p{margin:0;color:var(--soft);font-size:15px}
+.faq{margin-top:16px;display:grid;gap:10px}
+.faq details{background:var(--paper);border:1px solid var(--line);border-radius:18px}
+.faq summary{cursor:pointer;padding:16px 44px 16px 20px;font-weight:700;font-size:16px;list-style:none;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--soft)}
+.faq details[open] summary::after{content:'−'}
+.faq summary:focus-visible{outline:3px solid var(--wood);outline-offset:2px;border-radius:18px}
+.faq details>p,.faq ul{margin:0 20px 12px;color:var(--soft);font-size:15px}
+.faq ul{padding-left:1.2em}
+.faq details>:last-child{margin-bottom:18px}
+.faq a{color:var(--coral2);font-weight:700;text-underline-offset:3px}
+.sec>.wip{margin:20px 0 0;font-size:14px;color:var(--soft);text-align:center}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:28px 22px;text-align:center}
+.box p{margin:6px 0 18px;color:var(--soft)}
+.box .note{margin:12px 0 0}
+.row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.foot{padding:28px 0 40px;font-size:14px;color:var(--soft);text-align:center}
+.foot nav{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:center;margin-bottom:8px}
+.foot a{text-underline-offset:3px}
+/* links whose address is still TODO in config.js: no href, greyed */
+[data-todo]{cursor:not-allowed}
+.btn[data-todo]{background:#cdb99b;box-shadow:none}.btn[data-todo]:active{transform:none}
+@media (min-width:860px){
+  .hero{grid-template-columns:1.1fr .9fr;align-items:center;text-align:left;justify-items:start;padding:64px 0 32px}
+  .hero .row{justify-content:flex-start}
+  .hero .phone{justify-self:center;width:320px}
+  .lead{font-size:20px}
+  .logo{font-size:48px}
+  .cards{grid-template-columns:1fr 1fr;align-items:start;gap:24px}
+}
+/* privacy page */
+.doc{max-width:720px;margin:0 auto;padding:32px 20px 8px}
+.doc h1{font-size:28px;color:var(--wood);margin:16px 0 8px}
+.doc h2{font-size:19px;margin:28px 0 6px}
+.doc p,.doc li{font-size:16px}
+.doc ul{padding-left:1.2em}
+.doc table{width:100%;border-collapse:collapse;background:var(--paper);border-radius:14px;overflow:hidden;font-size:15px}
+.doc th,.doc td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.doc th{background:var(--sand);width:34%;font-weight:600}
+.todo{background:#ffe6a8;border-radius:6px;padding:0 4px}
+.back{display:inline-block;margin-top:4px;color:var(--soft);font-size:15px}
