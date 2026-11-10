@@ -16,6 +16,13 @@ export function pack(S, edition, at = now()) {
 }
 export const toCode = (S, edition, at) => TAG + b64(pack(S, edition, at));
 
+// inbox 39: iPhone·iPad Safari may clear a site's storage after 7 days without a visit; a home-screen web app is spared.
+// dev: { ua, touch: maxTouchPoints, standalone }. iPadOS asks for the desktop site (a Macintosh UA) but has touch points.
+// Safari only: Chrome·Firefox·Edge·Opera on iOS and in-app browsers (Kakao, Naver, Instagram…) name themselves in the UA.
+export const iosSafariTab = ({ ua = '', touch = 0, standalone = false }) => (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && touch > 1))
+  && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|Line\/|DaumApps|Whale/.test(ua) && !standalone;
+export const homeHintDue = (dev, flags = {}) => iosSafariTab(dev) && !flags.homeHintSeen;
+
 // text pasted or read from a file -> { save, at } or { err: what to tell the player }. newest: the game's SCHEMA_VERSION.
 export function unpack(text, edition, newest) {
   text = String(text ?? '').trim();

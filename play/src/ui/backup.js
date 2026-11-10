@@ -35,6 +35,9 @@ ${u ? `<div class="row"><b>되돌리기 <small>(${sumUp(u)})</small></b><div cla
   $('bkFile').onchange = async e => { const file = e.target.files[0]; if (!file) return; if (file.size > 1e6) return say('너무 커서 백업이 아니에요'); load(await file.text()); };
 }
 const say = t => { const v = $('bkText')?.value || ''; msg = t; draw(); $('bkText').value = v; }; // keep what is in the box
+// inbox 39: this device for homeHintDue (a home-screen app opens standalone: manifest display)
+export const DEV = { ua: navigator.userAgent, touch: navigator.maxTouchPoints || 0,
+  standalone: navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches };
 export function open() { msg = ''; draw(); $('prefs').hidden = true; el.hidden = false; }
 
 async function copy(code) {

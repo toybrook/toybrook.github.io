@@ -44,7 +44,7 @@ export function ask(text, ok = '확인', no = '취소') {
 }
 
 // the windows, top first; each closes with its own close button (so its own code runs)
-const TOPS = ['#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#prefs', '#help', '#habMenu', '#ret', '#grown', '#fmenu', '#friends', '.cdet', '#codex', '#store', '#cab', '#nest', '#decor', '#snap'];
+const TOPS = ['#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#prefs', '#help', '#habMenu', '#ret', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#store', '#cab', '#nest', '#decor', '#snap'];
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
 const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden');
 export const topWindow = () => { for (const q of TOPS) { const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };

@@ -193,6 +193,7 @@ html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-s
 .grown{z-index:1500;background:rgba(30,22,14,.28)}.grown[hidden]{display:none}
 .grown .pair{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 4px}.grown .pair img{width:124px;height:124px;object-fit:contain}
 .grown .pair img[alt=새끼]{width:100px;height:100px}.grown .pair span{color:#b08a64;font-size:calc(18px*var(--fs))}
+#homeHint .nbtns{flex-direction:column}#homeHint .nbtns button{min-width:0}#homeHint p{margin-bottom:14px} /* inbox 39 */
 .grown p.sub{font-size:calc(12.5px*var(--fs));color:#8a6a4c;text-align:center;margin:4px 0 12px}
 /* codex */
 .codex{position:absolute;inset:0;z-index:1350;background:#f3e2c7;color:#4a3626;display:flex;flex-direction:column}

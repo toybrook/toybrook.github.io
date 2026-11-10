@@ -8,6 +8,7 @@ import { zzz, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS
 import { loadBar, codeAsked } from './ui/loadbar.js';
 import { initLevel } from './ui/level.js';
 import * as BK from './ui/backup.js';
+import { iosSafariTab } from './game/backup.js';
 import { initPhoto } from './ui/photo.js';
 import { ASSETS, DEBUG, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, savePrefs, OFFLINE, calm, applyLook } from './config.js';
 import { applySound, sfx } from './ui/sound.js';
@@ -227,6 +228,7 @@ const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
   + LOOK_ROWS.map(segRow).join('')
   + `<div class="row"><b>내 저장 백업</b><div class="seg"><button data-act="backup"${BK.due() ? ' class="new"' : ''}>백업 · 불러오기</button></div></div>`
   + `<div class="row"><b>처음 안내</b><div class="seg"><button data-act="tips">안내 다시 보기</button></div></div>`
+  + (iosSafariTab(BK.DEV) ? `<div class="row"><b>홈 화면 안내</b><div class="seg"><button data-act="home">홈 화면 안내 다시 보기</button></div></div>` : '') // inbox 39
   + `<div class="row"><b>새 소식</b><div class="seg"><button data-act="news">새 소식 다시 보기</button></div></div>`
   + (FEEDBACK_URL === 'TODO' ? '' : `<div class="row"><b>의견</b><div class="seg"><button data-act="fb">의견 보내기</button><button data-act="bug">문제 알리기</button></div></div>`); };
 $('prefsBtn').onclick = () => { drawPrefs(); prefs.hidden = false; };
@@ -236,6 +238,7 @@ const tipsAgain = () => { resetTips(); G.flag('nestTapped', false); prefs.hidden
 rows.onclick = e => {
   const d = e.target.closest('button')?.dataset; if (!d) return;
   if (d.act === 'tips') return tipsAgain();
+  if (d.act === 'home') { G.flag('homeHintSeen', false); prefs.hidden = true; return toast(cur ? '홈 화면 안내를 다시 보여 줄게요' : '서식지에 들어가면 홈 화면 안내를 다시 보여 줄게요', 2200, true); } // play.js shows it
   if (d.act === 'backup') return BK.open();
   if (d.act === 'news') { prefs.hidden = true; news.hidden = false; return; }
   if (d.act === 'fb') return void open(fbUrl(), '_blank', 'noopener');

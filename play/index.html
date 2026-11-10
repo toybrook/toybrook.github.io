@@ -22,7 +22,7 @@
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="764936" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="767191" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -67,6 +67,9 @@
     <section class="codex" id="store" hidden aria-label="보관함"></section>
     <section class="codex cab" id="cab" hidden aria-label="진열장"></section>
     <section class="intro grown pop" id="grown" hidden aria-label="다 자랐어요"></section>
+    <section class="intro grown pop" id="homeHint" hidden aria-label="홈 화면에 추가"><div><h2>홈 화면에 추가해 주세요</h2>
+      <p>아이폰에서는 한동안 들어오지 않으면 기록이 지워질 수 있어요. 공유 버튼 → 「홈 화면에 추가」로 열면 안전해요.</p>
+      <div class="nbtns"><button class="sb" data-act="backup">백업 코드 저장하기</button><button class="go" data-close>알겠어요</button></div></div></section>
     <section class="nest pop" id="friends" hidden aria-label="친구들"></section>
     <section class="intro pop hmenu" id="habMenu" hidden aria-label="서식지 고르기"></section>
     <canvas class="snapov" id="snapOv" hidden aria-hidden="true"></canvas>
@@ -89,7 +92,7 @@
       <li><i aria-hidden="true">🎨</i><span>꾸미기<small>소품 색 바꾸기, 위에 쌓기, 조금씩 돌리기, 크기 3단계, 배치 저장 칸</small></span></li>
       <li><i aria-hidden="true">🛤️</i><span>길·울타리와 땅 모양<small>칸에 그으면 길과 울타리가 저절로 이어지고, 언덕·웅덩이·꽃 둔덕·바위 둔덕을 찍을 수 있어요</small></span></li>
       <li><i aria-hidden="true">👑</i><span>시크릿 치장<small>드물게 나오는 치장이 5종에서 24종으로 늘었어요</small></span></li>
-      <li><i aria-hidden="true">🔧</i><span>작은 손질<small>땅을 넓힌 뒤 치운 나무 자리에 소품이 안 놓이던 문제를 고쳤어요. 도감에 새 칸이 채워지면 하트 3개를 받아요</small></span></li>
+      <li><i aria-hidden="true">🔧</i><span>작은 손질<small>땅을 넓힌 뒤 치운 나무 자리에 소품이 안 놓이던 문제를 고쳤어요. 도감에 새 칸이 채워지면 하트 3개를 받아요. 아이폰에서 기록을 지키는 「홈 화면에 추가」 안내가 생겼어요</small></span></li>
     </ul>
     <p class="note">베타 기간의 데이터는 정식 출시 때 초기화돼요.</p>
     <div class="nbtns"><button class="go" data-close>확인</button></div>

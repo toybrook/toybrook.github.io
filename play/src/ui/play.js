@@ -13,6 +13,8 @@ import { openDecor, leaveDecor, onPropTap, onEdit, onPaint } from './decor.js';
 import { openCabinet } from './cabinet.js';
 import { figureThumb } from './thumbs.js';
 import { sfx } from './sound.js';
+import { homeHintDue } from '../game/backup.js';
+import { DEV, open as openBackup } from './backup.js';
 
 const $ = id => document.getElementById(id);
 const nameOf = callName; // 26-4: its name if it has one
@@ -83,6 +85,8 @@ export function initPlay(nav) {
       const out = outIn(G.S, habId); friendsBtn.lastChild.textContent = `${out.length}/${capOf(G.S, habId)}`;
       friendsBtn.classList.toggle('new', out.some(a => a.card)); decorBtn.classList.toggle('new', newProps().length > 0); drawPill();
       if (out.some(a => a.stage === 'baby')) tip('grow', '#friendsBtn');
+      if (out.length && !persisted) { persisted = true; navigator.storage?.persist?.()?.catch(() => {}); } // inbox 39: once a page, when there is something to keep
+      if (out.length && !homeT && home.hidden && homeHintDue(DEV, G.S.flags)) { quiet = Date.now(); homeT = setTimeout(homeCard, 800); }
     }
     hab?.sync(G.S.animals); hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId]);
   }
@@ -133,11 +137,12 @@ export function initPlay(nav) {
 
   // "○○가 다 자랐어요!": every grown animal whose card wasn't seen (several at once after time away), baby and adult side by side
   const card = $('grown'); let later = 0;
+  const busy = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo');
   function cards() {
     if (!hab || !card.hidden) return;
     const list = G.S.animals.filter(a => a.card); if (!list.length) return;
     // 27-7c: the nest (opened by 자리 비운 사이's egg row), another card or a tip in the way: wait for it (was dropped until the next visit)
-    if (overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo')) { clearTimeout(later); later = setTimeout(cards, 800); return; }
+    if (busy()) { clearTimeout(later); later = setTimeout(cards, 800); return; }
     const one = list.length === 1, nm = one && nameOf(list[0]), more = list.length - 4;
     card.innerHTML = `<div><h2>${one ? `${nm}${josa(nm, '이', '가')} 다 자랐어요!` : `친구 ${list.length}마리가 다 자랐어요!`}</h2>${
       list.slice(0, 4).map(a => `<p class="pair"><img alt="새끼"><span>→</span><img alt="성체"></p>`).join('')}${more > 0 ? `<p>그리고 ${more}마리 더</p>` : ''}${
@@ -148,11 +153,24 @@ export function initPlay(nav) {
     card.hidden = false; sfx('grown');
   }
 
+  // inbox 39: iPhone·iPad Safari can clear the save after 7 days away (a home-screen app is spared). Once a friend is out, one card says so:
+  // it waits like cards() and for 2 s with nothing else up (after the grow tip come the level card and its tip). 알겠어요 = not again.
+  const home = $('homeHint'); let homeT = 0, quiet = 0, persisted = false;
+  function homeCard() {
+    homeT = 0; if (!hab || !home.hidden || !homeHintDue(DEV, G.S.flags)) return;
+    if (busy()) quiet = Date.now();
+    if (Date.now() - quiet < 2000) { homeT = setTimeout(homeCard, 800); return; }
+    home.hidden = false;
+  }
+  home.onclick = e => { const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.act === 'backup') return openBackup(); // the backup sheet goes over the card; closing it comes back here
+    home.hidden = true; G.flag('homeHintSeen'); };
+
   return {
     onTap, events, onPropTap, onEdit, onPaint,
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
     attach(api, id) { hab = api; habId = id; nest.attach(api, id); draw(); hint(); setTimeout(cards, 1200); }, // grown while away: the cards together
     openNest: () => nest.open(), cards,
-    leave() { leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); bubble.hidden = true; bubbleFor = null; card.hidden = true; hideToast(); },
+    leave() { leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); bubble.hidden = true; bubbleFor = null; card.hidden = home.hidden = true; clearTimeout(homeT); homeT = 0; hideToast(); },
   };
 }
