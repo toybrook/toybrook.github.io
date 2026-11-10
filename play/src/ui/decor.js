@@ -18,19 +18,19 @@ import { openShare } from './share.js';
 import { sfx } from './sound.js';
 
 const el = document.getElementById('decor'), habEl = document.getElementById('habitat');
-export const propNote = P => P.use || (P.effect ? `${SP[P.effect].name}${josa(SP[P.effect].name, '이', '가')} 조금 더 자주 와요`
+export const propNote = P => P.gift || P.use || (P.effect ? `${SP[P.effect].name}${josa(SP[P.effect].name, '이', '가')} 조금 더 자주 와요`
   : P.light ? '밤이 되면 불이 켜져요' : P.shelter ? `${P.habitat === 'snow' ? '눈' : '비'} 오면 동물들이 쉬러 와요` : '보기만 해도 좋은 장식이에요');
 // the tabs and the props in each (one not listed goes under 가구; 28-2 놀이: the props animals use); the board's own nature put away shows under 자연
 const TABS = [['nature', '자연', 'flowers tulips tallgrass stones mushrooms log'], ['path', '길', 'fence path'], ['light', '조명', 'lantern jar mushlamp starlamp icelamp'],
   ['furniture', '가구', 'bench mailbox pinwheel vane hay trough snowman sled'], ['big', '큰 소품', 'gazebo duckhouse barn windmill greenhouse treehouse well arch picnic falls lighthouse waterpav igloo'], ['water', '물가', 'lily boat stepping'],
-  ['play', '놀이', 'swing slide seesaw ball hammock fountain campfire feeder musicbox bubbles lights fireworks pinhill bell'], ['home', '집', 'table shelf platform doll'], ['land', '땅', 'hillock puddle flowermound rockmound'], ['train', '기차', 'rail railcurve railfork railbridge']].map(([id, name, ps]) => ({ id, name, ps: ps.split(' ') }));
+  ['play', '놀이', 'swing slide seesaw ball hammock fountain campfire feeder musicbox bubbles lights fireworks pinhill bell'], ['home', '집', 'table shelf platform doll'], ['land', '땅', 'hillock puddle flowermound rockmound'], ['train', '기차', 'rail railcurve railfork railbridge'], ['gift', '선물', 'att_sunflower att_birdhouse att_balloons att_wcan att_signpost att_cart att_rainbow firstday']].map(([id, name, ps]) => ({ id, name, ps: ps.split(' ') }));
 const tabOf = P => (TABS.find(t => t.ps.includes(P.id)) ?? TABS[3]).id;
 const NAT = Object.fromEntries(NATURE.map(n => [n.id, n])), cut = id => id === 'rock' ? '치우기' : '베기';
 const UNDO = 20;
 
 let habId = null, hab = null, held = null, fresh = null, ok = false, shown = ''; // fresh: the uid bought for this hold (취소 refunds it)
 let tab = 'nature', brush, grid = false, undo = [], redo = [], min = false, sy = null, swiped = 0, pick = null; // pick: the uids picked (고르기), null: not picking; // min (inbox 25): the panel folded to its head // brush: BRUSHES index, null: the eraser, undefined: not painting
-const mine = () => PROPS.filter(P => (P.habitat ?? habId) === habId);
+const mine = () => PROPS.filter(P => (P.habitat ?? habId) === habId && (!P.gift || G.S.props.some(p => p.prop === P.id && p.hab === habId))); // 41: a gift one only once had here
 const stowed = id => G.S.props.filter(p => p.prop === id && p.hab === habId && !p.placed && !p.nat);
 const stowedNat = id => G.S.props.filter(p => p.nat && p.prop === id && p.hab === habId && !p.placed);
 const sig = () => JSON.stringify([G.S.hearts, G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], held?.uid, ok, held?.ring && hab.decor.clears(), tab, brush, grid, undo.length, redo.length, pick && [...pick]]);
@@ -80,7 +80,7 @@ function draw() {
   }
   if (held) {
     const N = held.nat && NAT[held.prop], P = N ? { ...N, r: N.r * (held.s || 1) } : PROPS.find(P => P.id === held.prop), name = P.name;
-    const sx = !N && stowed(P.id).some(s => s.uid !== held.uid), more = !N && (sx || !P.paid); // 하나 더: one put away first, else bought
+    const sx = !N && stowed(P.id).some(s => s.uid !== held.uid), more = !N && (sx || !P.paid && !P.gift); // 하나 더: one put away first, else bought (41: a gift one is never bought)
     const lk = !N && hab.decor.look(), pal = lk && paletteOf(P), big = lk && sizable(P); // 28-5 its look now (c, sz)
     el.innerHTML = GRIP() + (P.rail || !ok ? ROOM : '') + `<div class="dhead"><b>${name}</b><span class="${ok ? 'ok' : 'no'}">${ok ? '여기에 놓을 수 있어요' : '빨간 곳엔 놓을 수 없어요'}</span></div>
 ${pal || big ? `<div class="dlook">${pal ? `<span class="dsw" role="group" aria-label="색">${pal.map(([nm, hx], i) => `<button class="${lk.c === i ? 'on' : ''}${hx ? '' : ' orig'}" data-c="${i}" aria-label="${nm}" title="${nm}"${hx ? ` style="background:${hx}"` : ''}></button>`).join('')}</span>` : ''}${big ? `<span class="dsz" role="group" aria-label="크기">${[1, 0, 2].map(i => `<button class="${lk.sz === i ? 'on' : ''}" data-sz="${i}">${SIZES[i]}</button>`).join('')}</span>` : ''}</div>` : ''}
@@ -113,7 +113,7 @@ ${tools()}<div class="nbtns"><button class="go" data-endpaint>다 칠했어요</
   el.innerHTML = GRIP() + `<div class="dhead"><b>꾸미기</b><span${n >= cap ? ' class="no"' : ''}>놓은 ${rl ? '레일' : '소품'} ${n} / ${cap}</span><button class="back" data-done>완료</button></div>
 ${tools()}<div class="dtabs">${tabsHere().map(t => `<button class="${t.id === tab ? 'on' : ''}" data-tab="${t.id}">${t.name}</button>`).join('')}</div>
 <div class="dgrid">${ring}${exp}${L ? '<button class="dprop dcmp" data-compare><i></i><b>넓히기 전과 비교</b><small>처음 땅과 지금 땅을 위에서 봐요</small></button>' : ''}${nats.map(N => `<button class="dprop dnat" data-n="${N.id}"><img alt=""><b>${N.name}</b><small>처음부터 있던 것 · 다시 심어요</small><em>넣어 둔 것 ${stowedNat(N.id).length}</em></button>`).join('')}${list.map(P => { const s = stowed(P.id).length, lk = !s && !can(G.S, 'prop:' + P.id);
-    return `<button class="dprop${lk ? ' lock' : ''}" data-p="${P.id}"><img alt=""><b>${P.name}</b><small>${propNote(P)}</small><em>${s ? `넣어 둔 것 ${s}` : lk ? `Lv ${needFor('prop:' + P.id)}` : `<span class="hrt">♥</span>${P.price}`}</em></button>`; }).join('')}</div>
+    return `<button class="dprop${lk ? ' lock' : ''}" data-p="${P.id}"><img alt=""><b>${P.name}</b><small>${propNote(P)}</small><em>${s ? `넣어 둔 것 ${s}` : P.gift ? '놓았어요' : lk ? `Lv ${needFor('prop:' + P.id)}` : `<span class="hrt">♥</span>${P.price}`}</em></button>`; }).join('')}</div>
 <p class="dhint">${n >= cap ? full(rl && 'rail') : rl ? '레일은 4칸 격자에 맞춰 붙어요 · 이어서 고리를 닫으면 태엽 기차가 달려요' : G.S.ghost?.[habId]?.length ? '반투명한 것은 꾸미기 코드의 미리보기예요 · 그 소품을 사거나 꺼내면 그 자리에서 시작해요' : '놓은 소품이나 나무를 누르면(길게 누르면 바로 끌어서) 옮기거나 넣을 수 있어요'}</p>`;
   el.querySelectorAll('.dnat img').forEach((img, i) => propThumb('n:' + nats[i].id, () => hab.decor.natModel({ prop: nats[i].id, s: 1, v: 12 })).then(u => { img.src = u; }));
   el.querySelectorAll('.dring img').forEach(img => propThumb('railring', hab.decor.model).then(u => { img.src = u; }));
@@ -228,6 +228,7 @@ el.addEventListener('click', e => {
     const P = PROPS.find(P => P.id === d.p), s = stowed(P.id)[0];
     if (capped(G.S, habId, P.id)) toast(full(P.id));
     else if (s) hold(s);
+    else if (P.gift) toast(`${P.name}${josa(P.name, '은', '는')} 선물로만 받아요 · 받은 것은 다 놓았어요`);
     else if (!can(G.S, 'prop:' + P.id)) locked('prop:' + P.id);
     else if (G.S.hearts < P.price) toast(`하트 ${P.price}개가 필요해요 · 지금 ♥${G.S.hearts}`);
     else { const rec = G.buyProp(P.id, habId); if (rec) { toast(`${P.name} 샀어요 · ♥-${P.price}`); hold(rec, true); if (P.rail) railTip(); } }

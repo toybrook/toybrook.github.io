@@ -4,7 +4,7 @@
 // (shown under the level). A toast when one is done.
 import * as G from '../game/game.js';
 import { BALANCE as B, SETS, BRUSHES } from '../game/data.js';
-import { PROP, HAB, xpAt } from '../game/rules.js';
+import { PROP, HAB, xpAt, unlocksBetween } from '../game/rules.js';
 import { overlayOpen, topWindow, tip, toast } from './hud.js';
 import { ACH, ACH_BY } from '../game/achieve.js';
 import { sfx } from './sound.js';
@@ -64,13 +64,16 @@ export function initLevel(getApi) {
     achs.hidden = false;
   }
 
-  // level events wait for the screen to be free (a hatch reveal, the grown card, the away sheet...), several merged into one card
-  let pend = null, got = []; // got: 도전 과제 done, told by one toast when the screen is free
+  // level events wait for the screen to be free (a hatch reveal, the grown card, the away sheet...), several merged into one card.
+  // 41 D: and for GAP after the last card (flags.lvCard), so a quick first day gets one card for the levels in between; one
+  // not shown before the page closed comes on the next visit (from lvCard.lv)
+  const GAP = 15 * 60e3, C = G.S.flags.lvCard;
+  let pend = Number.isInteger(C?.lv) && C.lv < G.S.lv ? { from: C.lv, level: G.S.lv } : null, got = []; // got: 도전 과제 done, told by one toast when the screen is free
   function events(ev) {
     draw();
     if (ev.some(e => e.type === 'reset')) { pend = null; got = []; card.hidden = true; }
     got.push(...ev.filter(e => e.type === 'achieve').map(e => ACH_BY[e.id]).filter(Boolean));
-    for (const e of ev) if (e.type === 'level') pend = pend ? { level: e.level, unlocks: [...pend.unlocks, ...e.unlocks] } : { level: e.level, unlocks: e.unlocks };
+    for (const e of ev) if (e.type === 'level') pend = { from: pend?.from ?? e.from, level: e.level };
   }
   function show() {
     if (topWindow() || overlayOpen() || document.body.classList.contains('photo')) return;
@@ -78,8 +81,9 @@ export function initLevel(getApi) {
     if (got.length === 1) toast(`도전 과제 「${got[0].title}」 · ${got[0].text} · XP +${xa}`, 3200);
     else if (got.length) toast(`도전 과제 ${got.length}개를 이뤘어요 · XP +${got.length * xa} · 위의 Lv에서 볼 수 있어요`, 3200);
     got = [];
-    if (!pend || !card.hidden) return;
-    const { level, unlocks } = pend; pend = null;
+    const since = G.now() - (G.S.flags.lvCard?.at || 0); // a clock set back (since < 0) does not hold the card
+    if (!pend || !card.hidden || (since >= 0 && since < GAP)) return;
+    const { level } = pend, unlocks = unlocksBetween(pend.from, level); pend = null; G.flag('lvCard', { lv: level, at: G.now() });
     card.innerHTML = `<div><h2>레벨 ${level}!</h2>${unlocks.length ? `<p class="sub">새로 풀린 것</p><ul>${unlocks.map(k => row(k, true)).join('')}</ul>` : '<p class="sub">정원사 레벨이 올랐어요</p>'}<button data-close>좋아요</button></div>`;
     thumbs(card);
     card.querySelector('[data-close]').onclick = () => { card.hidden = true; tip('level', '#lvPill'); };

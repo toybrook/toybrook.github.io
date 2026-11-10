@@ -124,7 +124,7 @@ export function initPhoto(getApi, getHab) {
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       a.download = `toybrook-${getHab()}-${t.getFullYear()}${p(t.getMonth() + 1)}${p(t.getDate())}-${p(t.getHours())}${p(t.getMinutes())}${p(t.getSeconds())}.jpg`;
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-      msg = `저장했어요 · ${c.width}×${c.height} · 내려받은 파일이나 사진 앱에서 볼 수 있어요`;
+      msg = `저장했어요 · ${c.width}×${c.height} · 내려받은 파일이나 사진 앱에서 볼 수 있어요`; G.note('photo', 1); // 41 D 첫날 할 일
     } catch { msg = '저장하지 못했어요 · 다시 해 주세요'; }
     busy = false; draw();
   }

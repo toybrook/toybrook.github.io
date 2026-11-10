@@ -1,9 +1,10 @@
 // 27-4 문제 알리기. The latest 20 errors (window error, unhandled rejection) kept in this browser under their own key,
-// apart from the save (so not in backups); nothing is sent anywhere. 설정 › 문제 알리기 copies a short text for the
+// apart from the save (so not in backups). inbox 41 A: and, while 이용 통계 is on, one line (120 characters + file:line) a day per error (stats.js). 설정 › 문제 알리기 copies a short text for the
 // feedback form: version, device (OS, browser, screen), where the player is, the latest errors. No names, no save.
 // main.js imports this first, so it listens before the rest of the game runs.
 import { VERSION, PREFS } from '../config.js';
 import { EDITION } from '../game/data.js';
+import { track } from './stats.js';
 
 const KEY = 'toyhabitat.errors', MAX = 20;
 let list = []; try { list = JSON.parse(localStorage.getItem(KEY)) || []; } catch { /* broken or private mode: start empty */ }
@@ -15,7 +16,7 @@ export function note(msg, at = '') {
   const m = String(msg).replace(/^Uncaught /, '').replace(/\w+:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 160), last = list[list.length - 1];
   if (last && last.m === m && last.at === at) { last.n++; last.t = Date.now(); } // the same one again: counted
   else { list.push({ t: Date.now(), m, at, n: 1 }); if (list.length > MAX) list.shift(); }
-  keep();
+  keep(); track('error', { msg: m.slice(0, 120), at }, 'error:' + m.slice(0, 120) + at);
 }
 addEventListener('error', e => note(e.message, where(e.error?.stack) || where(`${e.filename}:${e.lineno}`)));
 addEventListener('unhandledrejection', e => { const r = e.reason; note(r?.name ? `${r.name}: ${r.message}` : r, where(r?.stack)); });

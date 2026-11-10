@@ -21,11 +21,13 @@
 //   xp (정원사 레벨 XP, 23-1), lv (the level last shown on a level-up card), xpDay (the day the first-visit XP was given),
 //   ach: { [도전 과제 id]: when done } (achieve.js), title (the 칭호 shown: a done one's id | null), stats: { hatch, grown, pet, feed, plant,
 //            days, lights, roof } (counts for 도전 과제; lights, roof: the most the habitat on screen has seen, noteLive),
-//   candy (꼬마 사탕 owned, not in use), unlocked: [habitat ids], flags: {} }
+//   candy (꼬마 사탕 owned, not in use), unlocked: [habitat ids], flags: {},
+//   since (when this game began, 41), mailGot: [mail ids received], codes: [gift codes used, codeKey],
+//   attend: { day: the last 출석 (dayOf), at: its time, n: slots had in all } (41 C), first: { [첫날 할 일 id | 'all']: when done } (41 D) }
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
-import { SCHEMA_VERSION, CONTENT_VERSION, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, FIRST, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -59,7 +61,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id) }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], attend: { day: '', at: 0, n: 0 }, first: {} }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   return S;
@@ -81,6 +83,10 @@ export function fromSave(raw, now) {
     for (const a of S.animals) { const n = cleanName(a.nm); if (n) a.nm = n; else delete a.nm; if (a.fav !== true) delete a.fav; } // 26-4: a backup code is text from outside
     tidy(S); // 28-5
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
+    if (!Number.isFinite(raw.since)) S.since = Math.min(now, ...Object.values(S.codex).map(e => e?.at), ...S.animals.map(a => a.born)) || now; // 41: before 0.71, the first animal
+    S.mailGot = S.mailGot.filter(x => typeof x === 'string'); S.codes = S.codes.filter(x => typeof x === 'string');
+    { const A = S.attend; S.attend = { day: typeof A.day === 'string' ? A.day : '', at: Number.isFinite(A.at) ? A.at : 0, n: Number.isInteger(A.n) && A.n >= 0 ? A.n : 0 }; } // 41 C
+    S.first = Object.fromEntries(Object.entries(S.first).filter(([, v]) => Number.isFinite(v))); // 41 D
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -156,7 +162,7 @@ function to10(S) {
     const P = S.paint?.[hab]; if (P) for (const k of Object.keys(P)) { const [i, j] = k.split(',').map(Number); if (!inRect(O, i + 0.5, j + 0.5)) delete P[k]; }
   }
 }
-const bump = (S, k) => { S.stats ??= {}; S.stats[k] = (S.stats[k] || 0) + 1; };
+export const bump = (S, k) => { S.stats ??= {}; S.stats[k] = (S.stats[k] || 0) + 1; };
 
 const pick = (items, weight, rng) => {
   let sum = 0; for (const it of items) sum += weight(it);
@@ -281,7 +287,7 @@ function register(S, a, at, gift) {
 
 // inbox 31: the time between nest eggs. A new game's first BALANCE.nest.early.n eggs (hatched, in a slot or in a nest) come faster
 const had = S => (S.stats?.hatch || 0) + S.slots.filter(Boolean).length + Object.values(S.nests).reduce((s, n) => s + n.eggs.length, 0);
-export const eggGap = S => had(S) < B.nest.early.n ? B.nest.early.every : B.nest.every;
+export const eggGap = S => [].concat(B.nest.early).find(t => had(S) < t.n)?.every ?? B.nest.every; // early: one step or a list of them (41 D)
 // Catch up to `now`: nests lay, babies whose gauge is full grow up (their adult look goes in the codex),
 // storage keeps each habitat at maxVisible, habitats unlock. Returns what happened, for the UI.
 export function advance(S, now, rng = Math.random) {
@@ -306,6 +312,7 @@ export function advance(S, now, rng = Math.random) {
     ev.push({ type: 'unlock', habitat: h.id }); } });
   const day = dayOf(now); if (S.xpDay !== day) { S.xpDay = day; S.xp += B.level.xp.login; bump(S, 'days'); } // the day's first visit (or the game left open past midnight)
   for (const a of newlyDone(S)) { S.ach = { ...S.ach, [a.id]: now }; S.xp += B.level.xp.achieve; ev.push({ type: 'achieve', id: a.id }); } // 23-2
+  firstCheck(S, now, ev, rng); // 41 D
   const L = gardenLevel(S.xp); if (L > S.lv) { ev.push({ type: 'level', from: S.lv, level: L, unlocks: unlocksBetween(S.lv, L) }); S.lv = L; }
   return ev;
 }
@@ -318,7 +325,7 @@ const SET_OF = Object.fromEntries(SETS.flatMap(s => s.props.map(p => [p, s.id]))
 const NEED = Object.fromEntries(Object.entries(LV.unlock).flatMap(([L, list]) => list.map(k => [k, +L])));
 export const needFor = k => { const [kind, id] = k.split(':'); return NEED[k] ?? (kind === 'prop' && SET_OF[id] ? NEED['set:' + SET_OF[id]] : null) ?? 1; }; // 'prop:barn', 'brush:sand', 'expand:3'
 export const can = (S, k) => gardenLevel(S.xp || 0) >= needFor(k);
-const unlocksBetween = (from, to) => Object.entries(LV.unlock).filter(([L]) => +L > from && +L <= to).flatMap(([, list]) => list);
+export const unlocksBetween = (from, to) => Object.entries(LV.unlock).filter(([L]) => +L > from && +L <= to).flatMap(([, list]) => list);
 
 // Habitat cap: maxVisible animals out, and each zone's room (HABITATS room: every animal counts at its adult body size),
 // both grown by 땅 넓히기 (BALANCE.expand).
@@ -414,7 +421,7 @@ export function setDisplay(S, k, cId) {
 export const displayColor = (S, k) => S.display[k] ?? S.colors[k]?.[0] ?? null;
 // 꾸미기: buy with hearts (put away), place/turn (free; where it may go is the habitat's layout.js), put away
 export function buyProp(S, propId, habId) { // habId: where it was bought (a prop sold everywhere stays there)
-  const P = PROP[propId], hab = P?.habitat ?? habId; if (!P || P.paid || S.hearts < P.price || !hab || !can(S, 'prop:' + P.id)) return null;
+  const P = PROP[propId], hab = P?.habitat ?? habId; if (!P || P.paid || P.gift || S.hearts < P.price || !hab || !can(S, 'prop:' + P.id)) return null; // 41: a gift one only comes as a gift
   S.hearts -= P.price;
   const p = { uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 };
   S.props.push(p); return p;
@@ -558,7 +565,7 @@ export function placeRing(S, habId, cells, clear = []) {
 // 취소 right after buying (held, never placed or put away): the prop goes and its hearts come back
 export function refundProp(S, uid) {
   const i = S.props.findIndex(p => p.uid === uid && !p.placed), P = i < 0 ? null : PROP[S.props[i].prop];
-  if (!P || P.paid) return 0; // 28-6c: a paid prop is never turned into hearts
+  if (!P || P.paid || P.gift) return 0; // 28-6c: a paid prop is never turned into hearts (41: nor a gift one)
   S.props.splice(i, 1); S.hearts += P.price; return P.price;
 }
 export function stowProp(S, uid) {
@@ -622,10 +629,69 @@ export function letGrow(S, id, now) {
 }
 // the "다 자랐어요" cards were seen
 export function grownSeen(S, ids) { for (const a of S.animals) if (ids.includes(a.id)) delete a.card; }
+// inbox 41 B 우편함·선물 코드 (the list: play/mail.json, src/ui/mail.js). Times are KST text: 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM';
+// a day alone as an end means the end of that day; missing or unreadable = no limit. A gift { hearts, candy, eggs, prop }:
+// the eggs are ordinary nest eggs (layEgg: rarity rolled, pity counted when they hatch), put in the newest open habitat's nest
+// with room; with every nest full each one comes as GIFT.eggHearts hearts (extra). A prop is put away in its habitat.
+const DAY_MS = 86400000;
+export const kst = s => { const m = /^(\d{4}-\d\d-\d\d)(?:[ T](\d\d:\d\d))?$/.exec(String(s ?? '').trim()); return m ? Date.parse(`${m[1]}T${m[2] || '00:00'}:00+09:00`) : NaN; };
+const kstEnd = s => kst(s) + (/:/.test(String(s)) ? 0 : DAY_MS);
+const live = (m, now) => !(now < kst(m.start)) && !(now >= kstEnd(m.end));
+export const mailOpen = (S, m, now) => typeof m?.id === 'string' && !!m.id && !S.mailGot.includes(m.id) && live(m, now) && (m.before == null || S.since < kst(m.before));
+export function give(S, rw, now, rng = Math.random, at = null) { // at: the habitat on screen (a prop goes there if open)
+  const n = k => Math.max(0, Math.min(k === 'eggs' ? 20 : 9999, Math.floor(+rw?.[k] || 0))); // a file from outside: whole numbers, capped
+  const got = { hearts: n('hearts'), candy: n('candy'), eggs: 0, extra: 0, prop: null };
+  S.hearts += got.hearts; S.candy = (S.candy || 0) + got.candy;
+  const open = [...S.unlocked].reverse().map(id => HAB[id]).filter(h => h?.nest && h.ready);
+  for (let i = n('eggs'); i > 0; i--) {
+    const h = open.find(h => (S.nests[h.id]?.eggs.length ?? 0) < B.nest.max);
+    if (h) { (S.nests[h.id] ??= { t: now, eggs: [] }).eggs.push(layEgg(S, h.nest, rng)); got.eggs++; } else { S.hearts += GIFT.eggHearts; got.extra++; }
+  }
+  const P = PROP[rw?.prop], hab = P?.habitat ?? (open.find(h => h.id === at) ?? open[0])?.id;
+  if (P && !P.paid && hab) { S.props.push({ uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 }); got.prop = P.id; }
+  return got;
+}
+// mail that can be had now (ids: only those), each once: ids kept in mailGot
+export function claimMail(S, list, now, ids, rng = Math.random) {
+  const got = [];
+  for (const m of Array.isArray(list) ? list : []) if (mailOpen(S, m, now) && (!ids || ids.includes(m.id))) { S.mailGot.push(m.id); got.push({ id: m.id, title: String(m.title ?? ''), ...give(S, m.rewards, now, rng) }); }
+  return got.length ? { got, events: [{ type: 'gift', got }] } : null;
+}
+// a gift code: case and spaces don't count; once per save and once per device (used: the device's list, game.js)
+export const codeKey = s => String(s ?? '').replace(/\s+/g, '').toUpperCase().slice(0, 40);
+export function useCode(S, codes, input, now, used = [], rng = Math.random) {
+  const k = codeKey(input), c = k && (Array.isArray(codes) ? codes : []).find(c => codeKey(c?.code) === k);
+  if (!c || now < kst(c.start)) return { err: 'none' };
+  if (S.codes.includes(k) || used.includes(k)) return { err: 'used' };
+  if (!live(c, now)) return { err: 'end' };
+  S.codes.push(k); const got = [{ id: k, title: String(c.title ?? '선물 코드'), ...give(S, c.rewards, now, rng) }];
+  return { got, events: [{ type: 'gift', got }] };
+}
+// inbox 41 C 출석부: a slot a day (dayOf); none on a day before the last one's time (a clock turned back), so at most one a day.
+// The slots run on after days away; the 7th adds the next of ATTEND_PROPS (the 7 in turn). at: the habitat on screen (give)
+export const attendDue = (S, now) => dayOf(now) !== S.attend.day && now >= S.attend.at;
+export function attend(S, now, rng = Math.random, at = null) {
+  if (!attendDue(S, now)) return null;
+  const A = S.attend, L = ATTEND.length, k = A.n % L, rw = k === L - 1 ? { ...ATTEND[k], prop: ATTEND_PROPS[Math.floor(A.n / L) % ATTEND_PROPS.length] } : ATTEND[k];
+  A.day = dayOf(now); A.at = now; A.n++;
+  const got = { slot: k + 1, ...give(S, rw, now, rng, at) };
+  return { got, events: [{ type: 'attend', got }] };
+}
+// inbox 41 D 첫날 할 일 (data.js FIRST): on while today (dayOf) is one of the game's first FIRST.days days and not all are done.
+// advance gives each task's hearts once (S.first[id] = when); all of them: FIRST.prop (into the habitat last entered) + FIRST.candy
+const FIRST_V = { hatch: S => S.stats?.hatch || 0, pet: S => S.stats?.pet || 0, prop: S => S.props.filter(p => p.placed && !p.nat).length, photo: S => S.stats?.photo || 0, codex: S => S.stats?.codex || 0 };
+export const firstGot = (S, t) => Math.min(t.n, FIRST_V[t.id](S));
+export const firstOn = (S, now) => !S.first?.all && Array.from({ length: FIRST.days }, (_, i) => dayOf(new Date(S.since).setHours(12, 0, 0, 0) + i * DAY_MS)).includes(dayOf(now));
+function firstCheck(S, now, ev, rng) {
+  if (!firstOn(S, now)) return; S.first ??= {};
+  for (const t of FIRST.tasks) if (!S.first[t.id] && firstGot(S, t) >= t.n) { S.first[t.id] = now; S.hearts += t.hearts; ev.push({ type: 'first', id: t.id, hearts: t.hearts }); }
+  if (FIRST.tasks.every(t => S.first[t.id])) { S.first.all = now; ev.push({ type: 'firstAll', got: give(S, { prop: FIRST.prop, candy: FIRST.candy }, now, rng, S.flags.lastHab) }); }
+}
 // debug: pretend `ms` passed (every timestamp moves back), then catch up
 export function skip(S, ms, now, rng = Math.random) {
   for (const n of Object.values(S.nests)) n.t -= ms;
   for (const s of S.slots) if (s) { s.start -= ms; s.end -= ms; }
   for (const a of S.animals) { a.born -= ms; if (a.gAt != null) a.gAt -= ms; if (a.adultAt != null) a.adultAt -= ms; a.heartAt -= ms; }
+  if (Number.isFinite(S.flags.lvCard?.at)) S.flags.lvCard.at -= ms; // 41 D: level.js's gap between level cards
   return advance(S, now, rng);
 }

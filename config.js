@@ -7,6 +7,7 @@ const SITE = {
   RATING_TEXT: 'TODO',   // 등급분류 뒤 등급과 번호(예: 전체이용가 · 등급분류번호 …)
   THREADS_URL: 'https://www.threads.com/@toybrook.game',   // 스레드 계정 주소
   CONTACT_EMAIL: 'toybrook1107@gmail.com', // 문의·삭제 요청을 받을 메일 주소
+  UMAMI_ID: 'f186eb37-4c11-4b9d-887c-1e3eb36b4ded', // 이용 통계(Umami Cloud, EU, 쿠키 없음) 사이트 id. 게임의 src/config.js와 같은 값. ''로 비우면 꺼지고 바깥 요청이 없습니다
 };
 
 const on = v => v && v !== 'TODO';
@@ -26,3 +27,12 @@ if (rating && (on(SITE.RATING_MARK) || on(SITE.RATING_TEXT))) {
   rating.querySelector('span').textContent = on(SITE.RATING_TEXT) ? SITE.RATING_TEXT : '';
   rating.hidden = false;
 }
+// 이용 통계(inbox 41 A): 공개 주소에서만 페이지 보기를 셉니다. 게임 설정의 「이용 통계 보내기」를 끈 브라우저(같은 주소라 그 설정을 읽음)와
+// Do Not Track을 켠 브라우저에서는 스크립트를 넣지 않습니다.
+(() => {
+  let off = false; try { off = JSON.parse(localStorage.getItem('toyhabitat.prefs') || '{}').stats === false; } catch { /* 읽지 못함: 켬 */ }
+  if (!on(SITE.UMAMI_ID) || off || location.hostname !== 'toybrook.github.io' || navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true) return;
+  const s = Object.assign(document.createElement('script'), { src: 'https://cloud.umami.is/script.js', defer: true });
+  Object.assign(s.dataset, { websiteId: SITE.UMAMI_ID, doNotTrack: 'true', domains: 'toybrook.github.io', excludeSearch: 'true', excludeHash: 'true' });
+  document.head.append(s);
+})();

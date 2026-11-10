@@ -113,7 +113,7 @@ export function initPlay(nav) {
   function place() {
     if (!bubbleFor) return;
     const p = hab?.where(bubbleFor.id), r = stage.getBoundingClientRect();
-    if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil || overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
+    if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil || overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
     const cb = $('camBtns'), low = cb.hidden ? 0 : cb.getBoundingClientRect().bottom + bubble.offsetHeight + 16; // following up close: kept under 정면 / 전체 보기
     bubble.style.left = p[0] + 'px'; bubble.style.top = Math.max(p[1], low) + 'px';
     requestAnimationFrame(place);
@@ -137,7 +137,7 @@ export function initPlay(nav) {
 
   // "○○가 다 자랐어요!": every grown animal whose card wasn't seen (several at once after time away), baby and adult side by side
   const card = $('grown'); let later = 0;
-  const busy = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo');
+  const busy = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo');
   function cards() {
     if (!hab || !card.hidden) return;
     const list = G.S.animals.filter(a => a.card); if (!list.length) return;

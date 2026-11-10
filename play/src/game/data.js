@@ -49,7 +49,7 @@ export const PACE = {
     play: { price: { seesaw: 70, ball: 30, hammock: 60, feeder: 40, campfire: 50, slide: 120, fountain: 150, musicbox: 80, bubbles: 60, lights: 70, fireworks: 60, pinhill: 90, bell: 50, rail: 10, railcurve: 10, railfork: 20, railbridge: 40, table: 40, shelf: 50, platform: 70, doll: 30, hillock: 40, puddle: 40, flowermound: 50, rockmound: 50 }, level: { 'set:friends': 6, 'prop:slide': 10, 'prop:fountain': 12, 'set:toys': 8, 'set:train': 7, 'set:home': 5, 'brush:stonepath': 3, 'prop:hillock': 3, 'brush:fenceline': 4, 'prop:puddle': 4, 'brush:plank': 5, 'prop:flowermound': 5, 'brush:wall': 6, 'prop:rockmound': 6 } },
   },
   beta: { // max 20: 10 h of eggs (the night between the last visit and the first); slots 3: with 2 the snow opened on day 4 (inbox-31.md)
-    nest: { every: 30 * MIN, max: 20, start: 1, startRarity: 'common', early: { n: 4, every: 2 * MIN }, onUnlock: 3 },
+    nest: { every: 30 * MIN, max: 20, start: 1, startRarity: 'common', early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3 }, // 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
     hatch: { common: 1 * MIN, rare: 3 * MIN, heroic: 8 * MIN, legendary: 20 * MIN },
     slots: 3,
     grow: { time: { common: 5 * MIN, rare: 10 * MIN, heroic: 20 * MIN, legendary: 40 * MIN }, pet: 0.02, feed: 0.1, feeds: 3 },
@@ -105,6 +105,8 @@ export const BALANCE = {
   color: { normal: 1, seldom: 0.25 },                // a variant's colours: weight of a normal / a seldom one (rolled after the variant)
 };
 for (const [k, lv] of Object.entries(P.play.level)) (BALANCE.level.unlock[lv] ??= []).push(k); // 28-2 (PACE play)
+// inbox 41 B 우편함·선물 코드: a gift egg that finds every open nest full comes as this many hearts instead
+export const GIFT = { eggHearts: 15 };
 
 // In order, rarest last. egg: what an egg of this rarity looks like (material + colours; none = the material's first colour).
 // 28-6c display: hue/sat the shard gauge's colour (nest.js, the rarities with a gauge); precious: 돌려보내기 asks once more (store.js)
@@ -674,7 +676,29 @@ export const PROPS = [
   { id: 'puddle', name: '웅덩이', price: P.play.price.puddle, r: 1.5, stamp: -0.3 },
   { id: 'flowermound', name: '꽃 둔덕', price: P.play.price.flowermound, r: 1.6, open: true, stamp: 0.45 },
   { id: 'rockmound', name: '바위 둔덕', price: P.play.price.rockmound, r: 1.7, stamp: 0.55 },
+  // inbox 41 C·D 선물 소품: only given (출석부 7th day, 첫날 할 일), never sold, nothing back when put away (price 0); decoration only.
+  // gift: the shop's note. The 꾸미기 list shows one only to a player who has it (decor.js, its own 선물 tab)
+  { id: 'att_sunflower', name: '해바라기', price: 0, r: 0.4, gift: '출석 선물' },
+  { id: 'att_birdhouse', name: '새집', price: 0, r: 0.4, gift: '출석 선물' },
+  { id: 'att_balloons', name: '풍선 다발', price: 0, r: 0.45, gift: '출석 선물' },
+  { id: 'att_wcan', name: '물뿌리개', price: 0, r: 0.4, small: true, gift: '출석 선물' },
+  { id: 'att_signpost', name: '이정표', price: 0, r: 0.45, gift: '출석 선물' },
+  { id: 'att_cart', name: '꽃수레', price: 0, r: 0.85, gift: '출석 선물' },
+  { id: 'att_rainbow', name: '무지개 아치', price: 0, r: 0.9, gift: '출석 선물' },
+  { id: 'firstday', name: '첫날 기념 나무', price: 0, r: 0.45, gift: '첫날 할 일 선물' },
 ];
+// inbox 41 C 출석부: one slot a day (dayOf), the next one even after days away (no penalty), back to 1 after 7. eggs: plain nest
+// eggs (rules give: the habitat's odds, its pity). The 7th adds the next of ATTEND_PROPS, the 7 in turn
+export const ATTEND = [{ hearts: 20 }, { candy: 2 }, { eggs: 1 }, { hearts: 30 }, { candy: 3 }, { eggs: 1 }, { hearts: 50 }];
+export const ATTEND_PROPS = ['att_sunflower', 'att_birdhouse', 'att_balloons', 'att_wcan', 'att_signpost', 'att_cart', 'att_rainbow'];
+// inbox 41 D 첫날 할 일: shown on the first `days` days of a game (dayOf, from S.since) as a small list under the top bar. Each
+// task done once gives its hearts; all of them the `prop` (a 선물 prop) and `candy`. What counts: rules.js FIRST_V
+export const FIRST = { days: 3, prop: 'firstday', candy: 2, tasks: [
+  { id: 'hatch', text: '알 3번 깨우기', n: 3, hearts: 15 },
+  { id: 'pet', text: '친구 5번 쓰다듬기', n: 5, hearts: 10 },
+  { id: 'prop', text: '소품 하나 놓기', n: 1, hearts: 15 },
+  { id: 'photo', text: '사진 한 장 찍기', n: 1, hearts: 10 },
+  { id: 'codex', text: '도감 열어 보기', n: 1, hearts: 10 }] };
 // 28-5 소품 색: each prop's palette (pal: its own, else toy; rails none). 0: as made; the rest: the key colour of its model turned
 // to that one (meadow/props.js recolor). 크기: sz 0 보통, 1 작게, 2 크게 (its model, footprint and cells x sizeF)
 export const PALETTES = {

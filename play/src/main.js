@@ -12,6 +12,10 @@ import { iosSafariTab } from './game/backup.js';
 import { initPhoto } from './ui/photo.js';
 import { ASSETS, DEBUG, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, savePrefs, OFFLINE, calm, applyLook } from './config.js';
 import { applySound, sfx } from './ui/sound.js';
+import { watch, track } from './ui/stats.js';
+import { openCode } from './ui/mail.js'; // inbox 41 B 우편함
+import { initAttend } from './ui/attend.js'; // inbox 41 C 출석부
+import './ui/first.js'; // inbox 41 D 첫날 할 일
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
 mapImg.src = ASSETS.worldmap;
@@ -24,6 +28,7 @@ function tabOff(first) {
 // 26-7: a save that failed (full storage etc.) is told once, with the way to a backup code (made from the game in memory)
 const saveFail = () => ask('저장하지 못했어요. 기기 저장 공간이 꽉 찼을 수 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.', '백업 코드 만들기', '닫기').then(ok => ok && BK.open());
 const offline = G.start({ busy: () => tabOff(true), lost: () => tabOff(false), fail: saveFail }); // eggs laid / babies grown while the game was closed
+watch(G); // inbox 41 A 이용 통계: start, first_hatch, return_d1
 
 const stage = $('stage'), map = $('map');
 const phone = matchMedia('(max-width:600px),(pointer:coarse) and (max-width:1000px)');
@@ -83,6 +88,7 @@ async function enter(id) {
   cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + ' 서식지 3D');
   $('habName').querySelector('b').textContent = HAB[id].name;
   loadBar(true, !!play); if (G.S.flags.lastHab !== id) G.flag('lastHab', id);
+  track('habitat_open', { habitat: HAB[id].name }, 'open:' + id); // inbox 41 A: a day each
   try { api = await (built[id] ??= build(id)); }
   catch (e) { console.warn('enter', id, e); // 26-1: offline, and this habitat's files were never fetched (or the network dropped): back to the map, try again later
     delete built[id]; loadBar(false); if (cur === id) $('back').click(); toast('인터넷에 연결되면 열 수 있어요', 2600); return false;
@@ -163,7 +169,7 @@ intro.hidden = !!G.S.flags.betaIntro;
 // 26-8 새 소식: once after VERSION changes (flags.news = the version last shown); a new player gets the intro card instead. 설정 › 다시 보기
 const news = $('news'); news.querySelector('[data-ver]').textContent = VERSION;
 news.hidden = !intro.hidden || G.S.flags.news === VERSION;
-const firstDone = () => { if (retWait && intro.hidden && news.hidden) { retWait = false; ret.hidden = false; } }; // 자리 비운 사이 waits for these
+const firstDone = () => { if (retWait && intro.hidden && news.hidden && $('attend').hidden) { retWait = false; ret.hidden = false; } }; // 자리 비운 사이 waits for these
 fb.hidden = FEEDBACK_URL === 'TODO';
 const fbUrl = () => { const n = cur ? outIn(G.S, cur).length : G.S.animals.length; // out in this habitat (not stored), or all
   return `${FEEDBACK_URL}?usp=pp_url&${FEEDBACK_FIELD}=${encodeURIComponent(`ver=${VERSION} habitat=${cur || 'map'} animals=${n}`)}`; };
@@ -188,7 +194,7 @@ function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
   ret.innerHTML = `<div><h2>자리 비운 사이</h2><ul>${rows.map(([i, t, sub, k]) => `<li><button data-go="${k}"><i aria-hidden="true">${i}</i><span>${t}<small>${sub}</small></span></button></li>`).join('')}</ul>
 <div class="nbtns"><button class="go" data-close>확인</button></div></div>`;
   ret.dataset.eggs = most || ''; ret.dataset.grown = grown[0] ? habitatOf(grown[0]) : '';
-  if (intro.hidden && news.hidden) ret.hidden = false; else retWait = true;
+  if (intro.hidden && news.hidden && $('attend').hidden) ret.hidden = false; else retWait = true; // 41 C: nor over 출석부
 }
 ret.onclick = async e => {
   const d = e.target.closest('button')?.dataset; if (!d) return;
@@ -210,6 +216,7 @@ addEventListener('visibilitychange', () => {
 });
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); firstDone(); };
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
+initAttend(() => cur, firstDone);
 { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
 
 // 21-1 설정: choices kept in this browser apart from the save (config.js PREFS); the habitat reads them every frame
@@ -219,7 +226,8 @@ const VOLS = [['vAll', '전체'], ['vAmb', '배경 소리'], ['vFx', '효과음'
 // 26-3: after the sound. 움직임 줄이기 shows the device's choice until one is picked; 진동 only where the browser can (Android)
 const LOOK_ROWS = [['gfx', '그래픽 품질', [['low', '낮음'], ['mid', '보통'], ['high', '높음']]], ['saver', '배터리 절약', [[false, '끄기'], [true, '켜기']]],
   ['font', '글자 크기', [['s', '작게'], ['m', '보통'], ['l', '크게']]], ['calm', '움직임 줄이기', [[false, '끄기'], [true, '켜기']]], ['signs', '구역 팻말 보이기', [[true, '켜기'], [false, '끄기']]],
-  ...navigator.vibrate && matchMedia('(pointer:coarse)').matches ? [['buzz', '진동', [[false, '끄기'], [true, '켜기']]]] : []];
+  ...navigator.vibrate && matchMedia('(pointer:coarse)').matches ? [['buzz', '진동', [[false, '끄기'], [true, '켜기']]]] : [],
+  ['stats', '이용 통계 보내기', [[true, '켜기'], [false, '끄기']]]]; // inbox 41 A (src/ui/stats.js)
 const segRow = ([k, name, opts]) => { const now = k === 'calm' ? calm() : PREFS[k];
   return `<div class="row"><b>${name}</b><div class="seg">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}"${now === v ? ' class="on"' : ''}>${t}</button>`).join('')}</div></div>`; };
 const prefs = $('prefs'), rows = $('prefRows'), help = $('help');
@@ -230,6 +238,7 @@ const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
   + `<div class="row"><b>처음 안내</b><div class="seg"><button data-act="tips">안내 다시 보기</button></div></div>`
   + (iosSafariTab(BK.DEV) ? `<div class="row"><b>홈 화면 안내</b><div class="seg"><button data-act="home">홈 화면 안내 다시 보기</button></div></div>` : '') // inbox 39
   + `<div class="row"><b>새 소식</b><div class="seg"><button data-act="news">새 소식 다시 보기</button></div></div>`
+  + `<div class="row"><b>선물 코드</b><div class="seg"><button data-act="code">선물 코드 넣기</button></div></div>` // inbox 41 B
   + (FEEDBACK_URL === 'TODO' ? '' : `<div class="row"><b>의견</b><div class="seg"><button data-act="fb">의견 보내기</button><button data-act="bug">문제 알리기</button></div></div>`); };
 $('prefsBtn').onclick = () => { drawPrefs(); prefs.hidden = false; };
 const nagDot = () => $('prefsBtn').classList.toggle('new', BK.due()); nagDot(); G.on(nagDot); // inbox 21: 7 days without a backup
@@ -241,6 +250,7 @@ rows.onclick = e => {
   if (d.act === 'home') { G.flag('homeHintSeen', false); prefs.hidden = true; return toast(cur ? '홈 화면 안내를 다시 보여 줄게요' : '서식지에 들어가면 홈 화면 안내를 다시 보여 줄게요', 2200, true); } // play.js shows it
   if (d.act === 'backup') return BK.open();
   if (d.act === 'news') { prefs.hidden = true; news.hidden = false; return; }
+  if (d.act === 'code') { prefs.hidden = true; return openCode(); }
   if (d.act === 'fb') return void open(fbUrl(), '_blank', 'noopener');
   if (d.act === 'bug') { const ok = copyNow(reportText(cur ? HAB[cur].name : '지도')); // copied at this tap; the player pastes it in the form
     ask(ok === false ? '복사하지 못했어요.\n의견 양식에 겪은 일을 적어 주세요.' : '버전·기기·최근 오류를 복사했어요.\n의견 양식의 글칸에 붙여 넣고 겪은 일을 적어 주세요.', '양식 열기', '닫기');

@@ -93,6 +93,15 @@ export const importLayout = (hab, d, fit, cell) => act(() => R.importLayout(S, h
 export const undoImport = () => act(() => R.undoImport(S));
 export const clearGhost = hab => act(() => R.clearGhost(S, hab));
 export const refundProp = uid => act(() => R.refundProp(S, uid));
+// inbox 41 B: mail.json's mail (ids: only those) and a gift code. Codes used on this device are also kept apart from the save
+// (toyhabitat.codes), so a new game here can't use one again
+const CODES = 'toyhabitat.codes', usedHere = () => { try { const u = JSON.parse(localStorage.getItem(CODES)); return Array.isArray(u) ? u : []; } catch { return []; } };
+export const claimMail = (list, ids) => act(now => R.claimMail(S, list, now, ids));
+export const useCode = (codes, input) => act(now => { const out = R.useCode(S, codes, input, now, usedHere());
+  if (out.got) try { localStorage.setItem(CODES, JSON.stringify([...usedHere(), out.got[0].id])); } catch { /* full: the save still has it */ } return out; });
+// inbox 41 C 출석부: at = the habitat on screen (a gift prop goes there)
+export const attendDue = () => R.attendDue(S, clock());
+export const attend = at => act(now => R.attend(S, now, Math.random, at));
 export const note = (k, n) => { if (n > (S.stats?.[k] || 0)) act(() => R.noteLive(S, k, n)); }; // 23-2: the habitat on screen (saved only when more)
 export const setTitle = id => act(() => R.setTitle(S, id));
 export const flag = (k, v = true) => act(() => { S.flags[k] = v; });

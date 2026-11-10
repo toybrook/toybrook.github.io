@@ -26,7 +26,7 @@ const isNew = k => !G.S.seen.includes(k);
 const open = id => G.S.unlocked.includes(id) || codexCells(id).some(c => G.S.codex[c.key]); // or already has some there (19-2: ducks registered in the meadow)
 export const hasNew = () => HABITATS.some(h => open(h.id) && codexCells(h.id).some(c => isNew(c.key)));
 
-export function openCodex(habId, api) { if (habId) tab = habId; hab = api; night = false; el.hidden = false; draw(); tip('codex', '#codex .cbar'); }
+export function openCodex(habId, api) { G.note('codex', 1); if (habId) tab = habId; hab = api; night = false; el.hidden = false; draw(); tip('codex', '#codex .cbar'); } // G.note: 41 D 첫날 할 일
 // live while open: redraw when what it shows changes (a variant registered, a habitat opened, someone stored), keeping the scroll
 const sig = () => [Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length].join();
 let shown = '';

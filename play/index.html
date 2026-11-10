@@ -22,7 +22,7 @@
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="769788" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="799163" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -51,9 +51,11 @@
       <button class="back" id="back" aria-label="월드맵으로 돌아가기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       <button class="back" id="habName" aria-label="서식지 고르기"><b>초원</b><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
       <div class="pill hearts" id="hearts"><span aria-hidden="true">♥</span><b>0</b></div>
-      <button class="back sq" id="prefsBtn" style="margin-left:auto" aria-label="설정"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
+      <button class="back sq" id="mailBtn" style="margin-left:auto" aria-label="우편함"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.8 7l8.2 6.2L20.2 7"/></svg></button>
+      <button class="back sq" id="prefsBtn" aria-label="설정"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
     </div>
     <div class="pill tag" id="tag" hidden></div>
+    <div class="fday" id="fday" hidden></div>
     <div class="camb" id="camBtns" hidden><button class="back" id="frontBtn">정면</button><button class="back" id="overview">전체 보기</button></div>
     <div class="tools"><button class="back sq" id="helpBtn" aria-label="도움말">?</button><button class="back" id="cabBtn">진열장</button><button class="back" id="snapBtn">사진</button></div>
     <!-- inbox 20: the buttons used most, low on the screen where a thumb reaches -->
@@ -81,18 +83,17 @@
   <section class="intro prefs pop bk" id="backup" hidden aria-label="내 저장 백업"></section>
   <section class="intro prefs pop bk share" id="share" hidden aria-label="꾸미기 코드"></section>
   <section class="intro pop help" id="help" hidden aria-label="도움말"></section>
+  <section class="intro pop ret news mail" id="mail" hidden aria-label="우편함"></section>
   <section class="intro pop ret" id="ret" hidden aria-label="자리 비운 사이"></section>
+  <section class="intro pop ret" id="attend" hidden aria-label="출석부"></section>
   <section class="intro pop ret news" id="news" hidden aria-label="새 소식"><div>
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
-      <li><i aria-hidden="true">🗺️</i><span>새 구역<small>땅을 넓힐 때마다 과수원 같은 이름 있는 구역이 열려요. 구역마다 땅 모습과 볼거리가 달라요</small></span></li>
-      <li><i aria-hidden="true">🛝</i><span>놀이 소품<small>미끄럼틀, 시소, 해먹, 모닥불, 먹이통, 작은 분수, 공, 그네. 친구들이 와서 놀아요</small></span></li>
-      <li><i aria-hidden="true">🎵</i><span>누르면 반응하는 소품<small>오르골, 비눗방울 기계, 꼬마전구 줄, 작은 폭죽, 바람개비 언덕, 부르는 종</small></span></li>
-      <li><i aria-hidden="true">🚂</i><span>장난감 기차<small>레일을 이어 고리를 만들면 태엽 기차가 달리고, 작은 친구들이 올라타요</small></span></li>
-      <li><i aria-hidden="true">🎨</i><span>꾸미기<small>소품 색 바꾸기, 위에 쌓기, 조금씩 돌리기, 크기 3단계, 배치 저장 칸</small></span></li>
-      <li><i aria-hidden="true">🛤️</i><span>길·울타리와 땅 모양<small>칸에 그으면 길과 울타리가 저절로 이어지고, 언덕·웅덩이·꽃 둔덕·바위 둔덕을 찍을 수 있어요</small></span></li>
-      <li><i aria-hidden="true">👑</i><span>시크릿 치장<small>드물게 나오는 치장이 5종에서 24종으로 늘었어요</small></span></li>
-      <li><i aria-hidden="true">🔧</i><span>작은 손질<small>땅을 넓힌 뒤 치운 나무 자리에 소품이 안 놓이던 문제를 고쳤어요. 도감에 새 칸이 채워지면 하트 3개를 받아요. 아이폰에서 기록을 지키는 「홈 화면에 추가」 안내가 생겼어요. 휴대폰 화면 모양에 맞게 단추 자리를 고쳤어요</small></span></li>
+      <li><i aria-hidden="true">📅</i><span>출석부<small>하루 한 번 들르면 하트·사탕·알을 받아요. 7일째에는 선물 소품을 줘요</small></span></li>
+      <li><i aria-hidden="true">📮</i><span>우편함·선물 코드<small>위쪽 막대의 봉투 단추를 누르면 편지와 선물이 와 있어요. 선물 코드는 설정에서 넣어요</small></span></li>
+      <li><i aria-hidden="true">✅</i><span>첫날 할 일<small>처음 3일 동안 작은 할 일 다섯 가지가 보여요. 하나마다 하트, 다 하면 「첫날 기념」 소품과 사탕 2개</small></span></li>
+      <li><i aria-hidden="true">🥚</i><span>첫 알이 빨리<small>새로 시작하면 처음 여섯 알은 2분마다, 다음 여섯 알은 5분마다 둥지에 생겨요</small></span></li>
+      <li><i aria-hidden="true">📊</i><span>이용 통계<small>쿠키 없이 시작·첫 알 같은 몇 가지만 세어요. 이름이나 저장 기록은 보내지 않고, 설정에서 끌 수 있어요</small></span></li>
     </ul>
     <p class="note">베타 기간의 데이터는 정식 출시 때 초기화돼요.</p>
     <div class="nbtns"><button class="go" data-close>확인</button></div>

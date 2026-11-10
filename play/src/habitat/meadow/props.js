@@ -507,6 +507,61 @@ export function decorModel(id) {
     part(g, new THREE.CylinderGeometry(0.035, 0.035, 1.05, 8), '#6f7fa8', 0, 0.58, 0);
     part(g, starGeo(0.27, 0.12), '#ffe066', 0, 1.35, 0, { lit: true });
     halo(g, '#ffe27a', 1.6, 0, 1.35, 0);
+  } else if (id === 'att_sunflower') { // inbox 41 C 출석 선물: a sunflower on a tall stem, two leaves, its face to the front and a little up
+    part(g, new THREE.CylinderGeometry(0.035, 0.045, 1.2, 8), '#5fa04a', 0, 0.6, 0);
+    const lf = new THREE.SphereGeometry(1, 10, 6);
+    for (const s of [-1, 1]) part(g, lf, '#5fae4a', s * 0.15, s > 0 ? 0.62 : 0.46, 0, { rz: s * 0.55 }).scale.set(0.18, 0.06, 0.1);
+    const head = new THREE.Group(); head.position.set(0, 1.26, 0.04); head.rotation.x = -0.3; g.add(head);
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; part(head, lf, '#ffd54a', Math.cos(a) * 0.23, Math.sin(a) * 0.23, 0, { rz: a }).scale.set(0.13, 0.06, 0.035); }
+    part(head, new THREE.CylinderGeometry(0.16, 0.16, 0.09, 20), '#8a5733', 0, 0, 0.02, { rx: Math.PI / 2 });
+  } else if (id === 'att_birdhouse') { // 출석 선물: a little blue birdhouse on a post, a red roof, a round door and a perch
+    part(g, roundedBox(0.1, 1.05, 0.1, 0.035), '#b07a48', 0, 0.525, 0);
+    part(g, roundedBox(0.42, 0.4, 0.38, 0.05), '#7fc3e8', 0, 1.25, 0);
+    for (const s of [-1, 1]) part(g, roundedBox(0.3, 0.05, 0.48, 0.02), '#e86a5a', s * 0.13, 1.53, 0, { rz: -s * 0.7 });
+    part(g, new THREE.CircleGeometry(0.075, 16), '#5a3a26', 0, 1.28, 0.192);
+    part(g, new THREE.CylinderGeometry(0.016, 0.016, 0.1, 6), '#b07a48', 0, 1.16, 0.23, { rx: Math.PI / 2 });
+  } else if (id === 'att_balloons') { // 출석 선물: three balloons on strings tied to a little weight; they sway together
+    part(g, roundedBox(0.2, 0.12, 0.2, 0.04), '#5a6a7a', 0, 0.06, 0);
+    const sw = new THREE.Group(); sw.position.y = 0.12; sw.userData.moves = true; g.add(sw);
+    const ball = lathe([[0, -0.24], [0.1, -0.21], [0.17, -0.12], [0.2, 0], [0.19, 0.1], [0.13, 0.19], [0, 0.23]], 16), str = new THREE.CylinderGeometry(0.006, 0.006, 1, 4), up = new THREE.Vector3(0, 1, 0);
+    [[-0.16, 1.3, 0.02, '#ff6b6b'], [0.17, 1.42, -0.04, '#5aa9e6'], [0.01, 1.62, 0.06, '#ffd54a']].forEach(([x, y, z, c]) => {
+      const d = new THREE.Vector3(x, y - 0.26, z), L2 = d.length();
+      part(sw, str, '#f1e4c8', x / 2, (y - 0.26) / 2, z / 2).scale.y = L2; sw.children.at(-1).quaternion.setFromUnitVectors(up, d.normalize());
+      part(sw, ball, c, x, y, z, { rz: -x * 0.6 }); part(sw, new THREE.ConeGeometry(0.03, 0.05, 8), c, x, y - 0.26, z); });
+    g.userData.tick = t => { sw.rotation.z = 0.05 * Math.sin(t * 0.7); sw.rotation.x = 0.03 * Math.sin(t * 0.53 + 1); };
+  } else if (id === 'att_wcan') { // 출석 선물: a round watering can, its spout up to the front-right, a handle over the top
+    part(g, lathe([[0, 0], [0.2, 0], [0.22, 0.04], [0.22, 0.3], [0.19, 0.34], [0, 0.34]], 18), '#5aa9e6', 0, 0, 0);
+    part(g, new THREE.CapsuleGeometry(0.035, 0.36, 3, 8), '#5aa9e6', 0.3, 0.3, 0, { rz: -0.9 });
+    part(g, new THREE.CylinderGeometry(0.07, 0.04, 0.06, 12), '#4a8fd0', 0.47, 0.44, 0, { rz: -0.9 });
+    part(g, new THREE.TorusGeometry(0.15, 0.03, 8, 16, Math.PI), '#4a8fd0', -0.02, 0.34, 0);
+  } else if (id === 'att_signpost') { // 출석 선물: a post with two pointed boards (no writing on them), a round cap
+    part(g, roundedBox(0.12, 1.3, 0.12, 0.04), '#b07a48', 0, 0.65, 0);
+    part(g, new THREE.SphereGeometry(0.08, 12, 9), '#ffd54a', 0, 1.32, 0);
+    [[1.08, 0.25, '#fff1d6', 1], [0.8, -0.4, '#bfe3f2', -1]].forEach(([y, ry, c, s]) => { const b = new THREE.Group(); b.position.y = y; b.rotation.y = ry; g.add(b);
+      part(b, roundedBox(0.6, 0.18, 0.05, 0.025), c, s * 0.24, 0, 0.08);
+      part(b, roundedBox(0.127, 0.127, 0.05, 0.02), c, s * 0.54, 0, 0.08, { rz: Math.PI / 4 }); });
+  } else if (id === 'att_cart') { // 출석 선물: a red flower cart: a box on four wheels, flowers in three colours, a handle to the right
+    part(g, roundedBox(1.0, 0.3, 0.6, 0.06), '#e86a5a', -0.12, 0.42, 0);
+    part(g, roundedBox(0.88, 0.04, 0.48, 0.02), '#8a5f3c', -0.12, 0.575, 0, { mat: { roughness: 0.9 } });
+    const wheel = new THREE.CylinderGeometry(0.17, 0.17, 0.07, 18), hub = new THREE.SphereGeometry(0.045, 10, 8);
+    for (const x of [-0.44, 0.2]) for (const z of [-1, 1]) { part(g, wheel, '#b07a48', x, 0.17, z * 0.33, { rx: Math.PI / 2 }); part(g, hub, '#ffd54a', x, 0.17, z * 0.375); }
+    part(g, new THREE.CapsuleGeometry(0.03, 0.5, 3, 8), '#7a5232', 0.61, 0.35, 0, { rz: 1.15 });
+    part(g, new THREE.CapsuleGeometry(0.03, 0.3, 3, 8), '#7a5232', 0.865, 0.235, 0, { rx: Math.PI / 2 });
+    const head = new THREE.SphereGeometry(0.1, 12, 9), cols = ['#ff8fb3', '#ffd54a', '#fff7ee'];
+    [[-0.45, -0.1], [-0.25, 0.12], [-0.05, -0.12], [0.15, 0.1], [-0.15, 0.02], [0.18, -0.12]].forEach(([x, z], i) => part(g, head, cols[i % 3], x, 0.66 + (i % 2) * 0.03, z));
+  } else if (id === 'att_rainbow') { // 출석 선물: a small rainbow arch, five bands, its feet in two white clouds
+    ['#ff6b6b', '#ffb44a', '#ffe066', '#7cc56a', '#5aa9e6'].forEach((c, i) => part(g, new THREE.TorusGeometry(0.78 - i * 0.1, 0.052, 10, 32, Math.PI), c, 0, 0.12, 0));
+    const puff = new THREE.SphereGeometry(1, 14, 10);
+    for (const s of [-1, 1]) [[0, 0.16, 0, 0.2], [0.14, 0.12, 0.06, 0.15], [-0.13, 0.11, -0.05, 0.15], [0.02, 0.28, 0.02, 0.14]].forEach(([x, y, z, k]) => part(g, puff, '#fff7ee', s * 0.58 + x, y, z).scale.setScalar(k));
+  } else if (id === 'firstday') { // inbox 41 D 첫날 할 일 선물: a little round tree in a clay pot, a red band and bow round the pot
+    part(g, lathe([[0, 0], [0.22, 0], [0.27, 0.3], [0.31, 0.32], [0.31, 0.38], [0.27, 0.39], [0, 0.39]], 18), '#d9774f', 0, 0, 0);
+    part(g, new THREE.CylinderGeometry(0.26, 0.26, 0.02, 18), '#7a5232', 0, 0.375, 0);
+    part(g, new THREE.CylinderGeometry(0.04, 0.05, 0.5, 8), '#8a5733', 0, 0.62, 0);
+    const ball = new THREE.SphereGeometry(1, 16, 12);
+    [[0, 1.0, 0, 0.3], [0.2, 0.88, 0.05, 0.2], [-0.19, 0.9, -0.03, 0.21], [0.03, 0.86, -0.18, 0.19]].forEach(([x, y, z, k], i) => part(g, ball, i % 2 ? '#73b043' : '#5fae4a', x, y, z).scale.setScalar(k));
+    part(g, new THREE.TorusGeometry(0.285, 0.02, 6, 24), '#e5584a', 0, 0.22, 0, { rx: Math.PI / 2 });
+    for (const s of [-1, 1]) part(g, ball, '#e5584a', s * 0.075, 0.22, 0.29, { rz: s * 0.35 }).scale.set(0.075, 0.045, 0.03);
+    part(g, ball, '#e5584a', 0, 0.22, 0.3).scale.setScalar(0.032);
   } else if (id === 'swing') { // 28-2: an A-frame swing a rabbit, a piglet or a fox can ride (play.js G.swing); the seat sways, more with someone on
     const { pivot: H, rope: R, half: X } = PLAY.swing, k = 0.24, leg = roundedBox(0.16, H / Math.cos(k) + 0.06, 0.16, 0.06);
     for (const x of [-X, X]) { for (const s of [-1, 1]) part(g, leg, '#b07a48', x, H / 2, s * H / 2 * Math.tan(k), { rx: -s * k }); part(g, new THREE.SphereGeometry(0.15, 12, 9), '#ffd54a', x, H, 0); }
