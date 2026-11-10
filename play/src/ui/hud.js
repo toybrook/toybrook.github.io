@@ -77,7 +77,8 @@ function nextTip() {
   const W = st.clientWidth, H = st.clientHeight, cx = (r.left + r.width / 2 - sr.left) / s, top = (r.top - sr.top) / s, bot = (r.bottom - sr.top) / s;
   const w = tipEl.offsetWidth, x = Math.max(12, Math.min(W - 12 - w, cx - w / 2)); tipEl.style.left = x + 'px';
   tipEl.style.setProperty('--ax', Math.max(14, Math.min(w - 14, cx - x)) + 'px');
-  if (top > H / 2) { tipEl.style.bottom = Math.max(8, H - top + 10) + 'px'; tipEl.classList.add('up'); } else tipEl.style.top = Math.min(H - tipEl.offsetHeight - 8, bot + 10) + 'px'; // a tall anchor: kept on screen
+  // a tall anchor: kept on screen; inbox 40: and off the home bar (--sa-b, style.css)
+  if (top > H / 2) { tipEl.style.bottom = `max(calc(8px + var(--sa-b)), ${H - top + 10}px)`; tipEl.classList.add('up'); } else tipEl.style.top = `min(calc(100% - ${tipEl.offsetHeight + 8}px - var(--sa-b)), ${bot + 10}px)`;
   tipEl.onclick = e => { const b = e.target.closest('button'); if (b) endTip(b.dataset.off != null); };
 }
 function endTip(off) { if (!tipEl) return; const k = tipEl.dataset.k; tipEl.remove(); tipEl = null; calm = Date.now() + 380; G.flag('tip_' + k); if (off) { G.flag('tipsOff'); waiting.length = 0; } setTimeout(nextTip, 400); }

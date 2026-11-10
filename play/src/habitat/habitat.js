@@ -93,7 +93,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   let bgNow = null;
   function paintBg(bg = bgNow) { // bg: three gradient stops (the time of day's, daylight.js)
     bgNow = bg;
-    const w = 128, h = Math.max(1, Math.round(w * H() / W())), c = bgCan.getContext('2d');
+    // inbox 40: a fixed size. It is drawn in 0..1 and stretched over the screen anyway; a size that followed the screen's shape
+    // overflowed the texture made at the first size when the phone turned or the window changed (WebGL INVALID_VALUE)
+    const w = 128, h = 256, c = bgCan.getContext('2d');
     bgCan.width = w; bgCan.height = h;
     c.setTransform(1.2 * w, 0, 0, 0.8 * h, 0.5 * w, 0.3 * h); // unit circle -> radial-gradient(120% 80% at 50% 30%)
     const g = c.createRadialGradient(0, 0, 0, 0, 0, 1);
@@ -887,7 +889,6 @@ GPU ${gpu}`; }
     pr = Math.min(pr, maxPR()); renderer.setPixelRatio(pr); renderer.setSize(W(), H());
     camera.aspect = W() / H(); camera.updateProjectionMatrix();
     HOME.radius = homeRadius(); controls.maxDistance = HOME.radius * 1.15;
-    paintBg();
   }
   window.addEventListener('resize', resize, sig);
   // 27-1: the habitat on screen (a built one entered again is only set active, not started again)

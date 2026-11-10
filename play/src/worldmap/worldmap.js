@@ -48,6 +48,19 @@ export function initWorldMap(root, { enter }) {
       spot.onclick = state === 'in' ? () => enter(h.id) : state === 'soon' ? () => toast('준비 중이에요') : () => lockToast(h.id);
     }
   }
-  refresh();
-  return { refresh };
+  // inbox 40: the map covers the stage like a picture, so a tall narrow screen (Fold cover, Flip) loses its sides;
+  // the name labels slide back inside. It runs on stage resize and on label size (font) changes.
+  const stage = map.closest('.stage');
+  const ro = new ResizeObserver(() => {
+    const r = map.getBoundingClientRect(), s = stage.getBoundingClientRect(), m = r.width / 390;
+    if (!m) return;
+    const lo = (s.left - r.left) / m + 6, hi = (s.right - r.left) / m - 6;
+    for (const e of made) if (e.tagName === 'SPAN') {
+      const x = parseFloat(e.style.left), w = e.offsetWidth / 2;
+      e.style.marginLeft = (x - w < lo ? lo - x + w : x + w > hi ? hi - x - w : 0) + 'px';
+    }
+  });
+  const watch = () => { ro.disconnect(); ro.observe(stage); for (const e of made) if (e.tagName === 'SPAN') ro.observe(e); };
+  refresh(); watch();
+  return { refresh() { refresh(); watch(); } };
 }
