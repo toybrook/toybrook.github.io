@@ -61,7 +61,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], attend: { day: '', at: 0, n: 0 }, first: {} }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {} }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   return S;
@@ -84,7 +84,7 @@ export function fromSave(raw, now) {
     tidy(S); // 28-5
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
     if (!Number.isFinite(raw.since)) S.since = Math.min(now, ...Object.values(S.codex).map(e => e?.at), ...S.animals.map(a => a.born)) || now; // 41: before 0.71, the first animal
-    S.mailGot = S.mailGot.filter(x => typeof x === 'string'); S.codes = S.codes.filter(x => typeof x === 'string');
+    S.mailGot = S.mailGot.filter(x => typeof x === 'string'); S.codes = S.codes.filter(x => typeof x === 'string'); S.giftEggs = Math.min(99, Math.max(0, Math.floor(S.giftEggs) || 0)); // 44
     { const A = S.attend; S.attend = { day: typeof A.day === 'string' ? A.day : '', at: Number.isFinite(A.at) ? A.at : 0, n: Number.isInteger(A.n) && A.n >= 0 ? A.n : 0 }; } // 41 C
     S.first = Object.fromEntries(Object.entries(S.first).filter(([, v]) => Number.isFinite(v))); // 41 D
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
@@ -235,7 +235,7 @@ export function sureRarity(S, type) {
 // A guaranteed rarity picks evenly among that rarity's variants nobody has yet (all of them if none is missing); tiers don't count there.
 // Gauges: +1 each, except a gauge whose rarity (or better) came out, which empties. Every egg counts, the first one too.
 export function crack(S, e, now, rng = Math.random, forced = false) { // forced: a secret for sure (?debug 다음 알 시크릿, game.hatch)
-  const top = sureRarity(S, e.type), sure = !!top && RANK[top] >= RANK[e.rarity], rarity = sure ? top : e.rarity;
+  const top = e.gift ? null : sureRarity(S, e.type), sure = !!top && RANK[top] >= RANK[e.rarity], rarity = sure ? top : e.rarity; // 44: a gift egg leaves the gauges alone
   let r;
   if (sure) {
     const all = hatchPool(e.type, rarity).flatMap(({ sp, vs }) => vs.map(v => ({ species: sp.id, variant: v.id })));
@@ -244,8 +244,8 @@ export function crack(S, e, now, rng = Math.random, forced = false) { // forced:
   } else r = rollHatch(S, e, rng);
   if (!r) return null;
   r = { ...r, color: rollColor(r.species, r.variant, rng) };
-  const before = shards(S, e.type), P = S.pity[e.type] = { ...before };
-  for (const k in B.pity) P[k] = RANK[rarity] >= RANK[k] ? 0 : P[k] + 1;
+  const before = shards(S, e.type), P = e.gift ? { ...before } : S.pity[e.type] = { ...before };
+  if (!e.gift) for (const k in B.pity) P[k] = RANK[rarity] >= RANK[k] ? 0 : P[k] + 1;
   const accs = Object.keys(ACCESSORIES);
   const acc = (forced || rng() < B.secret.chance) ? accs[Math.floor(rng() * accs.length)] : null;
   const newAcc = !!acc && !S.album[acc]; // first time this accessory turns up: the reveal card says 새 치장!
@@ -633,23 +633,39 @@ export function grownSeen(S, ids) { for (const a of S.animals) if (ids.includes(
 // a day alone as an end means the end of that day; missing or unreadable = no limit. A gift { hearts, candy, eggs, prop }:
 // the eggs are ordinary nest eggs (layEgg: rarity rolled, pity counted when they hatch), put in the newest open habitat's nest
 // with room; with every nest full each one comes as GIFT.eggHearts hearts (extra). A prop is put away in its habitat.
+// inbox 44: legendEggs = legendary eggs of the newest open habitat (species as usual, gift: true = the gauges don't count it,
+// crack). With that nest full they wait in S.giftEggs (the mailbox: 둥지에 자리가 생기면 받기, claimLegend), never hearts.
 const DAY_MS = 86400000;
 export const kst = s => { const m = /^(\d{4}-\d\d-\d\d)(?:[ T](\d\d:\d\d))?$/.exec(String(s ?? '').trim()); return m ? Date.parse(`${m[1]}T${m[2] || '00:00'}:00+09:00`) : NaN; };
 const kstEnd = s => kst(s) + (/:/.test(String(s)) ? 0 : DAY_MS);
 const live = (m, now) => !(now < kst(m.start)) && !(now >= kstEnd(m.end));
 export const mailOpen = (S, m, now) => typeof m?.id === 'string' && !!m.id && !S.mailGot.includes(m.id) && live(m, now) && (m.before == null || S.since < kst(m.before));
 export function give(S, rw, now, rng = Math.random, at = null) { // at: the habitat on screen (a prop goes there if open)
-  const n = k => Math.max(0, Math.min(k === 'eggs' ? 20 : 9999, Math.floor(+rw?.[k] || 0))); // a file from outside: whole numbers, capped
-  const got = { hearts: n('hearts'), candy: n('candy'), eggs: 0, extra: 0, prop: null };
+  const n = k => Math.max(0, Math.min(/eggs/i.test(k) ? 20 : 9999, Math.floor(+rw?.[k] || 0))); // a file from outside: whole numbers, capped
+  const got = { hearts: n('hearts'), candy: n('candy'), eggs: 0, extra: 0, prop: null, legend: 0, wait: 0 };
   S.hearts += got.hearts; S.candy = (S.candy || 0) + got.candy;
   const open = [...S.unlocked].reverse().map(id => HAB[id]).filter(h => h?.nest && h.ready);
   for (let i = n('eggs'); i > 0; i--) {
     const h = open.find(h => (S.nests[h.id]?.eggs.length ?? 0) < B.nest.max);
     if (h) { (S.nests[h.id] ??= { t: now, eggs: [] }).eggs.push(layEgg(S, h.nest, rng)); got.eggs++; } else { S.hearts += GIFT.eggHearts; got.extra++; }
   }
+  got.legend = layLegend(S, now, n('legendEggs')); got.wait = n('legendEggs') - got.legend; S.giftEggs += got.wait;
   const P = PROP[rw?.prop], hab = P?.habitat ?? (open.find(h => h.id === at) ?? open[0])?.id;
   if (P && !P.paid && hab) { S.props.push({ uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 }); got.prop = P.id; }
   return got;
+}
+const newestNest = S => [...S.unlocked].reverse().map(id => HAB[id]).find(h => h?.nest && h.ready);
+export const legendRoom = S => { const h = newestNest(S); return !!h && (S.nests[h.id]?.eggs.length ?? 0) < B.nest.max; };
+function layLegend(S, now, k) {
+  const h = newestNest(S); let n = 0;
+  for (; n < k && legendRoom(S); n++) (S.nests[h.id] ??= { t: now, eggs: [] }).eggs.push({ ...egg(S, h.nest, 'legendary'), gift: true });
+  return n;
+}
+// the waiting legend eggs, as many as the nest has room for
+export function claimLegend(S, now) {
+  const k = layLegend(S, now, S.giftEggs); if (!k) return null;
+  S.giftEggs -= k; const got = [{ id: 'legend', title: '기다리던 전설 알', hearts: 0, candy: 0, eggs: 0, extra: 0, prop: null, legend: k, wait: 0 }];
+  return { got, events: [{ type: 'gift', got }] };
 }
 // mail that can be had now (ids: only those), each once: ids kept in mailGot
 export function claimMail(S, list, now, ids, rng = Math.random) {

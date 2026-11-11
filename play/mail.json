@@ -12,5 +12,14 @@
       "end": "2027-03-31"
     }
   ],
-  "codes": []
+  "codes": [
+    {
+      "code": "TOYBROOK",
+      "title": "스레드 선물 코드",
+      "rewards": {
+        "hearts": 20,
+        "legendEggs": 1
+      }
+    }
+  ]
 }

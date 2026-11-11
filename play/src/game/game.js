@@ -97,6 +97,7 @@ export const refundProp = uid => act(() => R.refundProp(S, uid));
 // (toyhabitat.codes), so a new game here can't use one again
 const CODES = 'toyhabitat.codes', usedHere = () => { try { const u = JSON.parse(localStorage.getItem(CODES)); return Array.isArray(u) ? u : []; } catch { return []; } };
 export const claimMail = (list, ids) => act(now => R.claimMail(S, list, now, ids));
+export const claimLegend = () => act(now => R.claimLegend(S, now)); // 44
 export const useCode = (codes, input) => act(now => { const out = R.useCode(S, codes, input, now, usedHere());
   if (out.got) try { localStorage.setItem(CODES, JSON.stringify([...usedHere(), out.got[0].id])); } catch { /* full: the save still has it */ } return out; });
 // inbox 41 C 출석부: at = the habitat on screen (a gift prop goes there)

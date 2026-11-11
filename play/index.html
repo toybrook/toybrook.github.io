@@ -22,7 +22,7 @@
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="799163" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="799614" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -89,11 +89,7 @@
   <section class="intro pop ret news" id="news" hidden aria-label="새 소식"><div>
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
-      <li><i aria-hidden="true">📅</i><span>출석부<small>하루 한 번 들르면 하트·사탕·알을 받아요. 7일째에는 선물 소품을 줘요</small></span></li>
-      <li><i aria-hidden="true">📮</i><span>우편함·선물 코드<small>위쪽 막대의 봉투 단추를 누르면 편지와 선물이 와 있어요. 선물 코드는 설정에서 넣어요</small></span></li>
-      <li><i aria-hidden="true">✅</i><span>첫날 할 일<small>처음 3일 동안 작은 할 일 다섯 가지가 보여요. 하나마다 하트, 다 하면 「첫날 기념」 소품과 사탕 2개</small></span></li>
-      <li><i aria-hidden="true">🥚</i><span>첫 알이 빨리<small>새로 시작하면 처음 여섯 알은 2분마다, 다음 여섯 알은 5분마다 둥지에 생겨요</small></span></li>
-      <li><i aria-hidden="true">📊</i><span>이용 통계<small>쿠키 없이 시작·첫 알 같은 몇 가지만 세어요. 이름이나 저장 기록은 보내지 않고, 설정에서 끌 수 있어요</small></span></li>
+      <li><i aria-hidden="true">🥚</i><span>선물 코드 보상에 전설 알 추가</span></li>
     </ul>
     <p class="note">베타 기간의 데이터는 정식 출시 때 초기화돼요.</p>
     <div class="nbtns"><button class="go" data-close>확인</button></div>
