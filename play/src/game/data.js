@@ -11,13 +11,16 @@
 // Pure data: no DOM, no three.js, so tools/check-eggs.mjs can import it in Node.
 
 export const SCHEMA_VERSION = 11; // shape of the save; bump with a migration in rules.js (2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups)
-export const CONTENT_VERSION = 8; // bump when the lists below change (3: launch materials, one legendary each; marble and gold left the lists; 4: colour ids glitter gold -> violet, amber yellow -> honey; 5: meadow rabbit, pig, chicken; 6: meadow sheep, cow; 7: pond (turtle, otter, swan, flamingo, capybara; the duck moved from the meadow); 8: snow (penguin, polar bear, seal, arctic fox, reindeer, snowy owl))
+export const CONTENT_VERSION = 9; // bump when the lists below change (3: launch materials, one legendary each; marble and gold left the lists; 4: colour ids glitter gold -> violet, amber yellow -> honey; 5: meadow rabbit, pig, chicken; 6: meadow sheep, cow; 7: pond (turtle, otter, swan, flamingo, capybara; the duck moved from the meadow); 8: snow (penguin, polar bear, seal, arctic fox, reindeer, snowy owl); 9: dino (triceratops, brachiosaurus, stegosaurus, ankylosaurus, T. rex, pteranodon))
 
 const MIN = 60 * 1000;
 // inbox 22: which build this is. 'beta' now; 'release' at launch. A release build opens no beta save or backup (all start
 // over); the save and every backup carry it. Only here (config.js passes it on; the decor code of 24-2 is layout only and
 // opens in either). It also picks the PACE table below.
 export const EDITION = 'beta';
+// inbox 65: held back from the public build until the user okays them (14-1·14-2 신수와 이야기 카드, 14-3 공룡 정글). Off here;
+// tools/build-web.mjs turns this line on, tools/check-hold.mjs checks the built rules. The save's shape is the same either way
+export const HOLD = { myth: true, dino: true }; // release build: held back (inbox 65)
 // inbox 31 진행 속도, one table per edition. beta: quick and fun (the open beta; check-eggs sim 31 sets it against its goals:
 // 3 hatches and a first adult in a new game's first 10 minutes, the pond in a day, the snow in 3, level 10 in 2 days and 20
 // and 땅 넓히기 step 6 in about a week, for 3 visits a day of 10 minutes). release: the numbers as they were (sims 16~18), to be
@@ -44,6 +47,14 @@ const SCENE = { hearts: 10 };
 const SHELF = { hours: 3, n: 3, off: 0.2, every: 2 };
 // 15-1 계절 이벤트 (EVENTS below): 「곧 끝나요」 on the top bar this many days before an event ends
 const EVENT = { soon: 2 };
+// 14-1 신수의 부름 (MYTHIC below, rules.js mythTick): its first fire prints on day `day` (from S.since, 06:00), a campfire's `nights`
+// nights before the burnt hoofprints, then a guest `guest` days of bond (0: it settles the night it comes). release: placeholders
+// 16-1 놀러 보내기 (game/visit.js): a guest stays `stay` (real time), at most `max` at once; a postcard back gives ♥`card`, `cardDaily` a day
+const VISIT = { stay: 24 * 60 * MIN, max: 3, card: 10, cardDaily: 3 };
+// 16-2 특별한 하늘 (sky.js, 가안): a night's odds (a real meteor shower peak: 유성우 for sure); aurora: snow more often, red of the aurora nights;
+// bow2: a day's rainbow is a double one; miss: no 유성우·오로라 seen this many nights -> the next one has one; first: ♥ a 하늘 기록 slot first filled
+const SKY = { meteor: 0.25, aurora: 0.2, auroraSnow: 0.4, red: 0.05, comet: 0.07, bow2: 0.15, miss: 5, first: 5 };
+const MYTH = { beta: { day: 1, nights: 1, guest: 3 }, release: { day: 3, nights: 3, guest: 7 } }; // release: it comes in about a week, settles in about two (check-eggs 14-1)
 export const PACE = {
   release: {
     nest: { every: 60 * MIN, max: 8, start: 1, startRarity: 'common', early: { n: 0, every: 60 * MIN }, onUnlock: 0 },
@@ -62,6 +73,9 @@ export const PACE = {
     scene: SCENE,
     shelf: SHELF,
     event: EVENT,
+    myth: MYTH.release,
+    visit: VISIT,
+    sky: SKY,
   },
   beta: { // max 20: 10 h of eggs (the night between the last visit and the first); slots 3: with 2 the snow opened on day 4 (inbox-31.md)
     nest: { every: 30 * MIN, max: 20, start: 1, startRarity: 'common', early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3 }, // 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
@@ -80,11 +94,14 @@ export const PACE = {
     scene: SCENE,
     shelf: SHELF,
     event: EVENT,
+    myth: MYTH.beta,
+    visit: VISIT,
+    sky: SKY,
   },
 };
 const P = PACE[EDITION];
 export const BALANCE = {
-  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, event: P.event, // PACE (above)
+  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, event: P.event, myth: P.myth, visit: P.visit, sky: P.sky, // PACE (above)
   candy: { price: 15, free: 1 },                     // 꼬마 사탕 (inbox 14): holds a baby's growth (nothing shows on it); given back when it grows on. Hearts; a new game has `free`
   pity: { heroic: 30, legendary: 180 },              // shard gauges per egg type: every egg cracked +1 to each; full = the next egg is that rarity (legendary first).
                                                      // A natural one of that rarity or better empties the gauge. Guaranteed eggs prefer variants not owned yet
@@ -224,6 +241,8 @@ export const SIZE = {
   unit: 4.05, baby: 0.75,
   horse: 1.00, cow: 0.95, polarBear: 1.05, reindeer: 0.95, flamingo: 0.85, sheep: 0.70, pig: 0.60, swan: 0.60, capybara: 0.55, // the polar bear is also the longest
   penguin: 0.55, seal: 0.45, arcticFox: 0.45, rabbit: 0.48, chicken: 0.44, otter: 0.40, snowyOwl: 0.40, duck: 0.30, turtle: 0.30, // the seal lies down
+  brachiosaurus: 1.30, triceratops: 0.85, stegosaurus: 0.85, tRex: 0.80, ankylosaurus: 0.60, pteranodon: 0.45, // 14-3 dino: to the neck's top, the frill's, the plates', the crest's
+  firemane: 1.40, // 14-1 신수 (MYTHIC)
 };
 // a stage in model units -> scale s, and sink / r / seg in world units (legs and attach stay in model units)
 export const sized = (id, stage, m) => {
@@ -368,6 +387,44 @@ export const MODELS = {
     files: { baby: 'assets/models/snowyOwl_baby.glb', adult: 'assets/models/snowyOwl_adult.glb' },
     baby: sized('snowyOwl', 'baby', { h: 1.62, r: 0.54, seg: [-0.15, 0.02], legs: { hip: 0.14, x: [0.12], z: 0.2 }, wing: [0.06, 1, 0.4], attach: { head: { p: [0.1, 1.58, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.18, 0.98, 0], r: [0, 0, -0.2], s: 1.25 }, back: { p: [-0.54, 0.8, 0], r: [0, 0, 1.571], s: 0.95 }, eye: { p: [0.23, 1.25, 0], r: [0, 0, 0], s: 1.1 } } }),
     adult: sized('snowyOwl', 'adult', { h: 1.81, r: 0.44, seg: [-0.259, 0.02], legs: { hip: 0.2, x: [0.08], z: 0.16 }, wing: [0.06, 1.12, 0.32], attach: { head: { p: [0.06, 1.78, 0], r: [0, 0, -0.1], s: 0.85 }, neck: { p: [0.12, 1.18, 0], r: [0, 0, -0.2], s: 1.1 }, back: { p: [-0.44, 0.85, 0], r: [0, 0, 1.571], s: 0.9 }, eye: { p: [0.17, 1.48, 0], r: [0, 0, 0], s: 0.94 } } }),
+  },
+  // 14-3 dino (tools/bake-dino.mjs). walk.dig: how keen it is on the fossil site's dig spots (walk.js: a dig spot stays in its
+  // pick with odds 3 x dig; the pterosaur never digs, it perches on the rocks as the snowy owl: walk.perch, ctx.perches)
+  triceratops: {
+    move: 'walk', walk: { hop: 0, pace: 0.7, trot: 0.8, roam: 0.45, dig: 0.25 },
+    files: { baby: 'assets/models/triceratops_baby.glb', adult: 'assets/models/triceratops_adult.glb' },
+    baby: sized('triceratops', 'baby', { h: 1.808, r: 0.625, seg: [-0.729, 1.083], legs: { hip: 0.42, x: [0.4, -0.44], z: 0.3 }, attach: { head: { p: [1.0, 1.44, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.7, 0.92, 0], r: [0, 0, -1.0], s: 1.3 }, back: { p: [-0.1, 1.42, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [1.06, 1.1, 0], r: [0, 0, 0], s: 1.25 } } }),
+    adult: sized('triceratops', 'adult', { h: 2.196, r: 0.686, seg: [-1.131, 1.239], legs: { hip: 0.64, x: [0.56, -0.6], z: 0.32 }, attach: { head: { p: [1.26, 1.66, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.92, 1.2, 0], r: [0, 0, -1.0], s: 1.45 }, back: { p: [-0.15, 1.86, 0], r: [0, 0, 0], s: 1.25 }, eye: { p: [1.3, 1.38, 0], r: [0, 0, 0], s: 1.1 } } }),
+  },
+  brachiosaurus: {
+    move: 'walk', walk: { hop: 0, pace: 0.5, roam: 0.35, dig: 0.15 },
+    files: { baby: 'assets/models/brachiosaurus_baby.glb', adult: 'assets/models/brachiosaurus_adult.glb' },
+    baby: sized('brachiosaurus', 'baby', { h: 2.74, r: 0.591, seg: [-0.984, 0.948], legs: { hip: 0.56, x: [0.38, -0.42], z: 0.28 }, attach: { head: { p: [1.02, 2.68, 0], r: [0, 0, -0.1], s: 0.92 }, neck: { p: [0.72, 1.62, 0], r: [0, 0, -0.4], s: 1.05 }, back: { p: [-0.05, 1.44, 0], r: [0, 0, 0], s: 1.1 }, eye: { p: [1.12, 2.4, 0], r: [0, 0, 0], s: 1.02 } } }),
+    adult: sized('brachiosaurus', 'adult', { h: 3.69, r: 0.679, seg: [-1.393, 1.021], legs: { hip: 0.9, x: [0.5, -0.54], z: 0.32 }, attach: { head: { p: [1.26, 3.62, 0], r: [0, 0, -0.1], s: 0.72 }, neck: { p: [0.95, 2.4, 0], r: [0, 0, -0.35], s: 1.0 }, back: { p: [0, 1.96, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.34, 3.38, 0], r: [0, 0, 0], s: 0.8 } } }),
+  },
+  stegosaurus: {
+    move: 'walk', walk: { hop: 0, pace: 0.6, roam: 0.4, dig: 0.2 },
+    files: { baby: 'assets/models/stegosaurus_baby.glb', adult: 'assets/models/stegosaurus_adult.glb' },
+    baby: sized('stegosaurus', 'baby', { h: 1.559, r: 0.589, seg: [-0.889, 0.989], legs: { hip: 0.44, x: [0.36, -0.4], z: 0.28 }, attach: { head: { p: [1.0, 1.26, 0], r: [0, 0, -0.1], s: 0.97 }, neck: { p: [0.74, 0.86, 0], r: [0, 0, -1.3], s: 1.05 }, back: { p: [-0.1, 1.44, 0], r: [0, 0, 0], s: 1.0 }, eye: { p: [1.08, 0.96, 0], r: [0, 0, 0], s: 1.08 } } }),
+    adult: sized('stegosaurus', 'adult', { h: 2.079, r: 0.641, seg: [-1.337, 1.182], legs: { hip: 0.68, x: [0.46, -0.5], z: 0.3 }, attach: { head: { p: [1.3, 1.3, 0], r: [0, 0, -0.1], s: 0.76 }, neck: { p: [0.98, 1.08, 0], r: [0, 0, -1.3], s: 1.1 }, back: { p: [-0.1, 1.96, 0], r: [0, 0, 0], s: 1.2 }, eye: { p: [1.38, 1.08, 0], r: [0, 0, 0], s: 0.84 } } }),
+  },
+  ankylosaurus: {
+    move: 'walk', walk: { hop: 0, pace: 0.5, roam: 0.35, dig: 0.3 },
+    files: { baby: 'assets/models/ankylosaurus_baby.glb', adult: 'assets/models/ankylosaurus_adult.glb' },
+    baby: sized('ankylosaurus', 'baby', { h: 1.168, r: 0.588, seg: [-0.799, 0.731], legs: { hip: 0.32, x: [0.34, -0.38], z: 0.32 }, attach: { head: { p: [0.84, 1.12, 0], r: [0, 0, -0.1], s: 0.95 }, neck: { p: [0.6, 0.76, 0], r: [0, 0, -1.3], s: 1.15 }, back: { p: [-0.1, 1.16, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [0.92, 0.86, 0], r: [0, 0, 0], s: 1.05 } } }),
+    adult: sized('ankylosaurus', 'adult', { h: 1.378, r: 0.686, seg: [-1.104, 0.753], legs: { hip: 0.42, x: [0.46, -0.52], z: 0.38 }, attach: { head: { p: [1.0, 1.1, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.74, 0.86, 0], r: [0, 0, -1.3], s: 1.3 }, back: { p: [-0.1, 1.4, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.08, 0.9, 0], r: [0, 0, 0], s: 0.9 } } }),
+  },
+  tRex: {
+    move: 'walk', walk: { hop: 0, trot: 1.4, pace: 0.85, roam: 0.55, dig: 0.2 },
+    files: { baby: 'assets/models/tRex_baby.glb', adult: 'assets/models/tRex_adult.glb' },
+    baby: sized('tRex', 'baby', { h: 2.059, r: 0.486, seg: [-0.794, 0.813], legs: { hip: 0.32, x: [0], z: 0.25 }, attach: { head: { p: [0.64, 2.02, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.44, 1.28, 0], r: [0, 0, -0.5], s: 1.2 }, back: { p: [-0.2, 1.3, 0], r: [0, 0, 0.3], s: 0.95 }, eye: { p: [0.76, 1.68, 0], r: [0, 0, 0], s: 1.25 } } }),
+    adult: sized('tRex', 'adult', { h: 2.239, r: 0.486, seg: [-1.091, 0.953], legs: { hip: 0.44, x: [0], z: 0.26 }, attach: { head: { p: [0.78, 2.2, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.56, 1.54, 0], r: [0, 0, -0.5], s: 1.2 }, back: { p: [-0.2, 1.5, 0], r: [0, 0, 0.3], s: 1.0 }, eye: { p: [0.9, 1.92, 0], r: [0, 0, 0], s: 1.1 } } }),
+  },
+  pteranodon: {
+    move: 'walk', walk: { hop: 0.6, trot: 1.5, pace: 0.8, roam: 0.45, rest: 'sit', perch: 0.4 }, legMat: 'hoof',
+    files: { baby: 'assets/models/pteranodon_baby.glb', adult: 'assets/models/pteranodon_adult.glb' },
+    baby: sized('pteranodon', 'baby', { h: 1.785, r: 0.54, seg: [-0.143, 0.02], legs: { hip: 0.14, x: [0.12], z: 0.2 }, wing: [0.06, 1, 0.44], attach: { head: { p: [0.12, 1.62, 0], r: [0, 0, -0.1], s: 0.95 }, neck: { p: [0.18, 0.98, 0], r: [0, 0, -0.2], s: 1.25 }, back: { p: [-0.54, 0.8, 0], r: [0, 0, 1.571], s: 0.95 }, eye: { p: [0.24, 1.32, 0], r: [0, 0, 0], s: 1.05 } } }),
+    adult: sized('pteranodon', 'adult', { h: 2.039, r: 0.44, seg: [-0.179, 0.079], legs: { hip: 0.2, x: [0.08], z: 0.16 }, wing: [0.04, 1.14, 0.36], attach: { head: { p: [0.22, 1.8, 0], r: [0, 0, -0.1], s: 0.7 }, neck: { p: [0.12, 1.3, 0], r: [0, 0, -0.2], s: 0.95 }, back: { p: [-0.44, 0.85, 0], r: [0, 0, 1.571], s: 0.9 }, eye: { p: [0.28, 1.62, 0], r: [0, 0, 0], s: 0.75 } } }),
   },
 };
 
@@ -557,6 +614,63 @@ export const SPECIES = [
       gradient: [{ id: 'dawn', name: '새벽', body: '#ffffff', second: '#f4a6b8' }, { id: 'night', name: '밤하늘', body: '#c8d4f0', second: '#3e4a78' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
     legendary: [{ id: 'snowspirit', name: '눈의 정령', mat: 'snowspirit', effect: 'snow' }] },
+  // 14-3 dino. colors: accent = the triceratops' frill, the ankylosaur's back knobs, the pterosaur's crest; horn = the horns,
+  // the stegosaur's plates and tail spikes, the ankylosaur's tail club; hoof = the T. rex's toes and the pterosaur's feet;
+  // beak = the pterosaur's beak. The legendaries are 가칭 (temporary names)
+  { id: 'triceratops', name: '트리케라톱스', habitat: 'dino', model: 'triceratops', colors: { accent: '#f0a050', horn: '#f4e8cc' },
+    palette: {
+      solid: [{ id: 'green', name: '초록', body: '#86b86e' }, { id: 'sky', name: '하늘', body: '#8cc0e0', accent: '#f6c860' }, { id: 'pink', name: '분홍', body: '#f2a6be', accent: '#9a78e0', seldom: true }],
+      twotone: [{ id: 'leaf', name: '잎새', body: '#86b86e', second: '#f4e6b8' }, { id: 'sand', name: '모래', body: '#d8b47c', second: '#fbf2dc' }, { id: 'violet', name: '보라', body: '#a890d8', second: '#f6f0ff', seldom: true }],
+      spots: [{ id: 'moss', name: '이끼', body: '#9cc884', second: '#4e7a48' }, { id: 'sand', name: '모래', body: '#f0dcb0', second: '#b08050' }, { id: 'starry', name: '별밤', body: '#3e5a7a', second: '#f6f0c8', seldom: true }],
+      stripes: [{ id: 'mint', name: '민트', body: '#a8e0c8', second: '#ffffff' }, { id: 'lemon', name: '레몬', body: '#fbe7a0', second: '#fffaf0' }, { id: 'tiger', name: '호랑', body: '#f0a848', second: '#3a2a22', seldom: true }],
+      gradient: [{ id: 'jungle', name: '정글', body: '#d8f0a0', second: '#3e8a5a' }, { id: 'sunset', name: '노을', body: '#ffd08a', second: '#c25c3a' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
+    },
+    legendary: [{ id: 'lava', name: '용암 바위', mat: 'lava', effect: 'sparks' }] },
+  { id: 'brachiosaurus', name: '브라키오사우루스', habitat: 'dino', model: 'brachiosaurus', colors: { accent: '#7aaebb' },
+    palette: {
+      solid: [{ id: 'teal', name: '청록', body: '#8cc0cc' }, { id: 'sage', name: '연두', body: '#b4cc8a' }, { id: 'lilac', name: '라일락', body: '#c4b2ec', seldom: true }],
+      twotone: [{ id: 'sea', name: '바다', body: '#8cc0cc', second: '#eef8f4' }, { id: 'leaf', name: '잎새', body: '#9cc070', second: '#f4f0d0' }, { id: 'pink', name: '분홍', body: '#e8a0b8', second: '#fff4f6', seldom: true }],
+      spots: [{ id: 'teal', name: '청록', body: '#a8d4dc', second: '#4e8a98' }, { id: 'giraffe', name: '기린', body: '#f6e2b0', second: '#c88a48' }, { id: 'starry', name: '별밤', body: '#3e5a7a', second: '#f6f0c8', seldom: true }],
+      stripes: [{ id: 'sky', name: '하늘', body: '#a9cbe6', second: '#ffffff' }, { id: 'apricot', name: '살구', body: '#f6c7a2', second: '#fffaf2' }, { id: 'ink', name: '먹색', body: '#ffffff', second: '#3a3436', seldom: true }],
+      gradient: [{ id: 'lagoon', name: '석호', body: '#e0f6ee', second: '#3e8a98' }, { id: 'dusk', name: '저녁', body: '#9fb4d8', second: '#3e4a66' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
+    },
+    legendary: [{ id: 'moss', name: '이끼 숲', mat: 'moss', effect: 'fireflies' }] },
+  { id: 'stegosaurus', name: '스테고사우루스', habitat: 'dino', model: 'stegosaurus', colors: { horn: '#e06a50' },
+    palette: {
+      solid: [{ id: 'mustard', name: '겨자', body: '#e0c068' }, { id: 'olive', name: '올리브', body: '#a8b46a', horn: '#f0a050' }, { id: 'sky', name: '하늘', body: '#9fc8ec', horn: '#f39ac0', seldom: true }],
+      twotone: [{ id: 'honey', name: '꿀', body: '#e0c068', second: '#fbf2d8' }, { id: 'leaf', name: '잎새', body: '#8cb870', second: '#f4f0d0' }, { id: 'mint', name: '민트', body: '#7fd6c0', second: '#f4fffa', seldom: true }],
+      spots: [{ id: 'sand', name: '모래', body: '#f0dcb0', second: '#a87848' }, { id: 'moss', name: '이끼', body: '#c0d890', second: '#5a8a50' }, { id: 'pink', name: '분홍', body: '#fff0f4', second: '#ee86ae', seldom: true }],
+      stripes: [{ id: 'lemon', name: '레몬', body: '#fbe7a0', second: '#fffaf0' }, { id: 'sea', name: '바다', body: '#7fb3e8', second: '#ffffff' }, { id: 'tiger', name: '호랑', body: '#f0a848', second: '#3a2a22', seldom: true }],
+      gradient: [{ id: 'sunset', name: '노을', body: '#ffe066', second: '#ff7a59' }, { id: 'jungle', name: '정글', body: '#d8f0a0', second: '#3e8a5a' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
+    },
+    legendary: [{ id: 'obsidian', name: '흑요석', mat: 'obsidian', effect: 'motes' }] },
+  { id: 'ankylosaurus', name: '안킬로사우루스', habitat: 'dino', model: 'ankylosaurus', colors: { accent: '#8a6a50', horn: '#d8c0a0' },
+    palette: {
+      solid: [{ id: 'clay', name: '흙빛', body: '#b89878' }, { id: 'slate', name: '돌빛', body: '#9ca4a8', accent: '#6a7276' }, { id: 'rose', name: '장미', body: '#e09a9a', accent: '#a85a6a', seldom: true }],
+      twotone: [{ id: 'sand', name: '모래', body: '#b89878', second: '#f6ead4' }, { id: 'moss', name: '이끼', body: '#8aa070', second: '#eef0d8' }, { id: 'sky', name: '하늘', body: '#7fa8d8', second: '#ffffff', seldom: true }],
+      spots: [{ id: 'pebble', name: '조약돌', body: '#e6dccc', second: '#8a7a68' }, { id: 'honey', name: '꿀', body: '#fff6e6', second: '#e0a858' }, { id: 'violet', name: '보라', body: '#fbf6ff', second: '#a585f0', seldom: true }],
+      stripes: [{ id: 'apricot', name: '살구', body: '#f6c7a2', second: '#fffaf2' }, { id: 'mint', name: '민트', body: '#a4dfca', second: '#ffffff' }, { id: 'ink', name: '먹색', body: '#ffffff', second: '#3a3436', seldom: true }],
+      gradient: [{ id: 'choco', name: '초코우유', body: '#fff4e6', second: '#9a6444' }, { id: 'dusk', name: '저녁', body: '#d8dce4', second: '#5a6278' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
+    },
+    legendary: [{ id: 'fossil', name: '화석 돌', mat: 'fossil', effect: 'puffs' }] },
+  { id: 'tRex', name: '티라노사우루스', habitat: 'dino', model: 'tRex', colors: { hoof: '#7a5a48' },
+    palette: {
+      solid: [{ id: 'orange', name: '주황', body: '#e89060' }, { id: 'green', name: '초록', body: '#7cb870' }, { id: 'purple', name: '보라', body: '#a585f0', seldom: true }],
+      twotone: [{ id: 'orange', name: '주황', body: '#e89060', second: '#fbeedc' }, { id: 'sky', name: '하늘', body: '#86a8cc', second: '#f2f8ff' }, { id: 'pink', name: '분홍', body: '#f4a6b8', second: '#fff4f6', seldom: true }],
+      spots: [{ id: 'leopard', name: '얼룩', body: '#f6d8a8', second: '#a8683a' }, { id: 'mint', name: '민트', body: '#98e2c4', second: '#ffffff' }, { id: 'ladybug', name: '무당벌레', body: '#e8483c', second: '#2a2226', seldom: true }],
+      stripes: [{ id: 'tiger', name: '호랑', body: '#ffb23e', second: '#3a2a22' }, { id: 'sea', name: '바다', body: '#7fb3e8', second: '#ffffff' }, { id: 'candy', name: '사탕', body: '#ffffff', second: '#e8483c', seldom: true }],
+      gradient: [{ id: 'sunset', name: '노을', body: '#ffd08a', second: '#c25c3a' }, { id: 'lime', name: '라임', body: '#f0f8b0', second: '#5aa040' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
+    },
+    legendary: [{ id: 'meteor', name: '별똥별', mat: 'meteor', effect: 'twinkle' }] },
+  { id: 'pteranodon', fit: { wings: { r: [0, 0, 0.15], p: [0.06, 0.1, 0] } }, name: '프테라노돈', habitat: 'dino', model: 'pteranodon', colors: { accent: '#e86a50', hoof: '#6a5a50', beak: '#f2d48a' },
+    palette: {
+      solid: [{ id: 'periwinkle', name: '청보라', body: '#a8b8d8' }, { id: 'sand', name: '모래', body: '#e6cfa0', accent: '#c25c3a' }, { id: 'white', name: '흰색', body: '#f8f6f0', accent: '#f39ac0', seldom: true }],
+      twotone: [{ id: 'sky', name: '하늘', body: '#8fa8d0', second: '#f4f8ff' }, { id: 'coral', name: '산호', body: '#e89080', second: '#fff4ee' }, { id: 'mint', name: '민트', body: '#7fd6c0', second: '#f4fffa', seldom: true }],
+      spots: [{ id: 'grey', name: '잿빛', body: '#e4e6ec', second: '#6e737b' }, { id: 'sky', name: '하늘', body: '#f4f9ff', second: '#86b8e0' }, { id: 'starry', name: '별밤', body: '#3e5a7a', second: '#f6f0c8', seldom: true }],
+      stripes: [{ id: 'lavender', name: '라벤더', body: '#d2c4f0', second: '#ffffff' }, { id: 'lemon', name: '레몬', body: '#fbe7a0', second: '#fffaf0' }, { id: 'ink', name: '먹색', body: '#ffffff', second: '#3a3436', seldom: true }],
+      gradient: [{ id: 'dawn', name: '새벽', body: '#ffffff', second: '#f4a6b8' }, { id: 'sea', name: '바다', body: '#eaf6ff', second: '#477cc6' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
+    },
+    legendary: [{ id: 'sunset', name: '열대 노을', mat: 'sunset', effect: 'petals' }] },
 ];
 
 // inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the
@@ -591,6 +705,14 @@ export const ZONES = {
     { id: 'cave', name: '바위산 얼음 동굴', side: '-x', w: 8, line: '바위산 아래 얼음 동굴 입구에서 동물들이 낮잠을 자요.' },
     { id: 'iceplate', name: '얼음판', side: '+z', w: 8, line: '꽁꽁 언 얼음판에서 펭귄이 배로 미끄럼을 타요.' },
   ],
+  dino: [ // 14-3
+    { id: 'fernwood', name: '고사리 숲', side: '+x', w: 8, line: '키 큰 나무고사리 숲이에요. 동물들이 고사리 그늘에서 쉬어요.' },
+    { id: 'cliffs', name: '익룡 바위', side: '-x', w: 8, line: '바위 언덕 둘레의 돌기둥 위에 프테라노돈이 올라가 앉아요.' },
+    { id: 'riverbed', name: '얕은 강', side: '+z', w: 8, line: '정글 사이로 얕은 강이 흘러요. 동물들이 물가에 와서 쉬어요.' },
+    { id: 'bigdig', name: '큰 발굴지', side: '+x', w: 8, line: '커다란 공룡 뼈가 드러난 발굴지예요. 동물들이 와서 땅을 파요.' },
+    { id: 'mudflat', name: '진흙 늪', side: '-x', w: 8, line: '넓은 진흙 늪에서 동물들이 데굴데굴 뒹굴어요.' },
+    { id: 'springs', name: '김 나는 웅덩이', side: '+z', w: 8, line: '화산 옆 따뜻한 웅덩이에 동물들이 들어가 졸아요.' },
+  ],
 };
 
 // In unlock order: each one opens when the one before it is far enough along (BALANCE.unlock). ready: false = not built yet.
@@ -617,7 +739,11 @@ export const HABITATS = [
   // swim room of its own
   { id: 'snow', name: '설원', ready: true, nest: 'snow_nest', room: { swim: 0, walk: 577 },
     map: { at: [292, 210], label: [292, 243], icon: 'penguin' }, sound: ({ snow }) => ({ snowWind: 1 - 0.6 * snow, hush: 0.3 + 0.7 * snow }) },
-  { id: 'dino', name: '공룡 정글', ready: false, map: { at: [125, 147], label: [125, 180] } },
+  // Dino jungle (14-3): the snow's board with a lagoon (wading, no swim room), a mud wallow, a fossil dig, fern forest and a far
+  // volcano. Its land the same way as the snow's, by walkable ground on the same 0.25 grid measured today in the browser
+  // (2407 sq m against the snow's 2038; the snow's 873 was on the board before inbox 42's 1.5x): 577 x 2407 / 2038
+  { id: 'dino', name: '공룡 정글', short: '정글', ready: !HOLD.dino, nest: 'dino_nest', room: { swim: 0, walk: 681 },
+    map: { at: [125, 147], label: [125, 180], icon: 'triceratops' }, sound: ({ day, night, dry, rain }) => ({ birdsFar: day * dry, insects: (0.4 + 0.6 * night) * dry, stream: 0.4, frogs: 0.5 * night * (1 - rain), rainLeaves: rain }) },
 ];
 
 // Habitat props (서식지 꾸미기): bought with hearts, a fixed price, no randomness; placed, turned and put away for free.
@@ -680,6 +806,11 @@ export const PROPS = [
   { id: 'igloo', name: '이글루', habitat: 'snow', price: 90, r: 2, k: 1.6, shelter: true, cover: 'side' }, // inbox 26: x1.25 (1.6)
   { id: 'sled', name: '썰매', habitat: 'snow', price: 50, r: 0.9 },
   { id: 'icelamp', name: '얼음 등불', habitat: 'snow', price: 40, r: 0.44, k: 1.7, light: true, small: true }, // inbox 42 C2: r 0.45 -> 0.44 so it stays a cell across (x k)
+  // 14-3 공룡 정글 (the dino set, as the snow's: under 100 hearts, so small props). light: the lava lamp glows at night
+  { id: 'cycad', name: '소철', habitat: 'dino', price: 40, r: 0.8 },
+  { id: 'dinonest', name: '공룡알 둥지', habitat: 'dino', price: 60, r: 0.9 },
+  { id: 'lavalamp', name: '용암 등불', habitat: 'dino', price: 40, r: 0.44, k: 1.7, light: true, small: true },
+  { id: 'ribs', name: '갈비뼈 아치', habitat: 'dino', price: 80, r: 1.5 },
   // 28-2 놀이 소품 (and the swing, above): prices in PACE play. The fountain: the water birds' bath, so the pond's
   { id: 'seesaw', name: '시소', price: P.play.price.seesaw, r: 2.3, use: '두 마리가 같이 타요' },
   { id: 'ball', name: '굴리는 공', price: P.play.price.ball, r: 1.5, open: true, use: '공을 굴리며 놀아요' },
@@ -725,6 +856,8 @@ export const PROPS = [
   { id: 'walk_cairn', name: '조약돌 탑', price: 0, r: 0.3, small: true, gift: '산책 선물' }, // 13-1: STROLL_PROPS, in turn
   { id: 'walk_acorn', name: '큰 도토리', price: 0, r: 0.3, small: true, gift: '산책 선물' },
   { id: 'walk_pinecone', name: '솔방울', price: 0, r: 0.3, small: true, gift: '산책 선물' },
+  { id: 'sky_scope', name: '하늘 망원경', price: 0, r: 0.6, k: 1.2, gift: '특별한 하늘' }, // 16-2: given once (ui/sky.js); tapped: 하늘 보기, by day last night again
+  { id: 'myth_altar', name: '옛 제단', price: 0, r: 1.1, k: 1.4, habitat: 'meadow', gift: '신수의 부름' }, // 14-1: the burnt hoofprints give it (MYTHIC)
   // 15-1 이벤트 소품: bought with an event's coins in its window (EVENTS shop), never with hearts; nothing back when put away
   // (gift, price 0). ev: the event (sold again when it comes back, not yet). as: drawn with that prop's model (props.js
   // decorModel), its other looks copied here. 15-2 gives 첫눈 its own models
@@ -739,7 +872,16 @@ export const PROPS = [
   { id: 'ev_flakelamp', name: '큰 눈꽃 가로등', price: 0, r: 0.6, light: true, gift: '첫눈 이벤트', ev: 'firstsnow' },
   { id: 'ev_snowfam', name: '눈사람 가족', price: 0, r: 1.1, gift: '첫눈 이벤트', ev: 'firstsnow' },
   { id: 'ev_mitten', name: '벙어리장갑 의자', price: 0, r: 0.7, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  // 14-3 화석 발굴: dug up at the dino jungle's fossil site, one at a time in this order (FOSSIL, rules.js dig)
+  { id: 'fos_ammonite', name: '암모나이트 화석', price: 0, r: 0.6, gift: '화석 발굴' },
+  { id: 'fos_bone', name: '큰 뼈 화석', price: 0, r: 0.8, gift: '화석 발굴' },
+  { id: 'fos_egg', name: '공룡알 화석', price: 0, r: 0.55, gift: '화석 발굴' },
+  { id: 'fos_skull', name: '머리뼈 화석', price: 0, r: 1.0, gift: '화석 발굴' },
 ];
+// 14-3 화석 발굴: an animal digging at the dino jungle's fossil site (zones.js / dino/layout.js spots act 'dig', walk.js) turns up
+// the next of these (rules.js dig) with odds a dig, gap ms at least after the last find; each one once, a gift prop in the dino
+// habitat. Not part of BALANCE (no eggs, no hearts: decorations only)
+export const FOSSIL = { props: ['fos_ammonite', 'fos_bone', 'fos_egg', 'fos_skull'], gap: 2 * 3600e3, odds: 0.25 };
 // 42 F-1: list = the price as listed (release); price = what this edition charges (PACE priceX; big: list ♥100 and up). Gifts stay 0
 for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5, Math.round(p.price * P.priceX[p.price >= 100 ? 'big' : 'small'] / 5) * 5); }
 // 15-1 계절 이벤트 (docs/event.md; rules.js evTick; ui/event.js). start: 'MM-DD' every year (KST) unless play/events.json
@@ -798,6 +940,25 @@ export const PLACES = [
   { id: 'lake', name: '호숫가', lines: ['{n}{은/는} 호수에 비친 자기 얼굴을 봤어요', '{n}{이/가} 오리배가 떠가는 걸 구경했어요', '{n}{이/가} 노을이 질 때까지 앉아 있었어요'] },
   { id: 'path', name: '들판 오솔길', lines: ['{n}{은/는} 오솔길 끝까지 가 봤어요', '{n}{이/가} 울타리 너머를 기웃거렸어요', '{n}{은/는} 풀밭에서 네잎클로버를 찾았어요'] },
 ];
+// 14-1 신수 (神獸): its own rank, apart from RARITIES and SPECIES (so no nest egg, no 보관함, no seat, no walk: rules.js S.myth).
+// One per habitat, the meadow's first. 신수의 부름 (rules.js mythTick, ui/myth.js): fire prints -> a campfire's night -> burnt
+// hoofprints (page 1 + the 옛 제단) -> the altar's 3 (`hair` from a walk to `place`, `scenes` 놀이 장면, a 큰 소품 placed) -> 부르기
+// -> that night it comes -> a guest PACE myth.guest days -> it settles. pages: the story, page i shown when step i is done
+export const MYTHIC = [{
+  id: 'firemane', name: '불갈기 천리마', habitat: 'meadow', hair: '붉은 갈기 털', scenes: 3,
+  model: { file: 'assets/models/myth_firemane.glb', h: 2.517, r: 0.389, seg: [-0.43, 0.934], legs: { hip: 0.8432, foot: 0.165, x: [0.4, -0.42], z: 0.19 }, wing: [0.041, 1.266, 0.26] }, // tools/bake-mythic.mjs prints these
+  place: { id: 'firehill', name: '불의 언덕', lines: ['{n}{은/는} 따뜻한 언덕에서 붉은 털 한 가닥을 물고 왔어요', '{n}{이/가} 언덕의 그을린 풀밭을 한참 냄새 맡았어요', '{n}{은/는} 언덕 꼭대기에서 불씨 같은 털을 찾았어요'] },
+  tales: { at: '옛 제단', // 14-2 이야기 카드 (game/story.js): its coming, its settling
+    meet: ['하늘에서 불씨 하나가 천천히 내려왔어요.', '제단의 불 세 개가 한꺼번에 환해졌어요.', '친구들이 모두 고개를 들고 바라봤어요.'],
+    settle: ['며칠 동안 들판을 함께 달렸어요.', '이제 불갈기 천리마는 손님이 아니에요.', '오늘부터 초원의 식구예요.'] },
+  pages: [
+    ['모닥불 곁에 그을린 발굽 자국이 남았어요.', '자국을 따라가 보니 풀숲에 오래된 돌 제단이 있었어요.', '이 들판을 아는 누군가가 다시 오고 싶은 것 같아요.'],
+    ['불의 언덕에서 붉은 갈기 털을 찾았어요.', '아직도 손에 따뜻해요. 제단에 첫 불이 켜졌어요.'],
+    ['친구들이 노는 소리가 들판 가득 퍼졌어요.', '즐거운 소리를 좋아하는 손님이래요. 두 번째 불이 켜졌어요.'],
+    ['들판에 큰 놀거리가 생겼어요.', '머물 곳이 있다는 걸 알았나 봐요. 세 번째 불이 켜졌어요.'],
+    ['불갈기 천리마가 들판에 머물기로 했어요.', '아침이면 들판을 한 바퀴 달리고, 밤이면 들판을 환히 밝혀 줘요.'],
+  ],
+}];
 // inbox 41 D 첫날 할 일: shown on the first `days` days of a game (dayOf, from S.since) as a small list under the top bar. Each
 // task done once gives its hearts; all of them the `prop` (a 선물 prop) and `candy`. What counts: rules.js FIRST_V
 // 꾸미기 › 큰 소품 탭 (ui/decor.js TABS; first.js 「다음은 큰 소품」)
@@ -833,6 +994,8 @@ export const USES = { // 42 F-2: + the big props (tunnel ... snowslide) at the e
   otter: 'swing slide ball hammock campfire train tunnel tower gym carousel', capybara: 'hammock feeder campfire seesaw ball train tunnel tower gym carousel',
   penguin: 'slide seesaw ball campfire train tunnel gym carousel balloon snowslide', polarBear: 'campfire tunnel', seal: 'ball campfire hammock tunnel snowslide',
   arcticFox: 'swing slide seesaw ball hammock campfire train tunnel tower gym carousel balloon snowslide', reindeer: 'feeder campfire tunnel', snowyOwl: 'swing seesaw campfire tunnel tower balloon snowslide',
+  triceratops: 'feeder campfire ball tunnel', brachiosaurus: 'feeder campfire', stegosaurus: 'feeder campfire tunnel', ankylosaurus: 'feeder campfire ball tunnel',
+  tRex: 'feeder campfire ball tunnel', pteranodon: 'swing seesaw campfire tower balloon', // 14-3
 };
 
 // 13-2 놀이 장면 도감: what friends do with a play prop (USES) or with each other (walk.js social), watched on screen. One registers
@@ -889,6 +1052,7 @@ export const SETS = [
   { id: 'home', name: '집 꾸미기', props: ['table', 'shelf', 'platform', 'doll'] }, // 28-5 (its level: PACE play)
   { id: 'land', name: '언덕과 웅덩이', props: ['hillock', 'puddle', 'flowermound', 'rockmound'] }, // 28-6 지형 도장 (a level each: PACE play)
   { id: 'snow', name: '설원', props: ['snowman', 'igloo', 'sled', 'icelamp'] }, // 25-1: no level of its own, the snow habitat is its gate
+  { id: 'dino', name: '공룡 정글', props: ['cycad', 'dinonest', 'lavalamp', 'ribs'] }, // 14-3: as the snow's, the dino habitat is its gate
 ];
 
 // 22-1 「처음부터 놓인 소품」: each habitat's own trees, bushes, rocks and wildflower clusters (not the forest past the fence,
@@ -903,15 +1067,16 @@ export const NATURE = [
   { id: 'rock', name: '바위', r: 1.05 * NAT_K.rock, h: NAT_K.rock },
   { id: 'wildflowers', name: '들꽃 무리', r: 0.9, h: 0.45, open: true },
   { id: 'snowpine', name: '눈 덮인 전나무', r: 1.3 * NAT_K.pine, h: 3.6 * NAT_K.pine }, // 25-1: the snow's trees
+  { id: 'treefern', name: '나무고사리', r: 1.3 * NAT_K.tree, h: 3.4 * NAT_K.tree }, // 14-3: the dino jungle's trees
 ];
 // 22-1 땅 칠하기: a brush per grid cell (1 x 1 on the first board), stored as its index; looks only (animals walk as before)
-export const BRUSHES = [{ id: 'grass', name: '풀', c: '#86bf45', hab: ['meadow', 'pond'] }, { id: 'dirt', name: '흙길', c: '#e2bf86', hab: ['meadow', 'pond'], way: 1 }, { id: 'sand', name: '모래', c: '#efdcaa', hab: ['meadow', 'pond'] }, { id: 'gravel', name: '자갈', c: '#c4bdb0' }, { id: 'bloom', name: '꽃밭', c: '#7cb843', hab: ['meadow', 'pond'] },
+export const BRUSHES = [{ id: 'grass', name: '풀', c: '#86bf45', hab: ['meadow', 'pond', 'dino'] }, { id: 'dirt', name: '흙길', c: '#e2bf86', hab: ['meadow', 'pond', 'dino'], way: 1 }, { id: 'sand', name: '모래', c: '#efdcaa', hab: ['meadow', 'pond', 'dino'] }, { id: 'gravel', name: '자갈', c: '#c4bdb0' }, { id: 'bloom', name: '꽃밭', c: '#7cb843', hab: ['meadow', 'pond', 'dino'] },
   { id: 'snow', name: '눈', c: '#f4f6fa', hab: ['snow'] }, { id: 'ice', name: '얼음', c: '#cfe6f2', hab: ['snow'] },
   // 28-6: drawn along the cells, joined to the next ones: paths (way: terrain.js, with 흙길) and lines that stand (stand: lines.js;
   // animals go round them, props keep off them)
   { id: 'stonepath', name: '돌길', c: '#cfc8bb', way: 1 }, { id: 'plank', name: '나무판길', c: '#c99a63', way: 1 },
   { id: 'fenceline', name: '울타리', c: '#c88a4b', stand: 1 }, { id: 'wall', name: '돌담', c: '#a8a39a', stand: 1 }]; // c: the ground colour (terrain.js)
-// 25-1 hab: the habitats a brush paints in (none: all). 자갈 everywhere; 풀·흙길·모래·꽃밭 not on the snow; 눈·얼음 only there
+// 25-1 hab: the habitats a brush paints in (none: all). 자갈 everywhere; 풀·흙길·모래·꽃밭 not on the snow (14-3: on the dino jungle too); 눈·얼음 only there
 export const brushIn = (b, habId) => !!BRUSHES[b] && (!BRUSHES[b].hab || BRUSHES[b].hab.includes(habId));
 
 // Egg kinds. species: who can hatch from it, picked evenly. odds: rarity weights (%). hatchScale: x BALANCE.hatch.
@@ -921,4 +1086,5 @@ export const EGG_TYPES = [
   { id: 'meadow_nest', name: '초원 둥지 알', species: speciesOf('meadow'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, hatchScale: 1, sale: null },
   { id: 'pond_nest', name: '연못 둥지 알', species: speciesOf('pond'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, hatchScale: 1, sale: null },
   { id: 'snow_nest', name: '설원 둥지 알', species: speciesOf('snow'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, hatchScale: 1, sale: null },
+  { id: 'dino_nest', name: '공룡 정글 둥지 알', species: speciesOf('dino'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, hatchScale: 1, sale: null }, // 14-3
 ];

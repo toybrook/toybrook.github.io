@@ -100,12 +100,12 @@ function auroraMesh() {
 }
 
 // the rainbow: a pale band arching over the top of the view, far off (only the board in front hides it)
-function rainbowMesh() {
+function rainbowMesh(rev = false) { // rev (16-2 쌍무지개): the outer, fainter one, its colours the other way round
   const m = new THREE.Mesh(new THREE.RingGeometry(0.92, 1, 96, 1, 0, Math.PI), new THREE.ShaderMaterial({ transparent: true, depthWrite: false,
-    uniforms: { uBow: { value: 0 } },
+    uniforms: { uBow: { value: 0 }, uRev: { value: +rev } },
     vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: `uniform float uBow; varying vec2 vP;
-      void main(){ float k = (length(vP) - 0.92) / 0.08, a = atan(vP.y, vP.x), h = (1.0 - k) * 0.78;
+    fragmentShader: `uniform float uBow, uRev; varying vec2 vP;
+      void main(){ float k = (length(vP) - 0.92) / 0.08, a = atan(vP.y, vP.x), h = mix(1.0 - k, k, uRev) * 0.78;
         vec3 c = clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
         gl_FragColor = vec4(mix(c, vec3(1.0), 0.3), uBow * 0.42 * sin(k * 3.1416) * smoothstep(0.0, 0.5, a) * smoothstep(3.1416, 2.64, a)); }` }));
   m.frustumCulled = false; m.renderOrder = -1; return m;
@@ -113,17 +113,17 @@ function rainbowMesh() {
 
 // a habitat's weather: now() -> the weather (also its overcast, gray, for daylight.js), draw(t, w, L) every frame
 export function weather(scene, camera, controls, habId, area = [-20, 20, -31, 31]) {
-  let rain = null, bow = null, flakes = null, aur = null;
+  let rain = null, bow = null, bow2 = null, flakes = null, aur = null;
   const fog = scene.fog = new THREE.Fog('#ffffff', 1e4, 2e4); // always there (no shader rebuild when fog comes); this far off it fogs nothing
   return {
     now() { const w = weatherNow(habId); w.gray = Math.max(w.rain, w.snow * 0.45, w.fog * 0.6); return w; },
-    draw(t, w, L) {
+    draw(t, w, L, two = false) { // two: today's rainbow is a double one (16-2, game/sky.js bow2)
       rainNow.value = w.rain; snowNow.value = habId === 'snow' ? 0 : WEATHER.cover; // 15-2: the snow habitat is snowy anyway
       if (w.rain > 0 && !rain) scene.add(rain = rainMesh(area));
       if (rain) { rain.visible = w.rain > 0; rain.material.uniforms.uTime.value = t; }
       if (w.snow > 0 && !flakes) scene.add(flakes = rainMesh(area, true));
       if (flakes) { const u = flakes.material.uniforms; flakes.visible = w.snow > 0; u.uTime.value = t; u.uRain.value = w.snow; }
-      const au = habId === 'snow' ? L.night * (1 - Math.max(w.snow, w.fog)) * WEATHER.aur : 0; // the aurora: the snow's clear nights (15-2: brighter in 첫눈)
+      const au = habId === 'snow' && WEATHER.aur > 1 ? L.night * (1 - Math.max(w.snow, w.fog)) * WEATHER.aur : 0; // 15-2 첫눈: the snow's every clear night (16-2: else only on an aurora night, skyfx.js)
       if (au > 0.02 && !aur) scene.add(aur = auroraMesh());
       if (aur) { aur.visible = au > 0.02; if (aur.visible) { const hh = 250 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), hw = hh * camera.aspect;
         aur.position.copy(camera.position); aur.quaternion.copy(camera.quaternion); aur.translateZ(-250); aur.translateY(hh * 0.62); aur.scale.set(hw * 2.4, hh * 0.9, 1);
@@ -132,11 +132,12 @@ export function weather(scene, camera, controls, habId, area = [-20, 20, -31, 31
       if (w.fog > 0) { fog.near = d * (0.7 + 2.5 * (1 - w.fog)); fog.far = fog.near + d * (0.8 + 4 * (1 - w.fog)); } else { fog.near = 1e4; fog.far = 2e4; }
       if (w.bow > 0 && !bow) scene.add(bow = rainbowMesh());
       if (bow) {
-        bow.visible = w.bow > 0; if (!bow.visible) return;
+        bow.visible = w.bow > 0; if (bow2) bow2.visible = bow.visible && two; if (!bow.visible) return;
         // 250 off, through the view's sides at 55% of the way up and its middle at 86%
         const hh = 250 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), hw = hh * camera.aspect, dy = hh * 0.31, R = (hw * hw + dy * dy) / (2 * dy);
         bow.position.copy(camera.position); bow.quaternion.copy(camera.quaternion); bow.translateZ(-250); bow.translateY(hh * 0.86 - R); bow.scale.setScalar(R);
         bow.material.uniforms.uBow.value = w.bow * (1 - 0.6 * L.night);
+        if (two) { if (!bow2) scene.add(bow2 = rainbowMesh(true)); bow2.visible = true; bow2.position.copy(bow.position); bow2.quaternion.copy(bow.quaternion); bow2.scale.setScalar(R * 1.13); bow2.material.uniforms.uBow.value = bow.material.uniforms.uBow.value * 0.55; }
       }
     },
   };

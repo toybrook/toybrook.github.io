@@ -14,21 +14,23 @@ import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { makeFigure, loadModel } from '../animals/figure.js';
 import * as G from '../game/game.js';
-import { HABITATS, RARITIES, ACCESSORIES, SPECIES, SCENES, BALANCE } from '../game/data.js';
+import { HABITATS, RARITIES, ACCESSORIES, SPECIES, SCENES, BALANCE, MYTHIC, HOLD } from '../game/data.js';
 import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, displayColor, unlockInfo, twoName, variantsOf } from '../game/rules.js';
 import { toast, tip, lockText, josa } from './hud.js';
 import { DEBUG, calm } from '../config.js';
-import { figureThumb, silhouetteThumb, propThumb, studio, nightLights } from './thumbs.js';
+import { figureThumb, silhouetteThumb, propThumb, studio, nightLights, mythThumb } from './thumbs.js';
+import { mythCard, mythHint } from './myth.js';
+import { openStories, cardsIn } from './story.js';
 
 const el = document.getElementById('codex');
 let tab = HABITATS[0].id, night = false, hab = null; // night: 21-1 밤에 보기 (this screen only, off each time it opens)
 const isNew = k => !G.S.seen.includes(k);
-const open = id => G.S.unlocked.includes(id) || codexCells(id).some(c => G.S.codex[c.key]); // or already has some there (19-2: ducks registered in the meadow)
+const open = id => HABITATS.find(h => h.id === id).ready && G.S.unlocked.includes(id) || codexCells(id).some(c => G.S.codex[c.key]); // or already has some there (19-2: ducks registered in the meadow)
 export const hasNew = () => HABITATS.some(h => open(h.id) && codexCells(h.id).some(c => isNew(c.key)));
 
 export function openCodex(habId, api) { G.note('codex', 1); if (habId) tab = habId; hab = api; night = false; el.hidden = false; draw(); tip('codex', '#codex .cbar'); } // G.note: 41 D 첫날 할 일
 // live while open: redraw when what it shows changes (a variant registered, a habitat opened, someone stored), keeping the scroll
-const sig = () => [Object.keys(G.S.scenes).length, Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length].join();
+const sig = () => [Object.keys(G.S.scenes).length, Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length, G.S.myth?.here, G.S.myth?.settled].join();
 let shown = '';
 G.on(() => { if (el.hidden || sig() === shown) return; const body = el.querySelector('.cbody'), y = body?.scrollTop || 0, up = V?.box?.isConnected && V.box; draw(); el.querySelector('.cbody').scrollTop = y; if (up) el.append(up); }); // the 3D view stays up
 
@@ -39,6 +41,7 @@ el.addEventListener('click', e => {
   else if (b.dataset.tab) { tab = b.dataset.tab; draw(); }
   else if (b.dataset.night != null) { const y = el.querySelector('.cbody')?.scrollTop || 0; night = !night; draw(); el.querySelector('.cbody').scrollTop = y; }
   else if (b.dataset.shut != null) b.closest('.cdet').remove();
+  else if (b.dataset.story) openStories(b.dataset.story); // 14-2 이야기 카드
 });
 // a cell, tapped. Found: the 3D view (below). Not found: the silhouette. Both: where it comes from and where it lives.
 el.addEventListener('click', e => {
@@ -50,6 +53,18 @@ el.addEventListener('click', e => {
   silhouetteThumb(c.species.id, null, night).then(u => { box.querySelector('img').src = u; });
   el.append(box);
 });
+// 14-1 신수: its own row in each habitat (the meadow's 불갈기 천리마; the others' only a rumour yet), not in the count
+const mythRow = () => { if (HOLD.myth) return ''; const m = MYTHIC.find(m => m.habitat === tab), met = !!(m && G.S.myth?.here);
+  return `<h3>신수 <small>${+met}/1</small></h3><div class="crow"><div class="cell myth${met ? '' : ' unk'}" role="button" data-m="${m?.id || ''}">${m ? `<img alt="${met ? m.name : '아직 못 만난 신수'}">` : ''}<span>${met ? m.name : '?'}</span>${m ? '' : '<small>소문만 있어요</small>'}</div></div><button class="scards" data-story="${tab}">이야기 카드 <b>${cardsIn(tab).length}</b>장<small>신수·전설 친구를 만난 날</small></button>`; }; // 14-2
+function mythBox(id) {
+  const m = MYTHIC.find(m => m.id === id), met = !!(m && G.S.myth?.here), box = document.createElement('div'), n = [...Array(5)].filter((_, i) => G.S.myth?.read & 1 << i).length;
+  box.className = 'cdet pop myth';
+  box.innerHTML = `<div><b>${met ? m.name : '아직 못 만난 신수'}</b>${met ? mythCard() : m ? '<p class="pair"><span><img alt="신수 실루엣"><small>?</small></span></p>' : ''}<p class="from">${!m ? '이 서식지의 신수는 아직 소문만 있어요' : met ? `사는 곳: ${HAB[m.habitat].name} · 신수는 자리를 차지하지 않아요<br>이야기 ${n}/${m.pages.length} · 옛 제단에서 다시 읽어요` : mythHint()}</p><button class="back" data-shut>닫기</button></div>`;
+  const img = box.querySelector('img'); if (img) mythThumb(!met, false, met ? 0 : 1).then(u => { img.src = u; }, () => {});
+  el.append(box);
+}
+el.addEventListener('click', e => { const d = e.target.closest('.cell[data-m]'); if (d && tab !== 'album' && tab !== 'scenes') mythBox(d.dataset.m); });
+export function openMyth(api) { openCodex(MYTHIC[0].habitat, api); mythBox(MYTHIC[0].id); } // 14-1 stage 0: the fire prints tapped
 const from = c => { const h = HAB[c.species.habitat]; return `<p class="from">어디서 나와요: ${h.name} 둥지 · ${RAR[c.rarity].name} 알<br>사는 곳: ${h.name}</p>`; };
 
 // 26-5 the 3D view: one small renderer (made the first time), drawing only while the box is up; the habitat waits meanwhile
@@ -149,8 +164,9 @@ function draw() {
   }).join('');
   el.innerHTML = `<div class="chead"><b>도감</b><span>${cells.filter(got).length}/${cells.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>
 ${tabs()}${cells.length ? bar(tab, cells, cells.filter(got).length) : ''}
-<div class="cbody">${groups || '<p class="cnote">준비 중이에요</p>'}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}</div>`;
-  for (const d of el.querySelectorAll('.cell')) {
+<div class="cbody">${groups || '<p class="cnote">준비 중이에요</p>'}${groups ? mythRow() : ''}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}</div>`;
+  const mi = el.querySelector('.cell.myth img'); if (mi) mythThumb(!G.S.myth?.here, night).then(u => { mi.src = u; }, () => {});
+  for (const d of el.querySelectorAll('.cell[data-k]')) {
     const c = cells.find(c => c.key === d.dataset.k), img = d.firstChild;
     const stage = G.S.codex[c.key]?.adult == null ? 'baby' : 'adult'; // registered, not seen grown up yet: its baby
     (got(c) ? figureThumb(c.species.id, c.variant.id, displayColor(G.S, c.key), null, stage, night) : silhouetteThumb(c.species.id, null, night)).then(u => { img.src = u; }); // the colour picked in the cabinet (else the first found)

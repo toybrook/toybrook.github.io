@@ -280,7 +280,7 @@ function enter(hab) {
   here = hab;
   const H = HABITATS.find(h => h.id === hab), beds = Object.keys(H?.sound?.({ day: 1, night: 1, dry: 1, rain: 1, snow: 1 }) || {}), wet = beds.some(k => k.startsWith('rain'));
   if (wet) beds.push('rainLight', 'rainHeavy');
-  const own = hab === 'meadow' ? [hab, 'pond'] : [hab], keep = new Set([...beds.map(k => BEDS[k]), SPRITES.common, ...own.map(g => SPRITES[g]), wet && SPRITES.rain]);
+  const own = hab === 'meadow' ? [hab, 'pond'] : hab === 'dino' ? ['meadow', 'pond'] : [hab], keep = new Set([...beds.map(k => BEDS[k]), SPRITES.common, ...own.map(g => SPRITES[g]), wet && SPRITES.rain]);
   for (const g in ready) if (!keep.has(SPRITES[g])) { delete ready[g]; delete dec[SPRITES[g]]; }
   for (const u in raw) if (!keep.has(u)) delete raw[u];
   if (!hab) return;
@@ -300,11 +300,14 @@ export function ambience(hab, night = 0, rain = 0, snow = 0) {
   for (const k in want) bed(k, want[k] * (k.endsWith('Wind') ? 0.7 + 0.3 * gust() : 1));
 }
 
+// 16-3 책상 모드: 'off' silent, 'amb' the background only (no taps, no animals); null: as set
+let desk = null;
+export const deskSound = m => { desk = m; applySound(); };
 // the volumes and 모두 끄기 (설정 calls this after a change)
 export function applySound() {
   if (!A) return void touched(); // 27-7e: 켜기 itself (a tap) makes the sound, not the touch after it
   const t = A.currentTime;
-  out.gain.setTargetAtTime(PREFS.vAll, t, 0.05); amb.gain.setTargetAtTime(PREFS.vAmb, t, 0.05); fx.gain.setTargetAtTime(PREFS.vFx * FX_GAIN, t, 0.05); ani.gain.setTargetAtTime(PREFS.vAnimal * ANI_GAIN, t, 0.05);
+  out.gain.setTargetAtTime(PREFS.vAll, t, 0.05); amb.gain.setTargetAtTime(PREFS.vAmb, t, 0.05); fx.gain.setTargetAtTime(desk ? 0 : PREFS.vFx * FX_GAIN, t, 0.05); ani.gain.setTargetAtTime(desk ? 0 : PREFS.vAnimal * ANI_GAIN, t, 0.05);
   wake();
 }
 // every 0.1 s: the music box's next notes, the world's sounds, beds silent 30 s let go (their decoded sound: memory)
@@ -324,7 +327,7 @@ function build() {
 // running only when it may be heard: touched once, the tab shown, not muted (a silent context still costs battery)
 function wake() {
   if (!A) return;
-  if (document.hidden || PREFS.mute) { if (A.state === 'running') A.suspend(); } else if (A.state !== 'running') A.resume().catch(() => {});
+  if (document.hidden || PREFS.mute || desk === 'off') { if (A.state === 'running') A.suspend(); } else if (A.state !== 'running') A.resume().catch(() => {});
 }
 function touched() {
   if (!A) {

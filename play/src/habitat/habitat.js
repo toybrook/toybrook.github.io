@@ -8,6 +8,7 @@ import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { buildMeadow } from './meadow/index.js';
 import { buildPond } from './pond/index.js';
 import { buildSnow } from './snow/index.js';
+import { buildDino } from './dino/index.js';
 import { rectAt, strip, zoneSet, BOARD0 } from './zones.js';
 import { mist } from './mist.js';
 import { windTime, toyMat, snowNow } from './toyKit.js';
@@ -30,8 +31,10 @@ import { trainModel, recolor, treeCover } from './meadow/props.js';
 import { newPlay } from '../animals/play.js';
 import { blobSlot, ROOM } from '../animals/walk.js';
 import { landOf } from './land.js';
+import { mythLayer } from './myth.js';
+import { skyLayer } from './skyfx.js';
 
-const BUILD = { meadow: buildMeadow, pond: buildPond, snow: buildSnow }; // scene of each habitat that is ready (HABITATS ready: true)
+const BUILD = { meadow: buildMeadow, pond: buildPond, snow: buildSnow, dino: buildDino }; // scene of each habitat that is ready (HABITATS ready: true)
 // 27-1: three hangs a 'dispose' listener from each renderer on every geometry, material and texture that renderer draws,
 // and the listener holds the renderer's GL context. The shared (cached) ones outlive a habitat built again (main.js
 // rebuild), so every old renderer stayed alive (+0.5 MB a rebuild). Each habitat notes what its renderer hangs while it
@@ -158,6 +161,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   Object.assign(sun.shadow.camera, { left: -34 * kS, right: 34 * kS, top: 40 * kS, bottom: -40 * kS, near: 1, far: 140 * kS });
   sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.04; sun.shadow.radius = 4;
   scene.add(sun);
+  const fx = skyLayer(scene, camera, renderer); // 16-2 특별한 하늘 (stars, moon, aurora, comet, falling stars: drawn far, behind the board)
   const sky = weather(scene, camera, controls, habId, [built[0] - 2, built[1] + 2, built[2] - 2, built[3] + 2]); // 21-2: rain, fog, rainbow (before the light: it makes the fog the light colours)
   const light = daylight(renderer, scene, sun, sunDir, paintBg); light(sky.now().gray); // 21-1: sun, sky, background by the hour
 
@@ -184,8 +188,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const actors = new Map();
   let homed = false;
   const make = rec => { const a = moves[SP[rec.species].model].createActor(habitat.ctx, rec); actors.set(rec.id, a); return a; };
+  const asked = new Set(); // 16-1: a guest (ui/visit.js) that came after the build, of a species not fetched here: its model then
   function sync(records) {
     last = records;
+    for (const r of records) { const m = SP[r.species]?.model; if (r.guest && m && !moves[m] && !asked.has(m) && habitatOf(r) === habId) { asked.add(m); Promise.all([get(m), r.acc && loadAcc(r.acc)]).then(() => last && sync(last), () => {}); } }
     const want = new Map(records.filter(r => !r.stored && !r.pending && known(r) && habitatOf(r) === habId && moves[SP[r.species].model]).map(r => [r.id, r]));
     for (const [id, a] of actors) if (want.get(id) !== a.rec) { a.dispose(); actors.delete(id); if (focus === a) overview(); } // gone, or a new save reused the id
     const sp = habitat.ctx.spawn, R = fitW * 0.4; // inbox 43: opening with 0-3 friends they start round the middle (where a new one lands), so the close first view has them all
@@ -244,6 +250,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const c = habitat.ctx; return lands[kind] ??= landOf(open, kind ? (x, z) => c.walkable(x, z) || c.wet(x, z, kind) : c.walkable, c.bridgeEnds.length > 1 ? [c.bridgeEnds.slice(0, 2)] : []);
   };
   habitat.ctx.cramped = again => ui.cramped?.(again); // no room inside a closed fence: one put outside (walk.js unstick), said once
+  let skyOn = false, skyT = null, skyAt = 0; // 16-2 하늘 보기 (the camera tipped up to the sky); skyT: ui.skyNow(), read once a second
   let snapOn = false; // 24-1 사진 모드: a wider camera band (band)
   let propList = [], decorOn = false, ed = null, drag = null, pinch = null, back = null, carry = null; // carry: inbox 42 E, the animal held up { a, id, x, z, dx, dz }
   // ed: the prop being moved { uid, P, obj, x, z, rot, ok }; back: the camera before it was picked up
@@ -771,6 +778,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   function siteTap() { const s = site; s.n++; sfx('place'); snowPuff(s.x, s.z);
     if (s.n === 1) s.obj.add(lump(0.75, 0, 0.6, 0, 0.95)); else if (s.n === 2) s.obj.add(lump(0.5, 0, 1.55, 0, 0.95));
     else { scene.remove(s.obj); site = null; if (s.done(+(s.x / U).toFixed(4), +(s.z / U).toFixed(4))) gather(s.x, s.z, 6, 'rest', 2.4); } }
+  habitat.ctx.onDig = (x, z) => { puffs.push({ x, z, t: 0, c: '#e2c890' }); ui.onDig?.(); }; // 14-3 화석 발굴: done digging at the fossil site (walk.js): a puff of sand, now and then a fossil
   habitat.ctx.onBall = (x0, z0, x1, z1) => { balls.push({ m: lump(0.24, x0, 0, z0, 1), x0, z0, x1, z1, t: 0 }); scene.add(balls.at(-1).m); ballAt = performance.now(); };
   function updSnow(dt) {
     habitat.ctx.snowy = habId === 'snow' || snowNow.value > 0.5; // walk.js: 눈싸움 only on snow
@@ -786,6 +794,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
         if (habitat.ctx.pathClear(a.position.x, a.position.z, tx, tz)) { if (a.send(tx, tz, act, { fast: true })) k++; break; } } }
     return k;
   }
+  // 14-1 신수의 부름 (myth.js): the meadow's fire prints, burnt hoofprints, the altar's flames and the 불갈기 천리마 (ui/myth.js drives it)
+  const myth = habId === 'meadow' ? mythLayer({ scene, ctx: habitat.ctx, U, ui, open, nearest, gather, idle, placed, room: (r, x, z) => nearest((a, b) => fits({ r }, a, b), [x, z]),
+    puff: (x, z, c) => puffs.push({ x, z, t: 0, c }), view: (x, z, radius, phi) => { setFocus(null); goingHome = false; aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(x, ...panX), 0, THREE.MathUtils.clamp(z, ...panZ)), radius, phi }; } }) : null;
   const label = a => `${a.rec.nm ? a.rec.nm + ' · ' : ''}${SP[a.rec.species].name} · ${variantOf(a.rec.species, a.rec.variant).name} · ${STAGE_NAME[a.look.stage]}`;
   const height = a => new THREE.Box3().setFromObject(a.look.obj).max.y - a.obj.position.y;
 
@@ -804,6 +815,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       const uid = propUnder(e); if (uid != null) ui.onPropTap?.(uid);
       return;
     }
+    if (fx.tap(ndc.x, ndc.y)) { sfx('place'); ui.onStar?.(e.clientX, e.clientY); return; } // 16-2 a falling star caught: 별 조각
+    if (myth?.tap(ray, hit, e)) return; // 14-1
     for (const [o, f] of [[site?.obj, siteTap], [pileObj, pileTap]]) if (o && ray.intersectObject(o, true).length) return void f(); // 15-2: tapped on purpose
     // 28-3: a prop that does something when tapped (props.js userData.tap), with no animal in front of it
     const toys = [...placed.values()].filter(p => p.obj.userData.tap), th = toys.length ? ray.intersectObjects(toys.map(p => p.obj), true)[0] : null;
@@ -829,6 +842,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // for the bell the animals near (up to six, not busy, with a way there) running over to stand by it. The fireworks by day: false, a note says why
   function tapProp(p, shown) {
     const { x, z } = p.spot, near = (a, r) => Math.hypot(a.position.x - x, a.position.z - z) < r;
+    if (p.prop === 'sky_scope') { p.obj.userData.tap(); sfx('place'); ui.onScope?.(); return; } // 16-2 하늘 망원경 (ui/sky.js)
     if (p.obj.userData.tap() === false) { sfx('undo'); ui.say?.('작은 폭죽은 밤에만 쏠 수 있어요'); return; }
     sfx(p.prop);
     if (p.prop === 'musicbox') { const n = music(); ui.say?.(n ? `오르골: ${n}${PREFS.mute || !PREFS.vAll || !PREFS.vAmb ? ' · 소리를 켜면 들려요' : ''}` : '오르골을 멈췄어요'); if (n) for (const a of shown) if (near(a, 14)) a.poke(); } // 27-7e: the sound off, it says why there is no tune
@@ -891,7 +905,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (a) { lift = 0.5 * height(a); near = fit(a, NEAR_FILL, FRONT_PHI, faceOf(a)); glide = { radius: 1.4 * near }; }
     controls.zoomToCursor = !a; // following: zoom toward the animal
   }
-  function overview(w = false) { setFocus(null); aim = null; goingHome = true; wide = w; homeOn = !w; setHome(); } // inbox 63: w, the whole board (전체 보기); else on the friends
+  function overview(w = false) { skyOn = false; setFocus(null); aim = null; goingHome = true; wide = w; homeOn = !w; setHome(); } // inbox 63: w, the whole board (전체 보기); else on the friends
   const toggle = () => overview(!(wide && !focus && !away())); // the button: at the whole board -> the friends; else -> the whole board
   // 정면: an eased move (slow start, slow stop) to its face over FRONT_T; after that it keeps to its face as it turns
   function front() {
@@ -923,7 +937,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   function band(dt) {
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off);
     const t = focus ? 0 : THREE.MathUtils.clamp((sph.radius - 12) / 38, 0, 1);
-    const [lo, hi] = decorOn ? DECOR : snapOn ? [deg(4), deg(88)] : [TOP, LOWEST - deg(12) * t];
+    const [lo, hi] = decorOn ? DECOR : snapOn ? [deg(4), deg(88)] : skyOn ? [deg(60), deg(102)] : [TOP, LOWEST - deg(12) * t]; // 16-2 하늘 보기: from below the raised target, looking up
     const phi = sph.phi + (THREE.MathUtils.clamp(sph.phi, lo, hi) - sph.phi) * (1 - Math.exp(-dt * 6));
     if (phi !== sph.phi) { sph.phi = phi; camera.position.copy(controls.target).add(off.setFromSpherical(sph)); }
     controls.minPolarAngle = Math.min(lo, phi); controls.maxPolarAngle = Math.max(hi, phi); // the hard limits never snap it
@@ -1069,7 +1083,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // 26-3 배터리 절약: 30 frames a second, 15 after a minute without a touch, a key or the mouse
   let lastIn = performance.now(), lastDraw = 0;
   for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown']) window.addEventListener(ev, () => { lastIn = performance.now(); }, { passive: true, ...sig });
-  const fpsCap = () => !PREFS.saver ? 60 : performance.now() - lastIn > 60000 ? 15 : 30;
+  let deskOn = false, deskT = 0, rafOf = window, loop = 0; // 16-3 책상 모드: 15 fps, the camera drifting from friend to friend; rafOf: the 작은 창 draws in its own window
+  const fpsCap = () => deskOn ? 15 : !PREFS.saver ? 60 : performance.now() - lastIn > 60000 ? 15 : 30;
   function perf(rawDt) {
     fN++; fT += rawDt; worst = Math.max(worst, rawDt); if (fT < 1) return;
     const fps = fN / fT;
@@ -1087,12 +1102,12 @@ GPU ${gpu}`; }
   let active = true, lastTag = '', noteAt = 0;
   function setActive(on) { active = on; renderer.domElement.style.display = on ? '' : 'none'; clock.getDelta(); fN = fT = slow = 0; camState = null; if (!on) ambience(null); else if (DEBUG) window.__hab = dbg; } // paused (and hidden: another habitat may share the container) while the world map is shown
   const clock = new THREE.Clock();
-  function tick() {
-    if (dead) return;
-    requestAnimationFrame(tick);
+  function tick(id = loop) {
+    if (dead || id !== loop) return;
+    rafOf.requestAnimationFrame(() => tick(id));
     if (!active) return;
-    if (PREFS.saver) { const now = performance.now(); if (now - lastDraw < 1000 / fpsCap() - 4) return; lastDraw = now; } // 26-3 배터리 절약
-    const raw = clock.getDelta(), dt = Math.min(PREFS.saver ? 0.075 : 0.05, raw), t = clock.elapsedTime; // 15 fps: steps of 1/15 s keep the walk at speed
+    if (PREFS.saver || deskOn) { const now = performance.now(); if (now - lastDraw < 1000 / fpsCap() - 4) return; lastDraw = now; } // 26-3 배터리 절약
+    const raw = clock.getDelta(), dt = Math.min(PREFS.saver || deskOn ? 0.075 : 0.05, raw), t = clock.elapsedTime; // 15 fps: steps of 1/15 s keep the walk at speed
     const w = sky.now(), L = light(w.gray); habitat.ctx.night = L.night; habitat.ctx.rain = w.rain + w.snow; habitat.ctx.az = Math.atan2(camera.position.z - controls.target.z, camera.position.x - controls.target.x); flies?.(t, L.night); ambience(habId, L.night, w.rain, w.snow); // walk.js / swim.js: sleepier at night, shelter or swim in the rain (25-1: the snow's snow alike)
     windTime.value = t; habitat.update(dt, t); mistTick(t, dt); bugs.tick(t, L.night, w.rain);
     if (t > noteAt) { noteAt = t + 2; const es = [...placed.values()]; // 23-2 도전 과제: what is on screen now
@@ -1104,7 +1119,7 @@ GPU ${gpu}`; }
     for (const a of actors.values()) a.update(dt, t);
     if (t > homeAt && !decorOn) { homeAt = t + 1; penCheck(); }
     hear(camera, controls.target, actors, habitat.ctx, D.list, underfoot); // 13-0: the world's sounds where they are
-    updPuffs(dt); updSnow(dt);
+    updPuffs(dt); updSnow(dt); myth?.tick(dt, t);
     for (const e of placed.values()) e.obj.userData.tick?.(t); ed?.obj.userData.tick?.(t); // props that move (pinwheel, swing, boat...)
     if (ed && ed.on == null && fits(ed.P, ed.x, ed.z, SZ(ed)) !== ed.ok) moveEdit(ed.x, ed.z); // animals walk in and out of the held prop's spot (28-5: at its size; one on a top spot has none)
     if (grassDirty) { grassDirty = false; mask(hideGrass); }
@@ -1117,10 +1132,10 @@ GPU ${gpu}`; }
     else if (peekT && (peekT -= dt) <= 0) { peekT = 0; if (back0 === 'home') overview(); else aim = back0; back0 = null; } // inbox 43: back from the new friend (64-A: the first, the start view on it)
     if (hello && (hello.t -= dt) <= 0) { const a = hello.a; hello = null; if (a.obj.visible) { a.poke(); ui.hello?.(...project(a.obj, height(a) * 0.8)); } } // inbox 64-A
     if (homeOn && !focus && !aim && !peekT && !decorOn && !snapOn && !trainCam && (homeT -= dt) <= 0) { homeT = 1; if (actors.size && actors.size <= 3) { setHome(); goingHome = true; } }
-    feedWheel(dt); steerCamera(dt);
+    feedWheel(dt); steerCamera(dt); if (deskOn) deskCam(dt);
     if (!focus && !(DEBUG && window.__hab.free)) { // keep pan inside the board (screenshot script can lift this); eased so leaving a follow near the edge doesn't jump
       const T = controls.target, k = 1 - Math.exp(-dt * 8);
-      want.set(THREE.MathUtils.clamp(T.x, ...panX), goingHome ? T.y : 0, THREE.MathUtils.clamp(T.z, ...panZ)).sub(T).multiplyScalar(k);
+      want.set(THREE.MathUtils.clamp(T.x, ...panX), goingHome || skyOn ? T.y : 0, THREE.MathUtils.clamp(T.z, ...panZ)).sub(T).multiplyScalar(k);
       T.add(want); camera.position.add(want);
     }
     const tag = focus ? label(focus) : '', k = tag + (focus?.rec.id ?? ''); if (k !== lastTag) { lastTag = k; ui.tag?.(tag, focus?.rec); } // stage can change while followed
@@ -1128,9 +1143,16 @@ GPU ${gpu}`; }
     want.copy(controls.target); controls.update();
     if (focus && held && !decorOn && (panned += want.distanceTo(controls.target)) > 0.08 * near) setFocus(null); // the view moved: stop following
     camUi();
-    guard(); rEnd = real.distanceTo(controls.target); clearView(); fadeProps(dt); sky.draw(t, w, L);
+    guard(); rEnd = real.distanceTo(controls.target); clearView(); fadeProps(dt);
+    if (t > skyAt) { skyAt = t + 1; skyT = ui.skyNow?.(habId) ?? null; } fx.draw(t, dt, skyT, L, w.gray); sky.draw(t, w, L, !!skyT?.bow2); // 16-2
     RIM.value = snapOn ? 0 : 0.2 * THREE.MathUtils.clamp((rEnd - 90) / 90, 0, 1); renderer.render(scene, camera); RIM.value = 0; // inbox 63: faint rim only far out
     perf(raw);
+  }
+  // 16-3 책상 모드: every 25 s (움직임 줄이기 40 s) another friend on show, seen from 3x its nearest a little from the side, the view slowly going round it
+  function deskCam(dt) {
+    if ((deskT -= dt) <= 0) { deskT = calm() ? 40 : 25; const vis = [...actors.values()].filter(a => a.obj.visible), a = vis[Math.floor(Math.random() * vis.length)];
+      if (a && a !== focus) { setFocus(a); glide = { radius: 3 * near, phi: 1.05 }; } }
+    off.copy(camera.position).sub(controls.target); sph.setFromVector3(off); sph.theta += dt * (calm() ? 0.02 : 0.05); camera.position.copy(controls.target).add(off.setFromSpherical(sph));
   }
   function project(obj, lift = 2.4) { const v = obj.position.clone(); v.y += lift; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }
   function resize() {
@@ -1140,7 +1162,7 @@ GPU ${gpu}`; }
   }
   window.addEventListener('resize', resize, sig);
   // 27-1: the habitat on screen (a built one entered again is only set active, not started again)
-  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }) }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests)
+  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }), myth }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests)
   if (reveal) overview(true); // out to the wider board while the mist draws back
   // 28-1: a zone just opened (main.js): the camera glides out over it, and up to 4 animals run to its spots
   function showZone(k) {
@@ -1169,10 +1191,10 @@ GPU ${gpu}`; }
     return { was, now };
   }
   tick();
-  if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus });
+  if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus, fx });
   return {
     resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, showZone, topView,
-    pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
+    myth, pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw
     // 'isReady' of undefined there, uncaught, and the curtain never lifted. Here gone = ready, and it always ends (10 s at most)
@@ -1191,6 +1213,14 @@ GPU ${gpu}`; }
     // inbox 42 G: the preview is fitted under the panel by photo.js (a CSS transform; taps read the canvas rect), the view itself is whole
     canvas: renderer.domElement, snap(on) { snapOn = on; },
     sky: () => ({ hour: hourNow(), kind: weatherNow(habId).kind }), // 15-1: what a photo shows (the event album)
+    // 16-2 하늘 보기: on, the target goes up 6 m and the camera down to ~2.7 m, 24 m back: looking 8 deg up over the friends at the sky; off, home
+    skyView(on) { skyOn = on; skyAt = 0; if (!on) return void overview(); setFocus(null); goingHome = homeOn = false; trainCam = false;
+      const T = controls.target; aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(T.x, ...panX), 6, THREE.MathUtils.clamp(T.z, ...panZ)), radius: 24, phi: deg(98) }; },
+    skyOn: () => skyOn,
+    desk(on) { deskOn = on; deskT = 0; if (on) { setFocus(null); aim = null; goingHome = homeOn = trainCam = skyOn = false; } else overview(); }, // 16-3
+    raf(win) { rafOf = win; loop++; tick(); }, // 16-3 작은 창: the frames from the window the canvas is in (the old loop ends)
+    skyState: () => { const w = sky.now(); return { gray: w.gray, bow: w.bow ?? 0, night: habitat.ctx.night ?? 0 }; },
+    spot: r => { const p = spot(r); return p && [+(p[0] / U).toFixed(4), +(p[1] / U).toFixed(4)]; }, // a free spot near the view's middle, in save units (a gift)
     shot(ratio) {
       renderer.setPixelRatio(ratio); renderer.setSize(W(), H()); renderer.render(scene, camera);
       const c = document.createElement('canvas'); c.width = renderer.domElement.width; c.height = renderer.domElement.height; c.getContext('2d').drawImage(renderer.domElement, 0, 0);

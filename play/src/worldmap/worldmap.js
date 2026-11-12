@@ -24,6 +24,9 @@ const ICON = {
   penguin: `<ellipse cy="1" rx="8.6" ry="11.6" fill="#3d4250"/><ellipse cy="2.6" rx="5.8" ry="9.4" fill="${CREAM}"/>
     <circle cx="-2.4" cy="-4.4" r="1.1" fill="${INK}"/><circle cx="2.4" cy="-4.4" r="1.1" fill="${INK}"/><path d="M-1.9-2.6H1.9L0 .2z" fill="#f1a948"/>
     <ellipse cx="-3.4" cy="12.4" rx="3" ry="1.4" fill="#f1a948"/><ellipse cx="3.4" cy="12.4" rx="3" ry="1.4" fill="#f1a948"/>`, // 25-1 the snow's sign
+  triceratops: `<ellipse cx="-3" cy="-2" rx="9.5" ry="9" fill="#e9c48d"/><ellipse cx="2.5" cy="3.5" rx="8" ry="6.6" fill="${CREAM}"/>
+    <path d="M9 2.5 14.2 6 9 8.6z" fill="${CREAM}"/><path d="M-.6-1.4 3.4-11.6 3.2-.6zM4.6-.8 8.6-9.2 7.8.4zM10.6 1.2 12.6-3.6 12.4 2.4z" fill="#f6efe0"/>
+    <circle cx="5.6" cy="1.6" r="1.1" fill="${INK}"/>`, // 14-3 the dino jungle's sign
 };
 const SIGN = icon => `<svg viewBox="-20 -20 40 50" aria-hidden="true">
   <rect x="-2.6" y="12" width="5.2" height="17" rx="2" fill="#8a5a2f"/>

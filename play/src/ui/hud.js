@@ -24,6 +24,8 @@ function fx(cls, text, x, y, ms) {
 export const heart = (x, y) => fx('heart', '♥', x, y, 1300);
 export const zzz = ([x, y]) => fx('zz', 'z', x, y, 2300);
 // a sheet (nest, codex, storage, cabinet...) is open over the habitat: nothing floats over animals then
+// a window opened on a 3D tap's pointerup: the click that follows lands on it (a phone hit-tests the click after the window is up), so eat it
+export const eat = () => { const f = e => { e.stopPropagation(); e.preventDefault(); }; addEventListener('click', f, { capture: true, once: true }); setTimeout(() => removeEventListener('click', f, { capture: true }), 450); };
 export const overlayOpen = () => !!document.querySelector('#habitat > section:not([hidden])');
 
 // time left: 4:05 / 1:02:05 (slots), 40초 / 12분 / 1시간 5분 (sentences)
@@ -51,7 +53,7 @@ export function ask(text, ok = '확인', no = '취소') {
 }
 
 // the windows, top first; each closes with its own close button (so its own code runs)
-const TOPS = ['#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#event', '#prefs', '#help', '#habMenu', '#attend', '#ret', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
+const TOPS = ['#desk', '#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#story', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#visit', '#skySheet', '#event', '#prefs', '#help', '#habMenu', '#attend', '#ret', '#myth', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
 const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden') && !el.closest('[data-lock]'); // 64-A: ui/first.js locks
 export const topWindow = () => { for (const q of TOPS) { const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };

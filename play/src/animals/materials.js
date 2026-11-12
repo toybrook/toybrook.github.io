@@ -167,6 +167,7 @@ const SKY = 'vec3(0.97, 0.88, 0.75)'; // the page gradient behind a transparent 
 // after its post, in screen colour (the scene seen through them is dark at night, so they would go dark with it)
 const NIGHT_LOOK = { glow: 1.2, najeon: 0.8, pearl: 0.8, galaxy: 0.8, jade: 1.0, fortune: 0.6, cotton: 0.8, opal: 1.0, cowopal: 1.0, palejade: 1.2, coral: 0.8,
   moonstone: 1.2, frost: 1.0, yuzu: 0.8, dawn: 1.0, aurora: 1.2, glacier: 0.8, moonpearl: 1.0, starlight: 1.0, lantern: 1.5, snowspirit: 1.0,
+  lava: 0.8, moss: 1.0, obsidian: 1.2, fossil: 0.8, meteor: 1.0, sunset: 0.8, // 14-3
   // (GLSL instead of K: its own glow is too faint to scale; by night its silver ripples and rim light up)
   moonwater: 'totalEmissiveRadiance = totalEmissiveRadiance * (1.0 + uNight * 1.5) + uNight * (vec3(0.7, 0.78, 1.0) * rip * 0.45 + uBase * 0.9 * pow(1.0 - nv, 2.0));' };
 const AMBER_NIGHT = 'gl_FragColor.rgb += uNight * 0.7 * uTint * (0.3 + 0.7 * nv) * (1.0 - fr);', CRYSTAL_NIGHT = 'gl_FragColor.rgb += uNight * vec3(0.55, 0.75, 1.0) * (0.12 + 0.3 * pow(nv, 2.0)) * (1.0 - fr);';
@@ -485,6 +486,39 @@ const SPIRIT = `vec3 c = cells(p * 12.0 + 2.0); float gl = (1.0 - smoothstep(0.0
   float n = fbm3(p * 2.5 + vec3(0.0, uTime * 0.04, 0.0));
   diffuseColor.rgb *= mix(vec3(0.84, 0.91, 1.0), vec3(1.0), n); roughnessFactor = 0.22;
   totalEmissiveRadiance += vec3(0.6, 0.8, 1.0) * (0.05 + 0.28 * pow(1.0 - nv, 2.0)) + vec3(0.9, 0.97, 1.0) * gl * 0.7;`;
+// ---- 14-3 공룡 정글 전설 (가칭). p: object space / figure height (p.y 0 at the feet, 1 at the top) ----
+// 용암 바위 (트리케라톱스): dark basalt with glowing orange cracks between big cells, each piece breathing on its own
+const LAVA = `vec3 c = cells(p * 4.0 + 1.3); float e = c.y - c.x, crack = 1.0 - smoothstep(0.0, 0.05 + fwidth(e), e);
+  float pulse = 0.75 + 0.25 * sin(uTime * 1.2 + c.z * 12.0), n = fbm3(p * 6.0);
+  diffuseColor.rgb = mix(diffuseColor.rgb * (0.8 + 0.4 * n), vec3(1.0, 0.45, 0.1), crack); roughnessFactor = mix(0.55, 0.3, crack);
+  totalEmissiveRadiance += vec3(1.0, 0.42, 0.08) * crack * pulse * 1.2 + vec3(1.0, 0.3, 0.05) * 0.06 * pow(1.0 - nv, 2.0);`;
+// 이끼 숲 (브라키오사우루스): soft moss in two greens, and tiny spores glowing here and there
+const MOSS = `float n = fbm3(p * 5.0), m = smoothstep(0.45, 0.6, fbm3(p * 2.2 + 4.0));
+  vec3 c = cells(p * 14.0); float sp = (1.0 - smoothstep(0.05, 0.1 + fwidth(c.x), c.x)) * step(0.8, c.z) * (0.6 + 0.4 * sin(uTime * 1.5 + c.z * 20.0));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.8, 0.42), m) * (0.85 + 0.25 * n); roughnessFactor = 0.7;
+  totalEmissiveRadiance += vec3(0.75, 1.0, 0.45) * sp * 0.7;`;
+// 흑요석 (스테고사우루스): glossy black volcanic glass with a violet-green sheen at the outline
+const OBSIDIAN = `float n = fbm3(p * 3.0 + 2.0); vec3 sh = mix(vec3(0.5, 0.3, 0.9), vec3(0.2, 0.8, 0.7), n);
+  roughnessFactor = 0.08; totalEmissiveRadiance += sh * 0.35 * pow(1.0 - nv, 3.0);`;
+// 화석 돌 (안킬로사우루스): sandstone in faint layers and grain, with a curled shell print in a few cells
+const FOSSIL = `float b = 0.5 + 0.5 * sin(p.y * 22.0 + 2.0 * fbm3(p * 2.0)), n = fbm3(p * 9.0);
+  vec3 c = cells(p * 5.0 + 2.0); float ring = step(0.72, c.z) * (1.0 - smoothstep(0.28, 0.32, c.x)) * smoothstep(0.55, 0.85, abs(fract(c.x * 9.0) - 0.5) * 2.0);
+  diffuseColor.rgb *= (1.0 - 0.14 * b) * (0.88 + 0.2 * n) * (1.0 - 0.25 * ring); roughnessFactor = 0.75;
+  totalEmissiveRadiance += vec3(1.0, 0.85, 0.6) * 0.04 * pow(1.0 - nv, 2.0);`;
+// 별똥별 (티라노사우루스): a night sky, navy into violet, twinkling stars and now and then a shooting star sliding across
+const METEOR = `vec3 c = cells(p * 14.0); float tw = 0.5 + 0.5 * sin(uTime * (1.0 + 2.0 * c.z) + c.z * 40.0);
+  float star = (1.0 - smoothstep(0.04, 0.1 + fwidth(c.x), c.x)) * step(0.7, c.z) * tw;
+  float u = p.x * 0.8 - p.y * 0.6, v = p.x * 0.6 + p.y * 0.8 + 0.3 * p.z, lane = fract(v * 2.0), id = floor(v * 2.0);
+  float hd = fract(uTime * 0.12 + id * 0.37) * 4.0 - 2.0, tail = smoothstep(hd - 0.6, hd, u) * (1.0 - step(hd, u));
+  float streak = tail * (1.0 - smoothstep(0.0, 0.04 + fwidth(lane), abs(lane - 0.5)));
+  diffuseColor.rgb = mix(vec3(0.1, 0.1, 0.3), vec3(0.32, 0.18, 0.45), smoothstep(0.0, 1.0, p.y)); roughnessFactor = 0.25;
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.95, 0.8), max(star, streak));
+  totalEmissiveRadiance += vec3(1.0, 0.92, 0.7) * (star * 0.8 + streak * 1.2) + vec3(0.4, 0.4, 0.9) * 0.05 * pow(1.0 - nv, 2.0);`;
+// 열대 노을 (프테라노돈): violet at the feet through coral into gold at the top, the line drifting slowly, a warm rim
+const SUNSET = `float t = smoothstep(0.05, 0.95, p.y + 0.15 * (fbm3(p * 2.0 + vec3(uTime * 0.05)) - 0.5));
+  vec3 col = mix(vec3(0.55, 0.3, 0.7), vec3(1.0, 0.45, 0.4), smoothstep(0.0, 0.5, t)); col = mix(col, vec3(1.0, 0.82, 0.4), smoothstep(0.5, 1.0, t));
+  diffuseColor.rgb = col; roughnessFactor = 0.3;
+  totalEmissiveRadiance += col * (0.05 + 0.2 * pow(1.0 - nv, 2.0));`;
 // polished metal in the studio reflection (inbox 10: gold horns and hooves, the rose gold flamingo, onyx)
 const shine = (hex, rough = 0.15) => look(phys(hex, { roughness: rough, metalness: 1 }), 'shine', '', {}, { studio: 0.85 });
 
@@ -547,6 +581,17 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
     return { body: l('#f0a24a', '#ff9a3a'), accent: l('#fff0d0', '#fff0c8'), hoof: toyMat('#5a3a28'), horn: shine('#ffc75a'), beak: phys('#4a3022', { roughness: 0.2, clearcoat: 0.6 }) }; }, // the nose dark brown, not red
   snowspirit: () => { const d = phys('#3a4a66', { roughness: 0.1, clearcoat: 1 });
     return { body: look(phys('#eef4ff', { roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.1 }), 'snowspirit', SPIRIT), accent: look(phys('#c4d6f0', { roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.1 }), 'snowspirit', SPIRIT), hoof: d, beak: d }; },
+  // 14-3 dino (가칭). horn: the horns, the plates and spikes, the tail club; beak: the pterosaur's
+  lava: () => { const r = look(phys('#2a2222', { roughness: 0.5 }), 'lava', LAVA);
+    return { ...same(r), horn: phys('#ffb060', { roughness: 0.3, emissive: '#ff6a1a', emissiveIntensity: 0.45 }) }; },
+  moss: () => same(look(phys('#54905a', { roughness: 0.7 }), 'moss', MOSS)),
+  obsidian: () => ({ ...same(look(phys('#0e0e12', { roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.02 }), 'obsidian', OBSIDIAN)),
+    horn: look(phys('#9a2a34', { roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.02 }), 'obsidian', OBSIDIAN) }), // the plates red obsidian
+  fossil: () => { const f = hex => look(phys(hex, { roughness: 0.75 }), 'fossil', FOSSIL);
+    return { body: f('#dccaa0'), accent: f('#a88a68'), hoof: f('#a88a68'), horn: f('#efe2c4') }; },
+  meteor: () => same(look(phys('#1a1a40', { roughness: 0.25, clearcoat: 0.5, clearcoatRoughness: 0.1 }), 'meteor', METEOR)),
+  sunset: () => ({ body: look(phys('#ff9a6a', { roughness: 0.3, clearcoat: 0.3, clearcoatRoughness: 0.2 }), 'sunset', SUNSET),
+    accent: phys('#ffd860', { roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.03 }), hoof: toyMat('#5a3a48'), beak: phys('#fff0c0', { roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.03 }) }),
 };
 
 // 황금 복돼지 relief: cloud curls (a scalloped cloud with a curl at each end) as a height map in the red channel, lines

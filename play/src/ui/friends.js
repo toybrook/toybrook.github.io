@@ -10,6 +10,7 @@ import { figureThumb } from './thumbs.js';
 import { toast, heart, josa } from './hud.js';
 import { SORTS } from './store.js';
 import { pickStroll } from './stroll.js';
+import { sendSheet, openBook } from './visit.js';
 
 const el = document.getElementById('friends');
 const rarOf = a => variantOf(a.species, a.variant).rarity;
@@ -34,7 +35,7 @@ function draw() {
   if (fsp && !count[fsp]) fsp = '';
   const opt = (v, t, on) => `<option value="${v}"${on ? ' selected' : ''}>${t}</option>`;
   el.innerHTML = `<div class="nsheet fsheet" role="dialog" aria-label="친구들">
-<div class="fhead"><b>친구들</b><span>${HAB[habId].name} ${out.length}/${capOf(G.S, habId)}</span><button class="back" data-close>닫기</button></div>
+<div class="fhead"><b>친구들</b><span>${HAB[habId].name} ${out.length}/${capOf(G.S, habId)}</span><button class="back" data-book>방명록</button><button class="back" data-close>닫기</button></div>
 <p class="fsum">${Object.entries(count).map(([s, n]) => `${SP[s].name} ×${n}`).join(' · ') || '아직 서식지에 나온 친구가 없어요'}</p>
 <div class="fbar"><span class="seg">${[['all', '전체'], ['baby', '새끼'], ['adult', '성체']].map(([k, t]) => `<button data-stage="${k}"${k === stage ? ' class="on"' : ''}>${t}</button>`).join('')}</span>
 <select data-fsp aria-label="종">${opt('', '모든 종', !fsp)}${Object.keys(count).map(s => opt(s, SP[s].name, s === fsp)).join('')}</select>
@@ -66,6 +67,7 @@ el.addEventListener('change', e => { const d = e.target.dataset; if (d.rar != nu
 el.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.close != null) { el.hidden = true; return; }
+  if (b.dataset.book != null) { el.hidden = true; return openBook(); } // 16-1
   if (b.dataset.stage) { stage = b.dataset.stage; draw(); return; }
   const long = press?.long; press = null; if (long) return;
   if (b.dataset.more) more(+b.dataset.more);
@@ -78,12 +80,13 @@ function more(id) {
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
   menu.innerHTML = `<div><h2>${star(a)}${nm}</h2>${a.nm ? `<p class="sub">${kindName(a)}</p>` : ''}<div class="col"><button data-do="go">보러 가기</button>
 <button data-do="fav" aria-pressed="${!!a.fav}">${a.fav ? '★ 별 떼기' : '☆ 아끼는 친구로'}</button><button data-do="name">${a.nm ? '이름 바꾸기' : '이름 짓기'}</button>
-<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button><button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>`;
+<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button><button data-do="visit">놀러 보내기</button><button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>`;
   menu.onclick = e => {
     const d = e.target.closest('button')?.dataset; if (!d) return;
     if (d.do === 'go') return go(a.id);
     if (d.do === 'name') return naming(a);
     if (d.do === 'walk') { menu.remove(); menu = null; return pickStroll(a); }
+    if (d.do === 'visit') { menu.remove(); menu = null; if (a.stage !== 'baby') el.hidden = true; return sendSheet(a); } // 16-1
     if (d.do === 'pet') { const n = G.tapHeart(a.id); const r = e.target.getBoundingClientRect(); if (n) heart(r.left + r.width / 2, r.top); toast(n ? `${nm}${josa(nm, '이', '가')} 좋아해요 ♥+${n}` : G.S.pet.n >= B.heart.daily ? '오늘 쓰다듬기 하트는 다 모았어요' : '방금 쓰다듬었어요 · 조금 뒤에 다시', 2200, true); return; }
     if (d.do === 'fav') toast(G.setFav(a.id, !a.fav)?.fav ? `${nm}${josa(nm, '은', '는')} 아끼는 친구예요 · 보관함의 여러 마리 돌려보내기에서 빠져요` : `${nm}의 별을 뗐어요`, 2600);
     if (d.do === 'store' && G.store(a.id)) toast(`${nm}${josa(nm, '을', '를')} 보관함에 넣었어요`);

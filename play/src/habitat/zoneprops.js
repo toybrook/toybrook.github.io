@@ -27,22 +27,26 @@ const MIX = {
   isle: { tree: 0.3, bush: 0.6, rock: 0.4, fl: 2, grass: 1 }, swamp: { tree: 0, bush: 0.4, rock: 0.2, fl: 0, grass: 0.5 },
   conifer: { tree: 2.4, rock: 0.4 }, sled: { tree: 0.4, rock: 0.4 }, pillars: { tree: 0.1, rock: 0.5 },
   hotspring: { tree: 0.5, rock: 0.3 }, cave: { tree: 0.4, rock: 0.6 }, iceplate: { tree: 0, rock: 0 }, // nothing on the ice
+  // 14-3 the dino jungle (tree: its tree ferns; fern: low ground ferns, kit fern)
+  fernwood: { tree: 1.4, bush: 0.6, rock: 0.3, fl: 0.3, grass: 1, fern: 6 }, cliffs: { tree: 0.2, bush: 0.4, rock: 0.8, fl: 0.4, grass: 0.8, fern: 1.5 },
+  riverbed: { tree: 0.3, bush: 0.6, rock: 0.4, fl: 0.8, grass: 1, fern: 2 }, bigdig: { tree: 0, bush: 0.1, rock: 0.3, fl: 0, grass: 0.1 },
+  mudflat: { tree: 0.2, bush: 0.4, rock: 0.2, fl: 0, grass: 0.5, fern: 1.5 }, springs: { tree: 0.4, bush: 0.5, rock: 0.4, fl: 0.6, grass: 0.8, fern: 2 },
 };
 const GREENS = ['#6aa83a', '#7cb843', '#5e9c35'];
-let soft = null; // a soft round spot (fog, steam, mist)
-const softTex = () => { if (soft) return soft; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+let soft = null; // a soft round spot (fog, steam, mist; 14-3: the volcano's smoke, dino/props.js)
+export const softTex = () => { if (soft) return soft; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return soft = new THREE.CanvasTexture(c); };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
 
-// hab: 'meadow' | 'pond' | 'snow'; o: { L, N (natives), heightAt, occupied, free (the open ground now), O (the open rect),
+// hab: 'meadow' | 'pond' | 'snow' | 'dino'; o: { L, N (natives), heightAt, occupied, free (the open ground now), O (the open rect),
 // Z (zoneSet), back (the back forest's front edge), cliff (meadow: the cliff's foot, for its rock ledge) }
 export function zoneProps(scene, hab, o) {
-  const { L, N, heightAt, occupied, free, O, Z, back } = o, snow = hab === 'snow';
+  const { L, N, heightAt, occupied, free, O, Z, back } = o, snow = hab === 'snow', dino = hab === 'dino';
   const Lr = emptyL(), pads = [], fruit = [], caps = [], crystals = [], ups = [], orchard = [], fx = [], shells = [], signs = [];
   const nearSpot = (x, z, m) => Z.spots.some(s => Math.hypot(x - s.x, z - s.z) < s.r + m);
   for (let k = 1; k <= ZONES[hab].length; k++) {
     const s = strip(hab, k); if (!inRect(O, s.cx, s.cz)) continue;
-    let sd = 7919 * k + (hab === 'pond' ? 31 : snow ? 57 : 3); const rnd = () => { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; };
+    let sd = 7919 * k + (hab === 'pond' ? 31 : snow ? 57 : dino ? 71 : 3); const rnd = () => { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; };
     const K = kit(L, { rand: rnd, heightAt, occupied }), nk = kit(N.Ls, { rand: rnd, heightAt, occupied }), R = kit(Lr, { rand: rnd, heightAt, occupied });
     const { pickOf, jitter } = K, r = s.r, A = (r[1] - r[0]) * (r[3] - r[2]), mix = MIX[s.id], at = (u, v) => s.pos(u, v);
     const ok = (x, z, m) => free(x, z, m) && !nearSpot(x, z, m + 0.3);
@@ -58,11 +62,15 @@ export function zoneProps(scene, hab, o) {
 
     // the back shelf of a side strip: its forest goes on
     if (s.side !== '+z') {
-      place(Math.round((r[1] - r[0]) * (back - r[2]) * 0.2), (x, z) => z < back && free(x, z, 1.0), (x, z) => snow ? K.snowpine(x, z, 0.85 + rnd() * 0.5) : rnd() < 0.7 ? K.pine(x, z, 0.85 + rnd() * 0.45) : K.tree(x, z, 0.85 + rnd() * 0.3));
+      place(Math.round((r[1] - r[0]) * (back - r[2]) * 0.2), (x, z) => z < back && free(x, z, 1.0), (x, z) => snow ? K.snowpine(x, z, 0.85 + rnd() * 0.5) : dino ? (rnd() < 0.7 ? K.treefern(x, z, 0.85 + rnd() * 0.4) : K.tree(x, z, 0.85 + rnd() * 0.3)) : rnd() < 0.7 ? K.pine(x, z, 0.85 + rnd() * 0.45) : K.tree(x, z, 0.85 + rnd() * 0.3));
       if (o.cliff != null) for (let x = r[0] + 0.5; x < r[1] - 0.4; x += 0.9 + rnd() * 0.6) rock(x, o.cliff - 0.55 + (rnd() - 0.5) * 0.7, 0.5 + rnd() * 0.45);
     }
     const low = (m, x, z) => z > back + 2.4 && ok(x, z, m);
-    const tree = (x, z, sc) => snow ? N.add('snowpine', nk.snowpine, x, z, sc) : N.add('tree', nk.tree, x, z, sc);
+    const tree = (x, z, sc) => snow ? N.add('snowpine', nk.snowpine, x, z, sc) : dino ? N.add('treefern', nk.treefern, x, z, sc) : N.add('tree', nk.tree, x, z, sc);
+    // 14-3: d0..d1 out from a rill (either side), n times: fn(x, z)
+    const banks = (f, n, d0, d1, fn) => { for (let i = 0; i < n; i++) { const P = f.pts, j = Math.floor(rnd() * (P.length - 1)), dx = P[j + 1][0] - P[j][0], dz = P[j + 1][1] - P[j][1], l = Math.hypot(dx, dz), t = rnd(), sg = rnd() < 0.5 ? -1 : 1, d = d0 + rnd() * (d1 - d0);
+      fn(P[j][0] + dx * t - dz / l * sg * d, P[j][1] + dz * t + dx / l * sg * d); } };
+    const stump = (x, z) => { L.trunk.push({ x, y: heightAt(x, z) - 0.05, z, s: [0.95, 0.3 + rnd() * 0.12, 0.95], ry: rnd() * 6, c: jitter('#6e4a2e', 0.05) }); occupied.push({ x, z, r: 0.6, h: 0.6 }); };
     // the zone's own things first (the mix fills round them)
     const own = {
       grove() { const [bx, bz] = at(0.55, 0.55); K.tree(bx, bz, 1.8); // the big old tree on its mossy rise
@@ -140,7 +148,7 @@ export function zoneProps(scene, hab, o) {
           occupied.push({ x: sx, z: sz, r: 1.0, h: 8.4 }); }
         ringOf({ x: p.x, z: iz, len: p.ilen }, 8, p.isle + 0.4, p.isle + 0.9, (x, z) => { if (polyD(x, z, p.spit) > 1) R.tuft(x, z); }); },
       swamp() { for (const p of pools) ringOf(p, 6, wl(p) - 0.4, wl(p) + 0.2, (x, z) => R.tuft(x, z));
-        place(7, (x, z) => ok(x, z, 0.6), (x, z) => { L.trunk.push({ x, y: heightAt(x, z) - 0.05, z, s: [0.95, 0.3 + rnd() * 0.12, 0.95], ry: rnd() * 6, c: jitter('#6e4a2e', 0.05) }); occupied.push({ x, z, r: 0.6, h: 0.6 }); }); // old stumps
+        place(7, (x, z) => ok(x, z, 0.6), stump); // old stumps
         place(3, (x, z) => ok(x, z, 0.5), (x, z) => { L.trunk.push({ x, y: heightAt(x, z) - 0.05, z, s: [0.6, 1.25, 0.6], ry: rnd() * 6, c: jitter('#6b5a48', 0.05) }); occupied.push({ x, z, r: 0.5, h: 3 }); }); // bare dead trunks
         fog(r[0] + 3, r[1] - 3, r[2] + 1, r[3] - 1);
         const ff = fireflies(scene, { walkable: (x, z) => Z.wd(x, z) > 0.3, heightAt }, 44, () => [r[0] + 2 + rnd() * (r[1] - r[0] - 4), r[2] + 1 + rnd() * (r[3] - r[2] - 2)]);
@@ -172,6 +180,23 @@ export function zoneProps(scene, hab, o) {
         for (let i = 0; i < n; i++) gl.push({ x: x0 + 0.6 + rnd() * (2 * w - 1.2), z: z0 + 0.4 + rnd() * (2 * d - 0.8), ph: rnd() * 6.28, sp: 0.8 + rnd() * 0.8 });
         const im = new THREE.InstancedMesh(glint, new THREE.MeshBasicMaterial({ color: '#ffffff' }), n); im.frustumCulled = false; scene.add(im);
         ups.push(t => { im.material.color.copy(skyLit.value); for (let i = 0; i < n; i++) { const q = gl[i], k = Math.max(0, Math.sin(t * q.sp + q.ph)) ** 6; _q.setFromAxisAngle(_p.set(0, 1, 0), q.ph + t * 0.3); im.setMatrixAt(i, _m.compose(_p.set(q.x, y + 0.02, q.z), _q, _s.setScalar(k * 1.5 + 0.001))); } im.instanceMatrix.needsUpdate = true; }); },
+      // ---- 14-3 the dino jungle ----
+      fernwood() { for (const [u, v] of [[0.3, 0.15], [0.7, 0.3], [0.35, 0.5], [0.7, 0.68], [0.3, 0.84], [0.6, 0.97]]) { const [cx, cz] = at(u, v); // thick groves of tree ferns
+          for (let i = 0; i < 4; i++) { const x = cx + (rnd() - 0.5) * 3.4, z = cz + (rnd() - 0.5) * 3.4; if (low(1.3, x, z)) tree(x, z, 0.9 + rnd() * 0.45); } } },
+      cliffs() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id); occupied.push({ x: h.x, z: h.z, r: 0.7 * Math.min(h.rx, h.rz), h: h.h }); // no one climbs the rock
+        for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + rnd() * 0.3, x = h.x + Math.cos(a) * h.rx * 1.02, z = h.z + Math.sin(a) * h.rz * 0.98; if (free(x, z, 0.4) && !nearSpot(x, z, 0.3)) rock(x, z, 0.5 + rnd() * 0.5); }
+        for (const f of Z.F.filter(q => q.t === 'col' && q.zone === s.id)) for (let j = 0; j < 3; j++) { const a = rnd() * 6.283, x = f.x + Math.cos(a) * (f.r + 0.6), z = f.z + Math.sin(a) * (f.r + 0.6); if (free(x, z, 0.3)) rock(x, z, 0.28 + rnd() * 0.22); } }, // the pterosaur's rock stacks: stones at their feet
+      riverbed() { const f = Z.rills.find(q => q.zone === s.id);
+        banks(f, 18, f.w + 0.3, f.w + 0.8, (x, z) => { if (free(x, z, 0.3) && !nearSpot(x, z, 0)) rock(x, z, 0.25 + rnd() * 0.3); }); // stones on the gravel banks
+        banks(f, 26, f.w - 0.3, f.w + 0.2, (x, z) => { if (!nearSpot(x, z, 0.2)) R.tuft(x, z); }); }, // reeds at the water's edge
+      bigdig() { // the dig: a huge rib cage standing in the sand, a horned skull and leg bones lying about (the fossil props, bigger)
+        { const [x, z] = at(0.62, 0.3); fixture('ribs', x, z, 0.3, 2.5, undefined, 2.3).scale.setScalar(1.6); }
+        { const [x, z] = at(0.5, 0.58); fixture('fos_skull', x, z, -0.6, 1.4, heightAt(x, z) - 0.08, 1).scale.setScalar(1.4); }
+        for (const [u, v, ry] of [[0.25, 0.22, 0.4], [0.75, 0.62, 2.0], [0.3, 0.7, -0.8]]) { const [x, z] = at(u, v); if (free(x, z, 0.8)) fixture('fos_bone', x, z, ry, 0.8, heightAt(x, z) - 0.05, 0.4); }
+        for (let i = 0; i < 60; i++) { const [x, z] = at(0.1 + rnd() * 0.8, 0.12 + rnd() * 0.85); if (free(x, z, 0)) L.pebble.push({ x, y: heightAt(x, z) + 0.02, z, s: [0.14 + rnd() * 0.14, 0.07, 0.12 + rnd() * 0.1], ry: rnd() * 6, c: jitter(pickOf(['#c8a870', '#a89070', '#e2cfa0']), 0.08) }); } },
+      mudflat() { for (const p of pools) ringOf(p, 7, wl(p) - 0.4, wl(p) + 0.2, (x, z) => R.tuft(x, z)); place(4, (x, z) => ok(x, z, 0.6), stump); },
+      springs() { for (const p of pools) { for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + rnd() * 0.15, d = p.r - 0.15; K.rock(p.x + Math.cos(a) * d, p.z + Math.sin(a) * d, 0.3 + rnd() * 0.2); occupied.pop(); }
+        steam(p.x, waterAt(p), p.z, wl(p)); } },
     };
     function bigShroom(h, red) { // a giant toadstool: cream stem, a wide domed cap (red with cream dots, or tan)
       const g = new THREE.Group(), R = 0.5 * h, hs = 0.78 * h, sr = 0.11 * h;
@@ -215,6 +240,7 @@ export function zoneProps(scene, hab, o) {
     if (mix.tree) place(n(mix.tree), (x, z) => low(1.5, x, z), (x, z) => tree(x, z, (snow ? 0.85 : 1) + rnd() * 0.35));
     if (mix.bush) place(n(mix.bush), (x, z) => low(0.9, x, z), (x, z) => N.add('bush', nk.bush, x, z, 0.9 + rnd() * 0.4));
     if (mix.rock) place(n(mix.rock), (x, z) => low(1, x, z), (x, z) => snow ? rock(x, z, 0.4 + rnd() * 0.45) : N.add('rock', nk.rock, x, z, 0.55 + rnd() * 0.5));
+    if (mix.fern) place(n(mix.fern), (x, z) => low(0.5, x, z), (x, z) => K.fern(x, z, 0.8 + rnd() * 0.5)); // 14-3
     if (mix.fl) place(n(mix.fl), (x, z) => low(0.4, x, z), (cx, cz) => { const pi = Math.floor(rnd() * flowerPal.length); N.flowers(cx, cz, pi); flowerCluster(N.Ls, cx, cz, flowerPal[pi], free, rnd, jitter, heightAt); });
     if (mix.grass) N.bare(() => place(Math.round(A * 1.1 * mix.grass), (x, z) => inRect(r, x, z, 0.4), (x, z) => {
       const w = Z.wd(x, z), bank = w > -0.1 && w < 0.7;

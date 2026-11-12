@@ -1,5 +1,7 @@
 // The running game: owns the save (S), the clock and localStorage. rules.js does the work; this file only
 // times it, stores it and tells listeners what happened. Saved on device only; unreadable save = new game.
+import * as V from './visit.js'; // 16-1
+import * as K from './sky.js'; // 16-2
 import * as R from './rules.js';
 import { PROPS } from './data.js';
 import { EDITION } from '../config.js';
@@ -74,9 +76,17 @@ export const store = id => act(now => R.store(S, id, now));
 export const setFav = (id, on) => act(() => R.setFav(S, id, on));
 export const setName = (id, text) => act(() => R.setName(S, id, text));
 export const unstore = id => act(now => R.unstore(S, id, now));
-export const sendStroll = (id, h) => act(now => R.sendStroll(S, id, h, now)); // 13-1
+export const sendStroll = (id, h, pl) => act(now => R.sendStroll(S, id, h, now, Math.random, pl)); // 13-1 (pl: 14-1 the 불의 언덕)
 export const cardsSeen = () => act(() => R.cardsSeen(S));
 export const seeScene = (id, sp) => act(now => R.seeScene(S, id, sp, now)); // 13-2
+// 14-1 신수의 부름 (rules.js mythTick): at [x, z] where the gift goes if there is room
+export const mythStage = () => S && R.mythStage(S, clock());
+export const mythSeen = at => act(now => R.mythSeen(S, now, at));
+export const mythTrace = at => act(now => R.mythTrace(S, now, at));
+export const mythCall = () => act(now => R.mythCall(S, now));
+export const mythPet = () => act(now => R.mythPet(S, now));
+export const mythRead = i => act(() => R.mythRead(S, i));
+export const mythShown = () => act(now => R.mythShown(S, now));
 export const buyCandy = () => act(() => R.buyCandy(S));
 export const holdBaby = id => act(now => R.holdBaby(S, id, now));
 export const letGrow = id => act(now => R.letGrow(S, id, now));
@@ -121,9 +131,24 @@ export const evMail = () => S ? R.evMail(S, clock()) : [];
 // 15-2 첫눈: snow piles, the snowman built, event wear (on a friend while fewer are worn than bought)
 export const pile = () => S && R.evPile(S, clock());
 export const tapPile = () => act(now => R.tapPile(S, now));
+export const dig = () => act(now => R.dig(S, now)); // 14-3 화석 발굴: an animal done digging at the fossil site (the PROPS id found, or null)
 export const evBuild = (hab, x, z) => act(now => R.evBuild(S, hab, x, z, now));
 export const evWear = (id, k) => act(() => R.evWear(S, id, k));
 export const evOwned = () => S ? R.evOwned(S) : {};
+// 16-1 놀러 보내기 (visit.js): the guests come with the animals to the habitat (no seat, not in S.animals)
+export const withGuests = () => [...S.animals, ...S.visit.guests];
+export const sendVisit = id => act(now => V.sendVisit(S, id, now));
+export const takeVisit = v => act(now => V.takeVisit(S, v, now));
+export const pickCard = (lid, pic, line) => act(now => V.pickCard(S, lid, pic, line, now));
+export const takeCard = c => act(now => V.takeCard(S, c, now));
+export const claimCard = lid => act(now => V.claimCard(S, lid, now));
+export const setGarden = g => act(() => { S.visit.garden = g; });
+// 16-2 특별한 하늘 (sky.js, ui/sky.js)
+export const skyTonight = (hab, n) => K.tonight(S, clock(), hab, n);
+export const skySeen = (n, slots) => act(now => K.seenNight(S, n, slots, now));
+export const skyBit = () => act(() => K.skyBit(S));
+export const skyMark = (k, v) => act(() => { S.sky[k] = v; });
+export const skyScope = at => act(() => { if (S.sky.scope) return null; S.sky.scope = 1; return R.putGift(S, 'sky_scope', at, { cost: 0 }); });
 export const attendDue = () => R.attendDue(S, clock());
 export const attend = at => act(now => R.attend(S, now, Math.random, at));
 export const note = (k, n) => { if (n > (S.stats?.[k] || 0)) act(() => R.noteLive(S, k, n)); }; // 23-2: the habitat on screen (saved only when more)

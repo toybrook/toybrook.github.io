@@ -1,7 +1,7 @@
 // 23-2 도전 과제: each one a goal n of a count v(S) (the save as it is, or S.stats that rules.js and the habitat keep). Done
 // once (S.ach[id] = when), it gives BALANCE.level.xp.achieve XP and its 칭호 (title: S.title shows one). Never hearts or eggs.
 // rules.js advance checks them; ui/level.js lists them. (rules.js imports this file too: its helpers are only called later)
-import { HABITATS, SETS } from './data.js';
+import { HABITATS, SETS, HOLD } from './data.js';
 import { SP, variantOf, placedIn, decorCap, levelOf, outIn } from './rules.js';
 
 const cells = S => Object.keys(S.codex);
@@ -32,6 +32,8 @@ export const ACH = [
   ['pond6', '연못 친구들', '연못 친구 6종을 모두 만나요', 6, kinds('pond')],
   ['snow', '설원 개척자', '설원을 열어요', 1, S => +S.unlocked.includes('snow')], // 25-1
   ['snow6', '설원 친구들', '설원 친구 6종을 모두 만나요', 6, kinds('snow')],
+  ['dino', '정글 탐험가', '공룡 정글을 열어요', 1, S => +S.unlocked.includes('dino')], // 14-3
+  ['dino6', '공룡 친구들', '공룡 정글 친구 6종을 모두 만나요', 6, kinds('dino')],
   ['hatch50', '알 깨우기 장인', '알 50개를 깨워요', 50, st('hatch')],
   ['grown5', '꼬마 돌보미', '새끼 5마리가 다 자라요', 5, st('grown')],
   ['grown20', '든든한 보호자', '새끼 20마리가 다 자라요', 20, st('grown')],
@@ -52,6 +54,6 @@ export const ACH = [
   ['expand3', '넓은 들', '땅을 3단계까지 넓혀요', 3, most((S, h) => levelOf(S, h))],
   ['expand6', '끝없는 들판', '땅을 6단계까지 넓혀요', 6, most((S, h) => levelOf(S, h))],
   ['crowd', '북적북적 서식지', '한 서식지에 친구 12마리가 나와 놀아요', 12, most((S, h) => outIn(S, h).length)],
-].map(([id, title, text, n, v]) => ({ id, title, text, n, v }));
+].filter(([id]) => !(HOLD.dino && id.startsWith('dino'))).map(([id, title, text, n, v]) => ({ id, title, text, n, v })); // inbox 65
 export const ACH_BY = Object.fromEntries(ACH.map(a => [a.id, a]));
 export const newlyDone = S => ACH.filter(a => !S.ach?.[a.id] && a.v(S) >= a.n);

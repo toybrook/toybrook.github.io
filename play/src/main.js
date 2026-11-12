@@ -2,7 +2,7 @@
 import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // first: it listens for errors before the rest runs
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
-import { BALANCE, HABITATS, ZONES } from './game/data.js';
+import { BALANCE, HABITATS, ZONES, PROPS } from './game/data.js';
 import { initWorldMap } from './worldmap/worldmap.js';
 import { zzz, heart, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
 import { loadBar, codeAsked } from './ui/loadbar.js';
@@ -17,6 +17,9 @@ import { openCode } from './ui/mail.js'; // inbox 41 B 우편함
 import { initAttend, todayRow, takeToday } from './ui/attend.js'; // inbox 41 C 출석부
 import './ui/first.js'; // inbox 41 D 첫날 할 일
 import { initEvent } from './ui/event.js'; // 15-1 계절 이벤트
+import { initMyth, onMyth, mythCut, mythDue } from './ui/myth.js'; // 14-1 신수의 부름
+import { initVisit } from './ui/visit.js'; // 16-1 놀러 보내기
+import { initSky, skyNow, onScope, onStar, retSky, retShown, retGo } from './ui/sky.js'; // 16-2 특별한 하늘
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
 // 26-7 한 번에 한 탭: a tab opened second, or one another tab took over, is covered (nothing saved there) till 「여기서 하기」
@@ -74,7 +77,7 @@ if (fresh) code().catch(() => {}).then(mapUp);
 (fresh ? Promise.resolve() : mapUp()).then(() => {
   const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400);
   idle(() => code().then(h => { // then the models of the habitat opened last (a new player: none, above)
-    if (!fresh) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.S.animals).catch(() => {}));
+    if (!fresh) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.withGuests()).catch(() => {}));
     if (OFFLINE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
   }).catch(() => {}));
 });
@@ -83,8 +86,11 @@ const ui = {
   lostLong: id => { // inbox 53: not given back in 3 s: built on a new canvas. None to be had (a probe first: three logs an error when it can't): 다시 불러오기
     const c = document.createElement('canvas'), g = c.getContext('webgl2') || c.getContext('webgl'); if (!g || g.isContextLost()) return glFail('no context');
     g.getExtension('WEBGL_lose_context')?.loseContext(); redo(id); built[id]?.then(glRebuilt, glFail); },
+  onDig: () => { const id = G.dig(); if (id) toast(`화석을 발견했어요! ${PROPS.find(p => p.id === id).name} · 꾸미기 › 선물에 넣어 두었어요`, 2800, true); return id; }, // 14-3 화석 발굴
   onPile: () => { const n = G.tapPile(), L = n && G.event(); if (n) toast(`눈더미에서 ${L.e.coin.icon} ${L.e.coin.name} ${n}개!`, 2200, true); return n; }, // 15-2 첫눈
   hello: (x, y) => heart(x, y), // inbox 64-A: the first friend's hop
+  skyNow, onScope, onStar, // 16-2 특별한 하늘 (ui/sky.js)
+  onMyth, // 14-1 the meadow's fire prints, hoofprints, altar and 신수 tapped (ui/myth.js)
   say: t => toast(t, 1800, true), // 28-3: a short note from the habitat (the music box's tune, the fireworks by day)
   zzz(xy) { if (!hab.classList.contains('hidden') && !overlayOpen() && !document.querySelector('body > section.pop:not([hidden])')) zzz(xy); }, // not over a sheet (28-5: nor 설정·꾸미기 코드·도움말, outside #habitat)
   onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; $('overview').textContent = s === 'w' ? '친구들 보기' : '전체 보기'; }, // following: 정면 + 전체 보기; away from the start view: 전체 보기; at the whole board (inbox 63): 친구들 보기
@@ -102,7 +108,7 @@ const ui = {
 placeFrom(() => cur ? HAB[cur].name : '지도'); // inbox 49: where the player was, for 문제 알리기 and an error's clues
 const built = {}, lv = {}; // each habitat's scene is built the first time it is entered (and its models fetched then); lv: the 땅 넓히기 step it was built at
 // 22-1: a build hands the board's own trees, bushes, rocks and flowers to the save the first time (and a 땅 넓히기 step's new ones)
-const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r => setTimeout(r, 60)).then(code).then(h => h.startHabitat($('gl'), ui, id, G.S.animals, { level: lv[id], ...opt }))
+const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r => setTimeout(r, 60)).then(code).then(h => h.startHabitat($('gl'), ui, id, G.withGuests(), { level: lv[id], ...opt }))
   .then(api => { if (api.natives) G.addNatives(id, api.natives.list, api.natives.rings); return api; }); };
 // inbox 61 A·B: a new player's first egg is cracked on the loading screen as soon as the nest's code is here (seconds on a slow
 // phone). inbox 64-A: the board is built while the reveal card is read (built during the hatch, the hatch took 2.7 s longer);
@@ -115,7 +121,7 @@ const firstHere = id => code().then(() => new Promise(done => {
 }), () => {});
 async function enter(id) {
   cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + ' 서식지 3D');
-  $('habName').querySelector('b').textContent = HAB[id].name;
+  $('habName').querySelector('b').textContent = HAB[id].short ?? HAB[id].name; // 14-3: the chip's room (375 wide) fits two letters
   loadBar(true, !!play); if (G.S.flags.lastHab !== id) G.flag('lastHab', id);
   track('habitat_open', { habitat: HAB[id].name }, 'open:' + id); // inbox 41 A: a day each
   if (firstEgg(G.S) && !built[id]) await firstHere(id); // inbox 61 A·B
@@ -163,6 +169,7 @@ const glFail = e => { console.warn('rebuild', e); if ($('glFail')) return; const
   el.innerHTML = '<div><h2>화면을 다시 그리지 못했어요</h2><p>모은 동물과 꾸미기는 저장돼 있어요.</p><button>다시 불러오기</button></div>'; el.querySelector('button').onclick = () => location.reload(); $('stage').append(el); };
 const level = initLevel(() => api); level.events(offline); // 23-1 정원사 레벨
 const snap = initPhoto(() => api, () => cur); // 24-1 사진 모드
+initSky(() => api, () => cur);
 const habMenu = $('habMenu');
 $('back').onclick = () => { snap.leave(); hab.classList.add('hidden'); world.classList.remove('hidden'); api?.setActive(false); api = cur = null; play?.leave(); habMenu.hidden = true; };
 
@@ -226,16 +233,18 @@ const retAttend = () => G.attendDue() && G.S.attend.n > 0; // a new player's fir
 const retHome = () => cur || G.S.flags.lastHab || HABITATS[0].id;
 function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
   retEggs = eggs;
-  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new)) return; // nothing new: no card
+  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !retSky()) return; // nothing new: no card
   if (intro.hidden && news.hidden && $('attend').hidden) showRet(); else retWait = true; // 41 C: nor over 출석부
 }
 function showRet() {
   const eggs = retEggs, now = G.now(), ready = G.S.slots.filter(s => s && now >= s.end).length, grown = G.S.animals.filter(a => a.card), att = retAttend() && todayRow();
   const n = Object.values(eggs).reduce((a, b) => a + b, 0), most = Object.keys(eggs).sort((a, b) => eggs[b] - eggs[a])[0];
   const back = G.S.cards.filter(c => c.new), names = [...new Set(back.map(c => c.nm))]; // 13-1: postcards not seen, at the top
-  if (!n && !grown.length && !att && !back.length) return;
+  const myth = mythDue(); // 14-1: it came to the altar while away: the top row (its coming seen from there, 다시 보기)
+  const sk = retSky(); // 16-2: last night's sky not seen (망원경으로 다시 보기)
+  if (!n && !grown.length && !att && !back.length && !myth && !sk) return;
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
-  const rows = [back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
+  const rows = [myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '망원경으로 다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
     grown.length && ['🌱', `다 자란 친구 ${grown.length}`, '보러 가요', 'grown'], ready && ['✨', `부화 끝난 알 ${ready}`, '깨우러 가요', 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', '백업해 두면 기기를 바꿔도 이어서 할 수 있어요', '설정 › 내 저장 백업', 'backup']); G.flag('backupNag', today); }
@@ -245,7 +254,7 @@ function showRet() {
   ret.dataset.eggs = most || ''; ret.dataset.grown = grown[0] ? habitatOf(grown[0]) : ''; retGrown = grown.map(a => a.id);
   if (grown.length) code().then(() => import('./ui/thumbs.js')).then(({ figureThumb: f }) => ret.querySelectorAll('.minis > span').forEach((p, i) => { const a = grown[i], [b, c] = p.querySelectorAll('img');
     f(a.species, a.variant, a.color, a.acc, 'baby').then(u => { b.src = u; }); f(a.species, a.variant, a.color, a.acc, 'adult').then(u => { c.src = u; }); })).catch(() => {}); // offline: the row without them
-  ret.hidden = false;
+  ret.hidden = false; if (myth) G.mythShown(); if (sk) retShown(sk.n);
 }
 ret.onclick = async e => {
   const b = e.target.closest('button'), d = b?.dataset; if (!d) return;
@@ -255,11 +264,13 @@ ret.onclick = async e => {
   const first = retGrown[0]; if (retGrown.length) { G.grownSeen(retGrown); retGrown = []; }
   if (d.go == null) return;
   if (d.go === 'backup') return BK.open();
-  const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home, cards: home }[d.go];
+  const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home, cards: home, myth: 'meadow', sky: 'meadow' }[d.go];
   // the 3D comes in under a cloud, at once: no map in between (it showed for seconds on a phone the first time); the loading bar says the rest
   const far = cur !== to; if (far) { veil.firstChild.textContent = ''; veil.hidden = false; veil.classList.add('on'); world.classList.add('now'); hab.classList.add('now'); }
   const ok = await nav.go(to, d.go === 'grown' ? first : undefined) !== false;
   if (ok && d.go === 'cards') (await import('./ui/stroll.js')).openCards();
+  else if (ok && d.go === 'myth') mythCut();
+  else if (ok && d.go === 'sky') retGo();
   else if (ok && d.go !== 'grown') play.openNest();
   if (far) { world.classList.remove('now'); hab.classList.remove('now'); fade(false); }
 };
@@ -277,6 +288,8 @@ $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.fl
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
 initAttend(() => cur, firstDone);
 initEvent(() => cur, () => api);
+initMyth(() => cur, () => api);
+initVisit(nav);
 { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
 
 // 21-1 설정: choices kept in this browser apart from the save (config.js PREFS); the habitat reads them every frame
@@ -285,6 +298,7 @@ const PREF_ROWS = [['time', '시간', [['real', '실제 시간'], ['day', '항�
 const VOLS = [['vAll', '전체'], ['vAmb', '배경 소리'], ['vFx', '효과음'], ['vAnimal', '동물 소리']];
 // 26-3: after the sound. 움직임 줄이기 shows the device's choice until one is picked; 진동 only where the browser can (Android)
 const LOOK_ROWS = [['gfx', '그래픽 품질', [['low', '낮음'], ['mid', '보통'], ['high', '높음']]], ['saver', '배터리 절약', [[false, '끄기'], [true, '켜기']]],
+  ['deskSound', '책상 모드 소리', [[false, '끄기'], [true, '배경 소리만']]], ...navigator.wakeLock ? [['deskWake', '책상 모드 화면 켜 두기', [[true, '켜기'], [false, '끄기']]]] : [], // 16-3
   ['font', '글자 크기', [['s', '작게'], ['m', '보통'], ['l', '크게']]], ['calm', '움직임 줄이기', [[false, '끄기'], [true, '켜기']]], ['signs', '구역 팻말 보이기', [[true, '켜기'], [false, '끄기']]],
   ...navigator.vibrate && matchMedia('(pointer:coarse)').matches ? [['buzz', '진동', [[false, '끄기'], [true, '켜기']]]] : [],
   ['stats', '이용 통계 보내기', [[true, '켜기'], [false, '끄기']]]]; // inbox 41 A (src/ui/stats.js)
@@ -294,6 +308,7 @@ const prefs = $('prefs'), rows = $('prefRows'), help = $('help');
 const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
   + VOLS.map(([k, name]) => `<label class="row vol"><b>${name}</b><input type="range" min="0" max="100" step="5" data-vol="${k}" value="${Math.round(PREFS[k] * 100)}"${PREFS.mute ? ' disabled' : ''}><output>${Math.round(PREFS[k] * 100)}%</output></label>`).join('')
   + LOOK_ROWS.map(segRow).join('')
+  + (cur ? `<div class="row"><b>책상 모드</b><div class="seg"><button data-act="desk">켜기</button>${window.documentPictureInPicture ? '<button data-act="pip">항상 위 작은 창</button>' : ''}</div></div>` : '') // 16-3 (작은 창: PC Chrome only)
   + `<div class="row"><b>내 저장 백업</b><div class="seg"><button data-act="backup"${BK.due() ? ' class="new"' : ''}>백업 · 불러오기</button></div></div>`
   + `<div class="row"><b>처음 안내</b><div class="seg"><button data-act="tips">안내 다시 보기</button></div></div>`
   + (iosSafariTab(BK.DEV) ? `<div class="row"><b>홈 화면 안내</b><div class="seg"><button data-act="home">홈 화면 안내 다시 보기</button></div></div>` : '') // inbox 39
@@ -312,6 +327,7 @@ rows.onclick = e => {
   if (d.act === 'news') { prefs.hidden = true; news.hidden = false; return; }
   if (d.act === 'intro') { prefs.hidden = true; intro.hidden = false; return; }
   if (d.act === 'code') { prefs.hidden = true; return openCode(); }
+  if (d.act === 'desk' || d.act === 'pip') { prefs.hidden = true; const a = api; if (!a) return toast('서식지를 그리는 중이에요 · 조금 뒤에 다시 눌러 주세요', 2200, true); return import('./ui/desk.js').then(m => d.act === 'pip' ? m.openPip(a) : m.deskOn(a)).catch(e => { console.warn('desk', e); toast('작은 창을 열지 못했어요', 2200, true); }); } // 16-3
   if (d.act === 'fb') return void open(fbUrl(), '_blank', 'noopener');
   if (d.act === 'bug') { const ok = copyNow(reportText()); // copied at this tap; the player pastes it in the form
     ask(ok === false ? '복사하지 못했어요.\n의견 양식에 겪은 일을 적어 주세요.' : '버전·기기·최근 오류를 복사했어요.\n의견 양식의 글칸에 붙여 넣고 겪은 일을 적어 주세요.', '양식 열기', '닫기');

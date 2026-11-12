@@ -25,7 +25,7 @@ const floats = (o, g = o.geometry) => {
   if (!o.matrixWorld.equals(new THREE.Matrix4())) g.applyMatrix4(o.matrixWorld);
   return g;
 };
-async function meshes(file) {
+export async function meshes(file) {
   const i = fetched.push(0) - 1; let gltf;
   try { gltf = await loader.loadAsync(url(file), e => { if (e.total) fetched[i] = e.loaded / e.total; }); } finally { fetched[i] = 1; }
   const geo = {};

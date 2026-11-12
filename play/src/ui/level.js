@@ -76,7 +76,7 @@ export function initLevel(getApi) {
     for (const e of ev) if (e.type === 'level') pend = { from: pend?.from ?? e.from, level: e.level };
   }
   function show() {
-    if (topWindow() || overlayOpen() || document.body.classList.contains('photo')) return;
+    if (topWindow() || overlayOpen() || document.body.classList.contains('photo') || document.body.classList.contains('skyview')) return; // 16-2: not over the sky
     const onMap = !$('world').classList.contains('hidden') || !$('loading').hidden; // inbox 43: a card left from the last visit waits for the habitat (on the map it would eat the 초원 tap)
     const xa = B.level.xp.achieve;
     if (got.length === 1) toast(`도전 과제 「${got[0].title}」 · ${got[0].text} · XP +${xa}`, 3200);

@@ -13,6 +13,7 @@ import { openFriends, leaveFriends } from './friends.js';
 import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep } from './decor.js';
 import { openCabinet } from './cabinet.js';
 import { figureThumb } from './thumbs.js';
+import { guestName } from '../game/visit.js';
 import { sfx } from './sound.js';
 import { homeHintDue, appHintDue } from '../game/backup.js';
 import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
@@ -41,6 +42,7 @@ export function initPlay(nav) {
   bubble.onclick = e => { // the bubble's buttons: 먹이 주기 / 꼬마 사탕 / 다시 자라기 / 보관함에 넣기
     const b = e.target.closest('button'), r = bubbleFor; if (!b || !r) return;
     const nm = nameOf(r), act = b.dataset.act;
+    if (r.guest) { bubble.hidden = true; bubbleFor = null; if (act === 'book') import('./visit.js').then(m => m.openBook()); return; } // 16-1: a guest has only 방명록
     if (act === 'feed') { if (G.feed(r.id)) return showBubble(r, '냠냠!'); }
     if (act === 'candy') {
       if (!(G.S.candy > 0) && !G.buyCandy()) return toast(`하트가 모자라요 (꼬마 사탕 ♥${B.candy.price})`, 2200, true);
@@ -91,7 +93,7 @@ export function initPlay(nav) {
       if (out.length && !homeT && home.hidden && homeHintDue(DEV, G.S.flags)) { quiet = Date.now(); homeT = setTimeout(homeCard, 800); }
       if (out.length && !appT && appHintDue(DEV, G.S.flags)) { appQuiet = Date.now(); appT = setTimeout(appBand, 800); }
     }
-    hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId]); hab?.sync(G.S.animals); // inbox 42 B: the props first, so no one comes out inside one
+    hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId]); hab?.sync(G.withGuests()); // 16-1: and the guests; inbox 42 B: the props first, so no one comes out inside one
   }
 
   function onTap(kind, rec, x, y) {
@@ -106,6 +108,7 @@ export function initPlay(nav) {
   function showBubble(r, say = '') {
     const now = G.now(), baby = r.stage === 'baby', n = feedsLeft(r, now), c = G.S.candy || 0;
     const btn = (act, text, sub) => `<button data-act="${act}"${sub ? ' class="sub"' : ''}>${text}</button>`;
+    if (r.guest) bubble.innerHTML = `${say ? say + ' ' : ''}${guestName(r)}<small>손님 · ${Math.max(1, Math.ceil((r.until - now) / 3600e3))}시간 더 머물러요</small><div class="row">${btn('book', '방명록', true)}</div>`; else // 16-1
     bubble.innerHTML = `${say ? say + ' ' : ''}${nameOf(r)}${baby ? `<small>${growText(r, now)}</small>` : ''}<div class="row">${
       baby && growing(r) ? btn('feed', n ? `먹이 주기 ${n}/${B.grow.feeds}` : '오늘 먹이 다 줬어요') + btn('candy', `꼬마 사탕 주기 ${c ? `(${c}개)` : `♥${B.candy.price}`}`, true) : ''}${
       r.hold ? btn('grow', '다시 자라기') : ''}${btn('walk', '산책 보내기', true)}${btn('store', '보관함에 넣기', true)}</div>`;

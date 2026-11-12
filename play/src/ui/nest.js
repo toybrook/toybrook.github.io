@@ -209,6 +209,7 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     if (G.S.stats.hatch === 1 && !G.S.flags.next61) { G.flag('next61'); tip('next', '#nestBtn'); } // inbox 61 B: once, after the first (64-A: a tip, one at a time with the rest)
     const nm = nameOf(a), gift = go && B.codexHeart && !G.S.codex[key(a.species, a.variant)] ? ` · ♥+${B.codexHeart}` : ''; // inbox 38
     if (gift) heart(e.clientX, e.clientY);
+    const k = key(a.species, a.variant); if (go && !G.S.codex[k] && variantOf(a.species, a.variant)?.rarity === 'legendary') setTimeout(() => import('./story.js').then(m => m.giveStory('l', k)), 600); // 14-2: a legendary's first one, its card once it is kept
     if (go === 'store') { // its habitat is full or not open yet (rules.fits): it waits in storage
       const H = HAB[habitatOf(a)], shut = !G.S.unlocked.includes(H.id);
       G.store(a.id); toast(`${shut ? `${H.name}${josa(H.name, '이', '가')} 열리면 데려갈 수 있어요` : `${H.name}에 자리가 모자라요`} · ${nm}${josa(nm, '은', '는')} 보관함에서 기다려요${gift}`, 3200);

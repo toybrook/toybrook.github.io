@@ -9,6 +9,7 @@ import { encode } from '../game/layout.js';
 import { outIn, callName } from '../game/rules.js';
 import qrcode from '../../vendor/qrcode.js';
 import { sfx } from './sound.js';
+import { skyPhoto } from './sky.js'; // 16-2 하늘 기록 사진
 
 const HOURS = [['지금', null], ['아침', 7], ['낮', 12], ['노을', 18.5], ['밤', 23]];
 const SKIES = [['지금', null], ['맑음', 'clear'], ['비', 'rain'], ['안개', 'fog'], ['무지개', 'rainbow']]; // 25-1 the snow: 비 shows as 눈 (weather.js weatherNow turns 'rain' into its snow)
@@ -129,6 +130,7 @@ export function initPhoto(getApi, getHab) {
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
       msg = `저장했어요 · ${c.width}×${c.height} · 내려받은 파일이나 사진 앱에서 볼 수 있어요`; G.note('photo', 1); // 41 D 첫날 할 일
       const sk = api.sky?.(), got = sk && G.event() && G.evShot({ hab: getHab(), night: sk.hour >= 20 || sk.hour < 5, sky: sk.kind, ball: api.ball?.() }); // 15-1 이벤트 앨범 (15-2: a snowball fight on screen)
+      const sp = skyPhoto(c); if (sp) msg += ' · 하늘 기록에 사진을 넣었어요'; // 16-2
       if (got) msg += ` · 이벤트 앨범 한 칸: 「${G.event()?.e.album.slots.find(s => s.id === got.slot)?.name ?? ''}」${got.cover ? ' · 앨범을 다 채워 소품을 받았어요' : ''}`;
     } catch { msg = '저장하지 못했어요 · 다시 해 주세요'; }
     busy = false; draw();

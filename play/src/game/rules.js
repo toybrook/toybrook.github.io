@@ -23,11 +23,14 @@
 //            days, lights, roof } (counts for 도전 과제; lights, roof: the most the habitat on screen has seen, noteLive),
 //   candy (꼬마 사탕 owned, not in use), unlocked: [habitat ids], flags: {},
 //   since (when this game began, 41), mailGot: [mail ids received], codes: [gift codes used, codeKey],
-//   attend: { day: the last 출석 (dayOf), at: its time, n: slots had in all } (41 C), first: { [첫날 할 일 id | 'all']: when done } (41 D) }
+//   attend: { day: the last 출석 (dayOf), at: its time, n: slots had in all } (41 C), first: { [첫날 할 일 id | 'all']: when done } (41 D),
+//   fossil: { at: when the last fossil was dug up (14-3 dig; 0: none yet) } }
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT } from './data.js';
+import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
+import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -61,7 +64,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {} }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 } }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   return S;
@@ -90,7 +93,9 @@ export function fromSave(raw, now) {
     S.looks = Object.fromEntries(Object.entries(S.looks).filter(([k]) => Object.hasOwn(PROP, k)).map(([k, v]) => [k, (Array.isArray(v) ? v : []).filter(c => paletteOf(PROP[k])?.[c]?.[2])]).filter(([, v]) => v.length)); // 13-3
     S.cards = S.cards.filter(isObj).slice(-B.stroll.cards); S.strolls = Math.max(0, Math.floor(S.strolls) || 0); // 13-1
     S.scenes = Object.fromEntries(Object.entries(S.scenes).filter(([k, v]) => SCENES.some(s => s.id === k) && isObj(v) && Number.isFinite(v.at)).map(([k, v]) => [k, { at: v.at, sp: Object.hasOwn(SP, v.sp) ? v.sp : null }])); // 13-2
-    for (const a of S.animals) if (a.stroll != null && !(isObj(a.stroll) && B.stroll.hours.includes(a.stroll.h) && Number.isFinite(a.stroll.end) && PLACES.some(p => p.id === a.stroll.pl))) { delete a.stroll; a.stored = true; } // a broken walk: it waits in storage
+    for (const a of S.animals) if (a.stroll != null && !(isObj(a.stroll) && B.stroll.hours.includes(a.stroll.h) && Number.isFinite(a.stroll.end) && (PLACES.some(p => p.id === a.stroll.pl) || a.stroll.pl === MY.place.id))) { delete a.stroll; a.stored = true; } // a broken walk: it waits in storage
+    S.fossil = { at: Number.isFinite(S.fossil.at) ? Math.min(S.fossil.at, now) : 0 }; // 14-3
+    S.myth = Object.fromEntries(Object.entries(S.myth).filter(([k, v]) => k === 'bondDay' ? typeof v === 'string' : MYTH_T.includes(k) && Number.isFinite(v))); // 14-1
     { const n = v => Math.max(0, Math.floor(v) || 0); // 15-1: runs of events this build knows
       S.events = Object.fromEntries(Object.entries(S.events).filter(([, R]) => isObj(R) && EV[R.id] && Number.isFinite(R.start) && Number.isFinite(R.end)).map(([k, R]) => [k, { ...R,
         c: n(R.c), got: n(R.got), step: Math.min(n(R.step), EV[R.id].track.length), pets: n(R.pets), dayAt: n(R.dayAt), day: typeof R.day === 'string' ? R.day : '',
@@ -98,6 +103,7 @@ export function fromSave(raw, now) {
         pile: typeof R.pile === 'string' ? R.pile : '', pileAt: n(R.pileAt), built: n(R.built), luck: n(R.luck) }]));
       const own = evOwned(S); // 15-2: worn event wear, known ones, no more of each than bought
       for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
+    tidyVisit(S); tidySky(S); // 16-1, 16-2
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -340,13 +346,15 @@ export function advance(S, now, rng = Math.random) {
     S.xp += B.level.xp.grown; bump(S, 'grown'); ev.push({ type: 'grown', animal: a, isNew });
   }
   ev.push(...enforceCap(S));
-  HABITATS.forEach((h, i) => { if (i && !S.unlocked.includes(h.id) && unlockInfo(S, h.id).met) { S.unlocked.push(h.id); settle(S);
+  HABITATS.forEach((h, i) => { if (i && h.ready && !S.unlocked.includes(h.id) && unlockInfo(S, h.id).met) { S.unlocked.push(h.id); settle(S);
     if (h.nest && h.ready && !S.nests[h.id]) S.nests[h.id] = { t: now, eggs: Array.from({ length: B.nest.onUnlock }, () => layEgg(S, h.nest, rng)) }; // inbox 31: eggs to start with
     ev.push({ type: 'unlock', habitat: h.id }); } });
   const day = dayOf(now); if (S.xpDay !== day) { S.xpDay = day; S.xp += B.level.xp.login; bump(S, 'days'); } // the day's first visit (or the game left open past midnight)
   for (const a of newlyDone(S)) { S.ach = { ...S.ach, [a.id]: now }; S.xp += B.level.xp.achieve; ev.push({ type: 'achieve', id: a.id }); } // 23-2
   firstCheck(S, now, ev, rng); // 41 D
   evTick(S, now, rng); // 15-1
+  mythTick(S, now, ev); // 14-1
+  visitTick(S, now, ev); // 16-1
   const L = gardenLevel(S.xp); if (L > S.lv) { ev.push({ type: 'level', from: S.lv, level: L, unlocks: unlocksBetween(S.lv, L) }); S.lv = L; }
   return ev;
 }
@@ -461,11 +469,11 @@ export function unstore(S, id, now) {
 // walk is gone after), writes a postcard in S.cards and puts it back out if it fits, else in storage. Clock back: end <= now + h
 export const strollCap = S => B.stroll.slots.filter(([L]) => (S.lv || 1) >= L).at(-1)[1];
 export const strolling = S => S.animals.filter(a => a.stroll);
-export function sendStroll(S, id, h, now, rng = Math.random) {
+export function sendStroll(S, id, h, now, rng = Math.random, pl = null) { // pl: 14-1 the 불의 언덕 (mythHill), else picked here
   const a = S.animals.find(a => a.id === id && !a.pending && !a.stroll && known(a));
-  if (!a || !B.stroll.hours.includes(h) || strolling(S).length >= strollCap(S)) return null;
+  if (!a || !B.stroll.hours.includes(h) || strolling(S).length >= strollCap(S) || (pl != null && (pl !== MY.place.id || !mythHill(S)))) return null;
   bank(a, now); a.stored = true; delete a.home;
-  a.stroll = { start: now, end: now + h * 3600e3, h, pl: PLACES[Math.floor(rng() * PLACES.length)].id, ln: Math.floor(rng() * 3) };
+  a.stroll = { start: now, end: now + h * 3600e3, h, pl: pl ?? PLACES[Math.floor(rng() * PLACES.length)].id, ln: Math.floor(rng() * 3) };
   return a;
 }
 function strollBack(S, now, ev, rng) {
@@ -478,8 +486,74 @@ function strollBack(S, now, ev, rng) {
     const card = { id: S.nextId++, a: a.id, sp: a.species, v: a.variant, c: a.color, acc: a.acc, st: a.stage, nm: callName(a), pl: w.pl, ln: w.ln, h: w.h, at: w.end, hearts: got.hearts, candy: got.candy, prop: got.prop, new: true };
     S.cards.push(card); if (S.cards.length > R.cards) S.cards.splice(0, S.cards.length - R.cards);
     ev.push({ type: 'strollBack', animal: a, card });
+    if (w.pl === MY.place.id && S.myth.got && !S.myth.hair) { S.myth.hair = w.end; card.myth = MY.hair; ev.push({ type: 'myth', what: 'hair' }); } // 14-1
   }
 }
+// 14-1 신수의 부름 (data.js MYTHIC, PACE myth). S.myth: seen (the faint fire prints tapped), fire (a campfire out in the meadow
+// since), trace (the burnt hoofprints came), got (they were tapped: page 1, the 옛 제단, the 불의 언덕 opens), hair / play / big
+// (the altar's 3 lit), called (부르기), arrive (that night), here (it came), shown (its coming seen: the cutscene or 돌아왔어요),
+// bond, bondDay, settled, read (pages read, bits). Timestamps but bond, read, bondDay. Not in S.animals: no seat, no 보관함, no
+// walk, no send-back, never from an egg
+const MY = MYTHIC[0], BIG_IDS = BIGS.split(' ');
+const MYTH_T = ['seen', 'fire', 'trace', 'got', 'hair', 'play', 'big', 'called', 'arrive', 'here', 'shown', 'bond', 'settled', 'read'];
+const at6 = (t, d) => { const x = new Date(t); x.setHours(6, 0, 0, 0); x.setDate(x.getDate() + d); return +x; }; // 06:00, d days after t's day
+export const mythPrints = S => at6(S.since ?? 0, B.myth.day); // the faint fire prints show from then, no condition
+export const mythNight = t => { const h = new Date(t).getHours(); return h >= 20 || h < 5; };
+// null (nothing yet) | 'prints' | 'fire' (a campfire's night to wait) | 'trace' | 'altar' (the 3) | 'ready' (부르기) | 'called' | 'guest' | 'home'
+export function mythStage(S, now) {
+  const M = S.myth; if (HOLD.myth) return null; // inbox 65
+  if (M.settled) return 'home'; if (M.here) return 'guest'; if (M.called) return 'called';
+  if (M.got) return M.hair && M.play && M.big ? 'ready' : 'altar';
+  if (M.trace) return 'trace'; if (M.seen) return 'fire';
+  return now >= mythPrints(S) ? 'prints' : null;
+}
+export const mythHill = S => !!S.myth.got && !S.myth.hair && !S.animals.some(a => a.stroll?.pl === MY.place.id); // 불의 언덕 open (one walk at a time)
+export const altarOf = S => S.props.find(p => p.prop === 'myth_altar' && p.placed && p.hab === MY.habitat);
+const playNear = S => { const A = altarOf(S); return !!A && S.props.some(p => p.placed && p.hab === MY.habitat && PROP[p.prop]?.use && Math.hypot(p.x - A.x, p.z - A.z) < 12); };
+function bondUp(S, now, ev) { // one a day (a pet, or a play prop near the altar on a day the game is open); days missed just wait
+  const M = S.myth; M.bondDay = dayOf(now); M.bond = (M.bond || 0) + 1; ev.push({ type: 'myth', what: 'bond', n: M.bond });
+  if (M.bond >= B.myth.guest) { M.settled = now; ev.push({ type: 'myth', what: 'settle' }); }
+}
+function mythTick(S, now, ev) {
+  if (HOLD.myth) return; // inbox 65
+  const M = S.myth, C = B.myth;
+  if (M.seen && !M.trace) { // a campfire out through `nights` nights (offline too: nothing moves a prop then) -> the hoofprints at 06:00
+    if (!S.props.some(p => p.placed && p.hab === MY.habitat && p.prop === 'campfire')) delete M.fire;
+    else { if (!(M.fire <= now)) M.fire = now; const t = at6(M.fire, C.nights); if (now >= t) { M.trace = t; ev.push({ type: 'myth', what: 'trace' }); } }
+  }
+  if (M.got) { // scenes seen before count, and a 큰 소품 placed before (anywhere)
+    if (!M.play && Object.keys(S.scenes).length >= MY.scenes) { M.play = now; ev.push({ type: 'myth', what: 'play' }); }
+    if (!M.big && S.props.some(p => p.placed && !p.nat && BIG_IDS.includes(p.prop))) { M.big = now; ev.push({ type: 'myth', what: 'big' }); }
+  }
+  if (M.arrive && !M.here && now >= M.arrive) { M.here = M.arrive; ev.push({ type: 'myth', what: 'arrive' }); if (!C.guest) { M.settled = M.here; ev.push({ type: 'myth', what: 'settle' }); } }
+  if (M.here && !M.settled && M.bondDay !== dayOf(now) && now >= M.here && playNear(S)) bondUp(S, now, ev);
+}
+export const putGift = (S, prop, at, ex = {}) => { // into the meadow's storage, then where the tap was if there is room
+  const p = { uid: S.nextId++, prop, hab: MY.habitat, placed: false, x: 0, z: 0, rot: 0, ...ex }; S.props.push(p);
+  return { uid: p.uid, prop, placed: !!at && !!placeProp(S, p.uid, at[0], at[1], 0) };
+};
+export function mythSeen(S, now, at = null) { // the fire prints tapped; a campfire given (nothing back for it) if the level doesn't sell one yet
+  if (mythStage(S, now) !== 'prints') return null;
+  S.myth.seen = now;
+  return { gift: !can(S, 'prop:campfire') && !S.props.some(p => p.prop === 'campfire') ? putGift(S, 'campfire', at, { cost: 0 }) : null };
+}
+export function mythTrace(S, now, at = null) { // the burnt hoofprints tapped: page 1 and the 옛 제단
+  if (mythStage(S, now) !== 'trace') return null;
+  S.myth.got = now; const A = S.props.find(p => p.prop === 'myth_altar');
+  return A ? { uid: A.uid, prop: A.prop, placed: A.placed } : putGift(S, 'myth_altar', at);
+}
+export function mythCall(S, now) { // 부르기: it comes this night (20:00, or now if it is night already)
+  if (mythStage(S, now) !== 'ready') return null;
+  const t = new Date(now); t.setHours(20, 0, 0, 0);
+  const M = S.myth; M.called = now; M.arrive = mythNight(now) ? now : +t; return M.arrive;
+}
+export function mythPet(S, now) { // a guest's bond, once a day
+  const M = S.myth; if (!M.here || now < M.here) return null; const events = [];
+  if (!M.settled && M.bondDay !== dayOf(now)) bondUp(S, now, events);
+  return { events, bond: M.bond || 0, settled: !!M.settled };
+}
+export const mythRead = (S, i) => { S.myth.read = (S.myth.read || 0) | 1 << i; return true; }; // page i: 0 the hoofprints, 1~3 the altar's 3, 4 settled
+export const mythShown = (S, now) => { S.myth.shown = now; return true; };
 // 13-2 놀이 장면: S.scenes { id: { at (first seen), sp (the friend in it) } }. scenesOf(e): the SCENES e is, e = { prop (its kind), sp (species on it),
 // n (seats taken), night } from play.js's start, or { social (walk.js kind), night }. seeScene pays B.scene.hearts once
 export const scenesOf = e => SCENES.filter(s => (s.prop ? s.prop === e.prop && !(s.n > (e.n || 0)) && (!s.sp || !!e.sp?.includes(s.sp)) : s.social === e.social)
@@ -709,7 +783,7 @@ export function feed(S, id, now) {
 }
 // petting: the heart rule (hearts.js); a tap that gives a heart also adds BALANCE.grow.pet to a growing baby
 export function tapHeart(S, id, now, rng = Math.random) {
-  const a = S.animals.find(a => a.id === id), n = a ? heartFor(S, a, now) : 0;
+  const a = S.animals.find(a => a.id === id) ?? S.visit.guests.find(g => g.id === id), n = a ? heartFor(S, a, now) : 0; // 16-1: a guest too (the day's cap the same)
   if (n && growing(a)) { bank(a, now); a.g = Math.min(1, a.g + B.grow.pet); }
   if (n) { bump(S, 'pet'); const L = liveRun(S, now); if (L) { if (++L.R.pets % L.e.earn.pet === 0) evEarn(S, L.R, 1, now); // 15-1: a coin every earn.pet hearts
     if (L.e.earn.luck && rng() < L.e.earn.luck) { L.R.luck++; evEarn(S, L.R, 1, now); } } } // 15-2: now and then one more
@@ -856,6 +930,14 @@ export function evPile(S, now) {
   const i = P.findLastIndex(h => kstHour(now) >= h), id = `${kstDay(now)}:${i}`;
   return i < 0 || L.R.pile === id || now < L.R.pileAt ? null : { ...L, id };
 }
+// 14-3 화석 발굴: an animal done digging at the dino jungle's fossil site (walk.js 'dig', habitat.js ctx.onDig). The next of
+// FOSSIL.props the player doesn't have yet, with FOSSIL.odds, FOSSIL.gap at least after the last one: into the dino jungle's
+// storage (꾸미기 › 선물). Its PROPS id, or null
+export function dig(S, now, rng = Math.random) {
+  const prop = FOSSIL.props.find(id => !S.props.some(p => p.prop === id));
+  if (!prop || !S.unlocked.includes('dino') || now - S.fossil.at < FOSSIL.gap || !(rng() < FOSSIL.odds)) return null;
+  S.fossil.at = now; S.props.push({ uid: S.nextId++, prop, hab: 'dino', placed: false, x: 0, z: 0, rot: 0 }); return prop;
+}
 export function tapPile(S, now) { const p = evPile(S, now); if (!p) return 0; p.R.pile = p.id; p.R.pileAt = now; evEarn(S, p.R, p.e.earn.pile, now); return p.e.earn.pile; }
 // a snowman built (3 taps, the habitat finds the spot: x, z as saved) for build.price coins: placed there at once, a prop to keep
 export function evBuild(S, hab, x, z, now) {
@@ -892,5 +974,7 @@ export function skip(S, ms, now, rng = Math.random) {
   for (const s of S.slots) if (s) { s.start -= ms; s.end -= ms; }
   for (const a of S.animals) { a.born -= ms; if (a.gAt != null) a.gAt -= ms; if (a.adultAt != null) a.adultAt -= ms; a.heartAt -= ms; if (a.stroll) { a.stroll.start -= ms; a.stroll.end -= ms; } }
   if (Number.isFinite(S.flags.lvCard?.at)) S.flags.lvCard.at -= ms; // 41 D: level.js's gap between level cards
+  for (const k of MYTH_T) if (k !== 'bond' && k !== 'read' && Number.isFinite(S.myth[k])) S.myth[k] -= ms; // 14-1
+  for (const g of S.visit.guests) { g.at -= ms; g.until -= ms; } // 16-1
   return advance(S, now, rng);
 }

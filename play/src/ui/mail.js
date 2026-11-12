@@ -4,8 +4,10 @@
 // the 선물 코드 넣기 card (설정) and what came.
 // Beta: the list and the received ids live on the phone, so a player who edits them can take a gift again (release: a server).
 import * as G from '../game/game.js';
-import { mailOpen, legendRoom, PROP } from '../game/rules.js';
-import { GIFT } from '../game/data.js';
+import { mailOpen, legendRoom, PROP, kindName } from '../game/rules.js';
+import { GIFT, BALANCE } from '../game/data.js';
+import { gardenName, PICS, LINES } from '../game/visit.js';
+import { dayOf } from '../game/clock.js';
 import { sfx } from './sound.js';
 
 const $ = id => document.getElementById(id), box = $('mail'), btn = $('mailBtn');
@@ -15,17 +17,19 @@ const load = () => navigator.onLine ? fetch('mail.json', { cache: 'no-cache' }).
   .then(d => { if (d && typeof d === 'object') { list = d; dot(); } }, () => {}).catch(() => {}) : Promise.resolve();
 const all = () => [...(Array.isArray(list?.mail) ? list.mail : []), ...G.evMail()]; // 15-1: an event's mail while it runs
 const waiting = () => all().filter(m => mailOpen(G.S, m, G.now()));
-const dot = () => btn.classList.toggle('new', waiting().length > 0 || (G.S.giftEggs > 0 && legendRoom(G.S)));
+const cards = () => G.S.visit.cards.filter(c => !c.got); // 16-1: postcards from where a friend went
+const dot = () => btn.classList.toggle('new', waiting().length > 0 || cards().length > 0 || (G.S.giftEggs > 0 && legendRoom(G.S)));
 const day = s => { const m = /^\d{4}-(\d\d)-(\d\d)/.exec(String(s ?? '')); return m ? `${+m[1]}월 ${+m[2]}일까지` : ''; };
 const gifts = r => [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`, r?.candy > 0 && `꼬마 사탕 ${Math.floor(r.candy)}개`,
   r?.eggs > 0 && `둥지 알 ${Math.floor(r.eggs)}개`, PROP[r?.prop] && `소품 「${PROP[r.prop].name}」`, r?.legendEggs > 0 && `전설 알 ${Math.floor(r.legendEggs)}개`].filter(Boolean).join(' · ');
 
 function draw() {
-  const L = waiting(), k = G.S.giftEggs, room = legendRoom(G.S); // 44: legend eggs that found the nest full wait here
+  const L = waiting(), k = G.S.giftEggs, room = legendRoom(G.S), C = cards(), V = G.S.visit, n = V.cardDay === dayOf(G.now()) ? V.cardN : 0; // 44: legend eggs that found the nest full wait here
+  const pc = C.map((c, i) => `<li><i aria-hidden="true">💌</i><span>${esc(gardenName(c.g))}에서 온 엽서<small>${PICS[c.pic]} ${esc(LINES[c.line])} · ${esc(kindName(c))}</small><small class="gift">${n + i < BALANCE.visit.cardDaily ? `♥${BALANCE.visit.card}` : '오늘 엽서 하트는 다 받았어요'}</small></span><button data-pc="${c.lid}">받기</button></li>`).join('');
   const wait = k > 0 ? `<li><i aria-hidden="true">🥚</i><span>전설 알 ${k}개<small>둥지에 자리가 생기면 받기</small><small class="gift">${room ? '지금 둥지에 자리가 있어요' : '둥지가 가득 찼어요. 알을 하나 부화하면 받을 수 있어요'}</small></span><button data-legend${room ? '' : ' disabled'}>받기</button></li>` : '';
-  box.innerHTML = `<div><h2>우편함</h2>${L.length || wait ? `<ul>${wait}${L.map(m => `<li><i aria-hidden="true">✉️</i><span>${esc(m.title)}<small>${esc(m.body)}</small><small class="gift">${esc(gifts(m.rewards))}${m.end ? ` · ${day(m.end)}` : ''}</small></span><button data-get="${esc(m.id)}">받기</button></li>`).join('')}</ul>`
+  box.innerHTML = `<div><h2>우편함</h2>${L.length || wait || pc ? `<ul>${wait}${pc}${L.map(m => `<li><i aria-hidden="true">✉️</i><span>${esc(m.title)}<small>${esc(m.body)}</small><small class="gift">${esc(gifts(m.rewards))}${m.end ? ` · ${day(m.end)}` : ''}</small></span><button data-get="${esc(m.id)}">받기</button></li>`).join('')}</ul>`
     : '<p class="note">새 우편이 없어요</p>'}
-<div class="nbtns">${L.length > 1 ? '<button class="sb" data-all>모두 받기</button>' : ''}<button class="go" data-close>닫기</button></div></div>`;
+<div class="nbtns">${L.length + C.length > 1 ? '<button class="sb" data-all>모두 받기</button>' : ''}<button class="go" data-close>닫기</button></div></div>`;
 }
 // what came (a mail, all of them, or a code); eggs that found every nest full are told as hearts
 function show(got) {
@@ -56,8 +60,10 @@ box.onclick = e => {
   if (d.close != null) { box.hidden = true; return; }
   if (d.code != null) return void useCode();
   if (d.legend != null) { const out = G.claimLegend(); if (out) show(out.got); else draw(); return; }
-  const out = G.claimMail(all(), d.all != null ? undefined : [d.get]);
-  if (out) show(out.got); else draw();
+  if (d.pc) { const out = G.claimCard(d.pc); if (out) show([out]); else draw(); return; }
+  const pcs = d.all != null ? cards().map(c => G.claimCard(c.lid)).filter(Boolean) : [];
+  const out = (d.all == null || waiting().length) && G.claimMail(all(), d.all != null ? undefined : [d.get]), got = [...pcs, ...out?.got || []];
+  if (got.length) show(got); else draw();
 };
 box.onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'codeIn') useCode(); };
 load(); setInterval(load, 3600000); addEventListener('online', () => load());

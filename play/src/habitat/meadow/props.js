@@ -255,6 +255,25 @@ export function kit(L, { rand, heightAt, occupied }) {
     L.snow.push({ x, y: h, z, s: [s, sy, s], ry, c: '#f6f9fc' });
     occupied.push({ x, z, r: 1.3 * s, h: 3.6 * s, fade: [['trunk', L.trunk.length - 1, 1], ['pine', L.pine.length - 1, 1], ['snow', L.snow.length - 1, 1]] });
   }
+  // 14-3 the dino jungle's tree fern: a thick brown trunk (the tree's, narrower), a crown of nine long flat fronds arching out and
+  // down from its top (canopy blobs stretched along x, tipped by rz then turned by ry), two young ones standing up in the middle
+  function treefern(x, z, s) {
+    s *= NAT_K.tree;
+    const h = heightAt(x, z), t = L.trunk.length, c = L.canopy.length, top = h + 2.4 * s, leaf = '#5fa83c';
+    L.trunk.push({ x, y: h - 0.05, z, s: [0.7 * s, s, 0.7 * s], ry: rand() * 6, c: jitter('#7a5232', 0.05) });
+    const frond = (a, tilt, len, w) => { const d = len * 0.92; L.canopy.push({ x: x + d * Math.cos(tilt) * Math.cos(a), y: top - d * Math.sin(tilt), z: z - d * Math.cos(tilt) * Math.sin(a), s: [len, 0.07 * s, w], ry: a, rz: -tilt, c: jitter(leaf, 0.06) }); };
+    for (let i = 0; i < 9; i++) frond(i / 9 * Math.PI * 2 + rand() * 0.3, 0.15 + rand() * 0.35, 0.9 * s, 0.3 * s);
+    for (let i = 0; i < 2; i++) frond(rand() * 6.28, -1.1 + rand() * 0.2, 0.5 * s, 0.2 * s);
+    L.canopy.push({ x, y: top, z, s: 0.3 * s, c: jitter('#4e8a36', 0.04) });
+    occupied.push({ x, z, r: 1.3 * s, h: 3.4 * s, cover: { y: 2.2 * s, core: 0.4 * s, r: 1.7 * s }, fade: [['trunk', t, 1], ['canopy', c, L.canopy.length - c]] });
+  }
+  // 14-3 a low ground fern: seven fronds rising out of the ground (part of the board, no native; r 0.3: no wall, as a reed clump)
+  function fern(x, z, s) {
+    const h = heightAt(x, z), c = L.canopy.length;
+    for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283 + rand() * 0.4, tilt = -0.35 - rand() * 0.4, len = 0.5 * s, d = len * 0.9;
+      L.canopy.push({ x: x + d * Math.cos(tilt) * Math.cos(a), y: h + 0.05 - d * Math.sin(tilt), z: z - d * Math.cos(tilt) * Math.sin(a), s: [len, 0.05 * s, 0.17 * s], ry: a, rz: -tilt, c: jitter('#5fa83c', 0.08) }); }
+    occupied.push({ x, z, r: 0.3, h: 0.8 * s, fade: [['canopy', c, L.canopy.length - c]] });
+  }
   function bush(x, z, s) { s *= NAT_K.bush; const h = heightAt(x, z); const c = L.canopy.length; blobCluster(x, h + 0.35 * s, z, 0.75 * s, pickOf(leafPal), 6); occupied.push({ x, z, r: 0.9 * s, h: 1.25 * s, fade: [['canopy', c, L.canopy.length - c]] }); } // h: its top (the guard's default 1.2 let a camera sit just over a big one)
 
   const rockPal = ['#bdb6a9', '#aaa499', '#c9c2b4', '#a09a8f'];
@@ -264,7 +283,7 @@ export function kit(L, { rand, heightAt, occupied }) {
     occupied.push({ x, z, r: s * 1.05, h: s, fade: [['rock', L.rock.length - 1, 1]] });
   }
   const tuft = (x, z) => { for (let i = 0; i < 4; i++) { const px = x + (rand() - 0.5) * 0.8, pz = z + (rand() - 0.5) * 0.8, y = heightAt(px, pz), hh = 1.1 + rand() * 0.5, rz = (rand() - 0.5) * 0.15; L.stem.push({ x: px, y, z: pz, s: [1, hh, 1], rz }); L.head.push({ x: px + Math.sin(-rz) * hh, y: y + hh * 1.0, z: pz, rz }); } }; // a reed tuft
-  return { pickOf, jitter, tree, pine, snowpine, bush, rock, tuft };
+  return { pickOf, jitter, tree, pine, snowpine, treefern, fern, bush, rock, tuft };
 }
 export function addPads(scene, pads) { // lily pads (notched discs) floating on the water
   const padGeo = new THREE.CircleGeometry(0.55, 20, 0.35, Math.PI * 2 - 0.7); padGeo.rotateX(-Math.PI / 2);
@@ -580,6 +599,27 @@ export function decorModel(id) {
     const peb = new THREE.SphereGeometry(1, 16, 12);
     [[0, 0.07, 0.24, 0.08, '#a9a49b'], [0.02, 0.19, 0.18, 0.065, '#c9c3b8'], [-0.01, 0.29, 0.13, 0.05, '#8f8b84'], [0.01, 0.37, 0.08, 0.04, '#d9d3c8']]
       .forEach(([x, y, r, h, c]) => part(g, peb, c, x, y, 0).scale.set(r, h, r * 0.85));
+  } else if (id === 'sky_scope') { // 16-2 하늘 망원경: three wooden legs, a navy tube tipped up at the sky with cream bands and a small eyepiece; a tap nods it
+    for (let i = 0; i < 3; i++) { const a = i * Math.PI * 2 / 3 + 0.5; part(g, new THREE.CylinderGeometry(0.035, 0.05, 1.0, 8), '#a8703f', 0.22 * Math.cos(a), 0.47, 0.22 * Math.sin(a), { rx: -0.24 * Math.sin(a), rz: 0.24 * Math.cos(a) }); }
+    part(g, new THREE.SphereGeometry(0.09, 12, 8), '#8a5a34', 0, 0.95, 0);
+    const tube = new THREE.Group(); tube.position.set(0, 1.0, 0); tube.rotation.z = 0.6; g.add(tube);
+    part(tube, new THREE.CylinderGeometry(0.15, 0.11, 0.95, 18), '#3d5a8a', 0, 0.12, 0, { mat: { roughness: 0.6 } });
+    for (const y of [0.52, -0.3]) part(tube, new THREE.CylinderGeometry(y > 0 ? 0.165 : 0.125, y > 0 ? 0.165 : 0.125, 0.08, 18), '#f1e2b8', 0, y + (y > 0 ? 0.05 : 0), 0);
+    part(tube, new THREE.CylinderGeometry(0.05, 0.05, 0.14, 10), '#2b3550', 0, -0.42, 0);
+    const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.6, 8)); hit.position.y = 0.8; hit.visible = false; g.add(hit); // a thin thing: an unseen tap target round it (raycast ignores visible)
+    let t0 = -1e9; g.userData.tap = () => { t0 = performance.now(); return true; };
+    g.userData.tick = () => { const k = (performance.now() - t0) / 900; tube.rotation.z = 0.6 + (k < 1 ? 0.12 * Math.sin(k * Math.PI * 2) * (1 - k) : 0); };
+  } else if (id === 'myth_altar') { // 14-1 옛 제단 (신수의 부름): a round stone plinth in two steps, a standing stone at the back with a red flame
+    // jewel, three stone bowls in front, each one's flame lit as the altar fills (userData.lit(n), ui/myth.js), glowing by night
+    part(g, lathe([[0, 0], [0.8, 0], [0.84, 0.06], [0.8, 0.16], [0.64, 0.19], [0.64, 0.36], [0.7, 0.4], [0.68, 0.47], [0, 0.48]], 24), '#bdb5a6', 0, 0, 0, { mat: { roughness: 0.7 } });
+    part(g, new THREE.SphereGeometry(1, 18, 14), '#a69e90', -0.34, 0.75, 0, { mat: { roughness: 0.7 } }).scale.set(0.16, 0.42, 0.3);
+    part(g, new THREE.SphereGeometry(1, 16, 10), '#c8372a', -0.2, 0.84, 0).scale.set(0.03, 0.1, 0.075);
+    const bowl = lathe([[0, 0], [0.1, 0.01], [0.15, 0.07], [0.14, 0.13], [0.11, 0.12], [0, 0.09]], 14), fl = lathe([[0, 0], [0.07, 0.04], [0.08, 0.12], [0.05, 0.22], [0, 0.3]], 10);
+    const flames = [-0.55, 0, 0.55].map(a => { const x = 0.42 * Math.cos(a), z = 0.42 * Math.sin(a), f = new THREE.Group(); f.position.set(x, 0.6, z); f.visible = false; g.add(f);
+      part(g, bowl, '#8f877a', x, 0.47, z, { mat: { roughness: 0.7 } }); part(f, fl, '', 0, 0, 0, { m: fireMat('#ffb21a') }); part(f, fl, '', 0, 0.02, 0, { m: fireMat('#ff6a1a') }).scale.set(0.6, 0.75, 0.6);
+      halo(f, '#ffb35a', 1.6, 0, 0.15, 0); return f; });
+    g.userData.lit = n => flames.forEach((f, i) => { f.visible = i < n; });
+    g.userData.tick = t => flames.forEach((f, i) => { f.scale.set(1, 1 + 0.12 * Math.sin(t * 7 + i * 2), 1); });
   } else if (id === 'walk_acorn') { // 13-1 산책 선물: a big acorn lying a little tilted: a round nut, a darker cap, a short stem
     const a = new THREE.Group(); a.position.y = 0.2; a.rotation.z = 0.35; g.add(a);
     part(a, lathe([[0, -0.2], [0.1, -0.17], [0.16, -0.08], [0.17, 0.02], [0.15, 0.08], [0, 0.08]], 18), '#c98a4b', 0, 0, 0);
@@ -1152,6 +1192,49 @@ export function decorModel(id) {
     const palm = part(g, new THREE.CapsuleGeometry(0.36, 0.5, 6, 16), '#d9473f', 0, 0.9, -0.28); palm.scale.z = 0.5;
     part(g, new THREE.CapsuleGeometry(0.13, 0.22, 5, 12), '#d9473f', 0.42, 0.78, -0.26, { rz: -0.7 }).scale.z = 0.6;
     part(g, roundedBox(0.84, 0.2, 0.42, 0.09), '#fbf7f0', 0, 0.38, -0.28);
+  } else if (id === 'cycad') { // 14-3 the dino set: a short fat barrel trunk, ten long flat fronds fanning out from its top, four young ones upright
+    part(g, lathe([[0, 0], [0.27, 0], [0.31, 0.08], [0.29, 0.2], [0.3, 0.32], [0.26, 0.46], [0.24, 0.56], [0.12, 0.64], [0, 0.65]], 18), '#8a6a44', 0, 0, 0, { mat: { roughness: 0.7 } });
+    const fr = new THREE.CapsuleGeometry(0.08, 0.56, 4, 12);
+    for (let i = 0; i < 14; i++) { const young = i >= 10, a = young ? i * 1.57 + 0.4 : i / 10 * Math.PI * 2, p = new THREE.Group(); p.position.set(0, 0.6, 0); p.rotation.set(0, a, young ? 1.05 : 0.15 + 0.2 * (i % 2)); g.add(p);
+      part(p, fr, young ? '#6cb84a' : i % 2 ? '#4f9a3a' : '#58a440', young ? 0.24 : 0.38, 0, 0, { rz: Math.PI / 2 }).scale.set(1, young ? 0.7 : 1, 0.32); }
+  } else if (id === 'dinonest') { // 14-3: a round straw nest, a thick rim of twigs, three big eggs in it (cream, pale mint, cream)
+    part(g, lathe([[0, 0.1], [0.42, 0.12], [0.6, 0.2], [0.72, 0.3], [0.86, 0.22], [0.86, 0.08], [0.78, 0], [0, 0]], 24), '#c39a5c', 0, 0, 0, { mat: { roughness: 0.8 } });
+    part(g, new THREE.TorusGeometry(0.72, 0.12, 10, 28), '#a87c48', 0, 0.28, 0, { rx: Math.PI / 2, mat: { roughness: 0.8 } }).scale.z = 0.8;
+    [[-0.17, -0.08, 0.3, '#f3ead6'], [0.2, -0.1, -0.25, '#e2eedb'], [0.02, 0.22, 0.1, '#f3ead6']].forEach(([x, z, rz, c]) =>
+      part(g, new THREE.SphereGeometry(0.19, 18, 14), c, x, 0.36, z, { rz }).scale.set(1, 1.3, 1));
+  } else if (id === 'lavalamp') { // 14-3: a dark lava rock, on it a round glass with two orange blobs glowing inside by night
+    part(g, new THREE.SphereGeometry(0.36, 16, 10), '#4a3c38', 0, 0.08, 0, { mat: { roughness: 0.7 } }).scale.set(1, 0.55, 0.9);
+    part(g, new THREE.SphereGeometry(0.13, 12, 9), '#5a4a44', 0.28, 0.05, 0.12, { mat: { roughness: 0.7 } }).scale.y = 0.6;
+    part(g, new THREE.SphereGeometry(0.075, 12, 9), '#ffb04a', 0, 0.4, 0, { lit: true });
+    part(g, new THREE.SphereGeometry(0.055, 12, 9), '#ff7a2a', 0.03, 0.55, 0.02, { lit: true });
+    part(g, new THREE.CapsuleGeometry(0.15, 0.2, 6, 16), '', 0, 0.48, 0, { m: glassLit('#ff8a3a') });
+    halo(g, '#ff9a4a', 1.5, 0, 0.48, 0);
+  } else if (id === 'ribs') { // 14-3: a big dinosaur's rib cage standing in the ground: four bone arches under a row of round vertebrae, sand round their feet
+    const bone = { mat: { roughness: 0.7 } };
+    [[-0.9, 0.85], [-0.3, 1.05], [0.3, 1.05], [0.9, 0.85]].forEach(([z, R]) => {
+      part(g, new THREE.TorusGeometry(R, 0.09, 10, 28, Math.PI), '#efe4cc', 0, 0, z, bone).scale.y = 1.2;
+      for (const x of [-R, R]) part(g, new THREE.SphereGeometry(0.2, 12, 8), '#d8c08c', x, 0, z, { mat: { roughness: 0.9 } }).scale.y = 0.35; });
+    for (let i = 0; i < 11; i++) { const z = -1.3 + i * 0.26, y = 1.2 * (1.05 - 0.2 * (z / 1.3) ** 2) + 0.06; part(g, new THREE.SphereGeometry(0.14, 12, 9), '#e6d8b8', 0, y, z, bone).scale.set(1, 0.85, 0.8); }
+  } else if (id === 'fos_ammonite') { // 14-3 화석 발굴: a coiled shell standing on its edge, bedded in a low sandstone
+    part(g, new THREE.SphereGeometry(0.45, 16, 10), '#c4a97c', 0, 0.02, 0, { mat: { roughness: 0.85 } }).scale.set(1, 0.3, 0.75);
+    const sh = new THREE.SphereGeometry(1, 12, 9);
+    for (let i = 0; i <= 26; i++) { const th = i / 26 * 4 * Math.PI, r = 0.05 * Math.exp(0.15 * th); part(g, sh, i % 2 ? '#e9d7ad' : '#e2cea2', r * Math.cos(th), 0.36 + r * Math.sin(th), 0, { mat: { roughness: 0.75 } }).scale.set(r * 0.5, r * 0.5, r * 0.42 + 0.03); }
+  } else if (id === 'fos_bone') { // 14-3 화석 발굴: one big leg bone lying in a little bed of sand, two round knobs at each end
+    part(g, new THREE.SphereGeometry(0.75, 18, 10), '#d9c08e', 0, 0, 0, { mat: { roughness: 0.9 } }).scale.set(1, 0.09, 0.5);
+    part(g, new THREE.CapsuleGeometry(0.11, 0.9, 6, 14), '#efe2c4', 0, 0.15, 0, { rz: Math.PI / 2, mat: { roughness: 0.7 } });
+    for (const x of [-0.58, 0.58]) for (const z of [-0.09, 0.09]) part(g, new THREE.SphereGeometry(0.16, 14, 10), '#efe2c4', x, 0.16, z, { mat: { roughness: 0.7 } });
+  } else if (id === 'fos_egg') { // 14-3 화석 발굴: three stone eggs half bedded in a round sandstone
+    part(g, new THREE.SphereGeometry(0.48, 16, 10), '#b9a07a', 0, 0.02, 0, { mat: { roughness: 0.85 } }).scale.set(1, 0.32, 0.88);
+    [[-0.16, 0.1, 0.35, '#dccba6'], [0.18, 0.06, -0.3, '#d2bf98'], [0.01, -0.18, 0.1, '#e2d3b0']].forEach(([x, z, rz, c]) =>
+      part(g, new THREE.SphereGeometry(0.15, 16, 12), c, x, 0.2, z, { rz, mat: { roughness: 0.75 } }).scale.set(1, 1.3, 1));
+  } else if (id === 'fos_skull') { // 14-3 화석 발굴: a horned dinosaur's skull lying in the sand: a round frill behind, two brow horns and a short nose horn, dark eye holes
+    const bone = { mat: { roughness: 0.7 } };
+    part(g, new THREE.SphereGeometry(0.85, 18, 10), '#d9c08e', 0, 0, 0.05, { mat: { roughness: 0.9 } }).scale.set(0.9, 0.08, 1);
+    part(g, new THREE.CylinderGeometry(0.52, 0.52, 0.1, 28), '#e4d4b0', 0, 0.5, -0.38, { rx: Math.PI / 2 - 0.55, ...bone });
+    part(g, roundedBox(0.5, 0.42, 0.6, 0.18), '#efe2c4', 0, 0.3, 0.02, bone);
+    part(g, new THREE.SphereGeometry(1, 16, 12), '#efe2c4', 0, 0.24, 0.42, bone).scale.set(0.19, 0.18, 0.3);
+    for (const x of [-0.15, 0.15]) { part(g, new THREE.ConeGeometry(0.065, 0.42, 12), '#f4ead2', x, 0.62, 0.12, { rx: 0.55, ...bone }); part(g, new THREE.SphereGeometry(0.075, 10, 8), '#6a5642', x * 1.6, 0.4, 0.2); }
+    part(g, new THREE.ConeGeometry(0.05, 0.16, 10), '#f4ead2', 0, 0.44, 0.56, { rx: 0.3, ...bone });
   } else if (id === 'table') { // 28-5 a round wooden table on one thick leg and a round foot (its top spots: data.js top)
     part(g, lathe([[0, 0], [0.78, 0], [0.8, 0.03], [0.79, 0.07], [0.76, 0.09], [0, 0.09]], 28), '#c88a4b', 0, 0.65, 0);
     part(g, lathe([[0, 0], [0.13, 0], [0.11, 0.15], [0.1, 0.5], [0.12, 0.65], [0, 0.65]], 14), '#a8703f', 0, 0, 0);

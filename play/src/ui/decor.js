@@ -30,9 +30,9 @@ const shelfRow = sh => { shelfEnds = sh.ends; return sh.items.length ? `<div cla
   return `<button class="dsh${it.off ? ' sale' : ''}" data-shelf="${i}"><img alt="">${c ? `<i style="background:${c[1]}"></i>` : ''}<b>${P.name}</b><small>${c ? `진열대 색 · ${c[0]}` : it.off ? `${Math.round(B.shelf.off * 100)}% 싸게` : '이번 진열'}</small><em>${it.off ? `<s>${P.price}</s> ` : ''}<span class="hrt">♥</span>${it.price}</em></button>`; }).join('')}</div></div>` : ''; };
 setInterval(() => { const s = !el.hidden && el.querySelector('[data-left]'); if (!s) return; if (G.now() >= shelfEnds) draw(); else s.textContent = '다음 진열 ' + hm(shelfEnds - G.now()); }, 1000);
 // the tabs and the props in each (one not listed goes under 가구; 28-2 놀이: the props animals use); the board's own nature put away shows under 자연
-const TABS = [['nature', '자연', 'flowers tulips tallgrass stones mushrooms log'], ['path', '길', 'fence path'], ['light', '조명', 'lantern jar mushlamp starlamp icelamp'],
-  ['furniture', '가구', 'bench mailbox pinwheel vane hay trough snowman sled'], ['big', '큰 소품', BIGS], ['water', '물가', 'lily boat stepping'],
-  ['play', '놀이', 'swing slide seesaw ball hammock fountain campfire feeder musicbox bubbles lights fireworks pinhill bell'], ['home', '집', 'table shelf platform doll'], ['land', '땅', 'hillock puddle flowermound rockmound'], ['train', '기차', 'rail railcurve railfork railbridge'], ['gift', '선물', 'att_sunflower att_birdhouse att_balloons att_wcan att_signpost att_cart att_rainbow firstday walk_cairn walk_acorn walk_pinecone ev_igloo ev_sled ev_snowman ev_icelamp ev_bigsnowman ev_album ev_slide ev_flakelamp ev_snowfam ev_mitten']].map(([id, name, ps]) => ({ id, name, ps: ps.split(' ') }));
+const TABS = [['nature', '자연', 'flowers tulips tallgrass stones mushrooms log cycad'], ['path', '길', 'fence path'], ['light', '조명', 'lantern jar mushlamp starlamp icelamp lavalamp'],
+  ['furniture', '가구', 'bench mailbox pinwheel vane hay trough snowman sled dinonest ribs'], ['big', '큰 소품', BIGS], ['water', '물가', 'lily boat stepping'],
+  ['play', '놀이', 'swing slide seesaw ball hammock fountain campfire feeder musicbox bubbles lights fireworks pinhill bell'], ['home', '집', 'table shelf platform doll'], ['land', '땅', 'hillock puddle flowermound rockmound'], ['train', '기차', 'rail railcurve railfork railbridge'], ['gift', '선물', 'att_sunflower att_birdhouse att_balloons att_wcan att_signpost att_cart att_rainbow firstday walk_cairn walk_acorn walk_pinecone sky_scope myth_altar ev_igloo ev_sled ev_snowman ev_icelamp ev_bigsnowman ev_album ev_slide ev_flakelamp ev_snowfam ev_mitten fos_ammonite fos_bone fos_egg fos_skull']].map(([id, name, ps]) => ({ id, name, ps: ps.split(' ') }));
 const tabOf = P => (TABS.find(t => t.ps.includes(P.id)) ?? TABS[3]).id;
 const NAT = Object.fromEntries(NATURE.map(n => [n.id, n])), cut = id => id === 'rock' ? '치우기' : '베기';
 const UNDO = 20;
@@ -130,7 +130,7 @@ ${tools()}<div class="nbtns"><button class="go" data-endsweep>다 했어요</but
     el.innerHTML = GRIP() + `<div class="dhead"><b>땅 칠하기</b><span>칸을 손가락으로 칠해요 · 길은 옆 칸과 저절로 이어지고, 울타리·돌담은 동물이 돌아가요</span></div>
 <div class="dbrush">${BRUSHES.map((b, i) => { if (!brushIn(i, habId)) return ''; const k = 'brush:' + b.id, lk = !can(G.S, k); return `<button class="${brush === i ? 'on' : lk ? 'lock' : ''}" data-brush="${i}"><i style="background:${b.c}"></i>${b.name}${lk ? `<small>Lv ${needFor(k)}</small>` : ''}</button>`; }).join('')}<button class="${brush === null ? 'on' : ''}" data-brush="x"><i class="erase"></i>지우개</button></div>
 ${tools()}<div class="nbtns"><button class="go" data-endpaint>다 칠했어요</button></div>
-<p class="dhint">두 손가락으로 화면을 옮기고 키워요${habId === 'pond' ? ' · 연못은 물가 풀밭만 칠해요' : habId === 'snow' ? ' · 설원은 얼음 연못 밖 눈밭만 칠해요' : ''}</p>`;
+<p class="dhint">두 손가락으로 화면을 옮기고 키워요${habId === 'pond' ? ' · 연못은 물가 풀밭만 칠해요' : habId === 'snow' ? ' · 설원은 얼음 연못 밖 눈밭만 칠해요' : habId === 'dino' ? ' · 공룡 정글은 석호 밖 땅만 칠해요' : ''}</p>`;
     return;
   }
   const rl = tab === 'train', n = rl ? railsIn(G.S, habId) : placedIn(G.S, habId).length, cap = rl ? B.decor.rails : decorCap(G.S, habId), L = levelOf(G.S, habId), price = B.expand.price[L], xk = 'expand:' + (L + 1), xl = price != null && !can(G.S, xk);
