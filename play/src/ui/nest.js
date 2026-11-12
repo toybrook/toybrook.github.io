@@ -51,7 +51,7 @@ export function initNest(nav) {
   <div class="nlow"><div class="ngauges" id="ngauges"></div><div class="nslots" id="nslots"></div><div class="ncard" id="ncard" hidden></div></div>
 </div>`;
   const eggsEl = $('neggs'), stageEl = $('nstage'), gEl = $('ngauges'), slotsEl = $('nslots'), cardEl = $('ncard'), tabsEl = $('ntabs');
-  let habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {}, after = null;
+  let habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {}, after = null, ready = null;
   const nest = () => G.S.nests[habId] || { eggs: [], t: G.now() };
   const pending = () => G.S.animals.find(a => a.pending);
 
@@ -200,12 +200,13 @@ export function initNest(nav) {
 ${a.acc ? `<div class="nsecret"><em>시크릿!</em> ${ACCESSORIES[a.acc].wear} 나왔어요${'<i>✦</i>'.repeat(6)}${r?.newAcc ? '<small>처음 만난 치장이에요 · 치장 앨범에 남았어요</small>' : ''}</div>` : ''}
 <p class="nwhy">${SP[a.species].name} · ${H.name} 친구 · ${fresh ? '처음 만난 변종이에요' : newCol ? '처음 보는 색이에요' : back ? '이미 도감에 있는 변종이에요' : '이미 데려온 변종이에요'}</p>
 ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')} 열리면 데려갈 수 있어요. 그때까지 보관함에서 기다려요.` : room ? `${H.name}에서 사는 친구예요. ${H.name}으로 보낼게요.` : `${H.name}에서 사는 친구예요. ${H.name}에 자리가 모자라 보관함에서 기다려요.`}</p>` : ''}
-<div class="nbtns${away && room && back ? ' three' : ''}">${!room ? '<button class="go" data-store>보관함으로</button>' : away ? `<button class="sb" data-look>${H.name}에서 보기</button><button class="go" data-go>확인</button>` : '<button class="go" data-go>서식지로 보내기</button>'}${back ? `<button class="sb" data-back>돌려보내기 <span class="hrt">♥</span>+${n}</button>` : ''}</div>`;
+<div class="nbtns${away && room && back ? ' three' : ''}">${!room ? '<button class="go" data-store>보관함으로</button>' : away ? `<button class="sb" data-look>${H.name}에서 보기</button><button class="go" data-go>확인</button>` : '<button class="go" data-go>서식지로 보내기</button>'}${back ? `<button class="sb" data-back>돌려보내기 <span class="hrt">♥</span>+${n}</button>` : ''}</div><p class="nload">서식지 준비 중…</p>`; // inbox 64-A: the first board still being built (body.building, main.js)
     cardEl.dataset.id = a.id; cardEl.hidden = false; stageEl.classList.toggle('secret', !!a.acc);
   }
   function answer(go, e) {
     const a = G.S.animals.find(x => x.id === +cardEl.dataset.id && x.pending); if (!a) return;
-    if (G.S.stats.hatch === 1 && !G.S.flags.next61) { G.flag('next61'); setTimeout(() => toast('알마다 뭐가 나올지 몰라요 — 둥지에 다음 알이 있어요', 3600), 3400); } // inbox 61 B: once, after the first
+    if (ready) { const f = ready; ready = null; setTimeout(f, 500); } // 64-A: the first habitat builds while this card is read (not during the hatch: it took 2.7 s longer)
+    if (G.S.stats.hatch === 1 && !G.S.flags.next61) { G.flag('next61'); tip('next', '#nestBtn'); } // inbox 61 B: once, after the first (64-A: a tip, one at a time with the rest)
     const nm = nameOf(a), gift = go && B.codexHeart && !G.S.codex[key(a.species, a.variant)] ? ` · ♥+${B.codexHeart}` : ''; // inbox 38
     if (gift) heart(e.clientX, e.clientY);
     if (go === 'store') { // its habitat is full or not open yet (rules.fits): it waits in storage
@@ -259,6 +260,6 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     leave() { close(); hab = null; },
     open,
     // inbox 61 B: a new player's first egg, from the loading screen's 바로 깨기 (main.js), before the board is built; done: the sheet closed
-    first(id, done) { habId ??= id; after = done; const i = G.takeEgg(id); if (i < 0) return close(); sfx('egg'); open(); hatchSlot(i); },
+    first(id, done, onCard) { habId ??= id; after = done; ready = onCard; const i = G.takeEgg(id); if (i < 0) return close(); sfx('egg'); open(); hatchSlot(i); },
   };
 }

@@ -192,7 +192,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (!homed && want.size <= 3) habitat.ctx.spawn = () => { for (let k = 0; k < 30; k++) { const p = sp(); if (Math.hypot(p[0] - mid0.x, p[1] - mid0.z) < R) return p; } return sp(); };
     for (const [id, r] of want) if (!actors.has(id)) make(r);
     habitat.ctx.spawn = sp;
-    if (!homed) { homed = true; setHome(); if (!pose) { controls.target.copy(HOME.target); camera.position.copy(HOME.target).addScaledVector(homeDir, HOME.radius); controls.update(); } } // inbox 43: the start view on the friends
+    if (!homed && actors.size === 1 && !pose) hello = { a: actors.values().next().value, t: 1.2 }; // inbox 64-A: a lone friend says hello as the board opens (the first one comes this way)
+    if (!homed) { homed = true; homeOn = true; setHome(); if (!pose) { controls.target.copy(HOME.target); camera.position.copy(HOME.target).addScaledVector(homeDir, HOME.radius); controls.update(); } } // inbox 43: the start view on the friends
   }
   // 28-1: the animals free to be sent somewhere (walk.js send); the nearest one that can go sent to x, z (the orchard's fruit, zoneprops.js)
   const idle = () => [...actors.values()].filter(a => a.send && !a.hold && a.obj.visible && !a.busy());
@@ -216,16 +217,20 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const a = actors.get(rec.id) ?? make(rec);
     const [x, z] = nearest((x, z) => habitat.ctx.walkable(x, z) && free(habitat.ctx.crowd, a.body, x, z), habitat.ctx.landing);
     a.drop(x, z); puffs.push({ x, z, t: -DROP.fall, bits: null });
-    if (look) peek(x, z);
+    if (look) peek(x, z, actors.size === 1 && a);
   }
   // inbox 43: after 「서식지로 보내기」 (look) the camera goes near the new friend, stays ~3 s (1.5 s with 움직임 줄이기), then
   // glides back to where it was. A touch on the view, a follow, 꾸미기, 사진 모드 or the train camera ends it where it is.
-  let peekT = 0, back0 = null;
-  function peek(x, z) {
+  // inbox 64-A: the first friend out here (only, a): the camera goes as near as it fills FIRST_FILL of the screen height, it hops
+  // with a heart (hello), and after the peek the start view comes back on it (setHome, by the smallest friend), not the empty board
+  let peekT = 0, back0 = null, hello = null;
+  const FIRST_FILL = 0.36; // (2.643 h / share: a lying-down baby shows ~0.55 of it, so ~20% of the screen)
+  function peek(x, z, only) {
     if (decorOn || snapOn || focus || trainCam) return;
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off);
     back0 ??= { at: controls.target.clone(), radius: sph.radius, phi: sph.phi }; goingHome = false; peekT = DROP.fall + (calm() ? 1.5 : 3);
-    aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(x, ...panX), 0, THREE.MathUtils.clamp(z, ...panZ)), radius: Math.min(18, back0.radius), phi: 0.9 };
+    aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(x, ...panX), 0, THREE.MathUtils.clamp(z, ...panZ)), radius: Math.min(18, back0.radius ?? 18), phi: 0.9 }; // ('home': a second one sent during the first's)
+    if (only) { aim.radius = 2.643 * hOf(only) / FIRST_FILL; aim.phi = HOME.phi; back0 = 'home'; hello = { a: only, t: DROP.fall + 0.5 }; }
   }
 
   // ---- 서식지 꾸미기: placed props from the save (a mesh, a crowd.js body, a layout blocker each) ----
@@ -840,10 +845,15 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // off till that group shows between the top bar and the bottom buttons but never past 0.0887 (90% of 0.71's 0.0985, 375x812).
   // 전체 보기 (wide): the whole board, its middle at homeRadius; from there the button reads 친구들 보기 and comes back.
   // d = 2.643 H / share: measured (horse 71 px of 812 at 102 m, H 3.375; this tilt and fov)
-  const homeCam = new THREE.PerspectiveCamera(), fv = new THREE.Vector3(), atShare = s => Math.min(HOME.wide, 2.643 * SIZE.unit / s);
-  let wide = false;
+  const homeCam = new THREE.PerspectiveCamera(), fv = new THREE.Vector3(), atShare = (s, h = SIZE.unit) => Math.min(HOME.wide, 2.643 * h / s);
+  const hOf = a => SIZE.unit * (SIZE[a.rec.species] ?? 0.5) * (a.rec.stage === 'baby' ? SIZE.baby : 1); // its height (data.js sized)
+  // inbox 64-A homeOn: still on the start view with 1-3 friends out: it is worked out again every second (they wander off a near view);
+  // a touch on the view, a follow or a double tap ends it (overview / the first home view start it)
+  let wide = false, homeOn = false, homeT = 0;
   function setHome() {
-    const as = [...actors.values()], n = as.length; HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(THREE.MathUtils.clamp(0.12 - (n - 3) * 0.0018, 0.111, 0.12)); if (wide || !n) return;
+    // inbox 64-A: the share is the smallest friend's out here (a lone baby rabbit was ~4% of the screen), 0.3 with 1-3 out; the
+    // backing off below still stops at a grown horse's 0.0887
+    const as = [...actors.values()], n = as.length; HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(n <= 3 ? 0.3 : THREE.MathUtils.clamp(0.12 - (n - 3) * 0.0018, 0.111, 0.12), Math.min(...as.map(hOf))); if (wide || !n) return;
     const near = a => as.filter(b => Math.hypot(b.position.x - a.position.x, b.position.z - a.position.z) < 12);
     const g = as.map(near).reduce((x, y) => y.length > x.length ? y : x), t = HOME.target.set(0, 0, 0);
     for (const a of g) t.add(a.position); t.divideScalar(g.length).setY(0); t.x = THREE.MathUtils.clamp(t.x, ...panX); t.z = THREE.MathUtils.clamp(t.z, ...panZ);
@@ -877,11 +887,11 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // following: nearest = where it fills 70% of the screen height, aim at its middle, start at 1.4x the nearest
   function setFocus(a) {
     if (a && a === focus) return; // a pat while following keeps the view
-    focus = a; watch = false; trainCam = false; goingHome = false; facing = false; glide = tw = null; zoomed = false; extra = 0; // the camera stays put: its side room becomes plain distance
+    focus = a; watch = false; trainCam = false; if (a) homeOn = false; goingHome = false; facing = false; glide = tw = null; zoomed = false; extra = 0; // the camera stays put: its side room becomes plain distance
     if (a) { lift = 0.5 * height(a); near = fit(a, NEAR_FILL, FRONT_PHI, faceOf(a)); glide = { radius: 1.4 * near }; }
     controls.zoomToCursor = !a; // following: zoom toward the animal
   }
-  function overview(w = false) { setFocus(null); aim = null; goingHome = true; wide = w; setHome(); } // inbox 63: w, the whole board (전체 보기); else on the friends
+  function overview(w = false) { setFocus(null); aim = null; goingHome = true; wide = w; homeOn = !w; setHome(); } // inbox 63: w, the whole board (전체 보기); else on the friends
   const toggle = () => overview(!(wide && !focus && !away())); // the button: at the whole board -> the friends; else -> the whole board
   // 정면: an eased move (slow start, slow stop) to its face over FRONT_T; after that it keeps to its face as it turns
   function front() {
@@ -892,12 +902,12 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }
   // a double tap on the ground: that spot to the middle of the screen (stops following; distance and tilt stay)
   function centre(p) {
-    setFocus(null); goingHome = false;
+    setFocus(null); goingHome = homeOn = false;
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off);
     aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(p.x, ...panX), 0, THREE.MathUtils.clamp(p.z, ...panZ)), radius: sph.radius, phi: sph.phi };
   }
   let held = false, panned = 0; // a finger / button is down; how far this gesture has moved the target
-  controls.addEventListener('start', () => { glide = tw = null; facing = false; panned = 0; if (!focus) { goingHome = false; aim = null; } peekT = 0; back0 = null; held = true; }); // user drag/zoom takes over
+  controls.addEventListener('start', () => { glide = tw = null; facing = false; panned = 0; if (!focus) { goingHome = homeOn = false; aim = null; } peekT = 0; back0 = hello = null; held = true; }); // user drag/zoom takes over
   controls.addEventListener('end', () => { held = false; });
   // decorating keeps the 16-4 mapping: one finger / left drag moves the view, right drag / two fingers turn
   function mapping() {
@@ -1103,8 +1113,10 @@ GPU ${gpu}`; }
     if (focus && !zoomed && Math.abs(camera.position.distanceTo(controls.target) - rEnd) > 1e-3) { zoomed = true; extra = 0; }
     if (trainCam) { if (!train) trainCam = false; else { const c = train.T.cars[0]; trainAim.at.set(c.x, c.y + 0.4, c.z); aim = trainAim; // 28-4 기차 따라가기 (a drag or a pinch sets how far, how high)
       if (held) { off.copy(camera.position).sub(controls.target); sph.setFromVector3(off); trainAim.radius = sph.radius; trainAim.phi = sph.phi; } } }
-    if (peekT && (focus || decorOn || snapOn || trainCam)) peekT = 0, back0 = null;
-    else if (peekT && (peekT -= dt) <= 0) { peekT = 0; aim = back0; back0 = null; } // inbox 43: back from the new friend
+    if (peekT && (focus || decorOn || snapOn || trainCam)) peekT = 0, back0 = hello = null;
+    else if (peekT && (peekT -= dt) <= 0) { peekT = 0; if (back0 === 'home') overview(); else aim = back0; back0 = null; } // inbox 43: back from the new friend (64-A: the first, the start view on it)
+    if (hello && (hello.t -= dt) <= 0) { const a = hello.a; hello = null; if (a.obj.visible) { a.poke(); ui.hello?.(...project(a.obj, height(a) * 0.8)); } } // inbox 64-A
+    if (homeOn && !focus && !aim && !peekT && !decorOn && !snapOn && !trainCam && (homeT -= dt) <= 0) { homeT = 1; if (actors.size && actors.size <= 3) { setHome(); goingHome = true; } }
     feedWheel(dt); steerCamera(dt);
     if (!focus && !(DEBUG && window.__hab.free)) { // keep pan inside the board (screenshot script can lift this); eased so leaving a follow near the edge doesn't jump
       const T = controls.target, k = 1 - Math.exp(-dt * 8);

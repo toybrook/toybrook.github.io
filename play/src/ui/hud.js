@@ -5,6 +5,13 @@ let toastT;
 // ms = 0: stays until the next toast or hideToast(); small: a quieter, smaller line
 export function toast(text, ms = 2200, small = false) {
   toastEl.textContent = text; toastEl.classList.add('on'); toastEl.classList.toggle('small', small);
+  toastEl.style.top = ''; // 64-A: below any top-row button it would cover (첫날 할 일, 진열장 …)
+  const st = stageEl(), s = window.__stageScale || 1, sr = st.getBoundingClientRect();
+  const btns = [...st.querySelectorAll('.scene:not(.hidden) button')].filter(b => shown(b) && b.offsetParent && !b.closest('.scene > section,[role=dialog]')).map(b => b.getBoundingClientRect()).filter(r => r.width && r.top < sr.top + sr.height * .4);
+  for (let k = 0; k < 4; k++) {
+    const t = toastEl.getBoundingClientRect(), b = btns.find(r => r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top); if (!b) break;
+    toastEl.style.top = (b.bottom - sr.top) / s + 6 + 'px';
+  }
   clearTimeout(toastT); if (ms) toastT = setTimeout(hideToast, ms);
 }
 export const hideToast = () => toastEl.classList.remove('on');
@@ -46,7 +53,7 @@ export function ask(text, ok = '확인', no = '취소') {
 // the windows, top first; each closes with its own close button (so its own code runs)
 const TOPS = ['#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#event', '#prefs', '#help', '#habMenu', '#attend', '#ret', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
-const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden');
+const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden') && !el.closest('[data-lock]'); // 64-A: ui/first.js locks
 export const topWindow = () => { for (const q of TOPS) { const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };
 export function closeTop() {
   const el = topWindow(); if (el) { el.querySelector(SHUT).click(); return true; }
@@ -65,13 +72,13 @@ const waiting = []; let tipEl = null, calm = 0;
 // is the way in, not counted). resting(): wait. Tips, 출석부, level, grown and home cards all ask it.
 const CARDS = '#news,#attend,#event,#ret,#lvup,#zoneCard,#grown,#homeHint,.tip'; let upAt = 0;
 export const resting = () => { if ([...document.querySelectorAll(CARDS)].some(shown)) upAt = Date.now(); return !!G.S && G.now() - G.S.since < 600e3 && Date.now() - upAt < 40e3; };
-setInterval(() => { if (!resting()) nextTip(); }, 250);
+setInterval(() => { if (tipEl) dodge(); else if (!resting()) nextTip(); }, 250);
 export function tip(k, anchor) { // anchor: an element or a selector; shown once it is on screen and no other tip is up
   if (G.S.flags.tipsOff || G.S.flags['tip_' + k] || waiting.some(w => w.k === k) || tipEl?.dataset.k === k) return;
   waiting.push({ k, anchor }); nextTip();
 }
 function nextTip() {
-  if (tipEl || G.S.flags.tipsOff || Date.now() < calm || resting()) return; // 26-11: not while the tap that closed the last one is still landing
+  if (tipEl || G.S.flags.tipsOff || Date.now() < calm || resting() || document.querySelector('.rate')) return; // 26-11: not while the tap that closed the last one is still landing; 64-A: nor under a band (어때요·이어서 하기)
   const over = topWindow(), el = w => typeof w.anchor === 'string' ? document.querySelector(w.anchor) : w.anchor;
   const i = waiting.findIndex(w => shown(el(w)) && (!over || over.contains(el(w)))); if (i < 0) return; // not under another window
   const [{ k, anchor }] = waiting.splice(i, 1), a = typeof anchor === 'string' ? document.querySelector(anchor) : anchor;
@@ -84,7 +91,19 @@ function nextTip() {
   tipEl.style.setProperty('--ax', Math.max(14, Math.min(w - 14, cx - x)) + 'px');
   // a tall anchor: kept on screen; inbox 40: and off the home bar (--sa-b, style.css)
   if (top > H / 2) { tipEl.style.bottom = `max(calc(8px + var(--sa-b)), ${H - top + 10}px)`; tipEl.classList.add('up'); } else tipEl.style.top = `min(calc(100% - ${tipEl.offsetHeight + 8}px - var(--sa-b)), ${bot + 10}px)`;
+  tipFor = a; dodge();
   tipEl.onclick = e => { const b = e.target.closest('button'); if (b) endTip(b.dataset.off != null); };
+}
+// inbox 64-A: never over another button (the 「자라기」 tip by 친구들 covered 「부화 시작」): moved past it, away from its anchor;
+// again every 250 ms (a button can come up under it later, like 「부화 시작」 over the nest)
+let tipFor = null;
+function dodge() {
+  const a = tipFor, st = stageEl(), s = window.__stageScale || 1, sr = st.getBoundingClientRect(), up = tipEl.classList.contains('up');
+  const others = [...(a.closest?.('.scene') || st).querySelectorAll('button')].filter(b => b !== a && !a.contains?.(b) && !tipEl.contains(b) && shown(b) && b.offsetParent && !b.closest('.scene > section,[role=dialog]')); // its own screen's buttons, not a sheet's
+  for (let k = 0; k < 6; k++) {
+    const t = tipEl.getBoundingClientRect(), b = others.map(b => b.getBoundingClientRect()).find(r => r.width && r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top); if (!b) break;
+    if (up) tipEl.style.bottom = (sr.bottom - b.top) / s + 8 + 'px'; else tipEl.style.top = (b.bottom - sr.top) / s + 8 + 'px';
+  }
 }
 function endTip(off) { if (!tipEl) return; const k = tipEl.dataset.k; tipEl.remove(); tipEl = null; calm = Date.now() + 380; G.flag('tip_' + k); if (off) { G.flag('tipsOff'); waiting.length = 0; } setTimeout(nextTip, 400); }
 // any tap elsewhere also counts as seen

@@ -14,8 +14,8 @@ import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep } from './de
 import { openCabinet } from './cabinet.js';
 import { figureThumb } from './thumbs.js';
 import { sfx } from './sound.js';
-import { homeHintDue } from '../game/backup.js';
-import { DEV, open as openBackup } from './backup.js';
+import { homeHintDue, appHintDue } from '../game/backup.js';
+import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
 
 const $ = id => document.getElementById(id);
 const nameOf = callName; // 26-4: its name if it has one
@@ -89,6 +89,7 @@ export function initPlay(nav) {
       if (out.some(a => a.stage === 'baby')) tip('grow', '#friendsBtn');
       if (out.length && !persisted) { persisted = true; navigator.storage?.persist?.()?.catch(() => {}); } // inbox 39: once a page, when there is something to keep
       if (out.length && !homeT && home.hidden && homeHintDue(DEV, G.S.flags)) { quiet = Date.now(); homeT = setTimeout(homeCard, 800); }
+      if (out.length && !appT && appHintDue(DEV, G.S.flags)) { appQuiet = Date.now(); appT = setTimeout(appBand, 800); }
     }
     hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId]); hab?.sync(G.S.animals); // inbox 42 B: the props first, so no one comes out inside one
   }
@@ -166,6 +167,20 @@ export function initPlay(nav) {
     if (Date.now() - quiet < 2000) { homeT = setTimeout(homeCard, 800); return; }
     home.hidden = false;
   }
+  // inbox 64-A: in an Instagram·Threads in-app browser, once after the first friend: a band to carry the save to Safari·Chrome
+  let appT = 0, appQuiet = 0;
+  function appBand() {
+    if (!hab || !appHintDue(DEV, G.S.flags)) return void (appT = 0);
+    if (overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip, #toast.on') || document.body.classList.contains('photo') || !home.hidden) appQuiet = Date.now(); // busy() but not the quiet rest: the save is at stake
+    if (Date.now() - appQuiet < 2000) { appT = setTimeout(appBand, 800); return; }
+    G.flag('appHintSeen');
+    const bar = Object.assign(document.createElement('div'), { className: 'rate appband', role: 'group' }); bar.setAttribute('aria-label', '다른 브라우저에서 이어서 하기');
+    bar.innerHTML = `<span>Safari·Chrome에서 열면 이어서 할 수 있어요</span><button data-a="copy">이어서 하기 링크 복사</button>${/Android/.test(DEV.ua) ? `<a class="more" href="${chromeLink()}">Chrome으로 열기</a>` : ''}<button class="x" aria-label="닫기">✕</button>`;
+    document.body.append(bar); setTimeout(() => bar.remove(), 60e3); // the tips wait under it (hud.js)
+    bar.onclick = async e => { const b = e.target.closest('button,a'); if (!b) return;
+      if (b.dataset.a === 'copy') { const ok = await copyLink(); bar.remove(); if (ok) toast('링크를 복사했어요 · Safari·Chrome 주소창에 붙여 넣어 열어 주세요', 4000, true); }
+      else setTimeout(() => bar.remove()); };
+  }
   home.onclick = e => { const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.act === 'backup') return openBackup(); // the backup sheet goes over the card; closing it comes back here
     home.hidden = true; G.flag('homeHintSeen'); };
@@ -193,7 +208,7 @@ export function initPlay(nav) {
     onTap, events, scene, onPropTap, onEdit, onPaint, onSweep,
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
     attach(api, id) { hab = api; habId = id; nest.attach(api, id); draw(); hint(); setTimeout(cards, 1200); }, // grown while away: the cards together
-    openNest: () => nest.open(), cards, firstEgg: (id, done) => nest.first(id, done), // inbox 61 B
+    openNest: () => nest.open(), cards, firstEgg: (id, done, onCard) => nest.first(id, done, onCard), // inbox 61 B
     leave() { leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); hideNote(); bubble.hidden = true; bubbleFor = null; card.hidden = home.hidden = true; clearTimeout(homeT); homeT = 0; hideToast(); },
   };
 }

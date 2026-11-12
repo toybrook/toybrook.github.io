@@ -45,6 +45,13 @@ async function copy(code) {
   const t = $('bkText'); t.value = code; t.select();
   try { return document.execCommand('copy'); } catch { return false; }
 }
+// inbox 64-A 「이어서 하기」: this save as a link (only #backup=<code>); opening it asks before loading (below)
+export async function copyLink() {
+  const u = `${location.origin}${location.pathname}#backup=${encodeURIComponent(toCode(G.S, EDITION))}`;
+  try { await navigator.clipboard.writeText(u); return true; } catch { /* some in-app browsers: no clipboard API */ }
+  open(); $('bkText').value = u; say('복사가 안 돼요 · 위 칸의 링크를 길게 눌러 복사해 주세요'); return false;
+}
+export const chromeLink = () => `intent://${location.host}${location.pathname}#backup=${encodeURIComponent(toCode(G.S, EDITION))}#Intent;scheme=https;package=com.android.chrome;end`;
 async function load(text) {
   const r = unpack(text, EDITION, SCHEMA_VERSION); if (r.err) return say(r.err);
   const s = fromSave(r.save, G.now()); if (!s) return say('읽을 수 없는 백업이에요');
@@ -78,7 +85,10 @@ el.onclick = async e => {
 
 // after the reload: say what happened; release build with a beta save: say why it starts over (game.js kept it once)
 // (in a timeout: this module runs before main.js has started the game)
+const linked = location.hash.startsWith('#backup=') && location.hash.slice(8);
+if (linked) history.replaceState(null, '', location.pathname + location.search); // the code does not stay in the address bar
 setTimeout(() => {
+  if (linked) { let t = ''; try { t = decodeURIComponent(linked); } catch { /* cut short */ } open(); $('bkText').value = t; load(t); return; }
   const done = sessionStorage.getItem(DONE); sessionStorage.removeItem(DONE);
   if (done) toast(done === 'undo' ? '불러오기 전 저장으로 돌아왔어요' : '백업을 불러왔어요 · 설정 › 내 저장 백업에서 되돌릴 수 있어요', 3500, true);
   else if (G.refused === 'beta' || G.bad) { // on the start card when it is up (a toast would sit under it)

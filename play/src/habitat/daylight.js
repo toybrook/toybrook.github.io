@@ -28,8 +28,9 @@ export const TIMES = [
     bg: ['#fbe9d0', '#f1d3ae', '#e2b98c'], fog: '#f1d3ae', lit: [1, 1, 1], night: 0 },
   { id: 'sunset', from: 17, sun: [-34, 15, -6], col: '#ffa468', I: 1.8, top: [0.50, 0.44, 0.72], hor: [1.0, 0.64, 0.44], gnd: [0.32, 0.32, 0.20], glow: [1.0, 0.56, 0.30],
     bg: ['#fcd8bc', '#efad8e', '#bb7f84'], fog: '#e9a98e', lit: [1.0, 0.82, 0.70], night: 0.15 },
-  { id: 'night', from: 20, sun: [14, 36, -24], col: '#93a6ff', I: 0.38, top: [0.07, 0.10, 0.24], hor: [0.15, 0.17, 0.33], gnd: [0.04, 0.05, 0.06], glow: [0.30, 0.34, 0.55],
-    bg: ['#3e4a76', '#2b355c', '#181e3a'], fog: '#2b355c', lit: [0.30, 0.36, 0.58], night: 1 },
+  // inbox 64-A: a brighter, warmer moonlit night (was I 0.38 '#93a6ff', top 0.07/0.10/0.24, gnd 0.04/0.05/0.06): the animals keep their colours
+  { id: 'night', from: 20, sun: [14, 36, -24], col: '#b9c2ff', I: 0.75, top: [0.16, 0.19, 0.36], hor: [0.36, 0.32, 0.44], gnd: [0.12, 0.11, 0.10], glow: [0.62, 0.50, 0.46],
+    bg: ['#4f5c8c', '#3a4572', '#242c50'], fog: '#3a4572', lit: [0.42, 0.47, 0.66], night: 1 },
 ];
 const FADE = 1 / 3, STEPS = 12; // the env map and shadows are redrawn STEPS times per fade, not every frame
 

@@ -4,7 +4,7 @@ import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
 import { BALANCE, HABITATS, ZONES } from './game/data.js';
 import { initWorldMap } from './worldmap/worldmap.js';
-import { zzz, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
+import { zzz, heart, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
 import { loadBar, codeAsked } from './ui/loadbar.js';
 import { initLevel } from './ui/level.js';
 import * as BK from './ui/backup.js';
@@ -84,6 +84,7 @@ const ui = {
     const c = document.createElement('canvas'), g = c.getContext('webgl2') || c.getContext('webgl'); if (!g || g.isContextLost()) return glFail('no context');
     g.getExtension('WEBGL_lose_context')?.loseContext(); redo(id); built[id]?.then(glRebuilt, glFail); },
   onPile: () => { const n = G.tapPile(), L = n && G.event(); if (n) toast(`눈더미에서 ${L.e.coin.icon} ${L.e.coin.name} ${n}개!`, 2200, true); return n; }, // 15-2 첫눈
+  hello: (x, y) => heart(x, y), // inbox 64-A: the first friend's hop
   say: t => toast(t, 1800, true), // 28-3: a short note from the habitat (the music box's tune, the fireworks by day)
   zzz(xy) { if (!hab.classList.contains('hidden') && !overlayOpen() && !document.querySelector('body > section.pop:not([hidden])')) zzz(xy); }, // not over a sheet (28-5: nor 설정·꾸미기 코드·도움말, outside #habitat)
   onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; $('overview').textContent = s === 'w' ? '친구들 보기' : '전체 보기'; }, // following: 정면 + 전체 보기; away from the start view: 전체 보기; at the whole board (inbox 63): 친구들 보기
@@ -104,11 +105,13 @@ const built = {}, lv = {}; // each habitat's scene is built the first time it is
 const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r => setTimeout(r, 60)).then(code).then(h => h.startHabitat($('gl'), ui, id, G.S.animals, { level: lv[id], ...opt }))
   .then(api => { if (api.natives) G.addNatives(id, api.natives.list, api.natives.rings); return api; }); };
 // inbox 61 A·B: a new player's first egg is cracked on the loading screen as soon as the nest's code is here (seconds on a slow
-// phone); the board is built after the reveal card is answered, so the two never share the phone's time
+// phone). inbox 64-A: the board is built while the reveal card is read (built during the hatch, the hatch took 2.7 s longer);
+// while it is, a small line under the card says so (body.building), not the loading screen's over the nest
 const firstHere = id => code().then(() => new Promise(done => {
-  const L = $('loading'), b = L.querySelector('.lfirst'), say = L.firstChild;
+  const L = $('loading'), b = L.querySelector('.lfirst'), say = L.firstChild, off = () => document.body.classList.remove('building');
+  document.body.classList.add('building');
   say.textContent = '첫 알이에요! 눌러서 깨워 보세요'; b.hidden = false; b.focus?.();
-  b.onclick = () => { b.onclick = null; b.hidden = true; say.textContent = '서식지 불러오는 중…'; play.firstEgg(id, done); };
+  b.onclick = () => { b.onclick = null; b.hidden = true; say.textContent = ''; play.firstEgg(id, () => { say.textContent = '서식지 불러오는 중…'; done(); }, () => (built[id] ??= build(id)).then(off, off)); };
 }), () => {});
 async function enter(id) {
   cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + ' 서식지 3D');

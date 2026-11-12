@@ -23,9 +23,31 @@ function draw() {
 <p>다 하면 「${PROP[FIRST.prop].name}」 + 사탕 ${FIRST.candy}</p>`}`;
 }
 box.onclick = e => { if (e.target.closest('[data-fold]')) G.flag('fdFold', G.S.flags.fdFold === false); if (e.target.closest('[data-next]')) import('./decor.js').then(m => m.decorTab('big')); };
-G.on(ev => { said.push(...ev.filter(e => e.type === 'first' || e.type === 'firstAll')); draw(); });
+// inbox 64-A: a new game's first minutes show only 둥지·친구들·설정 and the top bar; the rest come when they are of use, with a
+// little sparkle: 꾸미기 once the hearts reach the cheapest prop, 도감 at the second friend, 보관함 once one is in it, all of them
+// 3 minutes after the game began. flags.ui64: this save began so (older saves see everything); flags['ui:' + id]: shown for good
+const LATER = 180e3, cheapest = S => Math.min(...PROPS.filter(P => P.price > 0 && !P.ev && can(S, 'prop:' + P.id)).map(P => P.price));
+const UNLOCK = { decorBtn: ['꾸미기', S => S.hearts >= cheapest(S)], codexBtn: ['도감', S => S.animals.filter(a => !a.pending).length >= 2], storeBtn: ['보관함', S => S.animals.some(a => a.stored)],
+  cabBtn: ['진열장'], snapBtn: ['사진'], helpBtn: ['도움말'], mailBtn: ['우편함'], evBtn: [''], fday: ['첫날 할 일'] };
+export const locked = id => !!document.getElementById(id)?.hasAttribute('data-lock');
+function locks() {
+  const S = G.S; if (!S) return;
+  if (!S.flags.ui64 && !S.stats.hatch && !S.animals.length) return G.flag('ui64'); // a new save (G.on calls this again)
+  const late = G.now() - S.since >= LATER, got = [], now = [];
+  for (const id in UNLOCK) {
+    const el = document.getElementById(id); if (!el) continue;
+    if (!S.flags.ui64 || S.flags['ui:' + id]) { el.removeAttribute('data-lock'); continue; }
+    if (!late && !UNLOCK[id][1]?.(S)) { el.dataset.lock = ''; continue; }
+    now.push(id); el.removeAttribute('data-lock'); el.classList.add('newly'); setTimeout(() => el.classList.remove('newly'), 4200);
+    if (!el.hidden && UNLOCK[id][0]) got.push(UNLOCK[id][0]);
+  }
+  now.forEach(id => G.flag('ui:' + id)); // after the loop: G.flag calls this again through G.on, and an inner toast would be overwritten
+  if (got.length) toast(`새로 생겼어요 · ${got.length > 3 ? `${got.slice(0, 2).join('·')} 외 ${got.length - 2}개` : got.join('·')}`, 2600, true);
+}
+locks();
+G.on(ev => { said.push(...ev.filter(e => e.type === 'first' || e.type === 'firstAll')); draw(); locks(); });
 setInterval(() => {
-  draw();
+  draw(); locks();
   if (!said.length || topWindow() || overlayOpen() || document.body.classList.contains('photo')) return;
   const one = said.filter(e => e.type === 'first'), all = said.find(e => e.type === 'firstAll')?.got; said = [];
   const h = one.reduce((n, e) => n + e.hearts, 0), hab = all?.prop && HAB[G.S.props.findLast(p => p.prop === all.prop)?.hab];

@@ -24,7 +24,7 @@ export const DEBUG = false; // release build
 
 // 20-1 open beta. VERSION goes to the feedback form; FEEDBACK_URL is the same form as site/config.js ('TODO' = no button).
 // RATING: the rating mark (an image under assets/) and number on the start screen; both empty = hidden (until rated).
-export const VERSION = '0.74.0';
+export const VERSION = '0.75.0';
 export { EDITION } from './game/data.js'; // inbox 22/31: set in data.js, next to the PACE table it picks
 export const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeHXV6tlH6IS3tlu7Xb71qeh1fvIbkzNHUoUHnSY3j_u7dcpA/viewform';
 export const FEEDBACK_FIELD = 'entry.2112099919'; // the form's "game info" box, filled in for the player
@@ -48,7 +48,7 @@ export const WEATHER_Q = params.get('weather');
 export const VIEW = { hour: null, weather: null };
 // 26-1: the bytes of the 3D code fetched after the first screen (ui/loadbar.js), and whether the offline files (dist-web/sw.js) are
 // there. Both lines are rewritten by tools/build-web.mjs; here (the source folder, no sw.js) a rough number and off.
-export const CODE_BYTES = 1668151; // release build
+export const CODE_BYTES = 1672293; // release build
 export const OFFLINE = true; // release build
 // settings sheet (main.js): kept apart from the save. time: 'real' | 'day' (항상 낮); weather: false = 날씨 효과 끄기
 // 26-2 소리: mute (모두 끄기), vAll / vAmb / vFx / vAnimal (전체 / 배경 / 효과 / 13-0 동물 소리, 0..1). Low at first (40%).

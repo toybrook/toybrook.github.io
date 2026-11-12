@@ -22,6 +22,9 @@ export const toCode = (S, edition, at) => TAG + b64(pack(S, edition, at));
 export const iosSafariTab = ({ ua = '', touch = 0, standalone = false }) => (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && touch > 1))
   && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|Line\/|DaumApps|Whale/.test(ua) && !standalone;
 export const homeHintDue = (dev, flags = {}) => iosSafariTab(dev) && !flags.homeHintSeen;
+// inbox 64-A: Instagram·Threads(Barcelona)·Facebook·KakaoTalk·LINE in-app browsers keep their own storage, so the save stays behind there
+export const inApp = (ua = '') => /Instagram|Barcelona|Threads|FBAN|FBAV|FB_IAB|KAKAOTALK|Line\/|DaumApps/.test(ua);
+export const appHintDue = (dev, flags = {}) => inApp(dev.ua) && !flags.appHintSeen;
 
 // text pasted or read from a file -> { save, at } or { err: what to tell the player }. newest: the game's SCHEMA_VERSION.
 export function unpack(text, edition, newest) {

@@ -29,9 +29,9 @@ html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-s
 .mark.sign{width:34px;height:43px;margin:-17px 0 0 -17px}
 @keyframes bob{50%{translate:0 -3px}}
 [hidden]{display:none!important}
-.toast{position:absolute;left:50%;top:calc(84px + var(--sa-t));transform:translateX(-50%);width:max-content;max-width:min(320px,86%);text-align:center;word-break:keep-all;line-height:1.45;background:rgba(20,24,20,.75);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:10px 14px;font-size:calc(14px*var(--fs));z-index:1400;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast{position:absolute;left:50%;top:calc(112px + var(--sa-t));transform:translateX(-50%);width:max-content;max-width:min(320px,86%);text-align:center;word-break:keep-all;line-height:1.45;background:rgba(20,24,20,.75);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:10px 14px;font-size:calc(14px*var(--fs));z-index:1400;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.on{opacity:1}
-.toast.small{font-size:calc(12px*var(--fs));padding:6px 11px;top:92px;background:rgba(20,24,20,.6)}
+.toast.small{font-size:calc(12px*var(--fs));padding:6px 11px;background:rgba(20,24,20,.6)}
 .label{position:absolute;transform:translate(-50%,-50%);background:rgba(20,24,20,.55);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 10px;font-size:calc(12px*var(--fs));pointer-events:none;white-space:nowrap}
 #habitat{background:radial-gradient(120% 80% at 50% 30%,#fbe9d0 0%,#f1d3ae 55%,#e2b98c 100%)}
 #gl{position:absolute;inset:0}
@@ -350,6 +350,8 @@ html.calm .lbar::before{animation:none}
 /* inbox 61 C 「토이브룩 어때요?」 a small bar at the bottom, once a day */
 .rate{position:fixed;left:50%;bottom:calc(126px + 56px*var(--fs) + var(--sa-b));transform:translateX(-50%);z-index:900;display:flex;align-items:center;gap:4px;max-width:calc(100vw - 24px);box-sizing:border-box;background:rgba(255,250,240,.96);border-radius:999px;padding:4px 4px 4px 14px;box-shadow:0 2px 10px rgba(107,74,46,.22);font-size:calc(14px*var(--fs));color:#5b4a3a;white-space:nowrap;animation:rateIn .3s ease-out}
 .rate span{margin-right:4px;font-weight:700}
+.appband{flex-wrap:wrap;justify-content:center;white-space:normal;border-radius:18px;width:max-content;padding:8px 6px 6px 14px;row-gap:2px}.appband span{flex:1 1 100%;text-align:center;font-size:calc(14px*var(--fs))}
+.appband button[data-a]{font-size:calc(14px*var(--fs));font-weight:700;background:#e8805f;color:#fff;padding:0 14px} /* inbox 64-A */
 .rate button,.rate a{min-width:44px;min-height:44px;border:0;background:none;font-size:calc(22px*var(--fs));cursor:pointer;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:inherit}
 .rate .x{font-size:calc(14px*var(--fs));color:#9a8574}
 .rate a.more{font-size:calc(14px*var(--fs));font-weight:700;background:#e8805f;color:#fff;padding:0 14px;text-decoration:none}
@@ -554,3 +556,9 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .evcard{position:relative;overflow:hidden}.evcard>*:not(.flakes){position:relative}
 .flakes{position:absolute;inset:0;margin:0;pointer-events:none}.flakes i{position:absolute;top:-1.2em;font-style:normal;color:#9cc7e8;font-size:calc(14px*var(--fs));animation:evfall 4s linear infinite;will-change:transform}
 @keyframes evfall{to{transform:translateY(380px) rotate(200deg)}}
+/* inbox 64-A: a new game's first minutes hide most buttons (ui/first.js locks); one that comes sparkles a little */
+[data-lock]{display:none!important}
+.newly{animation:newly 1.4s ease-out 3}
+@keyframes newly{0%{box-shadow:0 0 0 0 rgba(255,214,102,.95)}70%{box-shadow:0 0 0 12px rgba(255,214,102,0)}100%{box-shadow:0 0 0 0 rgba(255,214,102,0)}}
+@media (prefers-reduced-motion:reduce){.newly{animation:none;outline:2px solid #ffd666}}
+.nload{display:none;margin:6px 0 0;font-size:calc(12px*var(--fs));color:#8a7a66;text-align:center}body.building .nload{display:block}

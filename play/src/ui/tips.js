@@ -6,6 +6,7 @@ const span = ms => { const m = Math.round(ms / 60000); return m % 60 ? `${m}분`
 export const TIPS = {
   nest: ['둥지', `둥지에 ${span(B.nest.every)}마다 알이 생겨요${[].concat(B.nest.early).some(t => t.n > B.nest.start) ? '(처음 몇 개는 더 빨리)' : ''}. 둥지를 눌러 알을 부화 칸에 넣어 보세요.`],
   hatch: ['부화', '시간이 다 되면 부화 칸을 눌러 깨워요. 기다리는 동안 게임을 닫아도 돼요.'],
+  next: ['다음 알', '알마다 뭐가 나올지 몰라요. 둥지에 다음 알이 있어요.'], // inbox 64-A: was a toast at the top, over 첫날 할 일·전체 보기
   grow: ['자라기', '새끼는 시간이 지나면 자라요. 친구를 눌러 쓰다듬거나 먹이를 주면 조금 빨라져요. 친구들에서 얼마나 자랐는지 봐요.'],
   decor: ['꾸미기', '친구를 눌러 쓰다듬으면 하트가 생겨요. 하트로 소품을 사서 끌어다 놓아요. 놓은 소품은 다시 옮겨도 무료예요.'],
   train: ['기차', '레일 끝을 이어 고리를 만들면 기차가 달려요.'], // inbox 37: the first rail bought
