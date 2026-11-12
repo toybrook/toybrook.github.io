@@ -27,7 +27,7 @@
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, FIRST, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, FIRST, STROLL_PROPS, PLACES, SCENES, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -61,7 +61,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {} }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {} }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   return S;
@@ -87,6 +87,10 @@ export function fromSave(raw, now) {
     S.mailGot = S.mailGot.filter(x => typeof x === 'string'); S.codes = S.codes.filter(x => typeof x === 'string'); S.giftEggs = Math.min(99, Math.max(0, Math.floor(S.giftEggs) || 0)); // 44
     { const A = S.attend; S.attend = { day: typeof A.day === 'string' ? A.day : '', at: Number.isFinite(A.at) ? A.at : 0, n: Number.isInteger(A.n) && A.n >= 0 ? A.n : 0 }; } // 41 C
     S.first = Object.fromEntries(Object.entries(S.first).filter(([, v]) => Number.isFinite(v))); // 41 D
+    S.looks = Object.fromEntries(Object.entries(S.looks).filter(([k]) => Object.hasOwn(PROP, k)).map(([k, v]) => [k, (Array.isArray(v) ? v : []).filter(c => paletteOf(PROP[k])?.[c]?.[2])]).filter(([, v]) => v.length)); // 13-3
+    S.cards = S.cards.filter(isObj).slice(-B.stroll.cards); S.strolls = Math.max(0, Math.floor(S.strolls) || 0); // 13-1
+    S.scenes = Object.fromEntries(Object.entries(S.scenes).filter(([k, v]) => SCENES.some(s => s.id === k) && isObj(v) && Number.isFinite(v.at)).map(([k, v]) => [k, { at: v.at, sp: Object.hasOwn(SP, v.sp) ? v.sp : null }])); // 13-2
+    for (const a of S.animals) if (a.stroll != null && !(isObj(a.stroll) && B.stroll.hours.includes(a.stroll.h) && Number.isFinite(a.stroll.end) && PLACES.some(p => p.id === a.stroll.pl))) { delete a.stroll; a.stored = true; } // a broken walk: it waits in storage
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -320,6 +324,7 @@ export function advance(S, now, rng = Math.random) {
     for (let g; n.eggs.length < B.nest.max && now - n.t >= (g = eggGap(S)); ) { n.t += g; n.eggs.push(layEgg(S, h.nest, rng)); ev.push({ type: 'egg', habitat: h.id }); }
     if (n.eggs.length >= B.nest.max) n.t = now; // a full nest doesn't bank time
   }
+  strollBack(S, now, ev, rng);
   for (const a of S.animals) {
     if (!growing(a) || gauge(a, now) < 1) continue;
     a.adultAt = Math.min(now, (a.gAt ?? now) + Math.max(0, 1 - (a.g || 0)) * growTime(a)); // when it filled (offline: earlier)
@@ -414,7 +419,7 @@ export function hatch(S, i, now, rng = Math.random, forced = false) {
 }
 // reveal card: NEW = nobody like it yet; already in the codex = it may go back for hearts (from the card or storage)
 export const isNew = (S, a) => !S.codex[key(a.species, a.variant)] && !S.animals.some(b => b !== a && b.species === a.species && b.variant === a.variant);
-export const canSendBack = (S, a) => !!(a?.pending || a?.stored) && !!S.codex[key(a.species, a.variant)];
+export const canSendBack = (S, a) => !!(a?.pending || a?.stored) && !a.stroll && !!S.codex[key(a.species, a.variant)];
 export const sendBackHearts = a => (B.sendBack[variantOf(a.species, a.variant)?.rarity] || 0) * (a.acc ? B.secret.sendBackX : 1);
 // out into its habitat (growing starts now) if it fits, or into storage, or back for hearts (never shards)
 // (both register its codex cell: it is the player's now)
@@ -437,9 +442,39 @@ export function setHome(S, id, home) {
   if (home) a.home = home.map(v => Math.round(v * 10) / 10); else delete a.home;
 }
 export function unstore(S, id, now) {
-  const a = S.animals.find(a => a.id === id && a.stored); if (!a || !fits(S, a)) return null;
+  const a = S.animals.find(a => a.id === id && a.stored && !a.stroll); if (!a || !fits(S, a)) return null;
   bank(a, now); a.stored = false; return a;
 }
+// 13-1 산책: a friend (out or in storage, not on a walk) goes for B.stroll.hours h. While away it is stored (out of the habitat,
+// not growing, not sent back) with a.stroll = { start, end, h, pl (PLACES id), ln (its line) }. At `end` advance pays once (the
+// walk is gone after), writes a postcard in S.cards and puts it back out if it fits, else in storage. Clock back: end <= now + h
+export const strollCap = S => B.stroll.slots.filter(([L]) => (S.lv || 1) >= L).at(-1)[1];
+export const strolling = S => S.animals.filter(a => a.stroll);
+export function sendStroll(S, id, h, now, rng = Math.random) {
+  const a = S.animals.find(a => a.id === id && !a.pending && !a.stroll && known(a));
+  if (!a || !B.stroll.hours.includes(h) || strolling(S).length >= strollCap(S)) return null;
+  bank(a, now); a.stored = true; delete a.home;
+  a.stroll = { start: now, end: now + h * 3600e3, h, pl: PLACES[Math.floor(rng() * PLACES.length)].id, ln: Math.floor(rng() * 3) };
+  return a;
+}
+function strollBack(S, now, ev, rng) {
+  for (const a of S.animals.filter(a => a.stroll).sort((a, b) => a.stroll.end - b.stroll.end)) {
+    const w = a.stroll; w.end = Math.min(w.end, now + w.h * 3600e3); if (now < w.end) continue;
+    const R = B.stroll, prop = rng() < R.prop[w.h] ? STROLL_PROPS[S.strolls % STROLL_PROPS.length] : null;
+    const got = give(S, { hearts: R.hearts[w.h], candy: R.candy[w.h], prop }, now, rng, habitatOf(a));
+    if (got.prop) S.strolls++;
+    delete a.stroll; bank(a, w.end); a.stored = !fits(S, a);
+    const card = { id: S.nextId++, a: a.id, sp: a.species, v: a.variant, c: a.color, acc: a.acc, st: a.stage, nm: callName(a), pl: w.pl, ln: w.ln, h: w.h, at: w.end, hearts: got.hearts, candy: got.candy, prop: got.prop, new: true };
+    S.cards.push(card); if (S.cards.length > R.cards) S.cards.splice(0, S.cards.length - R.cards);
+    ev.push({ type: 'strollBack', animal: a, card });
+  }
+}
+// 13-2 놀이 장면: S.scenes { id: { at (first seen), sp (the friend in it) } }. scenesOf(e): the SCENES e is, e = { prop (its kind), sp (species on it),
+// n (seats taken), night } from play.js's start, or { social (walk.js kind), night }. seeScene pays B.scene.hearts once
+export const scenesOf = e => SCENES.filter(s => (s.prop ? s.prop === e.prop && !(s.n > (e.n || 0)) && (!s.sp || !!e.sp?.includes(s.sp)) : s.social === e.social)
+  && (s.night == null || s.night === (e.night > 0.3)));
+export function seeScene(S, id, sp, now) { if (S.scenes[id] || !SCENES.some(s => s.id === id)) return 0; S.scenes[id] = { at: now, sp: Object.hasOwn(SP, sp) ? sp : null }; S.hearts += B.scene.hearts; return B.scene.hearts; }
+export const cardsSeen = S => { for (const c of S.cards) delete c.new; return true; };
 // 진열장: the colour a codex cell's figure shows (one seen on a reveal card)
 export function setDisplay(S, k, cId) {
   if (!S.colors[k]?.includes(cId)) return false;
@@ -451,6 +486,26 @@ export function buyProp(S, propId, habId) { // habId: where it was bought (a pro
   const P = PROP[propId], hab = P?.habitat ?? habId; if (!P || P.paid || P.gift || S.hearts < P.price || !hab || !can(S, 'prop:' + P.id)) return null; // 41: a gift one only comes as a gift
   S.hearts -= P.price;
   const p = { uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 };
+  S.props.push(p); return p;
+}
+// 13-3 오늘의 진열대: PACE shelf n of this habitat's props (open now; no gift, paid, rail or 지형 도장), a new display every
+// `hours`, in a fixed order (by a hash of the id, never random); one at -off; every `every`-th display the next one shows a
+// 진열대 색 (its palette's entries marked 1, in turn). Bought at that price; the colour then stays in its swatch (S.looks)
+const hid = id => [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
+export function shelfOf(S, habId, now) {
+  const C = B.shelf, T = C.hours * 3600e3, k = Math.floor(now / T), ends = (k + 1) * T;
+  const pool = PROPS.filter(P => (P.habitat ?? habId) === habId && !P.gift && !P.paid && !P.rail && !P.stamp && can(S, 'prop:' + P.id)).sort((a, b) => hid(a.id) - hid(b.id));
+  const n = Math.min(C.n, pool.length), items = [];
+  for (let i = 0; i < n; i++) { const P = pool[(k * C.n + i) % pool.length], off = i === k % n; items.push({ id: P.id, off, price: off ? Math.round(P.price * (1 - C.off)) : P.price }); }
+  if (n && k % C.every === 0) { const it = items[(k + 1) % n], pal = paletteOf(PROP[it.id]) || [], xs = pal.map((e, c) => e[2] ? c : 0).filter(Boolean);
+    if (xs.length) it.c = xs[Math.floor(k / C.every) % xs.length]; }
+  return { k, ends, items };
+}
+export function buyShelf(S, habId, i, now) {
+  const it = shelfOf(S, habId, now).items[i], P = it && PROP[it.id], hab = P?.habitat ?? habId; if (!P || S.hearts < it.price) return null;
+  S.hearts -= it.price;
+  const p = { uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 }; if (it.price !== P.price) p.cost = it.price;
+  if (it.c) { p.c = it.c; const L = S.looks[P.id] || []; if (!L.includes(it.c)) { S.looks[P.id] = [...L, it.c]; p.nl = 1; } }
   S.props.push(p); return p;
 }
 // 땅 넓히기: the next step of an open habitat, for hearts
@@ -542,7 +597,7 @@ export function importLayout(S, habId, d, fit, cell) {
     if (!ok[k]) return n.off++;
     const r = P?.rail || 0; // 28-4: rails go to their own cap
     if (!nat && (r ? rails + r > B.decor.rails : props >= cap)) return n.full++;
-    const look = nat ? {} : { c: it.c || 0, sz: it.sz || 0 }; let seat = null, top = null;
+    const look = nat ? {} : { c: paletteOf(P)?.[it.c]?.[2] && !S.looks[P.id]?.includes(it.c) ? 0 : it.c || 0, sz: it.sz || 0 }; let seat = null, top = null;
     if (it.sl) { // 28-5: the prop under it (placed by this code just now, or its 미리보기) whose top spot sl is where it stands
       const near = h => { const t = topAt(h, it.sl - 1); return !!t && Math.hypot(t.x - it.x, t.z - it.z) < 0.35; };
       const h = mine.find(h => used.has(h.uid) && seatFree(S, h, it.sl - 1, null) && near(h)), gh = !h && ghost.find(near);
@@ -601,7 +656,9 @@ export function placeRing(S, habId, cells, clear = []) {
 export function refundProp(S, uid) {
   const i = S.props.findIndex(p => p.uid === uid && !p.placed), P = i < 0 ? null : PROP[S.props[i].prop];
   if (!P || P.paid || P.gift) return 0; // 28-6c: a paid prop is never turned into hearts (41: nor a gift one)
-  S.props.splice(i, 1); S.hearts += P.price; return P.price;
+  const p = S.props[i], h = Math.min(P.price, p.cost ?? P.price); // 13-3: what it cost on the shelf; a 진열대 색 it brought goes again
+  if (p.nl) S.looks[P.id] = (S.looks[P.id] || []).filter(c => c !== p.c);
+  S.props.splice(i, 1); S.hearts += h; return h;
 }
 export function stowProp(S, uid) {
   const p = S.props.find(p => p.uid === uid); if (!p) return null;
@@ -744,7 +801,7 @@ function firstCheck(S, now, ev, rng) {
 export function skip(S, ms, now, rng = Math.random) {
   for (const n of Object.values(S.nests)) n.t -= ms;
   for (const s of S.slots) if (s) { s.start -= ms; s.end -= ms; }
-  for (const a of S.animals) { a.born -= ms; if (a.gAt != null) a.gAt -= ms; if (a.adultAt != null) a.adultAt -= ms; a.heartAt -= ms; }
+  for (const a of S.animals) { a.born -= ms; if (a.gAt != null) a.gAt -= ms; if (a.adultAt != null) a.adultAt -= ms; a.heartAt -= ms; if (a.stroll) { a.stroll.start -= ms; a.stroll.end -= ms; } }
   if (Number.isFinite(S.flags.lvCard?.at)) S.flags.lvCard.at -= ms; // 41 D: level.js's gap between level cards
   return advance(S, now, rng);
 }

@@ -74,6 +74,9 @@ export const store = id => act(now => R.store(S, id, now));
 export const setFav = (id, on) => act(() => R.setFav(S, id, on));
 export const setName = (id, text) => act(() => R.setName(S, id, text));
 export const unstore = id => act(now => R.unstore(S, id, now));
+export const sendStroll = (id, h) => act(now => R.sendStroll(S, id, h, now)); // 13-1
+export const cardsSeen = () => act(() => R.cardsSeen(S));
+export const seeScene = (id, sp) => act(now => R.seeScene(S, id, sp, now)); // 13-2
 export const buyCandy = () => act(() => R.buyCandy(S));
 export const holdBaby = id => act(now => R.holdBaby(S, id, now));
 export const letGrow = id => act(now => R.letGrow(S, id, now));
@@ -81,6 +84,9 @@ export const grownSeen = ids => act(() => R.grownSeen(S, ids));
 export const setDisplay = (k, c) => act(() => R.setDisplay(S, k, c));
 // inbox 51: a 'buy' event (stats.js): kind as priced (big: listed ♥100 and up, else play for 놀이·기차 ones, else small), the hearts paid
 export const buyProp = (id, hab) => act(() => { const h = S.hearts, p = R.buyProp(S, id, hab), P = PROPS.find(x => x.id === id);
+  return p && { p, events: [{ type: 'buy', kind: P.list >= 100 ? 'big' : P.use || P.rail ? 'play' : 'small', price: h - S.hearts }] }; })?.p ?? null;
+export const shelf = hab => R.shelfOf(S, hab, clock()); // 13-3 오늘의 진열대
+export const buyShelf = (hab, i) => act(now => { const h = S.hearts, p = R.buyShelf(S, hab, i, now), P = p && PROPS.find(x => x.id === p.prop);
   return p && { p, events: [{ type: 'buy', kind: P.list >= 100 ? 'big' : P.use || P.rail ? 'play' : 'small', price: h - S.hearts }] }; })?.p ?? null;
 export const buyExpand = hab => act(() => R.buyExpand(S, hab));
 export const refit = (hab, moves) => act(() => R.refit(S, hab, moves)); // inbox 42 A

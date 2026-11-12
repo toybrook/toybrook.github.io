@@ -14,11 +14,11 @@ import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { makeFigure, loadModel } from '../animals/figure.js';
 import * as G from '../game/game.js';
-import { HABITATS, RARITIES, ACCESSORIES, SPECIES } from '../game/data.js';
-import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, displayColor, unlockInfo, twoName } from '../game/rules.js';
+import { HABITATS, RARITIES, ACCESSORIES, SPECIES, SCENES, BALANCE } from '../game/data.js';
+import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, displayColor, unlockInfo, twoName, variantsOf } from '../game/rules.js';
 import { toast, tip, lockText, josa } from './hud.js';
 import { DEBUG, calm } from '../config.js';
-import { figureThumb, silhouetteThumb, studio, nightLights } from './thumbs.js';
+import { figureThumb, silhouetteThumb, propThumb, studio, nightLights } from './thumbs.js';
 
 const el = document.getElementById('codex');
 let tab = HABITATS[0].id, night = false, hab = null; // night: 21-1 밤에 보기 (this screen only, off each time it opens)
@@ -28,7 +28,7 @@ export const hasNew = () => HABITATS.some(h => open(h.id) && codexCells(h.id).so
 
 export function openCodex(habId, api) { G.note('codex', 1); if (habId) tab = habId; hab = api; night = false; el.hidden = false; draw(); tip('codex', '#codex .cbar'); } // G.note: 41 D 첫날 할 일
 // live while open: redraw when what it shows changes (a variant registered, a habitat opened, someone stored), keeping the scroll
-const sig = () => [Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length].join();
+const sig = () => [Object.keys(G.S.scenes).length, Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length].join();
 let shown = '';
 G.on(() => { if (el.hidden || sig() === shown) return; const body = el.querySelector('.cbody'), y = body?.scrollTop || 0, up = V?.box?.isConnected && V.box; draw(); el.querySelector('.cbody').scrollTop = y; if (up) el.append(up); }); // the 3D view stays up
 
@@ -108,7 +108,21 @@ function bar(habId, cells, n) {
   return `<div class="cbar">${HAB[habId].name} 도감 ${n}/${cells.length} (${Math.round(n / cells.length * 100)}%)<u><i style="width:${n / cells.length * 100}%"></i></u>${left ? `<small>${left}</small>` : ''}</div>`;
 }
 
-const tabs = () => `<div class="ctabs">${HABITATS.map(h => `<button ${open(h.id) ? `data-tab="${h.id}"` : `data-lock="${h.id}" class="lock"`}${h.id === tab ? ' class="on"' : ''}>${h.name}${open(h.id) ? '' : ' 🔒'}</button>`).join('')}<button data-tab="album"${tab === 'album' ? ' class="on"' : ''}>치장 앨범</button></div>`;
+const tabs = () => `<div class="ctabs">${HABITATS.map(h => `<button ${open(h.id) ? `data-tab="${h.id}"` : `data-lock="${h.id}" class="lock"`}${h.id === tab ? ' class="on"' : ''}>${h.name}${open(h.id) ? '' : ' 🔒'}</button>`).join('')}<button data-tab="album"${tab === 'album' ? ' class="on"' : ''}>치장 앨범</button><button data-tab="scenes"${tab === 'scenes' ? ' class="on"' : ''}>놀이 장면</button></div>`;
+// 13-2 놀이 장면: one cell per SCENES one. Seen: the play prop (the friend in it pinned on) or, friends together, the friend; the
+// day. Not seen: the prop's (or a friend's) flat shape and the hint. Not part of the codex count
+function drawScenes() {
+  const n = SCENES.filter(s => G.S.scenes[s.id]).length;
+  el.innerHTML = `<div class="chead"><b>놀이 장면</b><span>${n}/${SCENES.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>${tabs()}
+<div class="cbody"><div class="crow sc">${SCENES.map(s => { const e = G.S.scenes[s.id];
+    return `<div class="cell scene${e ? '' : ' unk'}"><img alt="${e ? s.name : '아직 못 본 장면'}">${e?.sp && s.prop ? '<img class="who" alt="">' : ''}<span>${e ? s.name : '?'}</span><small>${e ? new Date(e.at).toLocaleDateString('ko-KR') : s.hint}</small></div>`; }).join('')}</div>
+<p class="cnote">친구가 놀이 소품에서 놀거나 친구끼리 노는 모습을 보면 담겨요 · 처음 볼 때 ♥${BALANCE.scene.hearts} · 도감 수에는 들어가지 않아요</p></div>`;
+  const fig = sp => figureThumb(sp, variantsOf(SP[sp])[0].id, null, null, 'adult', night);
+  el.querySelectorAll('.cell.scene').forEach((d, i) => { const s = SCENES[i], e = G.S.scenes[s.id], [img, who] = d.querySelectorAll('img'), set = el => u => { el.src = u; };
+    const sp = e?.sp || s.sp || SPECIES[0].id, pid = s.prop === 'train' ? 'railring' : s.prop;
+    (s.prop && hab?.decor ? propThumb(pid, hab.decor.model, !e, night).catch(() => fig(sp)) : e ? fig(sp) : silhouetteThumb(sp, null, night)).then(set(img), () => {});
+    if (who) fig(e.sp).then(set(who), () => {}); });
+}
 function drawAlbum() {
   const ids = Object.keys(ACCESSORIES), got = ids.filter(id => G.S.album[id]);
   el.innerHTML = `<div class="chead"><b>치장 앨범</b><span>${got.length}/${ids.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>${tabs()}
@@ -122,6 +136,7 @@ const nightBtn = () => `<button class="back" data-night>${night ? '낮에 보기
 function draw() {
   shown = sig(); el.classList.toggle('night', night);
   if (tab === 'album') return drawAlbum();
+  if (tab === 'scenes') return drawScenes();
   const cells = codexCells(tab), got = c => !!G.S.codex[c.key];
   const stored = G.S.animals.filter(a => a.stored && known(a) && habitatOf(a) === tab).length;
   const seen = c => G.S.colors[c.key] || [];

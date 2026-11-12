@@ -19,7 +19,8 @@ export const KINDS = ('hay trough lily duckhouse flowers bench fence path tulips
   + 'table shelf platform doll '  // 28-5 집 꾸미기
   + 'hillock puddle flowermound rockmound '  // 28-6 지형 도장
   + 'att_sunflower att_birdhouse att_balloons att_wcan att_signpost att_cart att_rainbow firstday '  // inbox 41 선물 소품
-  + 'mushroom tunnel snowslide carousel gym balloon tower waterwheel').split(' '); // 42 F-2 큰 소품
+  + 'mushroom tunnel snowslide carousel gym balloon tower waterwheel '  // 42 F-2 큰 소품
+  + 'walk_cairn walk_acorn walk_pinecone').split(' '); // 13-1 산책 선물
 
 const b64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64 = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));

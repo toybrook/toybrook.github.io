@@ -10,7 +10,7 @@
 // inbox 37: 작은 고리 바로 놓기 (four curves held as one, put down at once: rules.js placeRing), 가까운 빈 자리로 (a rail held:
 // habitat.js room; 27-7b: any prop held on a red spot), the first rail's tip.
 import * as G from '../game/game.js';
-import { BALANCE as B, BIGS, PROPS, NATURE, BRUSHES, SETS, ZONES, brushIn, paletteOf, SIZES, sizeF, sizable } from '../game/data.js';
+import { BALANCE as B, BIGS, PROPS, SCENES, NATURE, BRUSHES, SETS, ZONES, brushIn, paletteOf, SIZES, sizeF, sizable } from '../game/data.js';
 import { SP, PROP, placedIn, railsIn, capped, levelOf, decorCap, layoutOf, can, needFor } from '../game/rules.js';
 import { propThumb } from './thumbs.js';
 import { toast, josa, tip, ask } from './hud.js';
@@ -19,12 +19,20 @@ import { sfx } from './sound.js';
 import { railEnds } from '../habitat/train.js';
 
 const el = document.getElementById('decor'), habEl = document.getElementById('habitat');
+// 13-2: a play prop's 놀이 장면 (seen / all): a reason to buy and place it
+const sceneNote = P => { const L = SCENES.filter(s => s.prop === P.id); return L.length ? ` · 놀이 장면 ${L.filter(s => G.S.scenes[s.id]).length}/${L.length}` : ''; };
 export const propNote = P => P.gift || P.use || (P.effect ? `${SP[P.effect].name}${josa(SP[P.effect].name, '이', '가')} 조금 더 자주 와요`
   : P.light ? '밤이 되면 불이 켜져요' : P.shelter ? `${P.habitat === 'snow' ? '눈' : '비'} 오면 몸집이 맞는 동물이 쉬러 와요` : '보기만 해도 좋은 장식이에요');
+// 13-3 오늘의 진열대: three props, a new display every PACE shelf.hours (「다음 진열 1:42」 counts down here; no notification)
+const hm = ms => { const m = Math.max(1, Math.ceil(ms / 60e3)); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+let shelfEnds = 0;
+const shelfRow = sh => { shelfEnds = sh.ends; return sh.items.length ? `<div class="dshelf"><p><b>오늘의 진열대</b><span data-left>다음 진열 ${hm(sh.ends - G.now())}</span></p><div>${sh.items.map((it, i) => { const P = PROP[it.id], c = it.c && paletteOf(P)[it.c];
+  return `<button class="dsh${it.off ? ' sale' : ''}" data-shelf="${i}"><img alt="">${c ? `<i style="background:${c[1]}"></i>` : ''}<b>${P.name}</b><small>${c ? `진열대 색 · ${c[0]}` : it.off ? `${Math.round(B.shelf.off * 100)}% 싸게` : '이번 진열'}</small><em>${it.off ? `<s>${P.price}</s> ` : ''}<span class="hrt">♥</span>${it.price}</em></button>`; }).join('')}</div></div>` : ''; };
+setInterval(() => { const s = !el.hidden && el.querySelector('[data-left]'); if (!s) return; if (G.now() >= shelfEnds) draw(); else s.textContent = '다음 진열 ' + hm(shelfEnds - G.now()); }, 1000);
 // the tabs and the props in each (one not listed goes under 가구; 28-2 놀이: the props animals use); the board's own nature put away shows under 자연
 const TABS = [['nature', '자연', 'flowers tulips tallgrass stones mushrooms log'], ['path', '길', 'fence path'], ['light', '조명', 'lantern jar mushlamp starlamp icelamp'],
   ['furniture', '가구', 'bench mailbox pinwheel vane hay trough snowman sled'], ['big', '큰 소품', BIGS], ['water', '물가', 'lily boat stepping'],
-  ['play', '놀이', 'swing slide seesaw ball hammock fountain campfire feeder musicbox bubbles lights fireworks pinhill bell'], ['home', '집', 'table shelf platform doll'], ['land', '땅', 'hillock puddle flowermound rockmound'], ['train', '기차', 'rail railcurve railfork railbridge'], ['gift', '선물', 'att_sunflower att_birdhouse att_balloons att_wcan att_signpost att_cart att_rainbow firstday']].map(([id, name, ps]) => ({ id, name, ps: ps.split(' ') }));
+  ['play', '놀이', 'swing slide seesaw ball hammock fountain campfire feeder musicbox bubbles lights fireworks pinhill bell'], ['home', '집', 'table shelf platform doll'], ['land', '땅', 'hillock puddle flowermound rockmound'], ['train', '기차', 'rail railcurve railfork railbridge'], ['gift', '선물', 'att_sunflower att_birdhouse att_balloons att_wcan att_signpost att_cart att_rainbow firstday walk_cairn walk_acorn walk_pinecone']].map(([id, name, ps]) => ({ id, name, ps: ps.split(' ') }));
 const tabOf = P => (TABS.find(t => t.ps.includes(P.id)) ?? TABS[3]).id;
 const NAT = Object.fromEntries(NATURE.map(n => [n.id, n])), cut = id => id === 'rock' ? '치우기' : '베기';
 const UNDO = 20;
@@ -97,7 +105,7 @@ ${heldLine()}<div class="dinfo"><span>8×8칸 · 곡선 레일 4조각${n ? ` ·
     const sx = !N && stowed(P.id).some(s => s.uid !== held.uid), more = !N && (sx || !P.paid && !P.gift); // 하나 더: one put away first, else bought (41: a gift one is never bought)
     const lk = !N && hab.decor.look(), pal = lk && paletteOf(P), big = lk && sizable(P); // 28-5 its look now (c, sz)
     el.innerHTML = GRIP() + (P.rail || !ok ? ROOM : '') + `<div class="dhead"><b>${name}</b><span class="${ok ? 'ok' : 'no'}">${ok ? '여기에 놓을 수 있어요' : '빨간 곳엔 놓을 수 없어요'}</span></div>
-${P.rail ? heldLine() : ''}${pal || big ? `<div class="dlook">${pal ? `<span class="dsw" role="group" aria-label="색">${pal.map(([nm, hx], i) => `<button class="${lk.c === i ? 'on' : ''}${hx ? '' : ' orig'}" data-c="${i}" aria-label="${nm}" title="${nm}"${hx ? ` style="background:${hx}"` : ''}></button>`).join('')}</span>` : ''}${big ? `<span class="dsz" role="group" aria-label="크기">${[1, 0, 2, 3].map(i => `<button class="${lk.sz === i ? 'on' : ''}" data-sz="${i}">${SIZES[i]}</button>`).join('')}</span>` : ''}</div>` : ''}
+${P.rail ? heldLine() : ''}${pal || big ? `<div class="dlook">${pal ? `<span class="dsw" role="group" aria-label="색">${pal.map(([nm, hx, x], i) => x && lk.c !== i && !G.S.looks[P.id]?.includes(i) ? '' : `<button class="${lk.c === i ? 'on' : ''}${hx ? '' : ' orig'}" data-c="${i}" aria-label="${nm}" title="${nm}"${hx ? ` style="background:${hx}"` : ''}></button>`).join('')}</span>` : ''}${big ? `<span class="dsz" role="group" aria-label="크기">${[1, 0, 2, 3].map(i => `<button class="${lk.sz === i ? 'on' : ''}" data-sz="${i}">${SIZES[i]}</button>`).join('')}</span>` : ''}</div>` : ''}
 <div class="dinfo"><span>${info(P, N, N ? 1 : sizeF(P, lk?.sz))}</span>${N ? `<button class="sb dcut" data-stow>${cut(held.prop)}</button>` : ''}${more ? `<button class="sb" data-more>하나 더 ${sx ? '꺼내기' : can(G.S, 'prop:' + P.id) ? `<span class="hrt">♥</span>${P.price}` : `· Lv ${needFor('prop:' + P.id)}`}</button>` : ''}</div>
 <div class="nbtns"><button class="sb" data-cancel>취소</button>${P.rail ? '' : '<button class="sb" data-rot="15" aria-label="15도 돌리기 · 길게 누르면 자유롭게">⟳15°</button>'}<button class="sb" data-rot="90">⟳90°</button>${N ? '' : '<button class="sb" data-stow>넣기</button>'}<button class="go" data-place${ok ? '' : ' disabled'}>놓기</button></div>
 <p class="dhint">끌어서 옮겨요 · ${P.rail ? '레일은 큰 칸에 맞춰 이어져요' : P.small ? '탁자·선반·평상 가까이 끌면 위에 올라가요' : grid ? '격자 칸에 맞춰 놓여요' : '⟳15°를 길게 누르면 자유롭게 돌아요'}${N ? ` · ${held.prop === 'rock' ? '치운' : '벤'} 것은 자연 탭에서 다시 심어요` : ''}</p>`;
@@ -130,14 +138,15 @@ ${tools()}<div class="nbtns"><button class="go" data-endpaint>다 칠했어요</
   const exp = `<button class="dprop dexp${xl ? ' lock' : ''}" data-expand${price == null ? ' disabled' : ''}><i></i><b>땅 넓히기 ${L}/${B.expand.price.length}</b><small>${price == null ? '다 넓혔어요' : `다음: ${ZONES[habId][L].name} · ${B.expand.visible[L]}마리 · 소품 ${B.expand.decor[L]}개까지`}</small><em>${price == null ? '완료' : xl ? `Lv ${needFor(xk)}` : `<span class="hrt">♥</span>${price}`}</em></button>`;
   const [rk, rn] = ringCost(), rlk = rk && !can(G.S, 'prop:railcurve'), ring = rl ? `<button class="dprop dring${rlk ? ' lock' : ''}" data-ring><img alt=""><b>예시 고리 한 번에 놓기</b><small>곡선 4개로 된 작은 고리 · 놓으면 바로 기차가 달려요</small><em>${rlk ? `Lv ${needFor('prop:railcurve')}` : rk ? `<span class="hrt">♥</span>${rk}` : '넣어 둔 곡선'}${rn && rk && !rlk ? ` · 곡선 ${rn}개 써요` : ''}</em></button>` : '';
   const lvOf = P => stowed(P.id).length || can(G.S, 'prop:' + P.id) ? 0 : needFor('prop:' + P.id), // 42 F-5: the ones open first, then by the level they open at
-    list = mine().filter(P => tabOf(P) === tab).sort((a, b) => lvOf(a) - lvOf(b)), nats = tab === 'nature' ? NATURE.filter(N => stowedNat(N.id).length) : [];
+    list = mine().filter(P => tabOf(P) === tab).sort((a, b) => lvOf(a) - lvOf(b)), nats = tab === 'nature' ? NATURE.filter(N => stowedNat(N.id).length) : [], sh = G.shelf(habId);
   el.innerHTML = GRIP() + `<div class="dhead"><b>꾸미기</b><span${n >= cap ? ' class="no"' : ''}>놓은 ${rl ? '레일' : '소품'} ${n} / ${cap}</span><button class="back" data-done>완료</button></div>
-${rl ? railLine(railNow(false), '', '<button class="sb" data-rhelp>놓는 법</button>') : ''}${tools()}<div class="dtabs">${tabsHere().map(t => `<button class="${t.id === tab ? 'on' : ''}" data-tab="${t.id}">${t.name}</button>`).join('')}</div>
+${rl ? railLine(railNow(false), '', '<button class="sb" data-rhelp>놓는 법</button>') : ''}${tools()}${shelfRow(sh)}<div class="dtabs">${tabsHere().map(t => `<button class="${t.id === tab ? 'on' : ''}" data-tab="${t.id}">${t.name}</button>`).join('')}</div>
 <div class="dgrid">${ring}${exp}${L ? '<button class="dprop dcmp" data-compare><i></i><b>넓히기 전과 비교</b><small>처음 땅과 지금 땅을 위에서 봐요</small></button>' : ''}${tab === 'nature' ? '<button class="dprop dsweep" data-sweep><i></i><b>자연 정리</b><small>네모를 그려 그 안의 나무·바위·덤불을 한 번에 치워요</small></button>' : ''}${nats.map(N => `<button class="dprop dnat" data-n="${N.id}"><img alt=""><b>${N.name}</b><small>처음부터 있던 것 · 다시 심어요</small><em>넣어 둔 것 ${stowedNat(N.id).length}</em></button>`).join('')}${list.map(P => { const s = stowed(P.id).length, lk = !s && !can(G.S, 'prop:' + P.id);
-    return `<button class="dprop${lk ? ' lock' : ''}" data-p="${P.id}"><img alt=""><b>${P.name}</b><small>${propNote(P)}</small><em>${s ? `넣어 둔 것 ${s}` : P.gift ? '놓았어요' : lk ? `Lv ${needFor('prop:' + P.id)}` : `<span class="hrt">♥</span>${P.price}`}</em></button>`; }).join('')}</div>
+    return `<button class="dprop${lk ? ' lock' : ''}" data-p="${P.id}"><img alt=""><b>${P.name}</b><small>${propNote(P)}${sceneNote(P)}</small><em>${s ? `넣어 둔 것 ${s}` : P.gift ? '놓았어요' : lk ? `Lv ${needFor('prop:' + P.id)}` : `<span class="hrt">♥</span>${P.price}`}</em></button>`; }).join('')}</div>
 <p class="dhint">${n >= cap ? full(rl && 'rail') : rl ? '레일 끝의 초록 점은 이어진 곳, 빨간 점은 열린 곳이에요 · 고리를 닫으면 태엽 기차가 달려요' : G.S.ghost?.[habId]?.length ? '반투명한 것은 꾸미기 코드의 미리보기예요 · 그 소품을 사거나 꺼내면 그 자리에서 시작해요' : '놓은 소품이나 나무를 누르면(길게 누르면 바로 끌어서) 옮기거나 넣을 수 있어요'}</p>`;
   el.querySelectorAll('.dnat img').forEach((img, i) => propThumb('n:' + nats[i].id, () => hab.decor.natModel({ prop: nats[i].id, s: 1, v: 12 })).then(u => { img.src = u; }));
   el.querySelectorAll('.dring img').forEach(img => propThumb('railring', hab.decor.model).then(u => { img.src = u; }));
+  el.querySelectorAll('.dsh img').forEach((img, i) => propThumb(sh.items[i].id, hab.decor.model).then(u => { img.src = u; }));
   el.querySelectorAll('.dprop[data-p] img').forEach((img, i) => propThumb(list[i].id, hab.decor.model).then(u => { img.src = u; }));
 }
 
@@ -268,6 +277,12 @@ el.addEventListener('click', e => {
   }
   else if (d.room != null) { if (!hab.decor.room()) toast(held?.ring || PROPS.find(P => P.id === held?.prop)?.rail ? '이 서식지엔 고리가 들어갈 빈 땅이 없어요 · 소품을 조금 치워 보세요' : '가까이에 빈 자리가 없어요 · 소품을 조금 치워 보세요'); }
   else if (d.ring != null) { const no = ringNo(); if (no) toast(no); else { hold({ ring: true, prop: 'railring' }); if (!ok) hab.decor.room(); railTip(); } }
+  else if (d.shelf) { // 13-3: bought at the shelf's price (a 진열대 색 comes with it), then held like one from the list
+    const it = G.shelf(habId).items[+d.shelf], P = it && PROP[it.id]; if (!P) return draw();
+    if (capped(G.S, habId, P.id)) toast(full(P.id));
+    else if (G.S.hearts < it.price) toast(`하트 ${it.price}개가 필요해요 · 지금 ♥${G.S.hearts}`);
+    else { const rec = G.buyShelf(habId, +d.shelf); if (rec) { toast(`${P.name} 샀어요 · ♥-${it.price}${it.c ? ` · 진열대 색 「${paletteOf(P)[it.c][0]}」` : ''}`); hold(rec, true); } }
+  }
   else if (d.place != null) put(); else if (d.n) { const s = stowedNat(d.n)[0]; if (s) hold(s); }
   else if (d.p) {
     const P = PROPS.find(P => P.id === d.p), s = stowed(P.id)[0];

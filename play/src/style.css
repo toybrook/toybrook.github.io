@@ -69,6 +69,8 @@ html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-s
 .camb{position:absolute;left:50%;top:calc(62px + var(--sa-t));transform:translateX(-50%);z-index:1001;display:flex;gap:8px}.camb[hidden]{display:none}
 .camb .back{min-height:44px;padding:0 12px;font-size:calc(13px*var(--fs))}.camb .back[hidden]{display:none}
 .tag{position:absolute;left:50%;bottom:calc(172px + var(--sa-b));transform:translateX(-50%);z-index:1001;white-space:nowrap;pointer-events:none}
+.scnote{position:absolute;z-index:1002;display:flex;flex-direction:column;align-items:center;gap:1px;max-width:min(200px,52%);white-space:normal;text-align:center;line-height:1.35;font-size:calc(13px*var(--fs));padding:8px 12px;box-shadow:0 4px 14px rgba(60,35,15,.3);animation:scin .35s}.scnote.r{right:8px}.scnote.l{left:8px}.scnote small{display:block;font-size:calc(11px*var(--fs));opacity:.75}
+@keyframes scin{from{opacity:0;transform:scale(.85)}}
 .hearts b{font-weight:700;min-width:1ch}.hearts span{color:#ff8a98}
 /* 23-1 정원사 레벨: the Lv pill (a thin XP bar under it), the level sheet and the level-up card (ui/level.js) */
 .lvl{color:#f2ede3;font:inherit;font-size:calc(13px*var(--fs));cursor:pointer;flex-direction:column;gap:3px;padding:6px 9px;min-height:36px;justify-content:center;flex-shrink:0}
@@ -191,7 +193,7 @@ html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-s
 .nbtns .sb{flex:.8;border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b}
 /* bubble over an animal (fixed: placed by screen coordinates) */
 .bubble{position:fixed;z-index:1300;transform:translate(-50%,calc(-100% - 10px));background:#fffaf0;color:#4a3626;border-radius:14px;padding:8px 12px;font-size:calc(13px*var(--fs));line-height:1.4;box-shadow:0 4px 14px rgba(60,35,15,.25);text-align:center;width:max-content;max-width:240px}
-.bubble::after{content:'';position:absolute;left:50%;bottom:-6px;width:12px;height:12px;background:#fffaf0;transform:translateX(-50%) rotate(45deg)}
+.bubble::after{content:'';position:absolute;left:clamp(14px,calc(50% + var(--tx,0px)),calc(100% - 14px));bottom:-6px;width:12px;height:12px;background:#fffaf0;transform:translateX(-50%) rotate(45deg)}
 .bubble small{display:block;font-size:calc(12px*var(--fs));color:#7a5a3e;margin-top:1px}
 .bubble .row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:7px}
 .bubble button{min-height:44px;padding:0 13px;border:0;border-radius:999px;background:#e8805f;color:#fff;font-family:inherit;font-weight:600;font-size:calc(13px*var(--fs));cursor:pointer}
@@ -310,11 +312,20 @@ html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-s
 .cdet .pair{display:flex;gap:10px;justify-content:center;margin:10px 0 6px}.cdet .pair span{display:block;background:#f3e2c7;border-radius:14px;padding:6px}
 .cdet img{display:block;width:118px;height:118px;object-fit:contain}.cdet img:not([src]){visibility:hidden}.cdet small{font-size:calc(12px*var(--fs));color:#7a5a3e}
 .cdet .sub{font-size:calc(12.5px*var(--fs));color:#8a6a4c;margin:2px 0 10px}
-.sbtns{display:flex;gap:4px;margin-top:4px}
+.sbtns{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+/* 13-1 산책: the third button on its own line; a friend on a walk greyed, its time left instead of buttons */
+.sbtns .wk{flex-basis:100%}.scell.away img{opacity:.45}.onwalk{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:calc(11px*var(--fs));font-weight:700;color:#5f7d93;line-height:1.2}
+.pcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:12px;margin-top:6px}
+.pcard{margin:0;background:#fffaf0;border:1px solid #e3cba6;border-radius:14px;padding:8px;box-shadow:0 2px 6px rgba(74,54,38,.12)}
+.ppic{position:relative;aspect-ratio:3/2;border-radius:10px;overflow:hidden}.ppic svg{display:block;width:100%;height:100%}
+.ppic img{position:absolute;right:7%;bottom:9%;width:34%;border:3px solid #fff;border-radius:8px;box-shadow:0 2px 6px rgba(60,35,15,.3);transform:rotate(-4deg)} /* the friend as a photo pinned on the card (its thumb has the cell colour behind it) */.ppic img:not([src]){visibility:hidden}
+.ppic i{position:absolute;left:6px;top:6px;font-style:normal;font-weight:700;font-size:calc(10px*var(--fs));background:#ff6b7d;color:#fff;border-radius:6px;padding:3px 5px}
+.pcard figcaption{padding:8px 2px 0}.pcard b{display:block;font-size:calc(14px*var(--fs));line-height:1.35;word-break:keep-all}.pcard small{display:block;margin-top:3px;font-size:calc(11.5px*var(--fs));color:#8a6a4c}
 .sbtns button{flex:1;min-height:44px;border-radius:999px;font:inherit;font-weight:700;font-size:calc(12px*var(--fs));cursor:pointer;padding:0 4px}
 .sbtns .go{border:0;background:#e8805f;color:#fff}.sbtns .go:disabled{background:#cdb89a;cursor:default}
 .sbtns .sb{border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b}
 .cell small{display:block;font-size:calc(10.5px*var(--fs));color:#8a6a4c;line-height:1.3;margin-top:2px}
+.crow.sc{grid-template-columns:repeat(3,1fr)}.cell.scene .who{position:absolute;right:2px;top:2px;width:44%;border:2px solid #fff;border-radius:7px;box-shadow:0 2px 5px rgba(60,35,15,.3);transform:rotate(-4deg)} /* 13-2: the friend pinned on its play prop */
 /* 진열장 */
 .cab .cview{position:relative;flex:1;min-height:0;margin:0 calc(12px + var(--sa-r)) 0 calc(12px + var(--sa-l));border-radius:16px;overflow:hidden}
 .cab .cview canvas{display:block;touch-action:none}
@@ -502,3 +513,12 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .snap button.on{background:#6b4a2b;color:#fff7e8}
 .snap .smsg{margin:2px 2px 8px;font-size:calc(12px*var(--fs));line-height:1.45;color:#7a5a3c;word-break:keep-all;min-height:17px}
 .snap .sbar{display:flex;gap:6px}.snap .sbar button{min-height:44px;font-size:calc(14px*var(--fs))}.snap .sbar .go{background:#e8805f;color:#fff}
+/* 13-3 오늘의 진열대 */
+.dshelf{margin:0 0 8px;padding:6px;border-radius:14px;background:#fff7e8;border:1px dashed #e0b97e}
+.dshelf>p{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin:0 2px 4px;font-size:calc(12.5px*var(--fs))}.dshelf>p span{color:#8a6a4c;font-size:calc(11.5px*var(--fs));white-space:nowrap}
+.dshelf>div{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.dsh{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;background:#fbf1e1;border:1px solid #e3cba6;border-radius:12px;padding:3px 3px 5px;font:inherit;color:inherit;cursor:pointer}
+.dsh img{width:40px;height:40px;border-radius:8px}.dsh img:not([src]){visibility:hidden}
+.dsh b{font-size:calc(12px*var(--fs));max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dsh small{font-size:calc(10px*var(--fs));color:#8a6a4c;white-space:nowrap}
+.dsh em{font-style:normal;font-size:calc(11.5px*var(--fs));font-weight:700;color:#6b4a2b}.dsh s{color:#a8927a;font-weight:400}
+.dsh.sale{border-color:#e8a04a;background:#fff1dc}.dsh i{position:absolute;top:4px;right:4px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #d6bb93}

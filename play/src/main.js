@@ -81,6 +81,7 @@ const ui = {
   onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; }, // following: 정면 + 전체 보기; away from the start view: 전체 보기
   tag: (text, rec) => { play.tag(text, rec); snap.followed(); }, // ui/play.js: a baby's tag shows its growth; 26-4 사진 모드's 따라가기 shows who
   onTap: (...a) => { if (!snap.on()) play.onTap(...a); }, // 24-1 사진 모드: no hearts or bubbles (a tap still follows the animal)
+  scene: e => play?.scene(e, snap.on()), // 13-2 놀이 장면 (ui/play.js)
   onPropTap: uid => play.onPropTap(uid), onEdit: ok => play.onEdit(ok), onPaint: (c, b) => play.onPaint(c, b), onSweep: u => play.onSweep(u), // decorate mode (ui/decor.js)
   note: (k, n) => { if (!snap.on()) G.note(k, n); }, // 23-2 도전 과제 (not while 사진 모드 can hold the night or the rain)
   onHome: (id, home) => G.setHome(id, home), // inbox 53 울타리 안 자리
@@ -205,15 +206,16 @@ const retAttend = () => G.attendDue() && G.S.attend.n > 0; // a new player's fir
 const retHome = () => cur || G.S.flags.lastHab || HABITATS[0].id;
 function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
   retEggs = eggs;
-  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend()) return; // nothing new: no card
+  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new)) return; // nothing new: no card
   if (intro.hidden && news.hidden && $('attend').hidden) showRet(); else retWait = true; // 41 C: nor over 출석부
 }
 function showRet() {
   const eggs = retEggs, now = G.now(), ready = G.S.slots.filter(s => s && now >= s.end).length, grown = G.S.animals.filter(a => a.card), att = retAttend() && todayRow();
   const n = Object.values(eggs).reduce((a, b) => a + b, 0), most = Object.keys(eggs).sort((a, b) => eggs[b] - eggs[a])[0];
-  if (!n && !grown.length && !att) return;
+  const back = G.S.cards.filter(c => c.new), names = [...new Set(back.map(c => c.nm))]; // 13-1: postcards not seen, at the top
+  if (!n && !grown.length && !att && !back.length) return;
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
-  const rows = [att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
+  const rows = [back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
     grown.length && ['🌱', `다 자란 친구 ${grown.length}`, '보러 가요', 'grown'], ready && ['✨', `부화 끝난 알 ${ready}`, '깨우러 가요', 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', '백업해 두면 기기를 바꿔도 이어서 할 수 있어요', '설정 › 내 저장 백업', 'backup']); G.flag('backupNag', today); }
@@ -233,11 +235,12 @@ ret.onclick = async e => {
   const first = retGrown[0]; if (retGrown.length) { G.grownSeen(retGrown); retGrown = []; }
   if (d.go == null) return;
   if (d.go === 'backup') return BK.open();
-  const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home }[d.go];
+  const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home, cards: home }[d.go];
   // the 3D comes in under a cloud, at once: no map in between (it showed for seconds on a phone the first time); the loading bar says the rest
   const far = cur !== to; if (far) { veil.firstChild.textContent = ''; veil.hidden = false; veil.classList.add('on'); world.classList.add('now'); hab.classList.add('now'); }
   const ok = await nav.go(to, d.go === 'grown' ? first : undefined) !== false;
-  if (ok && d.go !== 'grown') play.openNest();
+  if (ok && d.go === 'cards') (await import('./ui/stroll.js')).openCards();
+  else if (ok && d.go !== 'grown') play.openNest();
   if (far) { world.classList.remove('now'); hab.classList.remove('now'); fade(false); }
 };
 let hiddenAt = null;

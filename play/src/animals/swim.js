@@ -67,7 +67,7 @@ export function createActor(ctx, rec) {
         const { q } = play; play.t += dt; let o;
         if (!q.A) { const k = Math.min(1, play.t / play.dur), hops = Math.max(2, Math.round(play.dur / 0.32)), x = play.x + (q.ax - play.x) * k, z = play.z + (q.az - play.z) * k;
           o = { x, z, y: Math.max(ctx.heightAt(x, z), water) + Math.sin(((k * hops) % 1) * Math.PI) * 0.45, yaw: Math.atan2(-(q.az - play.z), q.ax - play.x), sq: 1, rot: 0, gait: 'still', ph: 0 };
-          if (k >= 1) { start(q, x, z, o.yaw, t); play.t = 0; } }
+          if (k >= 1) { start(q, x, z, o.yaw, t); ctx.onPlay?.(q); play.t = 0; } } // 13-2: on it (habitat.js -> ui 놀이 장면)
         else o = playPose(q, play.t, t);
         root.position.set(o.x, o.y ?? ctx.heightAt(o.x, o.z) + (o.lift || 0), o.z); root.rotation.set(0, o.yaw, 0); look.fig.pose(o);
         Object.assign(body, { x: o.x, z: o.z, yaw: o.yaw }); fit();

@@ -52,7 +52,7 @@ const once = (k, f) => cache.has(k) ? cache.get(k) : (cache.set(k, f().catch(e =
 // (async: the species' model may not be loaded yet)
 export const figureThumb = (spId, vId, cId = null, acc = null, stage = 'adult', night = false) => once(`f${spId}:${vId}:${cId}:${acc}:${stage}${night ? ':n' : ''}`, async () => { await Promise.all([loadModel(SP[spId].model), loadAcc(acc)]); return shoot(makeFigure(spId, vId, stage, acc, cId).obj, false, night); });
 // a habitat's decor prop (front +z), turned a little toward us like the figures (a light without its halo sprite: it would widen the framing)
-export const propThumb = (id, make) => once('p' + id, async () => { const g = new THREE.Group(), m = make(id); m.remove(...m.children.filter(o => o.isSprite)); m.rotation.y = Math.PI / 2 - 0.9; g.add(m); return shoot(g); });
+export const propThumb = (id, make, silhouette = false, night = false) => once('p' + id + (silhouette ? ':s' : '') + (night ? ':n' : ''), async () => { const g = new THREE.Group(), m = make(id); m.remove(...m.children.filter(o => o.isSprite)); m.rotation.y = Math.PI / 2 - 0.9; g.add(m); return shoot(g, silhouette, night); }); // 13-2: the 놀이 장면 tab's "?" cells as a flat shape
 // the species' shape, flat, for codex cells not found yet (wearing an accessory: the album's "?")
 export const silhouetteThumb = (spId, acc = null, night = false) => once('s' + spId + acc + (night ? ':n' : ''), async () => { await Promise.all([loadModel(SP[spId].model), loadAcc(acc)]); return shoot(makeFigure(spId, variantsOf(SP[spId])[0].id, 'adult', acc).obj, true, night); });
 export const eggThumb = rarity => once('e' + rarity, async () => shoot(makeEgg(eggMat(rarity)).group));

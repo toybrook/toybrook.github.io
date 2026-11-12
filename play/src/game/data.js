@@ -34,6 +34,14 @@ export const EDITION = 'beta';
 //   expand: 땅 넓히기 prices;   xp: 정원사 레벨 XP (BALANCE.level.xp)
 //   play:   28-2 놀이 소품: their prices (PROPS) and the level each opens at (merged into BALANCE.level.unlock). Set again with the
 //           release balance (11차): release has the beta numbers for now. 28-6: the 땅 tab's stamps too, and the line brushes' levels
+// 13-1 산책 (PACE stroll, both editions): h hours out; hearts and candy when it comes back, and with `prop` chance the next
+// STROLL_PROPS gift. slots: [level, at once] (the last one reached). Hearts set by the check-eggs sim: a player who never pets
+// gets one small prop a day from one visit (3 x 8 h), two from two visits
+const STROLL = { hours: [1, 4, 8], hearts: { 1: 3, 4: 6, 8: 8 }, candy: { 1: 0, 4: 1, 8: 1 }, prop: { 1: 0.05, 4: 0.15, 8: 0.25 }, slots: [[1, 3], [6, 4], [12, 5]], cards: 200 };
+// 13-2 놀이 장면 (PACE scene, both editions): hearts the first time each SCENES one is seen
+const SCENE = { hearts: 10 };
+// 13-3 오늘의 진열대: n props every `hours` (a fixed order), one at -off; every `every`-th display one shows a 진열대 색
+const SHELF = { hours: 3, n: 3, off: 0.2, every: 2 };
 export const PACE = {
   release: {
     nest: { every: 60 * MIN, max: 8, start: 1, startRarity: 'common', early: { n: 0, every: 60 * MIN }, onUnlock: 0 },
@@ -48,6 +56,9 @@ export const PACE = {
     priceX: { small: 1, big: 1 },                    // 42 F-1: prop prices as listed (PROPS price; the beta x is below)
     xp: { codex: 10, grown: 4, pet: 1, petDaily: 10, login: 5, achieve: 10 },
     play: { price: { seesaw: 70, ball: 30, hammock: 60, feeder: 40, campfire: 50, slide: 120, fountain: 150, musicbox: 80, bubbles: 60, lights: 70, fireworks: 60, pinhill: 90, bell: 50, rail: 10, railcurve: 10, railfork: 20, railbridge: 40, table: 40, shelf: 50, platform: 70, doll: 30, hillock: 40, puddle: 40, flowermound: 50, rockmound: 50 }, level: { 'set:friends': 6, 'prop:slide': 10, 'prop:fountain': 12, 'set:toys': 8, 'set:train': 7, 'set:home': 5, 'brush:stonepath': 3, 'prop:hillock': 3, 'brush:fenceline': 4, 'prop:puddle': 4, 'brush:plank': 5, 'prop:flowermound': 5, 'brush:wall': 6, 'prop:rockmound': 6 } },
+    stroll: STROLL,
+    scene: SCENE,
+    shelf: SHELF,
   },
   beta: { // max 20: 10 h of eggs (the night between the last visit and the first); slots 3: with 2 the snow opened on day 4 (inbox-31.md)
     nest: { every: 30 * MIN, max: 20, start: 1, startRarity: 'common', early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3 }, // 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
@@ -62,11 +73,14 @@ export const PACE = {
     priceX: { small: 0.75, big: 0.5 },               // 42 F-1: prop prices x (big: listed ♥100 and up), to 5 hearts. inbox 51: small 1 -> 0.75 (the player found props dear); sim: one every 10~20 min, a big one on day 2
     xp: { codex: 8, grown: 2, pet: 1, petDaily: 10, login: 5, achieve: 10 },
     play: { price: { seesaw: 70, ball: 30, hammock: 60, feeder: 40, campfire: 50, slide: 120, fountain: 150, musicbox: 80, bubbles: 60, lights: 70, fireworks: 60, pinhill: 90, bell: 50, rail: 10, railcurve: 10, railfork: 20, railbridge: 40, table: 40, shelf: 50, platform: 70, doll: 30, hillock: 40, puddle: 40, flowermound: 50, rockmound: 50 }, level: { 'set:friends': 6, 'prop:slide': 10, 'prop:fountain': 12, 'set:toys': 8, 'set:train': 7, 'set:home': 5, 'brush:stonepath': 3, 'prop:hillock': 3, 'brush:fenceline': 4, 'prop:puddle': 4, 'brush:plank': 5, 'prop:flowermound': 5, 'brush:wall': 6, 'prop:rockmound': 6 } },
+    stroll: STROLL,
+    scene: SCENE,
+    shelf: SHELF,
   },
 };
 const P = PACE[EDITION];
 export const BALANCE = {
-  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, // PACE (above)
+  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, // PACE (above)
   candy: { price: 15, free: 1 },                     // 꼬마 사탕 (inbox 14): holds a baby's growth (nothing shows on it); given back when it grows on. Hearts; a new game has `free`
   pity: { heroic: 30, legendary: 180 },              // shard gauges per egg type: every egg cracked +1 to each; full = the next egg is that rarity (legendary first).
                                                      // A natural one of that rarity or better empties the gauge. Guaranteed eggs prefer variants not owned yet
@@ -703,6 +717,9 @@ export const PROPS = [
   { id: 'att_cart', name: '꽃수레', price: 0, r: 0.85, gift: '출석 선물' },
   { id: 'att_rainbow', name: '무지개 아치', price: 0, r: 0.9, gift: '출석 선물' },
   { id: 'firstday', name: '첫날 기념 나무', price: 0, r: 0.45, gift: '첫날 할 일 선물' },
+  { id: 'walk_cairn', name: '조약돌 탑', price: 0, r: 0.3, small: true, gift: '산책 선물' }, // 13-1: STROLL_PROPS, in turn
+  { id: 'walk_acorn', name: '큰 도토리', price: 0, r: 0.3, small: true, gift: '산책 선물' },
+  { id: 'walk_pinecone', name: '솔방울', price: 0, r: 0.3, small: true, gift: '산책 선물' },
 ];
 // 42 F-1: list = the price as listed (release); price = what this edition charges (PACE priceX; big: list ♥100 and up). Gifts stay 0
 for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5, Math.round(p.price * P.priceX[p.price >= 100 ? 'big' : 'small'] / 5) * 5); }
@@ -710,6 +727,17 @@ for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5
 // eggs (rules give: the habitat's odds, its pity). The 7th adds the next of ATTEND_PROPS, the 7 in turn
 export const ATTEND = [{ hearts: 20 }, { candy: 2 }, { eggs: 1 }, { hearts: 30 }, { candy: 3 }, { eggs: 1 }, { hearts: 50 }];
 export const ATTEND_PROPS = ['att_sunflower', 'att_birdhouse', 'att_balloons', 'att_wcan', 'att_signpost', 'att_cart', 'att_rainbow'];
+// 13-1 산책: where a walk goes (picked when it leaves) and the postcard's line ({n} the friend's name, {이/가} its josa).
+// The picture of each is ui/stroll.js SCENES
+export const STROLL_PROPS = ['walk_cairn', 'walk_acorn', 'walk_pinecone'];
+export const PLACES = [
+  { id: 'brook', name: '시냇가', lines: ['{n}{이/가} 시냇물에 발을 살짝 담갔어요', '{n}{은/는} 징검다리를 하나씩 건넜어요', '{n}{이/가} 물소리를 들으며 낮잠을 잤어요'] },
+  { id: 'flowers', name: '꽃밭', lines: ['{n}{이/가} 노란 꽃 냄새를 맡았어요', '{n}{은/는} 나비를 따라 한참 걸었어요', '{n}{이/가} 꽃잎 하나를 등에 얹고 왔어요'] },
+  { id: 'hill', name: '바람 언덕', lines: ['{n}{은/는} 언덕 꼭대기에서 바람을 맞았어요', '{n}{이/가} 언덕을 데굴데굴 굴러 내려왔어요', '{n}{이/가} 구름 모양을 세어 봤어요'] },
+  { id: 'forest', name: '숲길', lines: ['{n}{은/는} 도토리를 하나 주웠어요', '{n}{이/가} 나무 그늘에서 쉬었어요', '{n}{은/는} 다람쥐와 눈이 마주쳤어요'] },
+  { id: 'lake', name: '호숫가', lines: ['{n}{은/는} 호수에 비친 자기 얼굴을 봤어요', '{n}{이/가} 오리배가 떠가는 걸 구경했어요', '{n}{이/가} 노을이 질 때까지 앉아 있었어요'] },
+  { id: 'path', name: '들판 오솔길', lines: ['{n}{은/는} 오솔길 끝까지 가 봤어요', '{n}{이/가} 울타리 너머를 기웃거렸어요', '{n}{은/는} 풀밭에서 네잎클로버를 찾았어요'] },
+];
 // inbox 41 D 첫날 할 일: shown on the first `days` days of a game (dayOf, from S.since) as a small list under the top bar. Each
 // task done once gives its hearts; all of them the `prop` (a 선물 prop) and `candy`. What counts: rules.js FIRST_V
 // 꾸미기 › 큰 소품 탭 (ui/decor.js TABS; first.js 「다음은 큰 소품」)
@@ -723,10 +751,10 @@ export const FIRST = { days: 3, prop: 'firstday', candy: 2, tasks: [
 // 28-5 소품 색: each prop's palette (pal: its own, else toy; rails none). 0: as made; the rest: the key colour of its model turned
 // to that one (meadow/props.js recolor). 크기: sz 0 보통, 1 작게, 2 크게, 3 아주 크게 (its model, footprint and cells x sizeF)
 export const PALETTES = {
-  toy: [['원래'], ['빨강', '#e5584a'], ['파랑', '#4f8fe0'], ['노랑', '#f2c84b'], ['초록', '#6cbf5a'], ['분홍', '#f39ac0']],
-  wood: [['원래'], ['밝은 나무', '#e3b77f'], ['짙은 나무', '#8f5f3c'], ['하얀 칠', '#f1ece2']],
-  stone: [['원래'], ['밝은 돌', '#dcd8d0'], ['짙은 돌', '#7f7c79']],
-  leaf: [['원래'], ['연두', '#a8d65a'], ['단풍', '#e9873e'], ['노랑', '#f0cf4a']],
+  toy: [['원래'], ['빨강', '#e5584a'], ['파랑', '#4f8fe0'], ['노랑', '#f2c84b'], ['초록', '#6cbf5a'], ['분홍', '#f39ac0'], ['민트', '#7fd6c0', 1], ['라벤더', '#b49ee6', 1]],
+  wood: [['원래'], ['밝은 나무', '#e3b77f'], ['짙은 나무', '#8f5f3c'], ['하얀 칠', '#f1ece2'], ['벚나무', '#c97d5d', 1]],
+  stone: [['원래'], ['밝은 돌', '#dcd8d0'], ['짙은 돌', '#7f7c79'], ['분홍 돌', '#d9b3ad', 1]],
+  leaf: [['원래'], ['연두', '#a8d65a'], ['단풍', '#e9873e'], ['노랑', '#f0cf4a'], ['은빛', '#c9d3c8', 1]],
 };
 export const paletteOf = P => P && !P.rail && !P.stamp ? PALETTES[P.pal ?? 'toy'] : null;
 export const SIZES = ['보통', '작게', '크게', '아주 크게'];
@@ -746,6 +774,44 @@ export const USES = { // 42 F-2: + the big props (tunnel ... snowslide) at the e
   penguin: 'slide seesaw ball campfire train tunnel gym carousel balloon snowslide', polarBear: 'campfire tunnel', seal: 'ball campfire hammock tunnel snowslide',
   arcticFox: 'swing slide seesaw ball hammock campfire train tunnel tower gym carousel balloon snowslide', reindeer: 'feeder campfire tunnel', snowyOwl: 'swing seesaw campfire tunnel tower balloon snowslide',
 };
+
+// 13-2 놀이 장면 도감: what friends do with a play prop (USES) or with each other (walk.js social), watched on screen. One registers
+// the first time it is seen (hearts: PACE scene). prop: the play prop's kind (play.js), sp: that species only, n: that many on the
+// prop at once, night: true after dark, false by day only, social: walk.js's kind (greet, follow, tag, herd, nap). hint: the "?" cell's line
+export const SCENES = [
+  { id: 'swing_rabbit', name: '토끼의 그네', prop: 'swing', sp: 'rabbit', hint: '그네 근처에서 귀가 긴 친구가…' },
+  { id: 'swing_chicken', name: '닭의 그네', prop: 'swing', sp: 'chicken', hint: '그네 위에서 깃털이 팔랑…' },
+  { id: 'slide_pig', name: '돼지의 미끄럼', prop: 'slide', sp: 'pig', hint: '미끄럼틀에서 분홍빛 친구가…' },
+  { id: 'slide_otter', name: '수달의 미끄럼', prop: 'slide', sp: 'otter', hint: '물가 친구가 미끄럼틀을…' },
+  { id: 'seesaw_two', name: '둘이 시소', prop: 'seesaw', n: 2, hint: '시소는 혼자서는 못 타요…' },
+  { id: 'hammock_capybara', name: '카피바라의 해먹', prop: 'hammock', sp: 'capybara', hint: '느긋한 연못 친구가 해먹에…' },
+  { id: 'hammock_seal', name: '물범의 해먹', prop: 'hammock', sp: 'seal', hint: '설원의 동그란 친구가 해먹에…' },
+  { id: 'hammock_night', name: '해먹에서 밤잠', prop: 'hammock', night: true, hint: '밤에 해먹이 살랑…' },
+  { id: 'fountain_duck', name: '오리의 분수 물놀이', prop: 'fountain', sp: 'duck', hint: '연못 분수에서 꽥꽥…' },
+  { id: 'fountain_swan', name: '백조의 분수', prop: 'fountain', sp: 'swan', hint: '분수 둘레를 하얀 목이…' },
+  { id: 'fountain_flamingo', name: '플라밍고의 분수', prop: 'fountain', sp: 'flamingo', hint: '분수 옆에 긴 다리가…' },
+  { id: 'ball_sheep', name: '양의 공놀이', prop: 'ball', sp: 'sheep', hint: '굴리는 공을 폭신한 친구가…' },
+  { id: 'ball_penguin', name: '펭귄의 공놀이', prop: 'ball', sp: 'penguin', hint: '설원에서 공을 뒤뚱뒤뚱…' },
+  { id: 'feeder_horse', name: '말의 먹이통', prop: 'feeder', sp: 'horse', hint: '먹이통에 갈기 달린 친구가…' },
+  { id: 'feeder_three', name: '먹이통 모임', prop: 'feeder', n: 3, hint: '먹이통에 셋이 모이면…' },
+  { id: 'campfire_three', name: '모닥불에 셋이', prop: 'campfire', n: 3, hint: '모닥불을 셋이 둘러싸면…' },
+  { id: 'campfire_night', name: '밤 모닥불', prop: 'campfire', night: true, hint: '밤에 모닥불 근처에서…' },
+  { id: 'campfire_reindeer', name: '순록의 모닥불', prop: 'campfire', sp: 'reindeer', hint: '뿔 달린 친구가 불 앞에…' },
+  { id: 'train_ride', name: '기차 타기', prop: 'train', hint: '장난감 기차가 다닐 때…' },
+  { id: 'tunnel_cow', name: '소의 터널', prop: 'tunnel', sp: 'cow', hint: '풀 터널로 얼룩무늬가…' },
+  { id: 'tunnel_polarBear', name: '북극곰의 터널', prop: 'tunnel', sp: 'polarBear', hint: '아기 때만 터널에 쏙 들어가는 하얀 친구가…' },
+  { id: 'tower_up', name: '전망대 오르기', prop: 'tower', hint: '전망대 꼭대기에서…' },
+  { id: 'gym_play', name: '큰 놀이터', prop: 'gym', hint: '큰 놀이터 위에서…' },
+  { id: 'carousel_ride', name: '회전 놀이기구', prop: 'carousel', hint: '빙글빙글 도는 것에…' },
+  { id: 'balloon_fox', name: '북극여우의 열기구', prop: 'balloon', sp: 'arcticFox', hint: '열기구 바구니에 꼬리가 풍성한…' },
+  { id: 'snowslide_penguin', name: '펭귄의 눈 미끄럼', prop: 'snowslide', sp: 'penguin', hint: '눈 언덕을 배로…' },
+  { id: 'greet', name: '코 맞대기', social: 'greet', hint: '두 친구가 가까이 다가가면…' },
+  { id: 'follow', name: '졸졸 따라가기', social: 'follow', hint: '한 친구 뒤를 다른 친구가…' },
+  { id: 'tag', name: '술래잡기', social: 'tag', hint: '깡충 뛰더니 쫓아가요…' },
+  { id: 'herd', name: '줄지어 걷기', social: 'herd', hint: '같은 종 친구가 여럿이면…' },
+  { id: 'nap', name: '같이 낮잠', social: 'nap', night: false, hint: '낮에 친구들이 모여 누우면…' },
+  { id: 'nap_night', name: '밤에 모여 자기', social: 'nap', night: true, hint: '밤이 되면 친구들이…' },
+];
 
 // 23-1 소품 세트: every small prop is in one. A level opens a set (BALANCE.level.unlock); the garden set is there from the start.
 // 23-2 puts a little show on a habitat where a whole set is placed (looks only).

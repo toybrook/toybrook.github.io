@@ -169,13 +169,13 @@ export function createActor(ctx, rec) {
   // inbox 42 C 동물끼리: now and then with others near by (walkers on its own land, free: not on a prop, sent, asleep or with
   // another): 따라 걷기 (walks behind one), 무리 걷기 (the same kind side by side behind it), 술래잡기 (two run, the one caught runs
   // after), 코 맞대기 인사 (walks up nose to nose with one that waits), 모여서 낮잠 (two or three come and sleep beside it; by night
-  // only this). h.soc its part: { kind: lead, tail, tag, wait; o the other's api; until }. ctx.onSocial(kind, bodies): it happened
+  // only this). h.soc its part: { kind: lead, tail, tag, wait; o the other's api; until }. ctx.onSocial(kind, apis): it happened
   const reachOf = b => Math.max(-b.seg[0], b.seg[1]) + b.r;
   const pals = () => { const R = land(), mine = R?.id(h.x, h.z), out = [];
     for (const b of ctx.crowd) if (b.pal && b !== body && b.pal.free() && Math.hypot(b.x - h.x, b.z - h.z) < 20 && walkable(b.x, b.z) && (!R || R.id(b.x, b.z) === mine)) out.push(b.pal);
     return out.sort(() => Math.random() - 0.5); };
   const over = () => { const R = land(), m = me(), L = R ? R.root(m.mine) : -1; return L >= 0 && due(ctx, h.now, m, st => !m.can(st.x, st.z) && R.root(m.lab(st.x, st.z)) === L); }; // inbox 42 C: one of its kind waits on the bridge's other side
-  const say = (kind, os) => ctx.onSocial?.(kind, [body, ...os.map(o => o.body)]);
+  const say = (kind, os) => ctx.onSocial?.(kind, [api, ...os]); // 13-2 놀이 장면 (habitat.js -> ui): the apis (rec, body)
   function startSocial(only) { // only: 'huddle' (inbox 42 D: in the rain, the nap)
     if (!walkable(h.x, h.z)) return false;
     const all = pals(), T = h.now, same = all.filter(o => o.rec.species === rec.species), P = all.filter(o => Math.hypot(o.body.x - h.x, o.body.z - h.z) < (only ? 20 : 12)), o = P[0]; // its own kind come from further (in the rain's huddle, any from 20)
@@ -260,7 +260,7 @@ export function createActor(ctx, rec) {
   }
   function arrive(g) {
     const T = (a, b) => a + Math.random() * (b - a);
-    if (g.act === 'play') { h.play = start(g.q, h.x, h.z, h.yaw, h.now); h.state = 'play'; h.t = 0; h.pk = 0; return true; } // 28-2: on it (update's play)
+    if (g.act === 'play') { h.play = start(g.q, h.x, h.z, h.yaw, h.now); ctx.onPlay?.(g.q); h.state = 'play'; h.t = 0; h.pk = 0; return true; } // 28-2: on it (update's play)
     if (g.act === 'slide' && g.to && W.slide) { go('walk', g.to[0], g.to[1], 2.4 / W.pace); h.slide = true; return true; }
     if (g.act === 'run') { h.state = 'jump'; h.t = 0; h.dur = 0.55; return true; }
     if (g.act === 'bridge') { if (ctx.onBridge) { h.state = 'idle'; h.t = 0; h.dur = 1; } else { ctx.onBridge = h; go('cross', g.far.x, g.far.z, 1.3); } return true; } // inbox 42 C: at the landing: over (one at a time)

@@ -573,6 +573,18 @@ export function decorModel(id) {
     part(g, new THREE.TorusGeometry(0.285, 0.02, 6, 24), '#e5584a', 0, 0.22, 0, { rx: Math.PI / 2 });
     for (const s of [-1, 1]) part(g, ball, '#e5584a', s * 0.075, 0.22, 0.29, { rz: s * 0.35 }).scale.set(0.075, 0.045, 0.03);
     part(g, ball, '#e5584a', 0, 0.22, 0.3).scale.setScalar(0.032);
+  } else if (id === 'walk_cairn') { // 13-1 산책 선물: four smooth pebbles stacked, the biggest at the bottom
+    const peb = new THREE.SphereGeometry(1, 16, 12);
+    [[0, 0.07, 0.24, 0.08, '#a9a49b'], [0.02, 0.19, 0.18, 0.065, '#c9c3b8'], [-0.01, 0.29, 0.13, 0.05, '#8f8b84'], [0.01, 0.37, 0.08, 0.04, '#d9d3c8']]
+      .forEach(([x, y, r, h, c]) => part(g, peb, c, x, y, 0).scale.set(r, h, r * 0.85));
+  } else if (id === 'walk_acorn') { // 13-1 산책 선물: a big acorn lying a little tilted: a round nut, a darker cap, a short stem
+    const a = new THREE.Group(); a.position.y = 0.2; a.rotation.z = 0.35; g.add(a);
+    part(a, lathe([[0, -0.2], [0.1, -0.17], [0.16, -0.08], [0.17, 0.02], [0.15, 0.08], [0, 0.08]], 18), '#c98a4b', 0, 0, 0);
+    part(a, new THREE.SphereGeometry(0.19, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), '#7a5232', 0, 0.05, 0).scale.y = 0.6;
+    part(a, new THREE.CylinderGeometry(0.02, 0.025, 0.08, 8), '#5a3a26', 0, 0.2, 0);
+  } else if (id === 'walk_pinecone') { // 13-1 산책 선물: a pinecone standing up: four rounded tiers, wide to narrow
+    [[0.08, 0.16, 0.1], [0.19, 0.14, 0.09], [0.29, 0.11, 0.08], [0.37, 0.07, 0.06]].forEach(([y, r, h], i) =>
+      part(g, new THREE.SphereGeometry(1, 16, 10), i % 2 ? '#8a5733' : '#a06a3e', 0, y, 0).scale.set(r, h, r));
   } else if (id === 'swing') { // 28-2: an A-frame swing a rabbit, a piglet or a fox can ride (play.js G.swing); the seat sways, more with someone on
     const { pivot: H, rope: R, half: X } = PLAY.swing, k = 0.24, leg = roundedBox(0.16, H / Math.cos(k) + 0.06, 0.16, 0.06);
     for (const x of [-X, X]) { for (const s of [-1, 1]) part(g, leg, '#b07a48', x, H / 2, s * H / 2 * Math.tan(k), { rx: -s * k }); part(g, new THREE.SphereGeometry(0.15, 12, 9), '#ffd54a', x, H, 0); }

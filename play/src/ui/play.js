@@ -2,12 +2,13 @@
 // game toasts. Eggs, hatching and the reveal card live in the nest menu (nest.js).
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
-import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap } from '../game/rules.js';
+import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf } from '../game/rules.js';
 import { PROPS } from '../game/data.js';
 import { toast, hideToast, heart, span, josa, overlayOpen, clock, tip, resting } from './hud.js';
 import { openCodex, hasNew } from './codex.js';
 import { initNest } from './nest.js';
 import { openStore, leaveStore } from './store.js';
+import { pickStroll } from './stroll.js';
 import { openFriends, leaveFriends } from './friends.js';
 import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep } from './decor.js';
 import { openCabinet } from './cabinet.js';
@@ -48,6 +49,7 @@ export function initPlay(nav) {
     if (act === 'grow' && G.letGrow(r.id)) { toast('다시 자라요 · 꼬마 사탕을 돌려받았어요', 2400, true); return showBubble(r); }
     if (act === 'store' && G.store(r.id)) toast(`${nm}${josa(nm, '을', '를')} 보관함에 넣었어요`);
     bubble.hidden = true; bubbleFor = null;
+    if (act === 'walk') pickStroll(r);
   };
   const hint = () => { if (!G.S.flags.nestTapped) tip('nest', '#nestBtn'); }; // inbox 20: a first-time tip by the button (was a toast)
   // 꾸미기's red dot: a prop for this habitat not looked at yet (one added by an update; a new game has seen them all)
@@ -80,7 +82,7 @@ export function initPlay(nav) {
 
   function draw() {
     hearts.lastChild.textContent = G.S.hearts; if (tagFor) drawTag();
-    codexBtn.classList.toggle('new', hasNew());
+    codexBtn.classList.toggle('new', hasNew()); $('storeBtn').classList.toggle('new', G.S.cards.some(c => c.new)); // 13-1 a postcard not seen
     if (habId) {
       const out = outIn(G.S, habId); friendsBtn.lastChild.textContent = `${out.length}/${capOf(G.S, habId)}`;
       friendsBtn.classList.toggle('new', out.some(a => a.card)); decorBtn.classList.toggle('new', newProps().length > 0); drawPill();
@@ -105,7 +107,7 @@ export function initPlay(nav) {
     const btn = (act, text, sub) => `<button data-act="${act}"${sub ? ' class="sub"' : ''}>${text}</button>`;
     bubble.innerHTML = `${say ? say + ' ' : ''}${nameOf(r)}${baby ? `<small>${growText(r, now)}</small>` : ''}<div class="row">${
       baby && growing(r) ? btn('feed', n ? `먹이 주기 ${n}/${B.grow.feeds}` : '오늘 먹이 다 줬어요') + btn('candy', `꼬마 사탕 주기 ${c ? `(${c}개)` : `♥${B.candy.price}`}`, true) : ''}${
-      r.hold ? btn('grow', '다시 자라기') : ''}${btn('store', '보관함에 넣기', true)}</div>`;
+      r.hold ? btn('grow', '다시 자라기') : ''}${btn('walk', '산책 보내기', true)}${btn('store', '보관함에 넣기', true)}</div>`;
     bubble.querySelector('[data-act=feed]')?.toggleAttribute('disabled', !n); bubble.hidden = false;
     const go = !bubbleFor; bubbleFor = r; bubbleUntil = Date.now() + 10000; if (press) press.re = true;
     if (go) requestAnimationFrame(place);
@@ -115,7 +117,8 @@ export function initPlay(nav) {
     const p = hab?.where(bubbleFor.id), r = stage.getBoundingClientRect();
     if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil || overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
     const cb = $('camBtns'), low = cb.hidden ? 0 : cb.getBoundingClientRect().bottom + bubble.offsetHeight + 16; // following up close: kept under 정면 / 전체 보기
-    bubble.style.left = p[0] + 'px'; bubble.style.top = Math.max(p[1], low) + 'px';
+    const half = bubble.offsetWidth / 2 + 6, x = Math.min(Math.max(p[0], r.left + half), r.right - half); // 13-1: kept on screen near the edges, the tail still at the friend
+    bubble.style.left = x + 'px'; bubble.style.setProperty('--tx', p[0] - x + 'px'); bubble.style.top = Math.max(p[1], low) + 'px';
     requestAnimationFrame(place);
   }
 
@@ -130,6 +133,7 @@ export function initPlay(nav) {
     for (const e of ev) { // later ones matter more: they win the toast
       if (e.type === 'stored') toast(`서식지 자리가 모자라 오래된 친구가 보관함으로 갔어요 (최대 ${capOf(G.S, habitatOf(e.animal))}마리)`, 3200);
       if (e.type === 'unlock') { toast(`${HAB[e.habitat].name}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 가 보세요`, 3200); tip('unlock', '#habName'); }
+      if (e.type === 'strollBack' && hab) { const a = e.animal, nm = nameOf(a); if (!a.stored && habitatOf(a) === habId) hab.drop(a); toast(`${nm}${josa(nm, '이', '가')} 산책에서 돌아왔어요 · ♥+${e.card.hearts}${a.stored ? ' · 자리가 없어 보관함에 있어요' : ''}`, 3000); } // 13-1
       if (e.type === 'reset' && hab) { bubble.hidden = true; bubbleFor = null; hint(); }
     }
   }
@@ -166,11 +170,30 @@ export function initPlay(nav) {
     if (b.dataset.act === 'backup') return openBackup(); // the backup sheet goes over the card; closing it comes back here
     home.hidden = true; G.flag('homeHintSeen'); };
 
+  // 13-2 놀이 장면 (habitat.js: a friend got on a play prop, or friends did something together). One not in the 도감 yet: with
+  // the friend on screen (no sheet over it) it goes in at once; elsewhere a notice at the screen's side (one a minute, 8 s)
+  // turns the camera to it and puts it in. Quiet (사진 모드): only the ones in view
+  const note = $('sceneNote'); let noteAt = -Infinity, noteT = 0;
+  const hideNote = () => { note.hidden = true; clearTimeout(noteT); };
+  const got = (list, r) => { let h = 0; for (const s of list) h += G.seeScene(s.id, r?.species) || 0;
+    if (h) toast(`새 놀이 장면 「${list[0].name}」${list.length > 1 ? ` 외 ${list.length - 1}개` : ''} · 도감에 담았어요 ♥+${h}`, 2800, true); };
+  function scene(e, quiet) {
+    if (!hab || document.hidden) return; const list = scenesOf(e).filter(s => !G.S.scenes[s.id]); if (!list.length) return;
+    const r = e.who?.[0]?.rec, p = r && hab.where(r.id), W = innerWidth, H = innerHeight;
+    if (p && p[0] > 8 && p[0] < W - 8 && p[1] > 70 && p[1] < H - 90 && !overlayOpen()) return got(list, r);
+    if (quiet || !r || overlayOpen() || Date.now() - noteAt < 60e3) return;
+    noteAt = Date.now(); const right = !p || p[0] >= W / 2;
+    note.innerHTML = `✨ 저쪽에서 새 놀이 장면!<small>눌러서 보러 가기</small>`; note.className = 'back scnote ' + (right ? 'r' : 'l');
+    note.style.top = Math.min(Math.max(p ? p[1] : H / 2, 150), H - 260) + 'px'; note.hidden = false;
+    clearTimeout(noteT); noteT = setTimeout(hideNote, 8000);
+    note.onclick = () => { hideNote(); if (hab?.look(r.id)) got(list, r); };
+  }
+
   return {
-    onTap, events, onPropTap, onEdit, onPaint, onSweep,
+    onTap, events, scene, onPropTap, onEdit, onPaint, onSweep,
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
     attach(api, id) { hab = api; habId = id; nest.attach(api, id); draw(); hint(); setTimeout(cards, 1200); }, // grown while away: the cards together
     openNest: () => nest.open(), cards,
-    leave() { leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); bubble.hidden = true; bubbleFor = null; card.hidden = home.hidden = true; clearTimeout(homeT); homeT = 0; hideToast(); },
+    leave() { leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); hideNote(); bubble.hidden = true; bubbleFor = null; card.hidden = home.hidden = true; clearTimeout(homeT); homeT = 0; hideToast(); },
   };
 }

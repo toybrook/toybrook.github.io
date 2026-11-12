@@ -171,7 +171,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const mistTick = mist(scene, habitat.floor, open, built, reveal && level > 0 ? rectAt(habId, level - 1) : open), U = habitat.unit; // U: saved decor x, z -> here
   const flies = habId === 'meadow' ? fireflies(scene, habitat.ctx) : null; // 21-1: fireflies over the meadow at night (the pond: sparkles on its water)
   habitat.ctx.crowd = new Set(); // every animal's body capsule, so they keep apart (crowd.js)
-  const bugs = butterflies(scene); habitat.ctx.sets = []; habitat.ctx.play = []; // 23-2 세트 보너스: butterflies, and animals wander to a whole set (walk.js); 28-2: the play props placed (play.js)
+  const bugs = butterflies(scene); habitat.ctx.sets = []; habitat.ctx.play = [];
+  // 13-2 놀이 장면: a friend got on a play prop (walk.js, swim.js) / friends did something together (walk.js): to ui/play.js
+  habitat.ctx.onPlay = q => ui.scene?.({ prop: q.st.kind, sp: [q.who.rec.species], n: q.st.seats.filter(Boolean).length, night: q.night, who: [q.who] });
+  habitat.ctx.onSocial = (social, who) => ui.scene?.({ social, night: habitat.ctx.night, who }); // 23-2 세트 보너스: butterflies, and animals wander to a whole set (walk.js); 28-2: the play props placed (play.js)
 
   // the player's animals: one actor per saved record that lives here and isn't in storage
   const actors = new Map();
