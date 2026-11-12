@@ -4,14 +4,16 @@ import * as THREE from 'three';
 import { bump } from '../stamps.js';
 import { dist2D, WATER_Y } from '../meadow/layout.js';
 import { BOARD0, rectAt, zoneSet, edgeOf, inRect } from '../zones.js';
+import { UNIT } from '../../game/data.js';
 export { WATER_Y };
 
 const sm = t => { t = THREE.MathUtils.clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 
 // 28-1 땅 넓히기 as the meadow's: each step adds a zone along one side (zones.js), the first board stays as it is. (21-3b to
-// 27: the whole board spread out by S a step; S is 1 now, kept so the first board's code below reads as before.) R: the board
-// as built, O: the open ground, [x0, x1, z0, z1]; Z: the zones built. The next step's zone is built too, under mist
-export const BW0 = 36, BD0 = 58, S = 1;
+// 27: the whole board spread out by S a step.) inbox 42 A: the first board spread by S = UNIT (1.5): its shapes below are in the
+// old board's metres. R: the board as built, O: the open ground, [x0, x1, z0, z1]; Z: the zones built (world metres). The next
+// step's zone is built too, under mist
+export const S = UNIT, BW0 = 36 * S, BD0 = 58 * S;
 export const openAt = L => rectAt('pond', L);
 export let R = [...BOARD0], O = [...BOARD0], Z = zoneSet('pond', 0);
 
@@ -56,11 +58,12 @@ function hills(x, z) {
 const bed = s => -0.85 * sm((0.9 - s) / 1.7) - 1.35 * sm((-2.6 - s) / 2.4);
 const streamDepth = d => 1.0 * (1 - sm((d - 0.5) / 1.4));
 
-function h0(x, z) {
-  const ds = dist2D(sPts0, x, z), s = shore0(x, z), hill = hill0;
-  const land = 0.75 * hills(x, z) * sm((Math.min(ds - SW0, s, Z.wd(x, z, true) - 0.4) - 0.4) / 3.5) * (1 - Z.flat(x, z)) + rise(z) + 0.8 * sm(1 - Math.hypot(x - hill.x, z - hill.z) / hill.r) * sm((s - 0.6) / 3) // + the hill: 0.8 high, flat to the shore
-    + Z.lift(x, z); // 28-1: the zones' hills, their pools below
-  let h = Math.min(land + bed(s), land - streamDepth(ds), land - Z.dip(x, z));
+// X, Z: world metres (the zones'); x, z: the old board's (X / S)
+function h0(X, Zw) {
+  const x = X / S, z = Zw / S, ds = dist2D(sPts0, x, z), s = shore0(x, z), hill = hill0;
+  const land = 0.75 * hills(x, z) * sm((Math.min(ds - SW0, s, Z.wd(X, Zw, true) / S - 0.4) - 0.4) / 3.5) * (1 - Z.flat(X, Zw)) + rise(z) + 0.8 * sm(1 - Math.hypot(x - hill.x, z - hill.z) / hill.r) * sm((s - 0.6) / 3) // + the hill: 0.8 high, flat to the shore
+    + Z.lift(X, Zw); // 28-1: the zones' hills, their pools below
+  let h = Math.min(land + bed(s), land - streamDepth(ds), land - Z.dip(X, Zw));
   for (const I of islands0) h = Math.max(h, 0.25 - 2.45 * sm((Math.hypot(x - I.x, z - I.z) * 1.27 / I.r - 0.5) / 2.0)); // each island: the old one's mound, scaled
   return h;
 }
@@ -79,7 +82,7 @@ function edgeRound(h, x, z) {
   if (e >= 1.2) return h;
   const t = Math.max(0, e) / 1.2; return -1.9 + (h + 1.9) * (1 - (1 - t) * (1 - t));
 }
-export const heightAt = (x, z) => edgeRound(h0(x / S, z / S) + bump(x, z), x, z); // 28-6 지형 도장
+export const heightAt = (x, z) => edgeRound(h0(x, z) + bump(x, z), x, z); // 28-6 지형 도장
 export const depthAt = (x, z) => WATER_Y - heightAt(x, z);
 
 // Footprints of placed props; filled by props.js, read by free()/walkable().
@@ -91,7 +94,7 @@ export function free(x, z, r) {
   for (const o of occupied) if (Math.hypot(o.x - x, o.z - z) < o.r + r) return false;
   return true;
 }
-const inBoard = (x, z) => x > O[0] + 1.8 && x < O[1] - 1.8 && z > -22.5 && z < O[3] - 2.5; // 0.4 wider than the meadow's: the side rim
+const inBoard = (x, z) => x > O[0] + 1.8 && x < O[1] - 1.8 && z > -22.5 * S && z < O[3] - 2.5; // 0.4 wider than the meadow's: the side rim
 const clearOf = (x, z) => {
   for (const o of occupied) if (o.r > 0.9 && Math.hypot(o.x - x, o.z - z) < o.r + 0.4) return false;
   for (const d of decor) if (!d.water && !d.open && (!d.nat || d.r > 0.9) && Math.hypot(d.x - x, d.z - z) < d.r + (d.nat ? 0.4 : 0.6)) return false; // open: walked over or under; nat (22-1): as occupied
@@ -129,7 +132,7 @@ export const decor = [];
 export function placeable(x, z, r, water, dry) { // dry: as meadow's
   const ok = water ? shore(x, z) < -(r + 0.6) && isle(x, z) > r + 0.9
     : free(x, z, r) && (dry || walkable(x, z)) && bridgeEnds.every(b => Math.hypot(b.x - x, b.z - z) > r + 1.6);
-  return ok && decor.every(d => Math.hypot(d.x - x, d.z - z) > (d.nat && d.open ? 0.4 : d.r) + r + 0.1); // a wildflower patch: only its middle
+  return ok && decor.every(d => d.nat && d.open || Math.hypot(d.x - x, d.z - z) > d.r + r + 0.1); // inbox 42 C2: a wildflower patch never in the way (habitat.js hides one under a prop)
 }
 
 // A straight line every 0.5 of which passes ok (walkable by default; walk.js passes its own for water animals)

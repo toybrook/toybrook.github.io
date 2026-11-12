@@ -5,7 +5,7 @@
 import * as G from '../game/game.js';
 import { PROP, HAB } from '../game/rules.js';
 import { ATTEND, ATTEND_PROPS, GIFT } from '../game/data.js';
-import { topWindow, overlayOpen } from './hud.js';
+import { topWindow, overlayOpen, resting } from './hud.js';
 import { sfx } from './sound.js';
 import { track } from './stats.js';
 
@@ -39,7 +39,7 @@ box.onclick = e => {
   if (out) { track('attend', { day: G.S.attend.n }); return show(out.got); }
   box.hidden = true; done();
 };
-const busy = () => topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden;
+const busy = () => topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden || !at() || resting(); // inbox 43: only inside a habitat, never on the map; one card at a time
 setInterval(() => {
   if (!box.hidden || !G.attendDue() || busy()) { quiet = 0; return; }
   if ((quiet += 800) < 1600) return;

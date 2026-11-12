@@ -27,7 +27,7 @@
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, FIRST, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, FIRST, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -95,7 +95,7 @@ export function fromSave(raw, now) {
 }
 // Save migrations: MIGRATIONS[v] turns a v-1 save into a v save. A new save shape = SCHEMA_VERSION + 1 in data.js and a
 // step here (fields that only need a default don't need one: newGame fills them). 1 and 2 had no steps.
-const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10 }; // 4: animals over the new room go to storage on the first advance
+const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10, 11: to11 }; // 4: animals over the new room go to storage on the first advance
 // 2 -> 3 (16-2): 대리석 left the launch list (-> 유리), 황금 too (-> the species' remaining legendary); every animal gets
 // its variant's first colour, which also counts as seen. Codex entries move with them (the earliest date wins).
 function to3(S) {
@@ -155,12 +155,33 @@ function to9(S) {
 // prop past the open ground now, or in a zone's water, is put away (storage), and paint past the open ground goes.
 function to10(S) {
   for (const hab of Object.keys(S.expand || {}).filter(h => ZONES[h])) { // a habitat not out yet (dino) has no zones
-    const L = S.expand[hab] || 0, O = rectAt(hab, L), Z = zoneSet(hab, L);
-    S.props = S.props.filter(p => !(p.nat && p.hab === hab && !inRect(BOARD0, p.x, p.z)));
+    const L = S.expand[hab] || 0, O = rectAt(hab, L), Z = zoneSet(hab, L), u = UNIT; // inbox 42 A: the zones in the world's metres, UNIT x the save's
+    S.props = S.props.filter(p => !(p.nat && p.hab === hab && !inRect(BOARD0, p.x * u, p.z * u)));
     if (S.natives?.[hab] > 1) S.natives[hab] = 1;
-    for (const p of S.props) if (p.hab === hab && p.placed && !p.nat && (!inRect(O, p.x, p.z, 0.5) || Z.wd(p.x, p.z, true) < (PROP[p.prop]?.r ?? 1))) p.placed = false;
-    const P = S.paint?.[hab]; if (P) for (const k of Object.keys(P)) { const [i, j] = k.split(',').map(Number); if (!inRect(O, i + 0.5, j + 0.5)) delete P[k]; }
+    for (const p of S.props) if (p.hab === hab && p.placed && !p.nat && (!inRect(O, p.x * u, p.z * u, 0.5) || Z.wd(p.x * u, p.z * u, true) < (PROP[p.prop]?.r ?? 1) * sizeF(PROP[p.prop], p.sz))) p.placed = false;
+    const P = S.paint?.[hab]; if (P) for (const k of Object.keys(P)) { const [i, j] = k.split(',').map(Number); if (!inRect(O, (i + 0.5) * u, (j + 0.5) * u)) delete P[k]; }
   }
+}
+// 10 -> 11 (inbox 42 A): the first board 1.5x (data.js UNIT). x, z stay in the old board's metres, the world is UNIT x them, so
+// the board's own things (its trees, the paint's cells) stand where they stood on it. Props that touch (a fence line, a table
+// and its chairs, a rail loop) would spread apart: each such group keeps its shape and moves as one, its middle where the
+// middle is now (rails by whole tiles, train.js TILE); the meadow pond's water props stay in it (it moved, it did not grow).
+// What still does not fit (water, a wall) the habitat moves on its first visit (S.refit: habitat.js refit)
+export const MEADOW_POND = [9, 13]; // meadow/layout.js pond, in the old board's metres
+function to11(S) {
+  const k = UNIT - 1, g4 = v => Math.round(v / 4) * 4, R = p => (PROP[p.prop].r || 1) * sizeF(PROP[p.prop], p.sz);
+  for (const hab of new Set(S.props.map(p => p.hab))) {
+    const mine = S.props.filter(p => p.hab === hab && p.placed && !p.nat && p.on == null && PROP[p.prop]), groups = [];
+    for (const p of mine) { const near = groups.filter(g => g.some(q => Math.hypot(q.x - p.x, q.z - p.z) < R(p) + R(q) + 0.6)); const g = [p, ...near.flat()]; for (const n of near) groups.splice(groups.indexOf(n), 1); groups.push(g); }
+    for (const g of groups) {
+      const pond = hab === 'meadow' && g.every(p => PROP[p.prop].water), rail = g.some(p => PROP[p.prop].rail);
+      let [cx, cz] = pond ? MEADOW_POND : [g.reduce((a, p) => a + p.x, 0) / g.length, g.reduce((a, p) => a + p.z, 0) / g.length], dx = cx * k, dz = cz * k;
+      if (rail) { dx = g4(dx); dz = g4(dz); }
+      for (const p of g) { p.x = +((p.x + dx) / UNIT).toFixed(4); p.z = +((p.z + dz) / UNIT).toFixed(4); }
+    }
+  }
+  tidy(S); // the ones on top of another prop: onto its spot again
+  S.refit = Object.keys(ZONES);
 }
 export const bump = (S, k) => { S.stats ??= {}; S.stats[k] = (S.stats[k] || 0) + 1; };
 
@@ -466,11 +487,18 @@ export function setLayout(S, habId, snap) {
   }
   S.paint = { ...S.paint, [habId]: { ...o.paint } }; S.ghost = { ...S.ghost, [habId]: o.g || [] }; tidy(S);
 }
+// inbox 42 A: the habitat's refit (habitat.js) after to11: moved ones to their new spot, the rest into storage (and what stood on them)
+export function refit(S, habId, moves) {
+  const by = new Map(S.props.map(p => [p.uid, p]));
+  for (const m of moves || []) { const p = by.get(m.uid); if (!p || p.hab !== habId) continue; if (m.off) p.placed = false; else if (Number.isFinite(m.x) && Number.isFinite(m.z)) { p.x = m.x; p.z = m.z; } }
+  tidy(S); S.refit = (S.refit || []).filter(h => h !== habId); if (!S.refit.length) delete S.refit;
+  return { moved: (moves || []).filter(m => !m.off).length, off: (moves || []).filter(m => m.off).length };
+}
 // 28-5 쌓기: top spot k of a placed prop (a record) where it stands: x, z (saved units) and y above its ground, or null
 export function topAt(h, k) {
   const t = PROP[h?.prop]?.top?.[k]; if (!t) return null;
   const f = sizeF(PROP[h.prop], h.sz), c = Math.cos(h.rot || 0), s = Math.sin(h.rot || 0);
-  return { x: +(h.x + (t[0] * c + t[2] * s) * f).toFixed(3), z: +(h.z + (-t[0] * s + t[2] * c) * f).toFixed(3), y: t[1] * f };
+  return { x: +(h.x + (t[0] * c + t[2] * s) * f / UNIT).toFixed(4), z: +(h.z + (-t[0] * s + t[2] * c) * f / UNIT).toFixed(4), y: t[1] * f }; // inbox 42 A: a top's metres in saved units
 }
 const seatFree = (S, h, k, p) => !!PROP[h?.prop]?.top?.[k] && h.placed && !S.props.some(o => o !== p && o.placed && o.on === h.uid && o.sl === k);
 // what a save may hold (a backup code is text from outside): c and sz in range (else dropped: 0); a small prop whose prop under
@@ -481,6 +509,7 @@ export function tidy(S) {
     const P = PROP[p.prop]; if (p.nat || !P) continue;
     if (!(Number.isInteger(p.c) && p.c > 0 && p.c < (paletteOf(P)?.length ?? 0))) delete p.c;
     if (!(Number.isInteger(p.sz) && p.sz > 0 && p.sz < SIZES.length && sizable(P))) delete p.sz;
+    if (p.on != null && p.sz === 3) p.sz = 2; // inbox 42 F-3: 아주 크게 is too big for a top spot (it hits the next one)
     if (p.on == null && p.sl == null) { delete p.on; delete p.sl; continue; }
     const h = by.get(p.on);
     if (!p.placed || !P.small || !h || h === p || h.hab !== p.hab || !Number.isInteger(p.sl) || !seatFree(S, h, p.sl, p)) { p.placed = false; delete p.on; delete p.sl; }

@@ -22,7 +22,7 @@
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="799614" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="817263" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -89,7 +89,16 @@
   <section class="intro pop ret news" id="news" hidden aria-label="새 소식"><div>
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
-      <li><i aria-hidden="true">🥚</i><span>선물 코드 보상에 전설 알 추가</span></li>
+      <li><i aria-hidden="true">🌳</i><span>서식지가 넓어졌어요</span></li>
+      <li><i aria-hidden="true">🎠</i><span>큰 소품 8개: 큰 버섯 쉼터·풀 터널·회전 놀이기구·큰 놀이터·열기구·전망대·물레방아·눈 미끄럼 언덕</span></li>
+      <li><i aria-hidden="true">🏷️</i><span>베타 동안 소품 값을 낮췄어요</span></li>
+      <li><i aria-hidden="true">📐</i><span>소품 크기에 「아주 크게」</span></li>
+      <li><i aria-hidden="true">🚂</i><span>레일 끝이 이어졌는지 초록·빨강 점으로 보이고, 빈 곳 가까이 가져가면 방향이 저절로 맞아요</span></li>
+      <li><i aria-hidden="true">✋</i><span>동물을 꾹 눌러 옮길 수 있어요</span></li>
+      <li><i aria-hidden="true">🐾</i><span>동물끼리 어울려 놀고, 소품 사이에 갇히지 않아요</span></li>
+      <li><i aria-hidden="true">☔</i><span>비가 오면 큰 지붕 밑으로 피하거나 빗속에서 놀아요</span></li>
+      <li><i aria-hidden="true">🧹</i><span>꾸미기 › 자연 탭의 「자연 정리」로 나무·바위를 한 번에 치워요</span></li>
+      <li><i aria-hidden="true">📷</i><span>사진 모드에서 찍힐 장면 전체가 보여요</span></li>
     </ul>
     <p class="note">베타 기간의 데이터는 정식 출시 때 초기화돼요.</p>
     <div class="nbtns"><button class="go" data-close>확인</button></div>

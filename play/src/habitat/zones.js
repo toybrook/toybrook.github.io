@@ -5,14 +5,17 @@
 // spots animals go to there (walk.js ctx.spots). zoneSet(hab, top) gathers those of the zones built (open or under mist);
 // the habitat's layout adds them to its height field, its walkable ground and its colours, its water (meadow water.js) draws
 // the pools and rills, and zoneprops.js builds what stands there.
-import { ZONES } from '../game/data.js';
+import { ZONES, UNIT } from '../game/data.js';
 
-export const BOARD0 = [-18, 18, -29, 29];
+// inbox 42 A: everything below in the old board's metres, times S (the zones' widths too; a pool's r, a rill's or a path's w
+// stay, so the wider board has more open ground round them)
+const S = UNIT;
+export const BOARD0 = [-18, 18, -29, 29].map(v => v * S);
 const SIDE = { '+x': [1, 1], '-x': [0, -1], '+z': [3, 1] };
 // the board after step L (0: the first board)
 export function rectAt(hab, L) {
   const r = [...BOARD0];
-  for (const z of ZONES[hab].slice(0, L)) { const [i, s] = SIDE[z.side]; r[i] += s * z.w; }
+  for (const z of ZONES[hab].slice(0, L)) { const [i, s] = SIDE[z.side]; r[i] += s * z.w * S; }
   return r;
 }
 // zone k (1..6) of hab: its strip r, and pos(u, v) in it: u across, from the old edge (0) out (1); v along, back to front
@@ -51,23 +54,25 @@ const bank = (d, w) => { const t = Math.min(1, Math.max(0, (d - (w - 0.9)) / 1.5
 // path: a trodden path (c: its colour); spot: where animals go, act rest (stands or grazes a while), nap, bath (in the hot
 // pool), slide (the penguin's belly slide to `to`)
 const at = (s, u, v) => s.pos(u, v);
-const H = (s, u, v, a, b, h, o) => { const [x, z] = at(s, u, v), X = s.side === '+z'; return { t: 'hill', x, z, rx: X ? b : a, rz: X ? a : b, h, ...o }; };
+const H = (s, u, v, a, b, h, o) => { const [x, z] = at(s, u, v), X = s.side === '+z'; a *= S; b *= S; return { t: 'hill', x, z, rx: X ? b : a, rz: X ? a : b, h, ...o }; };
 const POOL = (s, u, v, r, o) => { const [x, z] = at(s, u, v); return { t: 'pool', x, z, r, ...o }; };
 const SPOT = (s, u, v, act, o) => { const [x, z] = at(s, u, v); return { t: 'spot', x, z, act, ...o }; };
-const TINT = (s, u, v, a, b, c, k = 1, o) => { const [x, z] = at(s, u, v), X = s.side === '+z'; return { t: 'tint', x, z, rx: X ? b : a, rz: X ? a : b, c, a: k, ...o }; };
+const TINT = (s, u, v, a, b, c, k = 1, o) => { const [x, z] = at(s, u, v), X = s.side === '+z'; a *= S; b *= S; return { t: 'tint', x, z, rx: X ? b : a, rz: X ? a : b, c, a: k, ...o }; };
 const RECT = (r, c, k = 1, o) => ({ t: 'tint', r, c, a: k, ...o }); // a: how strong (f.k is the zone's step)
 // inbox 34 the zone's face: its own ground over the whole strip (a side strip's from the back shelf's foot), the edge crisp
 // (e: 0.6 m) so the zone reads from above at a glance
-const FACE = (s, c, k = 1, o) => RECT([s.r[0], s.r[1], s.side === '+z' ? s.r[2] : -23.4, s.r[3]], c, k, { e: 0.6, ...o });
+const FACE = (s, c, k = 1, o) => RECT([s.r[0], s.r[1], s.side === '+z' ? s.r[2] : -23.4 * S, s.r[3]], c, k, { e: 0.6, ...o });
 const hash = (x, z) => { const h = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return h - Math.floor(h); };
 // a pattern: a share p of the ground (cells `cell` m wide, or each point of the grid) in one of cols
 const speck = (cols, p, cell) => (x, z) => { const n = cell ? hash(Math.floor(x / cell), Math.floor(z / cell)) : hash(x, z); return n < p ? cols[Math.floor(n / p * cols.length)] : null; };
 // the orchard's floor: a soil furrow under each row of trees (rows: m from the strip's edge x0), mown stripes between
 const mown = (x0, rows) => (x, z) => { const u = x - x0; for (const c of rows) if (Math.abs(u - c) < 0.45 + 0.04 * Math.sin(z * 2.1)) return '#9c6b43'; return Math.floor(u / 0.7) % 2 ? '#a7d65e' : null; };
-export const ORCHARD_ROWS = [1.6, 4, 6.4]; // zoneprops.js plants the trees on the furrows
+export const ORCHARD_ROWS = [1.6, 4, 6.4].map(v => v * S); // zoneprops.js plants the trees on the furrows
 const SAND = '#e6cf98', ICE = '#bfdff0', ROCK = '#9c978e', PATH = '#e6c48c', SNOWROCK = '#8e9097';
 const GRAVEL = speck(['#e2dccd', '#8d867a', '#cfc4ad', '#a39a8a'], 0.6);
-const FORK = [[-14.6, 32.6], [-10, 34.2], [-5, 33.4], [0, 34.3], [5.9, 33.7], [10.5, 34.2], [12.4, 33.7]];
+const P = pts => pts.map(([x, z, ...o]) => [x * S, z * S, ...o]); // a list of points (and spots) in the old board's metres
+const SP = l => P(l).map(([x, z, act, o]) => ({ t: 'spot', x, z, act, ...o }));
+const FORK = P([[-14.6, 32.6], [-10, 34.2], [-5, 33.4], [0, 34.3], [5.9, 33.7], [10.5, 34.2], [12.4, 33.7]]);
 const SHAPES = {
   meadow: {
     flowerhill: s => [FACE(s, '#93cf4c', 0.85, { pat: speck(['#ff9ec4', '#ffe066', '#ffffff', '#c9a8f0', '#ff9a6b'], 0.42, 0.42) }), // a carpet of flowers
@@ -76,53 +81,54 @@ const SHAPES = {
     grove: s => [FACE(s, '#4b7a30', 0.85, { pat: speck(['#6f9a3c', '#3b6326', '#5a8a34'], 0.35, 0.3) }), H(s, 0.55, 0.55, 2.8, 5, 0.5), // moss under the trees
       TINT(s, 0.55, 0.52, 3.4, 9, '#34562a', 0.5), // the old tree's shade
       SPOT(s, 0.25, 0.32, 'rest'), SPOT(s, 0.7, 0.45, 'nap'), SPOT(s, 0.3, 0.62, 'rest'), SPOT(s, 0.65, 0.86, 'rest')],
-    fork: () => [{ t: 'tint', pts: FORK, rw: 3.2, c: '#b8ad98', a: 0.9, pat: GRAVEL }, { t: 'tint', x: 14, z: 33.5, rx: 4.2, rz: 3.4, c: '#b8ad98', a: 0.9, pat: GRAVEL }, // gravel banks
-      { t: 'rill', pts: FORK, w: 1.5 }, { t: 'pool', x: 14, z: 33.5, r: 2.3 }, // wider; the stepping stones where the path crosses (zoneprops.js)
-      { t: 'spot', x: -9, z: 30.8, act: 'rest' }, { t: 'spot', x: -6.5, z: 30.9, act: 'nap' }, { t: 'spot', x: 2.5, z: 30.8, act: 'rest' }, { t: 'spot', x: 18, z: 33.4, act: 'rest' }],
-    orchard: s => [FACE(s, '#79b444', 0.9, { pat: mown(s.r[0], ORCHARD_ROWS) }), { t: 'spot', x: 30, z: -2.2, act: 'rest' }, { t: 'spot', x: 28.7, z: 7.4, act: 'nap' }, { t: 'spot', x: 31.3, z: 21.8, act: 'rest' }], // in the lanes between the rows,
-    lookout: s => [FACE(s, '#b9c45a', 0.55), H(s, 0.5, 0.4, 4.4, 9.5, 3.4, { top: 0.38 }), // a high hill, flat on top for the gazebo
-      { t: 'path', pts: [[-29, 13], [-30.6, 9.5], [-29.3, 6], [-30.4, 3], [-30, 0.5]], w: 0.7, c: '#c99a62' }, // the dirt path up
-      { t: 'spot', x: -30.3, z: 0.8, act: 'rest' }, { t: 'spot', x: -29.7, z: -6, act: 'nap' }, { t: 'spot', x: -29.5, z: 4, act: 'rest' }, { t: 'spot', x: -29.5, z: 15, act: 'rest' }],
+    fork: () => [{ t: 'tint', pts: FORK, rw: 3.2, c: '#b8ad98', a: 0.9, pat: GRAVEL }, { t: 'tint', x: 14 * S, z: 33.5 * S, rx: 4.2, rz: 3.4, c: '#b8ad98', a: 0.9, pat: GRAVEL }, // gravel banks
+      { t: 'rill', pts: FORK, w: 1.5 }, { t: 'pool', x: 14 * S, z: 33.5 * S, r: 2.3 }, // wider; the stepping stones where the path crosses (zoneprops.js)
+      ...SP([[-9, 30.8, 'rest'], [-6.5, 30.9, 'nap'], [2.5, 30.8, 'rest'], [18, 33.4, 'rest']])],
+    orchard: s => [FACE(s, '#79b444', 0.9, { pat: mown(s.r[0], ORCHARD_ROWS) }), ...SP([[30, -2.2, 'rest'], [28.7, 7.4, 'nap'], [31.3, 21.8, 'rest']])], // in the lanes between the rows,
+    lookout: s => [FACE(s, '#b9c45a', 0.55), H(s, 0.5, 0.4, 4.4, 9.5, 6.5, { top: 0.38 }), // a high hill, flat on top for the gazebo (inbox 42 C2: 3.4 -> 6.5, with the gazebo 3H)
+      { t: 'path', pts: P([[-29, 13], [-30.6, 9.5], [-29.3, 6], [-30.4, 3], [-30, 0.5]]), w: 0.7, c: '#c99a62' }, // the dirt path up
+      ...SP([[-30.3, 0.8, 'rest'], [-29.7, -6, 'nap'], [-29.5, 4, 'rest'], [-29.5, 15, 'rest']])],
     mushroom: s => [FACE(s, '#5a6a35', 0.85, { pat: speck(['#d0782f', '#a9532a', '#e0b040', '#8a5a2b'], 0.32, 0.3) }), // fallen leaves on the forest floor
-      { t: 'path', pts: [[-15.5, 41.6], [-8, 40.1], [0, 42], [8, 40.6], [16, 42.1], [24, 40.5], [31.5, 41.6]], w: 0.9 },
-      { t: 'spot', x: -11, z: 42.6, act: 'rest' }, { t: 'spot', x: -3, z: 39.4, act: 'nap' }, { t: 'spot', x: 12, z: 43.2, act: 'rest' }, { t: 'spot', x: 20, z: 38.8, act: 'nap' }, { t: 'spot', x: 28, z: 43.2, act: 'rest' }],
+      { t: 'path', pts: P([[-15.5, 41.6], [-8, 40.1], [0, 42], [8, 40.6], [16, 42.1], [24, 40.5], [31.5, 41.6]]), w: 0.9 },
+      ...SP([[-11, 42.6, 'rest'], [-3, 39.4, 'nap'], [12, 43.2, 'rest'], [20, 38.8, 'nap'], [28, 43.2, 'rest']])],
   },
   pond: {
     reeds: s => [FACE(s, '#7b6a44', 0.8, { pat: speck(['#6a5a38', '#8d7d52', '#5f7f3a'], 0.35, 0.3) }), // wet earth
-      { t: 'rill', pts: [[22.5, -22], [21.5, -14], [23.6, -6], [21.6, 2], [23.6, 10], [21.8, 18], [22.6, 25]], w: 0.9 }, // channels between the reeds
-      { t: 'rill', pts: [[21.6, 2], [19.8, 5.5], [20.2, 9]], w: 0.9 }, { t: 'rill', pts: [[21.5, -14], [19.8, -17.5], [20.2, -21]], w: 0.9 },
-      { t: 'spot', x: 24, z: -14, act: 'rest' }, { t: 'spot', x: 19.4, z: -6, act: 'rest' }, { t: 'spot', x: 24.2, z: 2, act: 'nap' }, { t: 'spot', x: 19.4, z: 13, act: 'rest' }, { t: 'spot', x: 24.4, z: 22, act: 'rest' }],
+      { t: 'rill', pts: P([[22.5, -22], [21.5, -14], [23.6, -6], [21.6, 2], [23.6, 10], [21.8, 18], [22.6, 25]]), w: 0.9 }, // channels between the reeds
+      { t: 'rill', pts: P([[21.6, 2], [19.8, 5.5], [20.2, 9]]), w: 0.9 }, { t: 'rill', pts: P([[21.5, -14], [19.8, -17.5], [20.2, -21]]), w: 0.9 },
+      ...SP([[24, -14, 'rest'], [19.4, -6, 'rest'], [24.2, 2, 'nap'], [19.4, 13, 'rest'], [24.4, 22, 'rest']])],
     falls: s => [FACE(s, '#557f36', 0.85, { pat: speck(['#8e8a80', '#77736b', '#6b9640'], 0.35, 0.35) }), // moss and stones
-      H(s, 0.5, 0.36, 3.8, 4.2, 6.2, { rock: 1, top: 0.3 }), TINT(s, 0.5, 0.36, 4.0, 4.4, ROCK, 1, { steep: 1 }), POOL(s, 0.5, 0.47, 2.4), // a rock cliff, its pool at its foot
-      { t: 'fall', from: at(s, 0.5, 0.36), to: at(s, 0.5, 0.47), w: 0.9 }, SPOT(s, 0.15, 0.5, 'rest'), SPOT(s, 0.8, 0.62, 'rest'), SPOT(s, 0.5, 0.75, 'nap'), SPOT(s, 0.2, 0.22, 'rest')],
+      H(s, 0.5, 0.36, 3.8, 4.2, 11, { rock: 1, top: 0.3 }), TINT(s, 0.5, 0.36, 4.0, 4.4, ROCK, 1, { steep: 1 }), POOL(s, 0.5, 0.47, 2.4), // a rock cliff, its pool at its foot (inbox 42 C2: 6.2 -> 11, 3.3H)
+      { t: 'fall', from: at(s, 0.5, 0.36), to: at(s, 0.5, 0.47), w: 1.3 }, SPOT(s, 0.15, 0.5, 'rest'), SPOT(s, 0.8, 0.62, 'rest'), SPOT(s, 0.5, 0.75, 'nap'), SPOT(s, 0.2, 0.22, 'rest')],
     sandbar: s => [FACE(s, SAND, 1, { pat: speck(['#f3e4b8', '#d9c088'], 0.4) }), H(s, 0.5, 0.35, 2.4, 9, 0.3), POOL(s, 0.5, 0.7, 2.2),
       SPOT(s, 0.5, 0.22, 'nap'), SPOT(s, 0.45, 0.4, 'nap'), SPOT(s, 0.55, 0.52, 'rest'), SPOT(s, 0.4, 0.85, 'rest')],
     lotus: s => { const [x, z] = at(s, 0.5, 0.48); // one big pond, long down the strip
-      return [FACE(s, '#6f8c4c', 0.8, { pat: speck(['#5d7a3c', '#86a35a'], 0.3, 0.4) }), { t: 'flat', r: [s.r[0], s.r[1], z - 15, z + 15] }, { t: 'pool', x, z, r: 2.9, len: 20 },
+      return [FACE(s, '#6f8c4c', 0.8, { pat: speck(['#5d7a3c', '#86a35a'], 0.3, 0.4) }), { t: 'flat', r: [s.r[0], s.r[1], z - 15 * S, z + 15 * S] }, { t: 'pool', x, z, r: 2.9, len: 20 * S },
         SPOT(s, 0.5, 0.2, 'rest'), SPOT(s, 0.4, 0.12, 'rest'), SPOT(s, 0.5, 0.82, 'nap'), SPOT(s, 0.6, 0.94, 'rest')]; },
     isle: s => { const [x] = at(s, 0.5, 0); // a bigger island, its bridge long, to the front
-      return [FACE(s, '#8ccf5a', 0.55), { t: 'pool', x, z: 4, r: 3.5, len: 7, isle: 1.6, iz: 2.5, ilen: 2.6 },
-        { t: 'spot', x, z: 3.2, act: 'nap', r: 0.4 }, { t: 'spot', x, z: 1, act: 'rest', r: 0.4 }, SPOT(s, 0.25, 0.3, 'rest'), SPOT(s, 0.3, 0.82, 'rest')]; },
+      const iz = 2.5 * S; return [FACE(s, '#8ccf5a', 0.55), { t: 'pool', x, z: 4 * S, r: 3.5, len: 7 * S, isle: 1.6, iz, ilen: 2.6 },
+        { t: 'spot', x, z: iz + 0.9, act: 'nap', r: 0.4 }, { t: 'spot', x: x - 0.5, z: iz, act: 'rest', r: 0.4 }, SPOT(s, 0.25, 0.3, 'rest'), SPOT(s, 0.3, 0.82, 'rest')]; }, // inbox 42 C2: the spots off the rock stack on the back end
     swamp: s => [FACE(s, '#4a4a2c', 0.9, { pat: speck(['#3d3d24', '#5a5a36', '#4f5a2e'], 0.4, 0.5) }), // dark mud, dark water
-      ...[[-22, 41, 2.2], [-4, 40.6, 2.4], [14, 41.4, 2.2]].map(([x, z, r]) => ({ t: 'pool', x, z, r, murk: 1 })),
-      ...[[-29, 41, 'rest'], [-18, 42.2, 'rest'], [-9, 39.6, 'nap'], [5, 42.6, 'rest'], [17.5, 39.2, 'nap'], [29, 40.6, 'rest']].map(([x, z, act]) => ({ t: 'spot', x, z, act }))],
+      ...P([[-22, 41, 2.2], [-4, 40.6, 2.4], [14, 41.4, 2.2]]).map(([x, z, r]) => ({ t: 'pool', x, z, r, murk: 1 })),
+      ...SP([[-29, 41, 'rest'], [-18, 42.2, 'rest'], [-9, 39.6, 'nap'], [5, 42.6, 'rest'], [17.5, 39.2, 'nap'], [29, 40.6, 'rest']])],
   },
   snow: {
     conifer: s => [SPOT(s, 0.3, 0.42, 'rest'), SPOT(s, 0.7, 0.62, 'nap'), SPOT(s, 0.3, 0.9, 'rest'), SPOT(s, 0.6, 0.2, 'rest')],
     sled: s => { const [x, z0] = at(s, 0.5, 0.3), z1 = at(s, 0.5, 0.64)[1];
-      return [{ t: 'ramp', x, z0, z1, rx: 2.6, h: 2.4 }, ...[-0.55, 0.55].map(d => ({ t: 'tint', x: x + d, z: (z0 + z1) / 2 + 1.5, rx: 0.16, rz: (z1 - z0) / 2 + 1.5, c: '#c4d4e6', a: 0.7 })), // sled tracks
+      return [{ t: 'ramp', x, z0, z1, rx: 2.6, h: 3.6 }, ...[-0.55, 0.55].map(d => ({ t: 'tint', x: x + d, z: (z0 + z1) / 2 + 1.5, rx: 0.16, rz: (z1 - z0) / 2 + 1.5, c: '#c4d4e6', a: 0.7 })), // sled tracks
         { t: 'spot', x, z: z0 + 1.2, act: 'slide', to: [x, z1 + 1.5] }, { t: 'spot', x: x + 0.8, z: z0 + 2.4, act: 'slide', to: [x - 0.6, z1 + 2] },
         { t: 'spot', x: x + 1, z: z1 + 3.5, act: 'rest' }, { t: 'spot', x: x - 1.5, z: z1 + 5, act: 'nap' }, SPOT(s, 0.5, 0.86, 'rest')]; },
-    pillars: () => [...[[-20, 31.6, 1.0, 0.8], [-14.5, 34.6, 0.9, 0.6], [-9, 31.2, 1.1, 0.9], [-3, 34.4, 0.9, 0.7], [3, 31.6, 1.0, 0.85], [9, 34.6, 0.95, 0.65], [14.5, 31.2, 1.05, 0.8], [20, 34.2, 0.9, 0.7]]
+    pillars: () => [...P([[-20, 31.6, 1.0, 0.8], [-14.5, 34.6, 0.9, 0.6], [-9, 31.2, 1.1, 0.9], [-3, 34.4, 0.9, 0.7], [3, 31.6, 1.0, 0.85], [9, 34.6, 0.95, 0.65], [14.5, 31.2, 1.05, 0.8], [20, 34.2, 0.9, 0.7]])
         .flatMap(([x, z, r, h]) => [{ t: 'col', x, z, r, h }, { t: 'tint', x, z, rx: r + 1.4, rz: r + 1.4, c: ICE, a: 0.75 }]), // each pillar on a round of ice
-      { t: 'spot', x: -11.8, z: 33.2, act: 'rest' }, { t: 'spot', x: 6, z: 33, act: 'nap' }, { t: 'spot', x: 17.5, z: 32.8, act: 'rest' }],
+      ...SP([[-11.8, 33.2, 'rest'], [6, 33, 'nap'], [17.5, 32.8, 'rest']])],
     hotspring: s => [POOL(s, 0.5, 0.5, 2.9, { hot: 1 }), TINT(s, 0.5, 0.5, 3.6, 3.6, SNOWROCK, 0.55),
       SPOT(s, 0.45, 0.48, 'bath', { r: 0.6 }), SPOT(s, 0.55, 0.53, 'bath', { r: 0.6 }), SPOT(s, 0.5, 0.42, 'bath', { r: 0.6 }), SPOT(s, 0.5, 0.25, 'rest'), SPOT(s, 0.5, 0.75, 'rest')],
-    cave: s => [H(s, 0.6, 0.42, 3.0, 4.6, 3.2, { rock: 1 }), TINT(s, 0.6, 0.42, 3.2, 4.8, SNOWROCK, 1, { steep: 1 }), // a round rock hill, the cave's mouth on its front (+z: toward the camera)
+    cave: s => [H(s, 0.6, 0.42, 3.0, 4.6, 10, { rock: 1 }), // inbox 42 C2: 3.2 -> 10 (3H), its mouth at its foot (zoneprops.js)
+      TINT(s, 0.6, 0.42, 3.2, 4.8, SNOWROCK, 1, { steep: 1 }), // a round rock hill, the cave's mouth on its front (+z: toward the camera)
       SPOT(s, 0.52, 0.5, 'nap'), SPOT(s, 0.66, 0.5, 'nap'), SPOT(s, 0.25, 0.25, 'rest'), SPOT(s, 0.25, 0.7, 'rest')],
-    iceplate: () => [{ t: 'flat', r: [-27, 27, 38.6, 44.2] }, RECT([-26, 26, 39.2, 43.6], ICE, 1), // under the ice sheet (zoneprops.js)
-      { t: 'spot', x: -21, z: 40.5, act: 'slide', to: [-11, 42.4] }, { t: 'spot', x: -3, z: 42.4, act: 'slide', to: [7, 40.2] }, { t: 'spot', x: 12, z: 40.4, act: 'slide', to: [22, 42.6] },
-      { t: 'spot', x: -29.5, z: 41, act: 'rest' }, { t: 'spot', x: 29.5, z: 41.2, act: 'rest' }, { t: 'spot', x: 0, z: 38, act: 'nap' }],
+    iceplate: () => [{ t: 'flat', r: [-27, 27, 38.6, 44.2].map(v => v * S) }, RECT([-26, 26, 39.2, 43.6].map(v => v * S), ICE, 1), // under the ice sheet (zoneprops.js)
+      ...SP([[-21, 40.5, 'slide', { to: [-11 * S, 42.4 * S] }], [-3, 42.4, 'slide', { to: [7 * S, 40.2 * S] }], [12, 40.4, 'slide', { to: [22 * S, 42.6 * S] }],
+      [-29.5, 41, 'rest'], [29.5, 41.2, 'rest'], [0, 38, 'nap']])],
   },
 };
 // the island's spit: from the island out to the pool's front end (inbox 34; a round one's: to the old-edge side, u = 0), as

@@ -12,11 +12,18 @@ let timer = 0; // an error every frame writes once a second, not 60 times
 const keep = () => { timer ||= setTimeout(() => { timer = 0; try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* full */ } }, 1000); };
 // where: the game's own path (src/ui/nest.js:170), never the site's address
 const where = s => (String(s || '').match(/((?:src|vendor)\/[\w/.-]+\.js):(\d+)/) || []).slice(1).join(':');
+// inbox 49: three clues sent with the error (stats.js, policy 10): the screen's width band, the habitat on screen (main.js placeFrom), whether a GL
+// context was lost (or lost and given back) before it. No exact size, no save
+let placeOf = () => '', gl = 'ok';
+export const placeFrom = f => { placeOf = f; };
+addEventListener('webglcontextlost', () => { gl = 'lost'; }, true); // the canvases in the page (capture: the event doesn't bubble)
+addEventListener('webglcontextrestored', () => { gl = 'restored'; }, true);
+const band = w => w < 360 ? '~359' : w < 400 ? '360~399' : w < 480 ? '400~479' : w < 768 ? '480~767' : w < 1200 ? '768~1199' : '1200~';
 export function note(msg, at = '') {
   const m = String(msg).replace(/^Uncaught /, '').replace(/\w+:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 160), last = list[list.length - 1];
   if (last && last.m === m && last.at === at) { last.n++; last.t = Date.now(); } // the same one again: counted
   else { list.push({ t: Date.now(), m, at, n: 1 }); if (list.length > MAX) list.shift(); }
-  keep(); track('error', { msg: m.slice(0, 120), at }, 'error:' + m.slice(0, 120) + at);
+  keep(); track('error', { msg: m.slice(0, 120), at, scr: band(innerWidth), hab: placeOf(), gl }, 'error:' + m.slice(0, 120) + at);
 }
 addEventListener('error', e => note(e.message, where(e.error?.stack) || where(`${e.filename}:${e.lineno}`)));
 addEventListener('unhandledrejection', e => { const r = e.reason; note(r?.name ? `${r.name}: ${r.message}` : r, where(r?.stack)); });
@@ -28,7 +35,7 @@ const browser = () => { for (const [k, n] of BROWSERS) { const m = ua.match(new 
 const os = () => { const m = ua.match(/(iPhone|iPad)[^)]*OS (\d+)|Android (\d+)|Windows|Mac OS X|CrOS|Linux/); return !m ? '기기 모름' : m[1] ? `${m[1]} iOS ${m[2]}` : m[3] ? `Android ${m[3]}` : m[0].replace('Mac OS X', 'Mac').replace('CrOS', 'ChromeOS'); };
 const day = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'); return `${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
-export function reportText(place) {
+export function reportText(place = placeOf()) {
   const last = list.slice(-5).reverse();
   return [`[토이브룩 문제 알림]`, `버전 ${VERSION} (${EDITION === 'beta' ? '베타' : EDITION})`,
     `기기 ${os()} · ${browser()} · 화면 ${innerWidth}×${innerHeight} ×${+devicePixelRatio.toFixed(2)}${matchMedia('(pointer:coarse)').matches ? ' · 터치' : ''} · 그래픽 ${({ low: '낮음', mid: '보통', high: '높음' })[PREFS.gfx] || PREFS.gfx}`,

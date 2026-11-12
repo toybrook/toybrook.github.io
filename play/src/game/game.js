@@ -79,8 +79,11 @@ export const holdBaby = id => act(now => R.holdBaby(S, id, now));
 export const letGrow = id => act(now => R.letGrow(S, id, now));
 export const grownSeen = ids => act(() => R.grownSeen(S, ids));
 export const setDisplay = (k, c) => act(() => R.setDisplay(S, k, c));
-export const buyProp = (id, hab) => act(() => R.buyProp(S, id, hab));
+// inbox 51: a 'buy' event (stats.js): kind as priced (big: listed ♥100 and up, else play for 놀이·기차 ones, else small), the hearts paid
+export const buyProp = (id, hab) => act(() => { const h = S.hearts, p = R.buyProp(S, id, hab), P = PROPS.find(x => x.id === id);
+  return p && { p, events: [{ type: 'buy', kind: P.list >= 100 ? 'big' : P.use || P.rail ? 'play' : 'small', price: h - S.hearts }] }; })?.p ?? null;
 export const buyExpand = hab => act(() => R.buyExpand(S, hab));
+export const refit = (hab, moves) => act(() => R.refit(S, hab, moves)); // inbox 42 A
 export const placeProp = (uid, x, z, rot, ex) => act(() => R.placeProp(S, uid, x, z, rot, ex)); // 28-5 ex: { c, sz, on, sl }
 export const placeRing = (hab, cells, clear) => act(() => R.placeRing(S, hab, cells, clear)); // inbox 37 작은 고리
 export const saveLay = (hab, k, name) => act(now => R.saveLay(S, hab, k, name, now)); // 28-5 배치 저장 칸

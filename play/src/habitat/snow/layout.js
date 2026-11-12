@@ -6,12 +6,13 @@ import * as THREE from 'three';
 import { bump } from '../stamps.js';
 import { dist2D, WATER_Y } from '../meadow/layout.js';
 import { BOARD0, rectAt, zoneSet, edgeOf, inRect } from '../zones.js';
+import { UNIT } from '../../game/data.js';
 export { WATER_Y };
 
 const sm = t => { t = THREE.MathUtils.clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 
 // 28-1 땅 넓히기 as the pond's: a zone a step along one side (zones.js); S stays 1. R: the board as built, O: the open ground; Z: the zones
-export const BW0 = 36, BD0 = 58, S = 1;
+export const S = UNIT, BW0 = 36 * S, BD0 = 58 * S; // inbox 42 A: the first board spread by S (its shapes in the old board's metres, the zones' in the world's)
 export const openAt = L => rectAt('snow', L);
 export let R = [...BOARD0], O = [...BOARD0], Z = zoneSet('snow', 0);
 
@@ -36,11 +37,11 @@ function hills(x, z) {
 const rise = z => 0.9 * sm((-19 - z) / 7); // the back rises a little toward the pines
 // the bed by distance from the shore line, as the pond's: a shallow shelf (the penguin stands in it), then deep
 const bed = s => -0.85 * sm((0.9 - s) / 1.7) - 1.35 * sm((-2.6 - s) / 2.4);
-function h0(x, z) {
-  const s = shore0(x, z);
-  let land = 0.6 * hills(x, z) * sm((Math.min(s, Z.wd(x, z, true) - 0.4) - 0.4) / 3.5) * (1 - Z.flat(x, z)) + rise(z) + Z.lift(x, z); // 28-1: + the zones' hills
+function h0(X, Zw) { // X, Zw: world metres (the zones'); x, z: the old board's
+  const x = X / S, z = Zw / S, s = shore0(x, z);
+  let land = 0.6 * hills(x, z) * sm((Math.min(s, Z.wd(X, Zw, true) / S - 0.4) - 0.4) / 3.5) * (1 - Z.flat(X, Zw)) + rise(z) + Z.lift(X, Zw); // 28-1: + the zones' hills
   for (const m of mounds0) land += m.h * sm(1 - Math.hypot(x - m.x, z - m.z) / m.r);
-  let h = Math.min(land + bed(s), land - Z.dip(x, z));
+  let h = Math.min(land + bed(s), land - Z.dip(X, Zw));
   for (const I of floes0) h = Math.max(h, FLOE - 2.0 * sm((Math.hypot(x - I.x, z - I.z) / I.r - 0.94) / 0.3));
   return h;
 }
@@ -59,7 +60,7 @@ function edgeRound(h, x, z) {
   if (e >= 1.2) return h;
   const t = Math.max(0, e) / 1.2; return -1.9 + (h + 1.9) * (1 - (1 - t) * (1 - t));
 }
-export const heightAt = (x, z) => edgeRound(h0(x / S, z / S) + bump(x, z), x, z); // 28-6 지형 도장
+export const heightAt = (x, z) => edgeRound(h0(x, z) + bump(x, z), x, z); // 28-6 지형 도장
 export const depthAt = (x, z) => WATER_Y - heightAt(x, z);
 export const mound = (x, z) => { let k = 0; for (const m of mounds) k = Math.max(k, sm(1 - Math.hypot(x - m.x, z - m.z) / m.r)); return k; }; // 0..1 up a mound (terrain.js)
 
@@ -70,7 +71,7 @@ export function free(x, z, r) {
   for (const o of occupied) if (Math.hypot(o.x - x, o.z - z) < o.r + r) return false;
   return true;
 }
-const inBoard = (x, z) => x > O[0] + 1.8 && x < O[1] - 1.8 && z > -22.5 && z < O[3] - 2.5;
+const inBoard = (x, z) => x > O[0] + 1.8 && x < O[1] - 1.8 && z > -22.5 * S && z < O[3] - 2.5;
 const clearOf = (x, z) => {
   for (const o of occupied) if (o.r > 0.9 && Math.hypot(o.x - x, o.z - z) < o.r + 0.4) return false;
   for (const d of decor) if (!d.water && !d.open && (!d.nat || d.r > 0.9) && Math.hypot(d.x - x, d.z - z) < d.r + (d.nat ? 0.4 : 0.6)) return false;
@@ -99,7 +100,7 @@ export function waterSpot(kind, x0, z0) {
 export const decor = [];
 export function placeable(x, z, r, water, dry) { // dry: as meadow's
   const ok = water ? shore(x, z) < -(r + 0.6) && isle(x, z) > r + 0.9 : free(x, z, r) && (dry || walkable(x, z));
-  return ok && decor.every(d => Math.hypot(d.x - x, d.z - z) > (d.nat && d.open ? 0.4 : d.r) + r + 0.1);
+  return ok && decor.every(d => d.nat && d.open || Math.hypot(d.x - x, d.z - z) > d.r + r + 0.1); // inbox 42 C2: a wildflower patch never in the way (habitat.js hides one under a prop)
 }
 export function pathClear(x1, z1, x2, z2, ok = walkable) {
   const n = Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 0.5);

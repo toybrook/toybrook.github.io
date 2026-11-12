@@ -61,12 +61,17 @@ document.addEventListener('click', e => { if (e.target.classList?.contains('pop'
 export { TIPS } from './tips.js'; // 26-1: in its own file, so the loading screen can show one before the game has loaded
 import { TIPS } from './tips.js';
 const waiting = []; let tipEl = null, calm = 0;
+// inbox 43: a game's first 10 minutes show one card or tip at a time, the next 40 s after the last one went (the start card
+// is the way in, not counted). resting(): wait. Tips, 출석부, level, grown and home cards all ask it.
+const CARDS = '#news,#attend,#ret,#lvup,#zoneCard,#grown,#homeHint,.tip'; let upAt = 0;
+export const resting = () => { if ([...document.querySelectorAll(CARDS)].some(shown)) upAt = Date.now(); return !!G.S && G.now() - G.S.since < 600e3 && Date.now() - upAt < 40e3; };
+setInterval(() => { if (!resting()) nextTip(); }, 250);
 export function tip(k, anchor) { // anchor: an element or a selector; shown once it is on screen and no other tip is up
   if (G.S.flags.tipsOff || G.S.flags['tip_' + k] || waiting.some(w => w.k === k) || tipEl?.dataset.k === k) return;
   waiting.push({ k, anchor }); nextTip();
 }
 function nextTip() {
-  if (tipEl || G.S.flags.tipsOff || Date.now() < calm) return; // 26-11: not while the tap that closed the last one is still landing
+  if (tipEl || G.S.flags.tipsOff || Date.now() < calm || resting()) return; // 26-11: not while the tap that closed the last one is still landing
   const over = topWindow(), el = w => typeof w.anchor === 'string' ? document.querySelector(w.anchor) : w.anchor;
   const i = waiting.findIndex(w => shown(el(w)) && (!over || over.contains(el(w)))); if (i < 0) return; // not under another window
   const [{ k, anchor }] = waiting.splice(i, 1), a = typeof anchor === 'string' ? document.querySelector(anchor) : anchor;

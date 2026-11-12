@@ -105,7 +105,7 @@ export function buildProps(scene) {
     if (bank && rand() < 0.6) continue;
     L.grass.push({ x, y: h - 0.03, z, s: bank ? 1.6 + rand() * 0.6 : 0.8 + rand() * 0.6, big: bank, ry: rand() * 6, c: jitter(bank ? '#4f9032' : pickOf(['#6aa83a', '#7cb843', '#5e9c35']), 0.06) });
   } });
-  const zp = zoneProps(scene, 'pond', { L, N, heightAt, occupied, free, O, Z, back: -24.2 });
+  const zp = zoneProps(scene, 'pond', { L, N, heightAt, occupied, free, O, Z, back: -24.2 * S });
   const list = N.done();
   return { natives: list, zone: zp, ...finish(scene, L, { rand, occupied }) };
 }

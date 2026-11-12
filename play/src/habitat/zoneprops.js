@@ -8,7 +8,9 @@
 // blue pillars and sparkling ice), and a small wooden sign with the zone's name at its entrance (설정 「구역 팻말 보이기」).
 import * as THREE from 'three';
 import { strip, inRect, polyD, poolAt, ORCHARD_ROWS } from './zones.js';
-import { ZONES } from '../game/data.js';
+import { ZONES, UNIT, NAT_K } from '../game/data.js';
+
+const S = UNIT; // inbox 42 A: the old board's metres -> the world's
 import { PREFS } from '../config.js';
 import { kit, emptyL, flowerPal, flowerCluster, addPads, addReeds, decorModel, part } from './meadow/props.js';
 import { toyMat, instanced, lathe, roundedBox, skyLit, nightGlow } from './toyKit.js';
@@ -70,7 +72,7 @@ export function zoneProps(scene, hab, o) {
         const nrm = (a, b) => { const dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz); return [-dz / l, dx / l]; };
         const water = (x, z, nx, nz) => Math.min(heightAt(x + nx * w, z + nz * w), heightAt(x - nx * w, z - nz * w)) + 0.03;
         { const [x, z] = P[4], [nx, nz] = nrm(P[3], P[5]); fixture('stepping', x, z, Math.atan2(-nz, nx), 0.4, water(x, z, nx, nz), 0.3).scale.setScalar(1.35); occupied.pop(); } // big stones across: walked over
-        { const [nx, nz] = nrm(P[2], P[3]), px = (P[2][0] + P[3][0]) / 2, pz = (P[2][1] + P[3][1]) / 2, Rw = 1.25, cx = px - nx * 0.75, cz = pz - nz * 0.75, hy = water(px, pz, nx, nz) + Rw - 0.15;
+        { const [nx, nz] = nrm(P[2], P[3]), px = (P[2][0] + P[3][0]) / 2, pz = (P[2][1] + P[3][1]) / 2, Rw = 1.8, cx = px - nx * 0.75, cz = pz - nz * 0.75, hy = water(px, pz, nx, nz) + Rw - 0.15;
           const wg = new THREE.Group(), k = new THREE.Group(), spin = new THREE.Group(); wg.position.set(cx, hy, cz); wg.rotation.y = Math.atan2(nx, nz); scene.add(wg); // a little wooden waterwheel, its axle across the stream
           for (const z of [-0.17, 0.17]) { part(k, new THREE.TorusGeometry(Rw * 0.86, 0.05, 6, 24), '#a8703f', 0, 0, z); for (let i = 0; i < 4; i++) part(k, roundedBox(Rw * 1.7, 0.05, 0.05, 0.02), '#a8703f', 0, 0, z, { rz: i * Math.PI / 4 }); }
           for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; part(k, roundedBox(0.5, 0.1, 0.42, 0.03), '#c98c52', Math.cos(a) * Rw * 0.78, Math.sin(a) * Rw * 0.78, 0, { rz: a }); }
@@ -85,20 +87,20 @@ export function zoneProps(scene, hab, o) {
           const x = P[j][0] + (P[j + 1][0] - P[j][0]) * t + nx * sg * d, z = P[j][1] + (P[j + 1][1] - P[j][1]) * t + nz * sg * d; if (free(x, z, 0.3) && !nearSpot(x, z, 0)) rock(x, z, 0.25 + rnd() * 0.3); } // pebbles on the gravel banks
         for (const p of pools) { ringOf(p, 5, wl(p) - 0.2, wl(p) + 0.3, (x, z) => R.tuft(x, z)); const y2 = waterAt(p); for (let i = 0; i < 4; i++) { const a = rnd() * 6.28, d = rnd() * (wl(p) - 0.8); pad(p.x + Math.cos(a) * d, y2, p.z + Math.sin(a) * d, i); } } },
       orchard() { // the trees in rows on the furrows (zones.js ORCHARD_ROWS), heavy with big fruit; a ladder and a basket in the lanes
-        for (let z = -19; z <= 29.1; z += 4.8) for (const c of ORCHARD_ROWS) { const x = r[0] + c, sc = 0.58; if (!free(x, z, 0)) continue;
-          const n0 = L.canopy.length; K.tree(x, z, sc, 5); const top = L.canopy[n0]; orchard.push({ x, z, y: top.y, fr: 1.7 * sc });
+        for (let z = -19 * S; z <= 29.1 * S; z += 4.8 * S) for (const c of ORCHARD_ROWS) { const x = r[0] + c, sc = 0.7; if (!free(x, z, 0)) continue; // inbox 42 C2: 0.58 -> 0.7 (x NAT_K.tree: 1.6H)
+          const n0 = L.canopy.length; K.tree(x, z, sc, 5); const top = L.canopy[n0]; orchard.push({ x, z, y: top.y, fr: 1.7 * sc * NAT_K.tree }); // fr: past the crown's edge
           for (let j = 0; j < 5; j++) { const a = rnd() * 6.28, el = -0.1 + rnd() * 0.6, R2 = top.s[0] * 1.3; fruit.push({ x: x + Math.cos(a) * Math.cos(el) * R2, y: top.y + Math.sin(el) * R2 * 0.85, z: z + Math.sin(a) * Math.cos(el) * R2, s: 0.2, c: jitter('#e04a35', 0.06) }); } }
         const lad = new THREE.Group(), lk = new THREE.Group(); lk.rotation.x = -0.32; lad.add(lk); // leaning into the tree behind it
         for (const x of [-0.22, 0.22]) part(lk, roundedBox(0.07, 2.0, 0.07, 0.03), '#b07a48', x, 1.0, 0);
         for (let i = 0; i < 5; i++) part(lk, roundedBox(0.44, 0.05, 0.05, 0.02), '#b07a48', 0, 0.3 + i * 0.35, 0);
-        put(lad, 30.3, 6.25, 0, 0.4, undefined, 2);
-        const bk = new THREE.Group(), bx = 31.3, bz = 12.2;
+        put(lad, 30 * S + 0.3, 5 * S + 1.25, 0, 0.4, undefined, 2); // inbox 42 A: just behind the tree at (30, 5) old metres
+        const bk = new THREE.Group(), bx = 31.3 * S, bz = 12.2 * S;
         part(bk, lathe([[0, 0], [0.22, 0], [0.3, 0.08], [0.34, 0.26], [0.31, 0.29], [0.27, 0.22], [0, 0.22]], 18), '#c9965f');
         part(bk, new THREE.TorusGeometry(0.3, 0.03, 6, 16, Math.PI), '#b5863a', 0, 0.28, 0);
         put(bk, bx, bz, 0.6, 0.45, undefined, 0.6);
         for (const [dx, dz] of [[0, 0], [0.12, 0.1], [-0.12, 0.08], [0.02, -0.13]]) fruit.push({ x: bx + dx, y: heightAt(bx, bz) + 0.3 + (dx ? 0 : 0.08), z: bz + dz, s: 0.13, c: jitter('#e04a35', 0.06) }); },
       lookout() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id); // on the flat top: a little gazebo and a telescope looking out
-        fixture('gazebo', h.x, h.z - 0.8, 0, 1.6, undefined, 2).scale.setScalar(0.85);
+        fixture('gazebo', h.x, h.z - 0.8, 0, 2.1, undefined, 4.6).scale.setScalar(1.15); // inbox 42 C2: 0.85 -> 1.15 (hill and gazebo 3H)
         const tg = new THREE.Group(), leg = new THREE.CylinderGeometry(0.025, 0.03, 0.9, 6);
         for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; part(tg, leg, '#8a5a34', Math.cos(a) * 0.14, 0.42, Math.sin(a) * 0.14, { rz: Math.cos(a) * 0.22, rx: -Math.sin(a) * 0.22 }); }
         part(tg, new THREE.SphereGeometry(0.07, 10, 8), '#5a4636', 0, 0.88, 0);
@@ -110,12 +112,13 @@ export function zoneProps(scene, hab, o) {
         for (let x = r[0] + 3, i = 0; x < r[1] - 2; x += 6, i++) { // glowing toadstool lamps along the path, either side
           out: for (const sg of i % 2 ? [1, -1] : [-1, 1]) for (const dx of [0, 1, -1]) { const X = x + dx, z = zOf(X) + sg * (f.w + 0.9); if (!ok(X, z, 0.3)) continue; fixture('mushlamp', X, z, rnd() * 6, 0.5, undefined, 1.4).scale.setScalar(1.6); break out; } }
         for (let x = r[0] + 4, j = 0; x < r[1] - 3; x += 7, j++) for (const dx of [0, 1.5, -1.5, 3]) { // giant toadstools, taller than the animals
-          const X = x + dx, z = zOf(X) - (f.w + 1.8); if (!ok(X, z, 1.0)) continue; put(bigShroom(2.6 + rnd() * 0.8, j % 2 === 0), X, z, rnd() * 6, 0.7, undefined, 2.6); break; } },
+          const X = x + dx, z = zOf(X) - (f.w + 2.6); if (!ok(X, z, 1.4)) continue; put(bigShroom(4.4 + rnd() * 1.4, j % 2 === 0), X, z, rnd() * 6, 0.95, undefined, 4.4); break; } }, // inbox 42 C2: x1.7 (1.5-2H)
       reeds() { for (const f of Z.rills.filter(q => q.zone === s.id)) for (let i = 1; i < f.pts.length; i++) { // reeds thick along every channel
           const a = f.pts[i - 1], b = f.pts[i], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz), nx = -dz / l, nz = dx / l;
           for (let d = 0; d < l; d += 0.6) for (const sg of [-1, 1]) { if (rnd() < 0.25) continue; const e = f.w - 0.25 + rnd() * 0.3, x = a[0] + dx / l * d + nx * sg * e, z = a[1] + dz / l * d + nz * sg * e; if (!nearSpot(x, z, 0.2)) R.tuft(x, z); } }
         place(40, (x, z) => ok(x, z, 0.3) && Z.wd(x, z) < 2.6, (x, z) => R.tuft(x, z)); },
-      falls() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id); for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + rnd() * 0.3, x = h.x + Math.cos(a) * h.rx * 1.02, z = h.z + Math.sin(a) * h.rz * 0.98; if (free(x, z, 0.4) && !nearSpot(x, z, 0.3)) rock(x, z, 0.5 + rnd() * 0.5); }
+      falls() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id); occupied.push({ x: h.x, z: h.z, r: 0.7 * Math.min(h.rx, h.rz), h: h.h }); // inbox 42 C2: no one climbs the 11 m cliff (the camera keeps out too)
+        for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + rnd() * 0.3, x = h.x + Math.cos(a) * h.rx * 1.02, z = h.z + Math.sin(a) * h.rz * 0.98; if (free(x, z, 0.4) && !nearSpot(x, z, 0.3)) rock(x, z, 0.5 + rnd() * 0.5); }
         for (const p of pools) { ringOf(p, 4, wl(p) + 0.1, wl(p) + 0.6, (x, z) => { if (free(x, z, 0.3)) rock(x, z, 0.3 + rnd() * 0.25); });
           const fl = Z.falls.find(q => q.zone === s.id), dx = fl.from[0] - p.x, dz = fl.from[1] - p.z, l = Math.hypot(dx, dz); spray(p.x + dx / l * (wl(p) - 0.3), waterAt(p), p.z + dz / l * (wl(p) - 0.3)); } },
       sandbar() { for (let i = 0; i < 3; i++) place(1, (x, z) => ok(x, z, 1.1), (x, z) => put(drift(), x, z, rnd() * 6, 0.9, heightAt(x, z) - 0.04, 0.5)); // bleached driftwood
@@ -131,7 +134,10 @@ export function zoneProps(scene, hab, o) {
           if (i % 4 === 0) for (const sg of [-1, 1]) posts.push({ x: x - uz * sg * 0.6, y: y + 0.25, z: z + ux * sg * 0.6, c: '#8a5a34' }); } // a long bridge, posts along it
         scene.add(instanced(new THREE.BoxGeometry(1.25, 0.1, 0.28), toyMat('#ffffff', { roughness: 0.55 }), planks));
         if (posts.length) scene.add(instanced(roundedBox(0.1, 0.5, 0.1, 0.03), toyMat('#ffffff', { roughness: 0.6 }), posts));
-        const iz = p.iz ?? p.z; K.bush(p.x - 1.05, iz - 0.5, 0.7); rock(p.x + 1.0, iz + 0.5, 0.3);
+        const iz = p.iz ?? p.z; K.bush(p.x - 0.95, iz + 1.6, 0.6); rock(p.x + 1.0, iz + 0.5, 0.3);
+        { const sx = p.x, sz = iz - 1.8, g0 = heightAt(sx, sz); // inbox 42 C2: the island's rock, three stacked (8.4 m, 2.5H)
+          for (const [y, a, b, c] of [[-0.3, 1.3, 3.0, 1.2], [3.1, 1.0, 2.6, 0.95], [6.2, 0.7, 1.9, 0.65]]) L.rock.push({ x: sx + (rnd() - 0.5) * 0.2, y: g0 + y, z: sz + (rnd() - 0.5) * 0.2, s: [a, b, c], ry: rnd() * 6, c: jitter(pickOf(['#bdb6a9', '#aaa499', '#c9c2b4']), 0.05) });
+          occupied.push({ x: sx, z: sz, r: 1.0, h: 8.4 }); }
         ringOf({ x: p.x, z: iz, len: p.ilen }, 8, p.isle + 0.4, p.isle + 0.9, (x, z) => { if (polyD(x, z, p.spit) > 1) R.tuft(x, z); }); },
       swamp() { for (const p of pools) ringOf(p, 6, wl(p) - 0.4, wl(p) + 0.2, (x, z) => R.tuft(x, z));
         place(7, (x, z) => ok(x, z, 0.6), (x, z) => { L.trunk.push({ x, y: heightAt(x, z) - 0.05, z, s: [0.95, 0.3 + rnd() * 0.12, 0.95], ry: rnd() * 6, c: jitter('#6e4a2e', 0.05) }); occupied.push({ x, z, r: 0.6, h: 0.6 }); }); // old stumps
@@ -142,19 +148,20 @@ export function zoneProps(scene, hab, o) {
       conifer() { for (const [u, v] of [[0.3, 0.12], [0.65, 0.32], [0.35, 0.6], [0.7, 0.82], [0.3, 0.97]]) { const [cx, cz] = at(u, v); for (let i = 0; i < 4; i++) { const x = cx + (rnd() - 0.5) * 3.2, z = cz + (rnd() - 0.5) * 3.2; if (low(1.3, x, z)) tree(x, z, 0.85 + rnd() * 0.45); } } },
       sled() { const f = Z.F.find(q => q.t === 'ramp' && q.zone === s.id); fixture('sled', f.x + 1.6, f.z1 + 1.2, 0.4, 0.8, undefined, 0.5); },
       pillars() { for (const f of Z.F.filter(q => q.t === 'col' && q.zone === s.id)) { const a0 = rnd() * 6.283; // tall blue ice pillars round each ice mound (its top stays the owl's perch)
-        for (let j = 0; j < 4; j++) { const big = j < 2, a = a0 + j * 1.3 + rnd() * 0.3, d = f.r + (big ? 0.35 : 0.2), x = f.x + Math.cos(a) * d, z = f.z + Math.sin(a) * d, sc = big ? 0.5 + rnd() * 0.12 : 0.3, hh = big ? 2.4 + rnd() * 1.0 : 1.1 + rnd() * 0.5;
+        for (let j = 0; j < 4; j++) { const big = j < 2, a = a0 + j * 1.3 + rnd() * 0.3, d = f.r + (big ? 0.6 : 0.35), x = f.x + Math.cos(a) * d, z = f.z + Math.sin(a) * d, sc = big ? 0.85 + rnd() * 0.2 : 0.5, hh = big ? 7.5 + rnd() * 3 : 2.2 + rnd() * 1; // inbox 42 C2: x3 / x2 (big 2.2-3.1H)
           crystals.push({ x, y: heightAt(x, z) + hh * 0.45, z, s: [sc, hh, sc], rx: Math.sin(a) * 0.12, rz: -Math.cos(a) * 0.12, ry: rnd() * 6, c: pickOf(['#9fd0f0', '#7fc0ec', '#b5ddf5']) });
-          if (big) occupied.push({ x, z, r: 0.5, h: 2.4 }); } } },
+          if (big) occupied.push({ x, z, r: 0.85, h: hh }); } } },
       hotspring() { const p = pools[0]; for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283 + rnd() * 0.15, d = p.r - 0.15; K.rock(p.x + Math.cos(a) * d, p.z + Math.sin(a) * d, 0.32 + rnd() * 0.2); occupied.pop(); }
         steam(p.x, waterAt(p), p.z, wl(p)); },
-      cave() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id), x = h.x, z = h.z + h.rz * 0.66, y = heightAt(x, z);
+      cave() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id), x = h.x, z = h.z + h.rz * 0.9, y = Math.min(heightAt(x, z), heightAt(x - 2.6, z), heightAt(x + 2.6, z)); // inbox 42 C2: at the 10 m hill's foot, twice as big
+        occupied.push({ x: h.x, z: h.z, r: 0.7 * Math.min(h.rx, h.rz), h: h.h }); // no one climbs the rock
         for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283 + rnd() * 0.3, rx = h.x + Math.cos(a) * h.rx * 1.02, rz = h.z + Math.sin(a) * h.rz * 0.98; if (Math.abs(a - Math.PI / 2) > 0.6 && free(rx, rz, 0.4) && !nearSpot(rx, rz, 0.3)) rock(rx, rz, 0.6 + rnd() * 0.6); }
         const g = new THREE.Group(), dark = toyMat('#2b3039', { roughness: 0.9 }), rim = toyMat('#8e9097', { roughness: 0.6 }), ice = toyMat('#dff2fa', { roughness: 0.15 });
-        const mg = new THREE.CircleGeometry(1.3, 24, 0, Math.PI); mg.scale(1, 1.1, 1); mg.rotateY(Math.PI / 2); g.add(new THREE.Mesh(mg, dark)); // the dark mouth, facing out
-        const arch = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.22, 8, 20, Math.PI), rim); arch.rotation.y = Math.PI / 2; arch.scale.set(1, 1.1, 1); arch.position.x = 0.05; g.add(arch);
-        for (let i = 0; i < 3; i++) { const a = Math.PI / 2 + (i - 1) * 0.4, ic = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.18 + rnd() * 0.1, 6), ice); ic.rotation.x = Math.PI; ic.position.set(0.12, Math.sin(a) * 1.3 * 1.1 - 0.18, Math.cos(a) * 1.25); g.add(ic); } // three short icicles (a full row read as teeth)
+        const mg = new THREE.CircleGeometry(2.6, 24, 0, Math.PI); mg.scale(1, 1.1, 1); mg.rotateY(Math.PI / 2); g.add(new THREE.Mesh(mg, dark)); // the dark mouth, facing out
+        const arch = new THREE.Mesh(new THREE.TorusGeometry(2.8, 0.4, 8, 24, Math.PI), rim); arch.rotation.y = Math.PI / 2; arch.scale.set(1, 1.1, 1); arch.position.x = 0.05; g.add(arch);
+        for (let i = 0; i < 3; i++) { const a = Math.PI / 2 + (i - 1) * 0.4, ic = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.32 + rnd() * 0.16, 6), ice); ic.rotation.x = Math.PI; ic.position.set(0.2, Math.sin(a) * 2.6 * 1.1 - 0.3, Math.cos(a) * 2.5); g.add(ic); } // three short icicles (a full row read as teeth)
         g.traverse(m => { if (m.isMesh) m.castShadow = m.receiveShadow = true; });
-        g.position.set(x, y - 0.2, z - 0.3); g.rotation.y = -Math.PI / 2; scene.add(g); occupied.push({ x, z, r: 1.0, h: 1.6 }); },
+        g.position.set(x, y - 0.2, z - 0.3); g.rotation.y = -Math.PI / 2; scene.add(g); occupied.push({ x, z, r: 2.0, h: 3.2 }); },
       iceplate() { const [x0, x1, z0, z1] = Z.F.find(q => q.t === 'tint' && q.r && q.zone === s.id).r, w = (x1 - x0) / 2, d = (z1 - z0) / 2, R = 1.4, sh = new THREE.Shape(); // a glossy sheet of blue ice (a tint on snow read as snow)
         sh.moveTo(-w + R, -d); sh.lineTo(w - R, -d); sh.quadraticCurveTo(w, -d, w, -d + R); sh.lineTo(w, d - R); sh.quadraticCurveTo(w, d, w - R, d); sh.lineTo(-w + R, d); sh.quadraticCurveTo(-w, d, -w, d - R); sh.lineTo(-w, -d + R); sh.quadraticCurveTo(-w, -d, -w + R, -d);
         const g = new THREE.ShapeGeometry(sh, 4); g.rotateX(-Math.PI / 2); const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, m = new THREE.Mesh(g, toyMat('#5fb0e6', { roughness: 0.1 }));

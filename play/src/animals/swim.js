@@ -4,11 +4,11 @@
 // by (play.js) to paddle round in it a while, then hops back.
 import * as THREE from 'three';
 import { dress } from './figure.js';
-import { DROP, dropPose } from './growth.js';
+import { DROP, dropPose, dropFrom, dangle } from './growth.js';
 import { free, blocked } from './crowd.js';
 import { MODELS } from '../game/data.js';
 import { SP } from '../game/rules.js';
-import { choose, start, pose as playPose, leave } from './play.js';
+import { choose, start, pose as playPose, leave, due } from './play.js';
 
 const ripGeo = new THREE.RingGeometry(0.55, 0.65, 40); ripGeo.rotateX(-Math.PI / 2);
 
@@ -33,7 +33,8 @@ export function createActor(ctx, rec) {
     rp.m.scale.setScalar((1 + k * 2.2) * rp.m.userData.s); rp.m.material.opacity = 0.6 * (1 - k);
     if (k >= 1) { scene.remove(rp.m); rp.m.material.dispose(); ripples.splice(i, 1); }
   } };
-  let land = null; // { x, z, t, dur }: on the grass after a drop
+  let land = null; // { x, z, t, dur, q }: on the grass after a drop (q: inbox 42 E, put down on a fountain: hops to it)
+  let held = null, now = 0; // inbox 42 E: { x, z } held up there (habitat.js carry)
   let play = null; // 28-2: { q (play.js), x, z (from), t, dur }: hopping to the fountain (q.A set: in it)
   const me = () => { const S = M[look.stage]; return { sp: rec.species, swim: true, s: S.s, reach: body.seg[1] + body.r, back: body.r - body.seg[0], w: 2 * body.r, L: body.seg[1] - body.seg[0] + 2 * body.r, h: S.h * S.s, fig: look.fig }; };
   const home = (x, z) => { place(); const p = at(); land = { x, z, t: DROP.end, dur: DROP.end + Math.max(0.6, Math.hypot(p.x - x, p.z - z) / 3.2) }; }; // hop back to the water
@@ -42,7 +43,14 @@ export function createActor(ctx, rec) {
     rec, look, obj: root, pickTarget: root, position: root.position,
     hold: false, // true while it hatches: stays put
     rest: () => at(),
-    drop(x, z) { unplay(); place(); const p = at(); land = { x, z, t: 0, dur: DROP.end + Math.max(0.6, Math.hypot(p.x - x, p.z - z) / 3.2) }; },
+    drop(x, z, from = 0) { unplay(); held = null; place();
+      // inbox 42 E: carried and let go: its place on the water nearest there (on the water: the lane under it), if free
+      const k = pond.k ?? 0.9, A = Math.atan2((z - pond.z) / k, x - pond.x), R = THREE.MathUtils.clamp((Math.hypot(x - pond.x, (z - pond.z) / k) - 1.2) / pond.r, L0, L1);
+      if (from) for (let j = 0; j < 21; j++) { const B = A + (j % 2 ? 1 : -1) * Math.ceil(j / 2) * 0.1; if (free(ctx.crowd, body, ...spot(B, R), yawAt(B))) { a = B; rr = lane = R; break; } } // or a little round
+      const p = at(), t0 = dropFrom(from); land = { x, z, t: t0, dur: DROP.end + Math.max(0.6, Math.hypot(p.x - x, p.z - z) / 3.2) }; },
+    water: 'swim',
+    carry(x, z) { unplay(); land = null; held = { x, z }; },
+    use(st) { const q = land && choose({ play: [st], night: ctx.night }, api, { ...me(), T: now }, land.x, land.z, 99); if (q) land.q = q; return q ? [land.x, land.z] : null; },
     poke() { poke = 0.6; },
     // on the camera's line to the followed animal (habitat.js; n: the line's side normal, d: how far off it, signed): swim on
     // faster for a while and slide to the lane that takes it further off that side
@@ -52,7 +60,9 @@ export function createActor(ctx, rec) {
       lane = THREE.MathUtils.clamp(rr + (((x1 - x0) * nx + (z1 - z0) * nz) * d > 0 ? 0.25 : -0.25), L0, L1); rush = 2.5;
     },
     update(dt, t) {
-      look.update(dt); fade(dt);
+      look.update(dt); fade(dt); now = t;
+      if (held) { const d = dangle(t, a); root.position.set(held.x, Math.max(ctx.heightAt(held.x, held.z), water) + DROP.carry, held.z); root.rotation.x = d.roll; root.rotation.z = d.rot;
+        look.fig.pose({ sq: 1, rot: 0, gait: 'still', ph: 0 }); Object.assign(body, { x: held.x, z: held.z }); fit(); return; }
       if (play) { // 28-2: over to the fountain in hops, paddle round in it (play.js poses it), then back
         const { q } = play; play.t += dt; let o;
         if (!q.A) { const k = Math.min(1, play.t / play.dur), hops = Math.max(2, Math.round(play.dur / 0.32)), x = play.x + (q.ax - play.x) * k, z = play.z + (q.az - play.z) * k;
@@ -67,6 +77,7 @@ export function createActor(ctx, rec) {
       if (land) { // fall, bounce, then hop to its place on the water
         land.t += dt; const p = at(), k = Math.max(0, (land.t - DROP.end) / (land.dur - DROP.end)), hops = Math.max(2, Math.round((land.dur - DROP.end) / 0.32));
         const d = land.t < DROP.end ? dropPose(land.t) : { lift: Math.sin(((k * hops) % 1) * Math.PI) * 0.45, sq: 1 };
+        if (land.q && land.t >= DROP.end) { const q = land.q; play = { q, x: land.x, z: land.z, t: 0, dur: Math.max(0.6, Math.hypot(q.ax - land.x, q.az - land.z) / 3.2) }; land = null; return; } // inbox 42 E: on to the fountain
         const x = land.x + (p.x - land.x) * Math.min(1, k), z = land.z + (p.z - land.z) * Math.min(1, k);
         root.position.set(x, (k < 1 ? Math.max(ctx.heightAt(x, z), water) : water) + d.lift, z);
         if (k > 0) root.rotation.y = Math.atan2(-(p.z - land.z), p.x - land.x);
@@ -75,8 +86,8 @@ export function createActor(ctx, rec) {
         Object.assign(body, { x, z, yaw: root.rotation.y }); fit(); // on the grass others step round it too
         return;
       }
-      if (!api.hold && rush <= 0 && ctx.play?.length && Math.random() < dt / 40) { // 28-2: a fountain within 18 (with room): off it goes
-        const q = choose(ctx, api, me(), root.position.x, root.position.z, 18);
+      if (!api.hold && rush <= 0 && ctx.play?.length && Math.random() < dt / (due(ctx, t, me()) ? 10 : 40)) { // 28-2: a fountain within 18 (with room): off it goes
+        const q = choose(ctx, api, { ...me(), T: t }, root.position.x, root.position.z, 18);
         if (q) { play = { q, x: root.position.x, z: root.position.z, t: 0, dur: Math.max(0.6, Math.hypot(q.ax - root.position.x, q.az - root.position.z) / 3.2) }; return; }
       }
       if (!api.hold) {

@@ -25,6 +25,27 @@ export function tracksOf(pieces, hy) {
   });
   return out;
 }
+// inbox 42 F-4: every end of the pieces' tracks ({ x, z, open }: open = no other piece meets it there; a fork's two tracks
+// share one end), how many are open, and whether some way round closes (the train's loop)
+export function railEnds(pieces) {
+  const tr = tracksOf(pieces, () => 0), at = new Map();
+  for (const t of tr) for (const [k, i] of [[t.a, 0], [t.b, t.n]]) { if (!at.has(k)) at.set(k, { u: new Set(), x: t.pts[3 * i], z: t.pts[3 * i + 2] }); at.get(k).u.add(t.uid); }
+  const ends = [...at.values()].map(o => ({ x: o.x, z: o.z, open: o.u.size < 2 }));
+  return { ends, open: ends.filter(e => e.open).length, loop: network(tr).loop };
+}
+// inbox 52: the turn a held piece (prop) takes to join the open ends (railEnds) its tile meets: cands, where it goes at each quarter
+// turn ({ x, z, rot }); the one joining the most, then the one whose other end comes nearest another open end (toward closing a
+// loop), then the one nearest base (the way it was turned). null: none joins
+export function joinTurn(prop, cands, open, base) {
+  const at = (a, b) => Math.hypot(a.x - b.x, a.z - b.z) < 0.1, b = Math.round(base / (Math.PI / 2)) & 3; let best = null;
+  cands.forEach((c, q) => {
+    const ends = railEnds([{ uid: 'h', prop, ...c }]).ends, n = ends.filter(e => open.some(o => at(o, e))).length; if (!n) return;
+    const rest = open.filter(o => !ends.some(e => at(o, e))), loose = ends.filter(e => !open.some(o => at(o, e)));
+    const s = [-n, loose.length && rest.length ? Math.round(10 * Math.min(...loose.flatMap(e => rest.map(o => Math.hypot(o.x - e.x, o.z - e.z))))) : 0, Math.min((q - b) & 3, (b - q) & 3)];
+    const i = best ? s.findIndex((v, k) => v !== best.s[k]) : 0; if (!best || i >= 0 && s[i] < best.s[i]) best = { s, rot: c.rot }; // the first that differs decides
+  });
+  return best?.rot ?? null;
+}
 // the point d along tr from its a end (clamped), into o = [x, y, z]
 function sample(tr, d, o = [0, 0, 0]) {
   const k = Math.max(0, Math.min(tr.n, d / tr.len * tr.n)), i = Math.min(tr.n - 1, Math.floor(k)), f = k - i, P = tr.pts, j = 3 * i;

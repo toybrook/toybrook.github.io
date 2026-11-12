@@ -1,7 +1,10 @@
 // inbox 41 A 이용 통계 (Umami Cloud, EU, no cookies). Off = the script is never added, so no outside request at all: UMAMI_ID
 // empty, 설정 › 이용 통계 보내기 끄기, the browser's Do Not Track, offline, or not on STATS_HOST (copies elsewhere, local tests).
 // Only these, counted in this browser (toyhabitat.stats, apart from the save): start (a day), first_hatch and return_d1 (once
-// ever), habitat_open (the habitat's name, a day each), attend (the day), error (120 characters + file:line, a day each).
+// ever), habitat_open (the habitat's name, a day each), attend (the day), error (120 characters + file:line, a day each; inbox 49: + the screen's width band, the habitat on screen, the GL context lost or not).
+// inbox 51, for the release balance (docs/balance-data.md), bands only: buy (small/big/play, ♥0~49/50~99/100+), expand (habitat, step),
+// level (each 5th), hearts_day (the last play day's hearts got and spent, 0/1~49/50~119/120+, sent the next day) and codex (cells
+// in tens, a day), each with day: days since the game began (0~29, 30+), never a date or time. 25 a day at most, errors 5 more.
 // No names, mail, device id or save. The service worker leaves other hosts alone (dist-web/sw.js), so the script is never stored.
 // report.js imports this before the game: nothing here may import the game.
 import { UMAMI_ID, STATS_HOST, PREFS } from '../config.js';
@@ -23,11 +26,13 @@ function load() {
   document.head.append(tag);
 }
 addEventListener('online', () => { failed = false; load(); });
-// key: once a day per key; the first call of a day clears the day's list
+// key: once a day per key (a key ending in # is numbered: each one sent); the first call of a day clears the day's list
 export function track(name, data, key = name) {
   if (!allowed()) return;
   const today = dayOf(Date.now()); if (st.day !== today) { st.day = today; st.sent = []; }
-  if (st.sent.includes(key) || key.startsWith('error:') && st.sent.filter(k => k.startsWith('error:')).length >= 5) return; // errors: 5 kinds a day at most
+  if (key.endsWith('#')) key += st.sent.length;
+  const err = key.startsWith('error:'); // errors: 5 kinds a day at most, the rest 25 (30 a device a day)
+  if (st.sent.includes(key) || st.sent.filter(k => k.startsWith('error:') === err).length >= (err ? 5 : 25)) return;
   st.sent.push(key); keep();
   if (window.umami) send(name, data); else { queue.push([name, data]); load(); }
 }
@@ -35,11 +40,23 @@ export function track(name, data, key = name) {
 const once = (name, data) => { if (st[name]) return; st[name] = 1; keep(); track(name, data); };
 
 // main.js, after the save is up. S: the game state (read only)
+const noon = t => new Date(t).setHours(12, 0, 0, 0);
+const hb = n => n < 1 ? '0' : n < 50 ? '1~49' : n < 120 ? '50~119' : '120+';
 export function watch(G) {
   if (!st.t0) { st.t0 = G.S.stats.days > 1 ? 'old' : Date.now(); if (G.S.stats.hatch) st.first_hatch = 1; keep(); } // a player from before 0.71: no first or next day
-  const tick = () => {
+  const day = (t = Date.now()) => { const d = Math.round((noon(t) - noon(G.S.since)) / DAY); return d >= 30 ? '30+' : Math.max(0, d); };
+  let h = G.S.hearts; // hearts got and spent are what this page saw them do (not across a backup put in)
+  const tick = (ev = []) => {
     const today = dayOf(Date.now());
+    if (st.hd?.day !== today) { if (st.hd?.d != null) track('hearts_day', { got: hb(st.hd.got), spent: hb(st.hd.spent), day: st.hd.d }); st.hd = { day: today, d: day(), got: 0, spent: 0 }; }
+    const dh = G.S.hearts - h; h = G.S.hearts; if (dh) { st.hd[dh > 0 ? 'got' : 'spent'] += Math.abs(dh); keep(); }
     track('start');
+    track('codex', { cells: Math.floor(Object.keys(G.S.codex).length / 10) * 10, day: day() });
+    for (const e of ev) {
+      if (e.type === 'buy') track('buy', { kind: e.kind, price: e.price < 50 ? '0~49' : e.price < 100 ? '50~99' : '100+', day: day() }, 'buy#');
+      if (e.type === 'expand') track('expand', { habitat: e.habitat, step: e.level, day: day() }, 'expand:' + e.habitat + e.level);
+      if (e.type === 'level') for (let L = Math.floor(e.from / 5 + 1) * 5; L <= e.level; L += 5) track('level', { level: L, day: day() }, 'level' + L);
+    }
     if (st.t0 !== 'old' && !st.return_d1 && today !== dayOf(st.t0)) { if (today === dayOf(st.t0 + DAY)) once('return_d1'); else { st.return_d1 = 1; keep(); } } // the next day only
     if (G.S.stats.hatch && !st.first_hatch) once('first_hatch');
   };

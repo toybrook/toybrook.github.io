@@ -43,7 +43,7 @@ export function buildProps(scene) {
   scene.add(instanced(new THREE.CylinderGeometry(1, 1, 1, 6), toyMat('#ffffff', { roughness: 0.18 }), chips, { cast: false }));
   scene.add(instanced(new THREE.SphereGeometry(1, 14, 8), toyMat('#ffffff', { roughness: 0.62 }), caps, { cast: false }));
 
-  const zp = zoneProps(scene, 'snow', { L, N, heightAt, occupied, free, O, Z, back: -24.2 });
+  const zp = zoneProps(scene, 'snow', { L, N, heightAt, occupied, free, O, Z, back: -24.2 * S });
   const list = N.done();
   return { natives: list, zone: zp, ...finish(scene, L, { rand, occupied }) };
 }

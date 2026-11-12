@@ -42,7 +42,11 @@ const nestMat = toyMat('#c79a5c', { roughness: 0.85 });
 const ss = THREE.MathUtils.smoothstep;
 
 // Sent out from the nest menu: falls in from above, lands with a squash ("퐁"), one small bounce. t = seconds since the drop.
-export const DROP = { fall: 0.45, end: 0.95, h: 6 };
+export const DROP = { fall: 0.45, end: 0.95, h: 6, carry: 1.2 }; // inbox 42 E: carry, how high one held up hangs
+// the drop's time when it is `lift` up (a carried one let go falls from there, not from DROP.h)
+export const dropFrom = lift => lift > 0 ? DROP.fall * Math.sqrt(Math.max(0, 1 - lift / DROP.h)) : 0;
+// inbox 42 E: held up, a little dangle (rot: nose up +, roll: about its length)
+export const dangle = (t, ph = 0) => ({ rot: -0.05 + Math.sin(t * 2.1 + ph) * 0.05, roll: Math.sin(t * 3.2 + ph) * 0.13 });
 export function dropPose(t) {
   if (t < DROP.fall) { const k = t / DROP.fall; return { lift: DROP.h * (1 - k * k), sq: 1.06 }; }
   const k = Math.min(1, (t - DROP.fall) / (DROP.end - DROP.fall));

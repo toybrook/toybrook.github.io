@@ -1,5 +1,5 @@
 // Screen flow: world map <-> habitats. The game (game/game.js) runs underneath either way.
-import { reportText, copyNow } from './ui/report.js'; // first: it listens for errors before the rest runs
+import { reportText, copyNow, placeFrom } from './ui/report.js'; // first: it listens for errors before the rest runs
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo } from './game/rules.js';
 import { BALANCE, HABITATS, ZONES } from './game/data.js';
@@ -37,6 +37,8 @@ const phone = matchMedia('(max-width:600px),(pointer:coarse) and (max-width:1000
 function fit() {
   const s = phone.matches ? 1 : Math.min(window.innerWidth / 410, window.innerHeight / 713, 1.6);
   window.__stageScale = s; stage.style.transform = s === 1 ? '' : 'scale(' + s + ')';
+  const side = document.querySelector('.side'), room = (innerWidth - 390 * s) / 2 - 40; // inbox 43: the PC guide text wraps beside the frame, or hides when there is no room
+  side.hidden = room < 200; side.style.maxWidth = Math.min(300, room) + 'px';
   map.style.transform = 'translate(-50%,-50%) scale(' + Math.max(stage.clientWidth / 390, stage.clientHeight / 693) + ')';
   api?.resize();
 }
@@ -70,16 +72,20 @@ mapImg.decode().catch(() => {}).then(() => {
   }).catch(() => {}));
 });
 const ui = {
+  restored: id => redo(id), // inbox 49: its GL context was lost and given back (habitat.js): built again
   say: t => toast(t, 1800, true), // 28-3: a short note from the habitat (the music box's tune, the fireworks by day)
   zzz(xy) { if (!hab.classList.contains('hidden') && !overlayOpen() && !document.querySelector('body > section.pop:not([hidden])')) zzz(xy); }, // not over a sheet (28-5: nor 설정·꾸미기 코드·도움말, outside #habitat)
   onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; }, // following: 정면 + 전체 보기; away from the start view: 전체 보기
   tag: (text, rec) => { play.tag(text, rec); snap.followed(); }, // ui/play.js: a baby's tag shows its growth; 26-4 사진 모드's 따라가기 shows who
   onTap: (...a) => { if (!snap.on()) play.onTap(...a); }, // 24-1 사진 모드: no hearts or bubbles (a tap still follows the animal)
-  onPropTap: uid => play.onPropTap(uid), onEdit: ok => play.onEdit(ok), onPaint: (c, b) => play.onPaint(c, b), // decorate mode (ui/decor.js)
+  onPropTap: uid => play.onPropTap(uid), onEdit: ok => play.onEdit(ok), onPaint: (c, b) => play.onPaint(c, b), onSweep: u => play.onSweep(u), // decorate mode (ui/decor.js)
   note: (k, n) => { if (!snap.on()) G.note(k, n); }, // 23-2 도전 과제 (not while 사진 모드 can hold the night or the rain)
+  onCarry: () => G.flag('tip_carry'), // inbox 42 E: found it alone: no tip for it
+  cramped(again) { if (again || !G.S.flags.cramped) { G.flag('cramped'); toast('울타리 안이 너무 좁아요', 2200, true); } }, // inbox 42 B: one put outside a fence closed too tight (once)
   train(hab, loop) { const k = 'train:' + hab; if (loop && !G.S.flags[k]) { G.flag(k); toast('고리가 닫혔어요! 태엽 기차가 달려요', 2600, true); } return !!G.S.flags[k]; }, // 28-4: once closed, it runs (a broken track: back and forth)
 };
 
+placeFrom(() => cur ? HAB[cur].name : '지도'); // inbox 49: where the player was, for 문제 알리기 and an error's clues
 const built = {}, lv = {}; // each habitat's scene is built the first time it is entered (and its models fetched then); lv: the 땅 넓히기 step it was built at
 // 22-1: a build hands the board's own trees, bushes, rocks and flowers to the save the first time (and a 땅 넓히기 step's new ones)
 const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r => setTimeout(r, 60)).then(code).then(h => h.startHabitat($('gl'), ui, id, G.S.animals, { level: lv[id], ...opt }))
@@ -94,7 +100,9 @@ async function enter(id) {
     delete built[id]; loadBar(false); if (cur === id) $('back').click(); toast('인터넷에 연결되면 열 수 있어요', 2600); return false;
   }
   // 27-2: the animals and props come out in attach; their shaders are made behind the curtain (the first frame after it froze 2.6 s in Chrome, 3.3 s in WebKit)
-  api.setActive(true); play.attach(api, id); await api.warm(); loadBar(false); return true;
+  api.setActive(true); play.attach(api, id);
+  if (G.S.refit?.includes(id)) G.refit(id, api.decor.refit(G.S.props)); // inbox 42 A: the board grew (rules.js to11): what no longer fits moves
+  await api.warm(); loadBar(false); return true;
 }
 const mapUi = initWorldMap(world, { enter });
 G.on(ev => { if (ev.some(e => e.type === 'unlock' || e.type === 'reset')) mapUi.refresh(); });
@@ -125,7 +133,7 @@ G.on(ev => {
   for (const id of Object.keys(built)) if (lv[id] !== (G.S.expand[id] || 0)) rebuild(id, ev.find(e => e.type === 'expand' && e.habitat === id));
 });
 // 26-3 그래픽 품질 changed: the habitat on screen is built again now (under the cloud), the others when next entered
-const regfx = () => { for (const id of Object.keys(built)) if (id === cur) rebuild(id); else { const p = built[id]; delete built[id]; p.then(a => a.dispose(), () => {}); } };
+const redo = id => { if (id === cur) rebuild(id); else if (built[id]) { const p = built[id]; delete built[id]; p.then(a => a.dispose(), () => {}); } }, regfx = () => Object.keys(built).forEach(redo);
 const level = initLevel(() => api); level.events(offline); // 23-1 정원사 레벨
 const snap = initPhoto(() => api, () => cur); // 24-1 사진 모드
 const habMenu = $('habMenu');
@@ -165,7 +173,9 @@ G.on(() => guard());
 // 20-1 open beta: the intro card once (flags.betaIntro); the feedback form with the game's state filled in (no personal
 // data: the version, where the player is, how many animals are out there, or how many in all on the map); the rating mark once rated
 const intro = $('intro'), fb = $('feedback'), rating = $('rating');
-intro.hidden = !!G.S.flags.betaIntro;
+// inbox 43: once per version on this device, also kept in the prefs (apart from the save and its tab lock); 설정 › 정보 shows it again
+intro.hidden = !!G.S.flags.betaIntro || PREFS.introAt === VERSION;
+if (intro.hidden && !G.S.flags.betaIntro) { G.flag('betaIntro'); G.flag('news', VERSION); }
 // 26-8 새 소식: once after VERSION changes (flags.news = the version last shown); a new player gets the intro card instead. 설정 › 다시 보기
 const news = $('news'); news.querySelector('[data-ver]').textContent = VERSION;
 news.hidden = !intro.hidden || G.S.flags.news === VERSION;
@@ -214,7 +224,7 @@ addEventListener('visibilitychange', () => {
   for (const [h, n] of Object.entries(eggsNow())) if (n > (was[h] || 0)) eggs[h] = n - (was[h] || 0);
   if (ret.hidden) away(eggs);
 });
-$('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); firstDone(); };
+$('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone(); };
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
 initAttend(() => cur, firstDone);
 { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
@@ -237,7 +247,7 @@ const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
   + `<div class="row"><b>내 저장 백업</b><div class="seg"><button data-act="backup"${BK.due() ? ' class="new"' : ''}>백업 · 불러오기</button></div></div>`
   + `<div class="row"><b>처음 안내</b><div class="seg"><button data-act="tips">안내 다시 보기</button></div></div>`
   + (iosSafariTab(BK.DEV) ? `<div class="row"><b>홈 화면 안내</b><div class="seg"><button data-act="home">홈 화면 안내 다시 보기</button></div></div>` : '') // inbox 39
-  + `<div class="row"><b>새 소식</b><div class="seg"><button data-act="news">새 소식 다시 보기</button></div></div>`
+  + `<div class="row"><b>정보</b><div class="seg"><button data-act="intro">베타 안내</button><button data-act="news">새 소식 다시 보기</button></div></div>` // inbox 43
   + `<div class="row"><b>선물 코드</b><div class="seg"><button data-act="code">선물 코드 넣기</button></div></div>` // inbox 41 B
   + (FEEDBACK_URL === 'TODO' ? '' : `<div class="row"><b>의견</b><div class="seg"><button data-act="fb">의견 보내기</button><button data-act="bug">문제 알리기</button></div></div>`); };
 $('prefsBtn').onclick = () => { drawPrefs(); prefs.hidden = false; };
@@ -250,9 +260,10 @@ rows.onclick = e => {
   if (d.act === 'home') { G.flag('homeHintSeen', false); prefs.hidden = true; return toast(cur ? '홈 화면 안내를 다시 보여 줄게요' : '서식지에 들어가면 홈 화면 안내를 다시 보여 줄게요', 2200, true); } // play.js shows it
   if (d.act === 'backup') return BK.open();
   if (d.act === 'news') { prefs.hidden = true; news.hidden = false; return; }
+  if (d.act === 'intro') { prefs.hidden = true; intro.hidden = false; return; }
   if (d.act === 'code') { prefs.hidden = true; return openCode(); }
   if (d.act === 'fb') return void open(fbUrl(), '_blank', 'noopener');
-  if (d.act === 'bug') { const ok = copyNow(reportText(cur ? HAB[cur].name : '지도')); // copied at this tap; the player pastes it in the form
+  if (d.act === 'bug') { const ok = copyNow(reportText()); // copied at this tap; the player pastes it in the form
     ask(ok === false ? '복사하지 못했어요.\n의견 양식에 겪은 일을 적어 주세요.' : '버전·기기·최근 오류를 복사했어요.\n의견 양식의 글칸에 붙여 넣고 겪은 일을 적어 주세요.', '양식 열기', '닫기');
     $('ask').querySelector('[data-ok]').addEventListener('click', () => open(fbUrl(), '_blank', 'noopener')); return; } // opened in the tap itself, not after a promise (popup blockers)
   if (!d.k) return;

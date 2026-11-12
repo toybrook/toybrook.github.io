@@ -3,22 +3,22 @@
 import * as THREE from 'three';
 import { bump } from '../stamps.js';
 import { BOARD0, rectAt, zoneSet, edgeOf, inRect, polyD } from '../zones.js';
+import { UNIT } from '../../game/data.js';
 
-// the first board: 36 wide (x), 58 deep (z). 28-1 땅 넓히기: each step adds a zone, a strip along one side (zones.js); the next
+// the first board: 54 wide (x), 87 deep (z) (inbox 42 A: the old 36 x 58 times S; the stream, pond, path, bridge and paddock
+// stand where they stood times S, as wide as they were, so there is more open ground between them). 28-1 땅 넓히기: each step adds a zone, a strip along one side (zones.js); the next
 // step's zone is built too, under mist (habitat mist.js). R: the board as built, O: the open (unmisted) ground, [x0, x1, z0, z1];
 // Z: the zones built (their hills, pools, rills, spots)
-export const BW0 = 36, BD0 = 58;
+export const S = UNIT, BW0 = 36 * S, BD0 = 58 * S;
 export const openAt = L => rectAt('meadow', L);
 export let R = [...BOARD0], O = [...BOARD0], Z = zoneSet('meadow', 0);
 export const SW = 1.9;         // stream half-width
 
-export const stream = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(15, 0, -29), new THREE.Vector3(9, 0, -17), new THREE.Vector3(-1, 0, -9),
-  new THREE.Vector3(4, 0, 2), new THREE.Vector3(-4, 0, 13), new THREE.Vector3(-13, 0, 29)
-]);
+const V = (x, z) => new THREE.Vector3(x * S, 0, z * S); // a point in the old board's metres
+export const stream = new THREE.CatmullRomCurve3([V(15, -29), V(9, -17), V(-1, -9), V(4, 2), V(-4, 13), V(-13, 29)]);
 export const sPts0 = stream.getSpacedPoints(300); // the stream on the first board (props.js plants it as before)
 export let sPts = sPts0; // ... and carried on straight to the board's edge, front and back (setLevel)
-export const pond = { x: 9, z: 13, r: 4.6 };
+export const pond = { x: 9 * S, z: 13 * S, r: 4.6 };
 export const bridgeT = 0.47;
 export const bP = stream.getPointAt(bridgeT), bTan = stream.getTangentAt(bridgeT);
 export const bN = new THREE.Vector3(-bTan.z, 0, bTan.x).normalize();
@@ -29,16 +29,12 @@ export const deckY = l => bridgeArch(l / BL) + 0.08;
 // the deck to the other (horse.js 'cross'); the stream band in between is not walkable, so this is the only way.
 export const BRIDGE_END = 4.4;
 export const bridgeEnds = [-1, 1].map(s => bP.clone().addScaledVector(bN, s * BRIDGE_END));
-// plank top under (x, z), or -Infinity off the deck (it is 2.3 wide)
+// plank top under (x, z), or -Infinity off the deck (it is 2.9 wide: inbox 42 C2)
 export function deckAt(x, z) {
   const dx = x - bP.x, dz = z - bP.z, l = dx * bN.x + dz * bN.z, w = dx * bN.z - dz * bN.x;
-  return Math.abs(l) <= BL / 2 && Math.abs(w) < 1.15 ? deckY(l) : -Infinity;
+  return Math.abs(l) <= BL / 2 && Math.abs(w) < 1.45 ? deckY(l) : -Infinity;
 }
-export const path = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(-8.0, 0, -16.8), new THREE.Vector3(-7.8, 0, -11),
-  bP.clone().addScaledVector(bN, -4.2), bP.clone().addScaledVector(bN, 4.2),
-  new THREE.Vector3(6, 0, 6), new THREE.Vector3(3, 0, 20), new THREE.Vector3(5, 0, 29)
-]);
+export const path = new THREE.CatmullRomCurve3([V(-8.0, -16.8), V(-7.8, -11), bP.clone().addScaledVector(bN, -4.2), bP.clone().addScaledVector(bN, 4.2), V(6, 6), V(3, 20), V(5, 29)]);
 export const pPts0 = path.getSpacedPoints(300);
 export let pPts = pPts0;
 // points on from p along the unit vector tn, every 0.25 for len
@@ -50,14 +46,15 @@ export function streamLine(N) {
     ...Array.from({ length: N + 1 }, (_, i) => ({ p: stream.getPointAt(i / N), tn: stream.getTangentAt(i / N) })),
     ...straight(b, tb, (R[3] - b.z) / tb.z).map(p => ({ p, tn: tb }))];
 }
-export const paddock = { x: -7.5, z: -18, w: 14, d: 7 }; // widened right in step 12: the barn and hay fill the left half
+export const paddock = { x: -14.25, z: -29, w: 20, d: 11, gx: -8 * S }; // widened right in step 12: the barn and hay fill the left half (inbox 42 C2: 14 x 7 -> 20 x 11 for the barn x2, out left and back; the front and right sides stay, the gate gx where the path starts)
 // Fence lines [x1, z1, x2, z2]: the paddock (gate gap of 2.6 in the middle of its front side) and two
 // loose stretches. props.js builds posts and rails from these; walkable() keeps animals off them.
 export const GATE = 1.3;
 export const fences = (() => {
   const { x, z, w, d } = paddock, x1 = x - w / 2, x2 = x + w / 2, z1 = z - d / 2, z2 = z + d / 2;
-  return [[x1, z1, x2, z1], [x1, z1, x1, z2], [x2, z1, x2, z2], [x1, z2, x - GATE, z2], [x + GATE, z2, x2, z2],
-    [9.5, 27.3, 17, 25.6], [-17, -1.2, -12.6, 0.6]];
+  const gx = paddock.gx ?? x;
+  return [[x1, z1, x2, z1], [x1, z1, x1, z2], [x2, z1, x2, z2], [x1, z2, gx - GATE, z2], [gx + GATE, z2, x2, z2],
+    ...[[9.5, 27.3, 17, 25.6], [-17, -1.2, -12.6, 0.6]].map(([a, b, c, e]) => { const dx = (a + c) / 2 * (S - 1), dz = (b + e) / 2 * (S - 1); return [a + dx, b + dz, c + dx, e + dz]; })]; // moved, as long
 })();
 const segDist = (x, z, [x1, z1, x2, z2]) => {
   const dx = x2 - x1, dz = z2 - z1, t = THREE.MathUtils.clamp(((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz), 0, 1);
@@ -68,7 +65,7 @@ export function dist2D(pts, x, z) { let m = 1e9; for (const p of pts) { const d 
 const sm = t => { t = THREE.MathUtils.clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 
 // Raised back shelf (forest) with a short rounded cliff; the stream falls off it.
-export const PLAT_H = 1.7, CLIFF_Z = -23.6;
+export const PLAT_H = 3, CLIFF_Z = -23.6 * S; // inbox 42 C2: the back shelf 1.7 -> 3 m (0.9 H)
 export const plateau = z => PLAT_H * sm((CLIFF_Z - z) / 1.3);
 // Water surface height along the stream/pond. Rest level -0.55, lifted on the shelf.
 export const WATER_Y = -0.55;
@@ -118,32 +115,18 @@ export const freeOf = (b, sp = sPts, pp = pPts, zones = true) => (x, z, r) => {
 export const freeBase = freeOf(BOARD0, sPts0, pPts0, false); // the first board, as it was (props.js)
 export let free = freeOf(O); // the open ground now
 
-// Horses are billboards 2.9 wide that tilt back with the camera (which always looks from the +z side, at
-// 26-64 deg elevation). So beside a building they keep their half-width HR, and in front of one they need a
-// deeper gap, or the top of the sprite sinks into the wall behind it. box: [half-width x, half-depth z, front gap].
-export const HR = 1.5;
-const inBox = (x, z, { x: bx, z: bz, box: [hw, hd, front] }) => Math.abs(x - bx) < hw + HR && z > bz - hd - 0.4 && z < bz + hd + front;
-
-// ...and the same for fence rails behind a horse (0.85 high): none may pass through the strip 0.2-1.3 behind it.
-const FENCE_BACK = 1.3;
-function railBehind(x, z, [x1, z1, x2, z2]) { // Liang-Barsky clip of the fence segment against that strip
-  let t0 = 0, t1 = 1; const dx = x2 - x1, dz = z2 - z1;
-  for (const [p, q] of [[-dx, x1 - (x - HR)], [dx, x + HR - x1], [-dz, z1 - (z - FENCE_BACK)], [dz, z - 0.2 - z1]]) {
-    if (p === 0) { if (q < 0) return false; continue; }
-    const r = q / p; if (p < 0) t0 = Math.max(t0, r); else t1 = Math.min(t1, r);
-    if (t0 > t1) return false;
-  }
-  return true;
-}
+// a building's footprint (box: [half-width x, half-depth z]) and 0.6 round it, as fences and props (inbox 42 B: no more the billboard
+// horses' wide sides and deep front, which shut the paddock's gate from inside)
+const inBox = (x, z, { x: bx, z: bz, box: [hw, hd] }) => Math.abs(x - bx) < hw + 0.6 && Math.abs(z - bz) < hd + 0.6;
 
 export function walkable(x, z) {
-  if (x < O[0] + 2.2 || x > O[1] - 2.2 || z < -22.5 || z > O[3] - 2.5) return false;
+  if (x < O[0] + 2.2 || x > O[1] - 2.2 || z < CLIFF_Z + 1.1 || z > O[3] - 2.5) return false;
   if (dist2D(sPts, x, z) < SW + 2.2) return false;
   if (Z.wd(x, z) < 1.0) return false; // 28-1: a zone's pool or rill
   if (Math.hypot(x - pond.x, z - pond.z) < pond.r + 2.0) return false;
   for (const o of occupied) if (o.box ? inBox(x, z, o) : o.r > 0.9 && Math.hypot(o.x - x, o.z - z) < o.r + 0.4) return false;
   for (const d of decor) if (!d.water && !d.open && (!d.nat || d.r > 0.9) && Math.hypot(d.x - x, d.z - z) < d.r + (d.nat ? 0.4 : 0.6)) return false; // open: walked over or under; nat (22-1): as occupied
-  for (const f of fences) if (segDist(x, z, f) < 0.6 || railBehind(x, z, f)) return false;
+  for (const f of fences) if (segDist(x, z, f) < 0.6) return false; // inbox 42 B: no more kept off the strip in front of a rail (the billboard horses'): the gate is open
   return true;
 }
 
@@ -156,16 +139,14 @@ export const decor = [];
 export function placeable(x, z, r, water, dry) { // dry (28-4, rail pieces and the rail bridge's ends): dry open ground, not kept off the stream as far as walkers are
   const ok = water ? Math.hypot(x - pond.x, z - pond.z) < pond.r - r - 0.4
     : free(x, z, r) && (dry || walkable(x, z)) && fences.every(f => segDist(x, z, f) > r + 0.4) && bridgeEnds.every(b => Math.hypot(b.x - x, b.z - z) > r + 1.6);
-  return ok && decor.every(d => Math.hypot(d.x - x, d.z - z) > (d.nat && d.open ? 0.4 : d.r) + r + 0.1); // a wildflower patch: only its middle
+  return ok && decor.every(d => d.nat && d.open || Math.hypot(d.x - x, d.z - z) > d.r + r + 0.1); // inbox 42 C2: a wildflower patch never in the way (habitat.js hides one under a prop)
 }
 
-export const inPaddock = (x, z) => Math.abs(x - paddock.x) < paddock.w / 2 && Math.abs(z - paddock.z) < paddock.d / 2;
 
 // A hop is a straight line: every point on it must be walkable, so animals go round fences, water and
 // big props instead of jumping through them (0.5 steps < 2 x the 0.6 fence margin, so no fence slips between).
-// The paddock keeps whoever is in it: no hop starts on one side of its fence and ends on the other.
+// inbox 42 B: the paddock no longer keeps whoever is in it: they come and go by the gate (walk.js finds the way round, land.js)
 export function pathClear(x1, z1, x2, z2) {
-  if (inPaddock(x1, z1) !== inPaddock(x2, z2)) return false;
   const n = Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 0.5);
   for (let i = 1; i <= n; i++) if (!walkable(x1 + (x2 - x1) * i / n, z1 + (z2 - z1) * i / n)) return false;
   return true;

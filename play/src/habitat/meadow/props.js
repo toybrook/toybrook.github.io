@@ -1,7 +1,7 @@
 // Meadow props, all from the shared toy kit so they share one lighting/gloss look.
 // Repeated things are InstancedMesh (one draw call per kind) to keep phones at 60fps.
 import * as THREE from 'three';
-import { BW0 as BW, BD0 as BD, O, Z, SW, stream, pond, bridgeT, bP, bN, BL, bridgeArch as arch, paddock, fences, heightAt, occupied, freeBase as free, free as freeOpen, rand, dist2D, sPts0 as sPts, CLIFF_Z, WATER_Y } from './layout.js';
+import { S, BW0 as BW, BD0 as BD, O, Z, SW, stream, pond, bridgeT, bP, bN, BL, bridgeArch as arch, paddock, fences, heightAt, occupied, freeBase as free, free as freeOpen, rand, dist2D, sPts0 as sPts, CLIFF_Z, WATER_Y } from './layout.js';
 import { ringIn } from '../zones.js';
 import { zoneProps } from '../zoneprops.js';
 import { toyMat, roundedBox, merge, lathe, addSway, instanced, windTime, nightGlow } from '../toyKit.js';
@@ -10,11 +10,16 @@ import { G as PLAY, newPlay, propTick } from '../../animals/play.js';
 import { playing } from '../../ui/sound.js';
 import { PIECES, ARCH } from '../train.js';
 import { shape } from '../stamps.js';
-import { PROPS } from '../../game/data.js';
+import { PROPS, NAT_K } from '../../game/data.js';
 
 const pickOf = arr => arr[Math.floor(rand() * arr.length)];
+// inbox 42 A: the board spread by S (layout.js): spots below in the old board's metres times S, counts by its area
+const n2 = n => Math.round(n * S * S);
 const jitter = (hex, amt) => { const c = new THREE.Color(hex), hsl = {}; c.getHSL(hsl); return c.setHSL(hsl.h + (rand() - 0.5) * amt * 0.1, hsl.s, THREE.MathUtils.clamp(hsl.l + (rand() - 0.5) * amt, 0, 1)).getHex(); };
 
+// inbox 42 D: under a tree of scale s (tree below; a moved one, habitat.js): the leaves' underside 1.66 s up, the trunk 0.62 s round at
+// its foot, the crown out to 1.95 s (blobCluster: its middle 2.9 s up, 1.55 s round, 0.8 of that high)
+export const treeCover = s => ({ y: 1.66 * s, core: 0.62 * s, r: 1.95 * s });
 export const emptyL = () => ({ canopy: [], trunk: [], pine: [], snow: [], rock: [], pebble: [], post: [], rail: [], grass: [], petal: [], centre: [], stem: [], head: [] });
 export const flowerPal = [['#ffffff', '#ffcf33'], ['#ffffff', '#ffcf33'], ['#b9a0f2', '#ffd447'], ['#f7a8c4', '#ffe066'], ['#ffd447', '#f08a24'], ['#9d86e8', '#fff1a8']];
 // 22-1: the trees, bushes, rocks and wildflower clusters the board came with are props now (S.props nat: 1; habitat/nature.js
@@ -40,32 +45,32 @@ export function buildProps(scene) {
   const { tree, pine, rock, tuft } = kit(L, { rand, heightAt, occupied }), nk = kit(N.Ls, { rand, heightAt, occupied });
 
   // back shelf forest: mostly pines with a few round trees
-  for (let i = 0; i < 90; i++) {
-    const x = -17 + rand() * 34, z = -28.4 + rand() * 3.6;
+  for (let i = 0; i < n2(90); i++) {
+    const x = (-17 + rand() * 34) * S, z = (-28.4 + rand() * 3.6) * S;
     if (z > CLIFF_Z - 1.4 || !free(x, z, 1.0)) continue;
     rand() < 0.7 ? pine(x, z, 0.85 + rand() * 0.45) : tree(x, z, 0.85 + rand() * 0.3);
   }
   [[-14.5, -6], [-13.5, 4], [14, -7], [15.5, 3], [-14.5, 20], [14.5, 25], [11.5, -20.5], [-2.5, 24.5], [-15.5, 12], [16, 15], [3.5, -15]]
-    .forEach(([x, z]) => { if (free(x, z, 1.5)) N.add('tree', nk.tree, x, z, 1 + rand() * 0.3); });
+    .forEach(([x, z]) => { x *= S; z *= S; if (free(x, z, 1.5)) N.add('tree', nk.tree, x, z, 1 + rand() * 0.3); });
   [[-16, -12], [-3, -20], [16.2, -1], [-16.5, 27], [-6, 27.2], [16.5, 9], [-16.2, 1], [1, 11.5], [12.5, -14]]
-    .forEach(([x, z]) => { if (free(x, z, 0.9)) N.add('bush', nk.bush, x, z, 0.9 + rand() * 0.4); });
+    .forEach(([x, z]) => { x *= S; z *= S; if (free(x, z, 0.9)) N.add('bush', nk.bush, x, z, 0.9 + rand() * 0.4); });
 
   const sideOf = (t, side, off) => { const p = stream.getPointAt(t), tn = stream.getTangentAt(t); return { x: p.x - tn.z * side * off, z: p.z + tn.x * side * off }; };
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < Math.round(30 * S); i++) {
     const t = rand(); if (Math.abs(t - bridgeT) < 0.05) continue;
     const q = sideOf(t, rand() < 0.5 ? -1 : 1, SW + 0.35 + rand() * 0.5);
     if (Math.abs(q.x) < BW / 2 - 1 && Math.abs(q.z) < BD / 2 - 1) rock(q.x, q.z, 0.35 + rand() * 0.45);
   }
   for (let i = 0; i < 10; i++) { const a = rand() * 6.28, r = pond.r + 0.35 + rand() * 0.3; rock(pond.x + Math.cos(a) * r, pond.z + Math.sin(a) * r, 0.3 + rand() * 0.35); }
-  for (let i = 0; i < 7; i++) { const x = -15 + rand() * 30, z = -20 + rand() * 46; if (free(x, z, 1)) N.add('rock', nk.rock, x, z, 0.55 + rand() * 0.5); }
+  for (let i = 0; i < n2(7); i++) { const x = (-15 + rand() * 30) * S, z = (-20 + rand() * 46) * S; if (free(x, z, 1)) N.add('rock', nk.rock, x, z, 0.55 + rand() * 0.5); }
   // rock ledge along the cliff, bigger stones flanking the waterfall
-  for (let x = -17.2; x < 17.4; x += 0.9 + rand() * 0.6) {
+  for (let x = -17.2 * S; x < 17.4 * S; x += 0.9 + rand() * 0.6) {
     const z = CLIFF_Z - 0.55 + (rand() - 0.5) * 0.7, ds = dist2D(sPts, x, z);
     if (ds < SW - 0.1) continue;
     rock(x, z, ds < SW + 1.5 ? 0.85 + rand() * 0.35 : 0.5 + rand() * 0.45);
   }
   // pebbles on the stream and pond bed (seen through the water)
-  for (let i = 0; i < 170; i++) {
+  for (let i = 0; i < Math.round(170 * S); i++) {
     const t = rand(), q = sideOf(t, rand() < 0.5 ? -1 : 1, rand() * (SW - 0.5));
     if (Math.abs(q.x) > BW / 2 - 0.8 || Math.abs(q.z) > BD / 2 - 0.8) continue;
     L.pebble.push({ x: q.x, y: heightAt(q.x, q.z) + 0.02, z: q.z, s: [0.16 + rand() * 0.16, 0.08, 0.13 + rand() * 0.12], ry: rand() * 6, c: jitter(pickOf(['#c9b991', '#a8a39a', '#b7c2bc', '#d8cfb8']), 0.08) });
@@ -78,10 +83,10 @@ export function buildProps(scene) {
     let prev = null;
     for (let i = 0; i <= n; i++) {
       const t = i / n, x = x1 + (x2 - x1) * t, z = z1 + (z2 - z1) * t, y = heightAt(x, z);
-      L.post.push({ x, y: y - 0.08, z, s: 1, ry, c: jitter('#c88a4b', 0.04) }); occupied.push({ x, z, r: 0.35 });
+      L.post.push({ x, y: y - 0.08, z, s: [1.15, 1.42, 1.15], ry, c: jitter('#c88a4b', 0.04) }); occupied.push({ x, z, r: 0.35 }); // inbox 42 C2: 1.05 -> 1.5 m (0.44 H)
       if (prev) {
         const span = Math.hypot(x - prev.x, z - prev.z), rz = Math.atan2(y - prev.y, span);
-        for (const yy of [0.42, 0.74]) L.rail.push({ x: (x + prev.x) / 2, y: (y + prev.y) / 2 + yy, z: (z + prev.z) / 2, s: [span, 1, 1], ry, rz, c: jitter('#d0955a', 0.04) });
+        for (const yy of [0.6, 1.05]) L.rail.push({ x: (x + prev.x) / 2, y: (y + prev.y) / 2 + yy, z: (z + prev.z) / 2, s: [span, 1.2, 1.2], ry, rz, c: jitter('#d0955a', 0.04) });
       }
       prev = { x, y, z };
     }
@@ -94,12 +99,12 @@ export function buildProps(scene) {
     const at = (lx, ly, lz) => ({ x: bP.x + X.x * lx + Z.x * lz, y: ly, z: bP.z + X.z * lx + Z.z * lz });
     const planks = [];
     for (let i = 0; i < 11; i++) { const u = i / 10 - 0.5, p = at(u * BL, arch(u), 0); planks.push({ ...p, ry: th, rz: -Math.atan(-8 * u * 0.62 / BL), c: jitter('#c98c52', 0.06) }); }
-    scene.add(instanced(roundedBox(0.58, 0.16, 2.3, 0.06, 2), toyMat('#ffffff', { roughness: 0.5 }), planks));
+    scene.add(instanced(roundedBox(0.58, 0.16, 2.9, 0.06, 2), toyMat('#ffffff', { roughness: 0.5 }), planks));
     const railGeos = [];
-    for (const lz of [-1.05, 1.05]) {
-      const pts = []; for (let i = 0; i <= 12; i++) { const u = i / 12 - 0.5, p = at(u * BL * 0.88, arch(u * 0.88) + 0.78, lz); pts.push(new THREE.Vector3(p.x, p.y, p.z)); }
+    for (const lz of [-1.35, 1.35]) { // inbox 42 C2: 2.3 -> 2.9 wide (two horses side by side: 2 x 1.06 m), the rails 0.78 -> 1.0 high
+      const pts = []; for (let i = 0; i <= 12; i++) { const u = i / 12 - 0.5, p = at(u * BL * 0.88, arch(u * 0.88) + 1.0, lz); pts.push(new THREE.Vector3(p.x, p.y, p.z)); }
       railGeos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.08, 8, false));
-      for (let i = 0; i < 5; i++) { const u = (i / 4 - 0.5) * 0.88, p = at(u * BL, arch(u) - 0.05, lz); L.post.push({ ...p, s: [0.75, 0.82, 0.75], ry: th, c: '#c88a4b' }); }
+      for (let i = 0; i < 5; i++) { const u = (i / 4 - 0.5) * 0.88, p = at(u * BL, arch(u) - 0.05, lz); L.post.push({ ...p, s: [0.8, 1.02, 0.8], ry: th, c: '#c88a4b' }); }
     }
     const rails = new THREE.Mesh(merge(railGeos), toyMat('#c88a4b', { roughness: 0.5 })); rails.castShadow = true; scene.add(rails);
   }
@@ -120,14 +125,14 @@ export function buildProps(scene) {
     add(new THREE.ExtrudeGeometry(door, { depth: 0.08, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2, curveSegments: 12 }), wood, 0, 0.02, 1.68);
     add(new THREE.TorusGeometry(0.34, 0.08, 8, 20), wood, 0, 3.05, 1.62);
     add(new THREE.CircleGeometry(0.3, 20), toyMat('#5c3d2a', { roughness: 0.3 }), 0, 3.05, 1.6);
-    const bx = paddock.x - 4.1, bz = paddock.z - 0.9;
-    g.position.set(bx, heightAt(bx, bz), bz); scene.add(g);
+    const bx = paddock.x - 4.4, bz = paddock.z - 0.5;
+    g.scale.setScalar(2); g.position.set(bx, heightAt(bx, bz), bz); scene.add(g); // inbox 42 C2: twice as big (ridge 8.2 m, 2.4 H; was 0.9 H)
     // barn (roof overhang 2.45 x 2.05, eaves ~2.3 high) and hay stack (1.4 x 2.6, 1.85 high): circles for
     // props and contact shadow, boxes for the horses (see walkable)
-    const hay = lathe([[0, -0.55], [0.5, -0.55], [0.6, -0.45], [0.62, -0.3], [0.62, 0.3], [0.6, 0.45], [0.5, 0.55], [0, 0.55]], 16); hay.rotateZ(Math.PI / 2);
-    const hayM = instanced(hay, toyMat('#ffffff', { roughness: 0.65 }), [[bx + 3.2, bz + 1.0, 0.3], [bx + 3.5, bz - 0.4, -0.2], [bx + 3.3, bz + 0.3, 0.1, 1.15]].map(([x, z, ry, lift]) => ({ x, y: heightAt(x, z) + 0.6 + (lift || 0), z, ry, c: '#e8c35a' })));
+    const hay = lathe([[0, -0.55], [0.5, -0.55], [0.6, -0.45], [0.62, -0.3], [0.62, 0.3], [0.6, 0.45], [0.5, 0.55], [0, 0.55]], 16); hay.rotateZ(Math.PI / 2); hay.scale(1.3, 1.3, 1.3);
+    const hayM = instanced(hay, toyMat('#ffffff', { roughness: 0.65 }), [[bx + 6.3, bz + 1.4, 0.3], [bx + 6.7, bz - 0.4, -0.2], [bx + 6.5, bz + 0.5, 0.1, 1.5]].map(([x, z, ry, lift]) => ({ x, y: heightAt(x, z) + 0.78 + (lift || 0), z, ry, c: '#e8c35a' })));
     scene.add(hayM);
-    occupied.push({ x: bx, z: bz, r: 2.9, h: 4.5, box: [2.45, 2.05, 2.6], fade: [[g]] }, { x: bx + 3.35, z: bz + 0.3, r: 1.2, h: 2.1, box: [0.6, 1.3, 2.0], fade: [[hayM, 0, 3]] });
+    occupied.push({ x: bx, z: bz, r: 5.8, h: 9, box: [4.9, 4.1, 5.2], cover: { y: 9, core: 5.8, r: Infinity, side: true }, fade: [[g]] }, { x: bx + 6.5, z: bz + 0.5, r: 1.6, h: 2.8, box: [0.8, 1.7, 2.6], fade: [[hayM, 0, 3]] });
   }
 
   // ---------- pond plants ----------
@@ -143,7 +148,7 @@ export function buildProps(scene) {
 
   // ---------- front-left corner (left of the stream): fallen logs, mushrooms, bushes ----------
   {
-    const X0 = -16.6, X1 = -8.5, Z0 = 12.5, Z1 = 26.8;
+    const X0 = -16.6 * S, X1 = -8.5 * S, Z0 = 12.5 * S, Z1 = 26.8 * S;
     const spot = (r, x0 = X0, x1 = X1, z0 = Z0, z1 = Z1) => { for (let k = 0; k < 60; k++) { const x = x0 + rand() * (x1 - x0), z = z0 + rand() * (z1 - z0); if (free(x, z, r)) return [x, z]; } return null; };
     const logs = [], stems = [], caps = [], spots = [];
     const mushrooms = (x, z) => {
@@ -184,12 +189,12 @@ export function buildProps(scene) {
   }
 
   // ---------- flowers + grass ----------
-  for (let cl = 0; cl < 40; cl++) {
-    const cx = -16.5 + rand() * 33, cz = -22 + rand() * 49; if (!free(cx, cz, 0.4)) continue;
+  for (let cl = 0; cl < n2(40); cl++) {
+    const cx = (-16.5 + rand() * 33) * S, cz = (-22 + rand() * 49) * S; if (!free(cx, cz, 0.4)) continue;
     const pi = Math.floor(rand() * flowerPal.length); N.flowers(cx, cz, pi); flowerCluster(N.Ls, cx, cz, flowerPal[pi], free, rand, jitter);
   }
-  N.bare(() => { for (let i = 0; i < 9000 && L.grass.length < 2200; i++) {
-    const x = -17.6 + rand() * 35.2, z = -28.6 + rand() * 57.2;
+  N.bare(() => { for (let i = 0; i < n2(9000) && L.grass.length < n2(2200); i++) {
+    const x = (-17.6 + rand() * 35.2) * S, z = (-28.6 + rand() * 57.2) * S;
     if (Math.abs(x) > BW / 2 - 0.4 || Math.abs(z) > BD / 2 - 0.4) continue;
     const ds = dist2D(sPts, x, z), dp = Math.hypot(x - pond.x, z - pond.z);
     const bank = (ds > SW - 0.1 && ds < SW + 0.7) || (dp > pond.r - 0.1 && dp < pond.r + 0.6);
@@ -226,13 +231,16 @@ export function kit(L, { rand, heightAt, occupied }) {
     }
     for (let i = 0; i < 3; i++) { const a = rand() * 6.28; L.canopy.push({ x: cx + Math.cos(a) * R * 0.3, y: cy + R * 0.7, z: cz + Math.sin(a) * R * 0.3, s: R * (0.4 + rand() * 0.1), c: jitter(base, 0.05) }); }
   }
+  // inbox 42 D: the room under a tree's crown (walk.js shelter): y its lowest leaves, core the trunk, r how far the crown reaches
   function tree(x, z, s, n) { // n: the crown's blobs round the middle one (9; inbox 34: the small orchard trees 5)
+    s *= NAT_K.tree; // inbox 42 C2: everything below (crown, room under it, footprint) as big
     const h = heightAt(x, z), t = L.trunk.length, c = L.canopy.length;
     L.trunk.push({ x, y: h - 0.05, z, s: [s, s, s], ry: rand() * 6, c: jitter('#9a6438', 0.05) });
     blobCluster(x, h + 2.9 * s, z, 1.55 * s, pickOf(leafPal), n);
-    occupied.push({ x, z, r: 1.7 * s, h: 4.8 * s, fade: [['trunk', t, 1], ['canopy', c, L.canopy.length - c]] }); // h: how tall (the camera keeps out, habitat.js guard); fade: its instances (see-through when it hides the followed animal)
+    occupied.push({ x, z, r: 1.7 * s, h: 4.8 * s, cover: treeCover(s), fade: [['trunk', t, 1], ['canopy', c, L.canopy.length - c]] }); // h: how tall (the camera keeps out, habitat.js guard); fade: its instances (see-through when it hides the followed animal)
   }
   function pine(x, z, s) {
+    s *= NAT_K.pine;
     const h = heightAt(x, z);
     L.trunk.push({ x, y: h - 0.05, z, s: [s * 0.7, s * 0.5, s * 0.7], ry: rand() * 6, c: '#8a5a34' });
     L.pine.push({ x, y: h, z, s: [s, s * (0.95 + rand() * 0.2), s], ry: rand() * 6, c: jitter('#4f9046', 0.05) });
@@ -240,16 +248,18 @@ export function kit(L, { rand, heightAt, occupied }) {
   }
   // 25-1 the snow's pine: the same tiers in a deeper green, each tier's top under a cap of snow (L.snow, the same transform)
   function snowpine(x, z, s) {
+    s *= NAT_K.pine;
     const h = heightAt(x, z), ry = rand() * 6, sy = s * (0.95 + rand() * 0.2);
     L.trunk.push({ x, y: h - 0.05, z, s: [s * 0.7, s * 0.5, s * 0.7], ry, c: '#7a5232' });
     L.pine.push({ x, y: h, z, s: [s, sy, s], ry, c: jitter('#3d7448', 0.05) });
     L.snow.push({ x, y: h, z, s: [s, sy, s], ry, c: '#f6f9fc' });
     occupied.push({ x, z, r: 1.3 * s, h: 3.6 * s, fade: [['trunk', L.trunk.length - 1, 1], ['pine', L.pine.length - 1, 1], ['snow', L.snow.length - 1, 1]] });
   }
-  function bush(x, z, s) { const h = heightAt(x, z); const c = L.canopy.length; blobCluster(x, h + 0.35 * s, z, 0.75 * s, pickOf(leafPal), 6); occupied.push({ x, z, r: 0.9 * s, h: 1.25 * s, fade: [['canopy', c, L.canopy.length - c]] }); } // h: its top (the guard's default 1.2 let a camera sit just over a big one)
+  function bush(x, z, s) { s *= NAT_K.bush; const h = heightAt(x, z); const c = L.canopy.length; blobCluster(x, h + 0.35 * s, z, 0.75 * s, pickOf(leafPal), 6); occupied.push({ x, z, r: 0.9 * s, h: 1.25 * s, fade: [['canopy', c, L.canopy.length - c]] }); } // h: its top (the guard's default 1.2 let a camera sit just over a big one)
 
   const rockPal = ['#bdb6a9', '#aaa499', '#c9c2b4', '#a09a8f'];
   function rock(x, z, s, y) {
+    s *= NAT_K.rock;
     L.rock.push({ x, y: (y ?? heightAt(x, z)) + s * 0.12, z, s: [s * (1 + rand() * 0.3), s * (0.55 + rand() * 0.25), s * (0.85 + rand() * 0.2)], ry: rand() * 6, c: jitter(pickOf(rockPal), 0.05) });
     occupied.push({ x, z, r: s * 1.05, h: s, fade: [['rock', L.rock.length - 1, 1]] });
   }
@@ -448,9 +458,10 @@ export function decorModel(id) {
     part(g, roundedBox(1.6, 0.34, 0.08, 0.04), '#b07a48', 0, 0.78, -0.2, { rx: -0.12 });
     for (const x of [-0.65, 0.65]) for (const z of [-0.16, 0.16]) part(g, roundedBox(0.1, 0.42, 0.1, 0.03), '#7a5232', x, 0.21, z);
   } else if (id === 'fence') { // a short length of the meadow's fence: three round-topped posts, two rails
-    const post = lathe([[0.12, 0], [0.12, 0.8], [0.1, 0.9], [0.06, 0.95], [0, 0.96]], 10), rail = new THREE.CapsuleGeometry(0.065, 1.7, 3, 8);
+    // inbox 42 C2: taller (0.96 -> 1.34 m, 0.4 H), the length kept so a 0.71 fence line still meets end to end
+    const post = lathe([[0.12, 0], [0.12, 1.12], [0.1, 1.25], [0.06, 1.33], [0, 1.34]], 10), rail = new THREE.CapsuleGeometry(0.065, 1.7, 3, 8);
     for (const x of [-0.85, 0, 0.85]) part(g, post, '#c88a4b', x, 0, 0);
-    for (const y of [0.42, 0.72]) part(g, rail, '#d0955a', 0, y, 0.04, { rz: Math.PI / 2 });
+    for (const y of [0.58, 1.02]) part(g, rail, '#d0955a', 0, y, 0.04, { rz: Math.PI / 2 });
   } else if (id === 'path') { // flat stepping stones in a gentle bend (walked over: open)
     const stone = lathe([[0, 0], [0.26, 0], [0.3, 0.025], [0.29, 0.055], [0.22, 0.07], [0, 0.075]], 16);
     [[-0.78, 0.12, 1, 0.85], [-0.28, -0.08, 0.9, 1], [0.24, 0.1, 1.05, 0.9], [0.76, -0.06, 0.85, 0.95]].forEach(([x, z, sx, sz], i) =>
@@ -620,15 +631,16 @@ export function decorModel(id) {
     part(g, roundedBox(0.03, 0.12, 0.16, 0.01), '#ffd54a', 0.19, 1.12, -0.03);
   // 22-2 큰 소품
   } else if (id === 'barn') { // a red barn: a gabled body, a brown roof, a big cream-framed door, a round loft window; animals shelter by it in the rain
+    // inbox 42 C2: walls and gable taller (1.45/2.25 -> 1.85/2.95) so k 2.6 reaches 2.5H on a smaller footprint (k 3.3 left the meadow ~4 spots)
     part(g, roundedBox(3.0, 0.12, 2.6, 0.05), '#c9a47a', 0, 0.06, 0);
-    const body = new THREE.ExtrudeGeometry(new THREE.Shape([[-1.25, 0], [1.25, 0], [1.25, 1.45], [0, 2.25], [-1.25, 1.45]].map(([x, y]) => new THREE.Vector2(x, y))),
+    const body = new THREE.ExtrudeGeometry(new THREE.Shape([[-1.25, 0], [1.25, 0], [1.25, 1.85], [0, 2.95], [-1.25, 1.85]].map(([x, y]) => new THREE.Vector2(x, y))),
       { depth: 1.9, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 3 }); body.translate(0, 0, -0.95);
     part(g, body, '#e0604a', 0, 0.12, 0);
-    for (const s of [-1, 1]) part(g, roundedBox(1.86, 0.14, 2.4, 0.05), '#8a5a3a', s * 0.775, 2.04, 0, { rz: -s * 0.584 });
-    part(g, new THREE.CapsuleGeometry(0.09, 2.3, 3, 8), '#fff1d6', 0, 2.5, 0, { rx: Math.PI / 2 });
-    part(g, roundedBox(1.0, 1.15, 0.08, 0.03), '#fff1d6', 0, 0.695, 1.04);
-    part(g, roundedBox(0.82, 1.0, 0.08, 0.03), '#b8432f', 0, 0.62, 1.07);
-    part(g, new THREE.CircleGeometry(0.22, 20), '#fff1d6', 0, 1.9, 1.035); part(g, new THREE.CircleGeometry(0.15, 20), '#5a3a26', 0, 1.9, 1.04);
+    for (const s of [-1, 1]) part(g, roundedBox(2.04, 0.14, 2.4, 0.05), '#8a5a3a', s * 0.78, 2.57, 0, { rz: -s * 0.73 });
+    part(g, new THREE.CapsuleGeometry(0.09, 2.3, 3, 8), '#fff1d6', 0, 3.2, 0, { rx: Math.PI / 2 });
+    part(g, roundedBox(1.0, 1.4, 0.08, 0.03), '#fff1d6', 0, 0.82, 1.04);
+    part(g, roundedBox(0.82, 1.25, 0.08, 0.03), '#b8432f', 0, 0.745, 1.07);
+    part(g, new THREE.CircleGeometry(0.22, 20), '#fff1d6', 0, 2.45, 1.035); part(g, new THREE.CircleGeometry(0.15, 20), '#5a3a26', 0, 2.45, 1.04);
   } else if (id === 'windmill') { // a round cream tower under a red cap; four sails turn slowly
     part(g, new THREE.CylinderGeometry(0.95, 1.0, 0.1, 24), '#c9a47a', 0, 0.05, 0);
     part(g, lathe([[0, 0], [0.78, 0], [0.74, 0.6], [0.62, 1.8], [0.55, 2.4], [0.3, 2.42], [0, 2.42]], 24), '#fff1d6', 0, 0.1, 0);
@@ -730,6 +742,133 @@ export function decorModel(id) {
     part(g, lathe([[0, 0], [2.15, 0], [2.2, 0.06], [1.9, 0.25], [1.2, 0.62], [0.5, 0.88], [0, 0.95]], 8), '#4fa3a8', 0, 2.13, 0);
     part(g, new THREE.TorusGeometry(2.05, 0.06, 6, 8), '#fff1d6', 0, 2.16, 0, { rx: Math.PI / 2 });
     part(g, new THREE.SphereGeometry(0.13, 12, 9), '#ffd54a', 0, 3.12, 0);
+  } else if (id === 'mushroom') { // 42 F-2 a big toadstool to shelter under (cover): a cream stalk, a red cap with white dots, three little ones at its foot
+    part(g, lathe([[0, 0], [0.72, 0], [0.66, 0.2], [0.55, 0.7], [0.5, 2.0], [0.5, 3.2], [0.56, 3.8], [0, 3.8]], 20), '#f3e6cf');
+    const cap = [[0, 3.62], [2.25, 3.62], [2.5, 3.7]], Y = new THREE.Vector3(0, 1, 0), dot = new THREE.SphereGeometry(1, 12, 8);
+    for (let j = 8; j >= 0; j--) { const th = j / 8 * Math.PI / 2; cap.push([2.6 * Math.sin(th), 3.75 + 1.6 * Math.cos(th)]); }
+    part(g, lathe(cap, 32), '#e8735a'); part(g, new THREE.CylinderGeometry(2.28, 2.28, 0.05, 32), '#f5e6cf', 0, 3.61, 0);
+    for (const [th, ph] of [[0.2, 1.0], [0.75, 0.4], [0.8, 1.55], [0.7, 2.7], [0.85, 3.8], [0.75, 5.0], [1.25, 1.0], [1.3, 2.2], [1.25, 3.3], [1.3, 4.4], [1.28, 5.6]]) {
+      const s = Math.sin(th), m = part(g, dot, '#fff7ee', 2.6 * s * Math.cos(ph), 3.75 + 1.6 * Math.cos(th), 2.6 * s * Math.sin(ph));
+      m.scale.set(0.3, 0.07, 0.3); m.quaternion.setFromUnitVectors(Y, new THREE.Vector3(s * Math.cos(ph) / 2.6, Math.cos(th) / 1.6, s * Math.sin(ph) / 2.6).normalize()); }
+    for (const [x, z, k] of [[1.9, 1.5, 0.32], [2.35, 0.9, 0.22], [-2.0, 1.3, 0.26]]) {
+      part(g, lathe([[0, 0], [0.3 * k, 0], [0.26 * k, 0.9 * k], [0, 0.9 * k]], 10), '#f3e6cf', x, 0, z);
+      part(g, new THREE.SphereGeometry(0.75 * k, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2), '#e8735a', x, 0.85 * k, z); }
+  } else if (id === 'tunnel') { // 42 F-2 a grass hill with a round tunnel through it along z (play.js G.tunnel: the bevel makes its inside r 1.2 on walls 2.3 high), stone rims at its mouths, a dirt floor
+    const T = PLAY.tunnel, hill = x => 4.6 * Math.max(0, 1 - (x / 3) ** 2) ** 0.6, sh = new THREE.Shape();
+    const arc = (s, r, back) => { for (let i = 0; i <= 16; i++) { const a = (back ? 16 - i : i) / 16 * Math.PI; s.lineTo(r * Math.cos(a), T.wall + r * Math.sin(a)); } };
+    const band = (r0, r1, d) => { const s = new THREE.Shape(); s.moveTo(r1, 0); arc(s, r1); s.lineTo(-r1, 0); s.lineTo(-r0, 0); arc(s, r0, true); s.lineTo(r0, 0);
+      return new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false }).translate(0, 0, -d / 2); };
+    sh.moveTo(-3, 0); for (let i = 1; i <= 24; i++) sh.lineTo(-3 + i / 4, hill(-3 + i / 4));
+    sh.lineTo(1.4, 0); arc(sh, 1.4); sh.lineTo(-1.4, 0);
+    const hg = new THREE.ExtrudeGeometry(sh, { depth: T.len, bevelEnabled: true, bevelThickness: 0.2, bevelSize: 0.2, bevelSegments: 3 }).translate(0, 0, -T.len / 2), P = hg.attributes.position, N = hg.attributes.normal;
+    for (let i = 0; i < P.count; i++) { const x = P.getX(i) * 3 / 3.2, y = P.getY(i); // the sides (not the ends, the floor or the hole): the hill's own slope
+      if (Math.abs(N.getZ(i)) > 0.3 || y < 0.05 || Math.hypot(x, Math.max(0, y - T.wall)) < 1.75) continue;
+      const u = Math.max(0.02, 1 - (x / 3) ** 2), n = new THREE.Vector3(4.6 * 0.6 * u ** -0.4 * 2 * x / 9, 1, 0).normalize(); N.setXYZ(i, n.x, n.y, n.z); }
+    part(g, hg, '#86c24a');
+    part(g, band(1.16, 1.26, T.len + 0.3), '#6b5a44');
+    for (const s of [-1, 1]) part(g, band(1.15, 1.65, 0.35), '#c0b9ac', 0, 0, s * (T.len / 2 + 0.2), { mat: { roughness: 0.55 } });
+    part(g, roundedBox(2.3, 0.04, T.len + 0.8, 0.02), '#c9a47a', 0, 0.02, 0);
+    const bud = new THREE.SphereGeometry(0.16, 12, 8), top = x => hill(x * 3 / 3.2) + 0.2;
+    for (const [x, z, c] of [[-0.9, -0.6, '#fff7ee'], [0.3, -1.7, '#ff9cc4'], [1.6, 1.5, '#fff7ee'], [-1.4, 1.2, '#ffd54a'], [0.4, 2.1, '#ff9cc4'], [2.0, 0.2, '#fff7ee']]) part(g, bud, c, x, top(x) + 0.02, z);
+    play(g, 'tunnel', {});
+  } else if (id === 'tower') { // 42 F-2 a lookout: a round cream tower, a stair winding once round it from the front (+z) up to a railed deck, a flag (play.js G.tower)
+    const T = PLAY.tower, step = roundedBox(1.25, 0.16, 0.95, 0.05);
+    part(g, new THREE.CylinderGeometry(T.drum, 1.7, T.top - 0.15, 28), '#fff1d6', 0, (T.top - 0.15) / 2, 0);
+    part(g, new THREE.CylinderGeometry(1.63, 1.64, 0.25, 28), '#e8735a', 0, 3.2, 0);
+    part(g, new THREE.CylinderGeometry(T.deck, T.deck, 0.15, 32), '#c98c52', 0, T.top - 0.075, 0);
+    part(g, roundedBox(0.72, 1.15, 0.16, 0.05), '#8a5a34', 0, 0.575, 1.68);
+    for (const a of [Math.PI / 2 - 0.9, Math.PI / 2 + 0.9]) part(g, new THREE.CylinderGeometry(0.26, 0.26, 0.06, 16), '#5a6a7a', Math.cos(a) * 1.66, 1.8, Math.sin(a) * 1.66, { rz: Math.PI / 2, ry: -a });
+    for (let k = 0; k < 12; k++) if (k !== 3) { const a = k * Math.PI / 6; part(g, new THREE.CylinderGeometry(0.05, 0.05, 0.55, 6), '#fff1d6', Math.cos(a) * 1.75, T.top + 0.275, Math.sin(a) * 1.75); }
+    part(g, new THREE.TorusGeometry(1.75, 0.06, 6, 40, Math.PI * 5 / 3).rotateX(Math.PI / 2).rotateY(-Math.PI * 2 / 3), '#5aa9e6', 0, T.top + 0.55, 0);
+    for (let j = 0; j <= T.steps; j++) { const a = Math.PI / 2 + j / T.steps * Math.PI * 2, y = T.top * j / T.steps;
+      part(g, step, '#c98c52', Math.cos(a) * 2.25, y - 0.08, Math.sin(a) * 2.25, { ry: -a }); // inner edge 1.63: against the drum
+      if (j && j % 2 === 0 && j < T.steps) part(g, new THREE.CylinderGeometry(0.06, 0.06, y - 0.16, 6), '#8a5a34', Math.cos(a) * 2.75, (y - 0.16) / 2, Math.sin(a) * 2.75); }
+    part(g, new THREE.CylinderGeometry(0.04, 0.04, 1.5, 6), '#8a5a34', 0, T.top + 0.75, -1.6);
+    part(g, new THREE.ConeGeometry(0.22, 0.8, 4), '#e8735a', 0.4, T.top + 1.25, -1.6, { rz: -Math.PI / 2 }).scale.z = 0.2;
+    part(g, new THREE.SphereGeometry(0.08, 10, 7), '#ffd54a', 0, T.top + 1.52, -1.6);
+    play(g, 'tower', {});
+  } else if (id === 'gym') { // 42 F-2 a big climbing frame: a ramp with cleats up to a railed deck under a blue roof, a long yellow slide down (play.js G.gym, along x)
+    const Q = PLAY.gym, rail = '#5aa9e6';
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) part(g, roundedBox(0.22, 4.3, 0.22, 0.06), '#e8735a', sx * 1.4, 2.15, sz * 1.4);
+    part(g, roundedBox(2 * Q.half, 0.2, 2 * Q.half, 0.06), '#fff1d6', 0, Q.deck - 0.1, 0);
+    part(g, new THREE.ConeGeometry(2.45, 1.3, 4), rail, 0, 4.95, 0, { ry: Math.PI / 4 }); part(g, new THREE.SphereGeometry(0.16, 12, 9), '#ffd54a', 0, 5.65, 0);
+    for (const s of [-1, 1]) { part(g, roundedBox(3, 0.1, 0.1, 0.04), rail, 0, Q.deck + 0.6, s * 1.45);
+      for (const x of [-1, -0.5, 0, 0.5, 1]) part(g, new THREE.CylinderGeometry(0.035, 0.035, 0.6, 6), rail, x, Q.deck + 0.3, s * 1.45); }
+    const ramp = (x0, y0, x1, y1) => { const r = new THREE.Group(), L = Math.hypot(x1 - x0, y1 - y0); r.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0); r.rotation.z = Math.atan2(y1 - y0, x1 - x0); g.add(r); return [r, L]; };
+    const [up, L1] = ramp(Q.foot, 0, -Q.half, Q.deck);
+    part(up, roundedBox(L1 + 0.1, 0.12, 1.6, 0.04), '#c98c52', 0, -0.06, 0);
+    for (let k = -2; k <= 2; k++) part(up, roundedBox(0.08, 0.06, 1.5, 0.02), '#a8703f', k * L1 / 5.5, 0.03, 0);
+    for (const s of [-1, 1]) { part(up, roundedBox(L1, 0.08, 0.08, 0.03), rail, 0, 0.5, s * 0.82);
+      for (const x of [-1, 1]) part(up, new THREE.CylinderGeometry(0.035, 0.035, 0.5, 6), rail, x * L1 * 0.38, 0.25, s * 0.82); }
+    const [dn, L2] = ramp(Q.half, Q.deck, Q.x1, Q.y1);
+    part(dn, roundedBox(L2 + 0.08, 0.1, 1.5, 0.04), '#ffd54a', 0, -0.05, 0);
+    for (const s of [-1, 1]) { part(dn, roundedBox(L2, 0.25, 0.06, 0.03), rail, 0, 0.08, s * 0.78);
+      part(g, roundedBox(Q.lip - Q.x1 + 0.06, 0.25, 0.06, 0.03), rail, (Q.x1 + Q.lip) / 2, Q.y1 + 0.08, s * 0.78);
+      part(g, new THREE.CylinderGeometry(0.06, 0.06, Q.y1 - 0.1, 6), '#e8735a', Q.x1, (Q.y1 - 0.1) / 2, s * 0.6); }
+    part(g, roundedBox(Q.lip - Q.x1 + 0.06, 0.1, 1.5, 0.04), '#ffd54a', (Q.x1 + Q.lip) / 2, Q.y1 - 0.05, 0);
+    play(g, 'gym', {});
+  } else if (id === 'snowslide') { // 42 F-2 the snow's: a snow hill, snow steps up its back (-z), a blue ice chute with rails down its front (play.js G.snowslide)
+    const Q = PLAY.snowslide, ice = '#a8d8f0', rail = '#5aa9e6';
+    part(g, lathe([[0, 0], [2.6, 0], [2.5, 0.15], [2.1, 0.7], [1.6, 1.6], [1.1, 2.15], [0.9, Q.top], [0, Q.top]], 28), '#f2f6fa', 0, 0, 0, { mat: { roughness: 0.62 } }).scale.z = 1.1;
+    for (let k = 0; k < Q.steps; k++) { const y = Q.top * (k + 1) / Q.steps; part(g, roundedBox(1.3, y, 0.5, 0.08), '#e3ecf5', 0, y / 2, Q.z0 + k * Q.dz, { mat: { roughness: 0.62 } }); }
+    for (let i = 1; i < Q.chute.length; i++) { const [z0, y0] = Q.chute[i - 1], [z1, y1] = Q.chute[i], L = Math.hypot(z1 - z0, y1 - y0), c = new THREE.Group();
+      c.position.set(0, (y0 + y1) / 2, (z0 + z1) / 2); c.rotation.x = Math.atan2(y0 - y1, z1 - z0); g.add(c);
+      part(c, roundedBox(1.5, 0.12, L + 0.06, 0.04), ice, 0, -0.06, 0, { mat: { roughness: 0.2 } });
+      for (const s of [-1, 1]) part(c, roundedBox(0.08, 0.2, L + 0.06, 0.03), rail, s * 0.8, 0.06, 0); }
+    play(g, 'snowslide', {});
+  } else if (id === 'carousel') { // 42 F-2 a merry-go-round: four cushions on a turning floor round a yellow column under a striped canopy (play.js G.carousel; propTick turns 'top')
+    const Q = PLAY.carousel, top = new THREE.Group(); top.userData.moves = true; g.add(top);
+    part(g, new THREE.CylinderGeometry(Q.r + 0.15, Q.r + 0.25, 0.3, 32), '#c9a47a', 0, 0.15, 0);
+    part(top, new THREE.CylinderGeometry(Q.r, Q.r, 0.22, 32), '#fff1d6', 0, 0.41, 0);
+    part(top, new THREE.TorusGeometry(Q.r, 0.07, 6, 40), '#e8735a', 0, 0.41, 0, { rx: Math.PI / 2 });
+    ['#e8735a', '#5aa9e6', '#ffd54a', '#7cbc40'].forEach((c, i) => part(top, new THREE.CylinderGeometry(0.55, 0.6, 0.12, 20), c, Math.cos(i * Math.PI / 2) * Q.seat, Q.y - 0.06, Math.sin(i * Math.PI / 2) * Q.seat));
+    part(top, new THREE.CylinderGeometry(0.32, 0.38, Q.top - 0.52, 16), '#ffd54a', 0, (Q.top + 0.52) / 2, 0);
+    for (let i = 0; i < 8; i++) { part(top, new THREE.ConeGeometry(2.5, 1.2, 3, 1, false, i * Math.PI / 4, Math.PI / 4), i % 2 ? '#fff1d6' : '#e8735a', 0, Q.top + 0.6, 0);
+      part(top, new THREE.LatheGeometry([[2.38, Q.top - 0.3], [2.52, Q.top - 0.3], [2.53, Q.top + 0.02], [2.38, Q.top + 0.02], [2.38, Q.top - 0.3]].map(([x, y]) => new THREE.Vector2(x, y)), 6, i * Math.PI / 4, Math.PI / 4), i % 2 ? '#e8735a' : '#ffd54a');
+      part(top, new THREE.SphereGeometry(0.1, 10, 7), '#ffd54a', Math.sin(i * Math.PI / 4) * 2.5, Q.top, Math.cos(i * Math.PI / 4) * 2.5); }
+    part(top, new THREE.SphereGeometry(0.14, 12, 9), '#ffd54a', 0, Q.top + 1.32, 0);
+    play(g, 'carousel', { top });
+  } else if (id === 'balloon') { // 42 F-2 a tethered hot-air balloon: a wicker basket under a striped envelope, four ropes to pegs (play.js G.balloon; propTick lifts 'up', the ropes follow)
+    const Q = PLAY.balloon, up = new THREE.Group(), ropes = [], wick = '#c98c52', rope = '#8a5a34', Y = new THREE.Vector3(0, 1, 0);
+    up.userData.moves = true; g.add(up);
+    const line = (p, a, b, r = 0.025) => { const d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), L = d.length(), m = part(p, new THREE.CylinderGeometry(r, r, L, 5), rope, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+      m.quaternion.setFromUnitVectors(Y, d.divideScalar(L)); return m; };
+    part(g, new THREE.CylinderGeometry(2.0, 2.1, 0.1, 28), '#d9c39a', 0, 0.05, 0);
+    part(up, roundedBox(2.3, 0.2, 2.3, 0.06), '#a8703f', 0, Q.floor - 0.1, 0);
+    for (const s of [-1, 1]) { part(up, roundedBox(2.3, 0.85, 0.1, 0.04), wick, 0, 0.675, s * 1.1); part(up, roundedBox(0.1, 0.85, 2.3, 0.04), wick, s * 1.1, 0.675, 0);
+      part(up, roundedBox(2.34, 0.12, 0.04, 0.02), '#e8735a', 0, 0.85, s * 1.16); part(up, roundedBox(0.04, 0.12, 2.34, 0.02), '#e8735a', s * 1.16, 0.85, 0); }
+    part(up, new THREE.TorusGeometry(1.1 * Math.SQRT2, 0.08, 6, 4), '#8a5a34', 0, 1.12, 0, { rx: Math.PI / 2, rz: Math.PI / 4 });
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) line(up, [sx * 1.05, 1.1, sz * 1.05], [sx * 0.4, 3.05, sz * 0.4]);
+    part(up, new THREE.CylinderGeometry(0.22, 0.28, 0.3, 12), '#5a6a7a', 0, 2.85, 0);
+    const prof = new THREE.SplineCurve([[0.55, 3.0], [1.2, 3.4], [1.9, 4.1], [2.3, 4.9], [2.25, 5.6], [1.85, 6.3], [1.1, 6.85], [0, 7.05]].map(([r, y]) => new THREE.Vector2(r, y))).getPoints(24);
+    for (let i = 0; i < 8; i++) part(up, new THREE.LatheGeometry(prof, 4, i * Math.PI / 4, Math.PI / 4), ['#e8735a', '#ffd54a', '#5aa9e6', '#fff1d6'][i % 4]);
+    part(up, new THREE.TorusGeometry(0.55, 0.06, 6, 20), '#8a5a34', 0, 3.0, 0, { rx: Math.PI / 2 });
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { part(g, new THREE.CylinderGeometry(0.08, 0.1, 0.3, 8), rope, sx * 1.6, 0.15, sz * 1.6);
+      const t = new THREE.Group(); t.userData.moves = true; g.add(t); part(t, new THREE.CylinderGeometry(0.025, 0.025, 1, 5), rope);
+      ropes.push({ g: t, p: [sx * 1.6, 0.3, sz * 1.6], c: [sx * 1.1, 1.0, sz * 1.1] }); }
+    play(g, 'balloon', { up, ropes });
+  } else if (id === 'waterwheel') { // 42 F-2 a mill: a cream house with a brown roof, a big wheel turning in a stone channel, water pouring onto it from a flume (shelter beside it)
+    const hx = -0.75, wx = 1.15, wood = '#8a5a34', ph = new THREE.Shape(), wh = new THREE.Group();
+    part(g, roundedBox(2.7, 0.12, 2.5, 0.04), '#c0b9ac', hx, 0.06, 0, { mat: { roughness: 0.55 } });
+    [[-1.2, 0], [1.2, 0], [1.2, 2.0], [0, 2.8], [-1.2, 2.0]].forEach(([x, y], i) => i ? ph.lineTo(x, y) : ph.moveTo(x, y));
+    part(g, new THREE.ExtrudeGeometry(ph, { depth: 2.2, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 2 }).translate(0, 0, -1.1), '#fff1d6', hx, 0.12, 0);
+    for (const s of [-1, 1]) part(g, roundedBox(1.62, 0.14, 2.6, 0.05), '#8a5a3a', hx + s * 0.68, 2.64, 0, { rz: -s * 0.588 });
+    part(g, roundedBox(0.6, 1.0, 0.08, 0.03), wood, hx - 0.3, 0.67, 1.2);
+    part(g, roundedBox(0.6, 0.6, 0.06, 0.03), wood, hx + 0.55, 1.35, 1.2); part(g, roundedBox(0.44, 0.44, 0.06, 0.03), '#5a6a7a', hx + 0.55, 1.35, 1.215);
+    part(g, roundedBox(1.5, 0.35, 3.8, 0.08), '#c0b9ac', wx, 0.175, 0, { mat: { roughness: 0.55 } });
+    part(g, roundedBox(1.2, 0.04, 3.5, 0.02), '', wx, 0.355, 0, { m: flowMat(0) });
+    wh.position.set(wx, 1.7, 0); wh.userData.moves = true; g.add(wh);
+    for (const s of [-1, 1]) part(wh, new THREE.TorusGeometry(1.5, 0.07, 6, 32), wood, s * 0.22, 0, 0, { ry: Math.PI / 2 });
+    for (let i = 0; i < 4; i++) part(wh, roundedBox(0.4, 3.0, 0.09, 0.03), '#a8703f', 0, 0, 0, { rx: i * Math.PI / 4 });
+    for (let i = 0; i < 12; i++) { const b = i * Math.PI / 6; part(wh, roundedBox(0.5, 0.45, 0.06, 0.02), '#c98c52', 0, Math.cos(b) * 1.35, Math.sin(b) * 1.35, { rx: b }); }
+    part(wh, new THREE.CylinderGeometry(0.22, 0.22, 0.6, 12), '#7f7c79', 0, 0, 0, { rz: Math.PI / 2 });
+    part(g, new THREE.CylinderGeometry(0.08, 0.08, 0.7, 8), '#7f7c79', 0.85, 1.7, 0, { rz: Math.PI / 2 });
+    part(g, roundedBox(0.5, 0.06, 2.55, 0.02), '#a8703f', wx, 3.47, -1.025);
+    for (const s of [-1, 1]) part(g, roundedBox(0.06, 0.18, 2.55, 0.02), '#a8703f', wx + s * 0.25, 3.56, -1.025);
+    part(g, roundedBox(0.38, 0.03, 2.5, 0.01), '#8fd3f0', wx, 3.515, -1.025);
+    part(g, roundedBox(0.14, 3.44, 0.14, 0.04), wood, wx, 1.72, -2.0);
+    const f = part(g, fallGeo(), '', wx, 2.95, 0.25, { m: flowMat(1) }); f.scale.set(1.0, 0.35, 0.5); f.castShadow = false;
+    g.userData.tick = t => { wh.rotation.x = t * 0.5; };
   } else if (id === 'snowman') { // 25-1 the snow's: two snowballs, bead eyes, a carrot nose, a red scarf with its end hanging
     const snow = { mat: { roughness: 0.62 } };
     part(g, new THREE.SphereGeometry(0.5, 20, 14), '#f6f9fc', 0, 0.44, 0, snow).scale.y = 0.92;

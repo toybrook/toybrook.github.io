@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { R, Z, SW, sPts, pPts, pond, paddock, dist2D, heightAt, occupied, CLIFF_Z, stream, rand as meadowRand } from './layout.js';
+import { R, S, Z, SW, sPts, pPts, pond, paddock, dist2D, heightAt, occupied, CLIFF_Z, stream, rand as meadowRand } from './layout.js';
 import { toyMat, roundedBox, worldColor, glslColor, instanced, rainNow } from '../toyKit.js';
 import { BRUSHES } from '../../game/data.js';
 
@@ -85,7 +85,7 @@ export function buildTerrain(scene) {
     const wd = Math.min(ds - (SW - 0.4), dp - (pond.r - 0.4), Z.wd(x, z, true)); // 0 at the waterline
     col.lerp(wetSand, sm((0.5 - wd) / 0.4) * 0.85);
     if (wd < 0) col.copy(bedSand).lerp(bedDeep, sm(-wd / 1.1));
-  });
+  }, R, S);
 }
 // The board's ground: the height field as a grid (150 x 240 on the first board), coloured per vertex by color(col, x, z, h, normal y), darkened
 // round the props (a contact shadow), with fine mottling close up and the soil cut at the rounded edge. (The pond's too.)
@@ -158,7 +158,7 @@ const SDF = `float sdBox(vec2 p, vec2 c, vec2 h) { vec2 d = abs(p - c) - h; retu
 // lum: the board's own ground brightness, which a painted cell's shade (slopes, contact shadows) is measured against (25-1: the snow's)
 export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lum = 0.3 } = {}) {
   const bw = r[1] - r[0], bd = r[3] - r[2];
-  const tg = new THREE.PlaneGeometry(bw, bd, Math.round(150 * bw / 36), Math.round(240 * bd / 58)); tg.rotateX(-Math.PI / 2); tg.translate((r[0] + r[1]) / 2, 0, (r[2] + r[3]) / 2);
+  const tg = new THREE.PlaneGeometry(bw, bd, Math.round(120 * bw / 36), Math.round(192 * bd / 58)); tg.rotateX(-Math.PI / 2); tg.translate((r[0] + r[1]) / 2, 0, (r[2] + r[3]) / 2);
   const pos = tg.attributes.position;
   for (let i = 0; i < pos.count; i++) pos.setY(i, heightAt(pos.getX(i), pos.getZ(i)));
   tg.computeVertexNormals();

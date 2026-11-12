@@ -10,7 +10,7 @@
 //   new prop         = one line in PROPS (+ its look in that habitat's props.js decorModel)
 // Pure data: no DOM, no three.js, so tools/check-eggs.mjs can import it in Node.
 
-export const SCHEMA_VERSION = 10; // shape of the save; bump with a migration in rules.js (2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away)
+export const SCHEMA_VERSION = 11; // shape of the save; bump with a migration in rules.js (2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups)
 export const CONTENT_VERSION = 8; // bump when the lists below change (3: launch materials, one legendary each; marble and gold left the lists; 4: colour ids glitter gold -> violet, amber yellow -> honey; 5: meadow rabbit, pig, chicken; 6: meadow sheep, cow; 7: pond (turtle, otter, swan, flamingo, capybara; the duck moved from the meadow); 8: snow (penguin, polar bear, seal, arctic fox, reindeer, snowy owl))
 
 const MIN = 60 * 1000;
@@ -45,6 +45,7 @@ export const PACE = {
     codexHeart: 0,
     unlock: { codex: 0.2, hearts: 30 },
     expand: [20, 45, 140, 200, 400, 650],
+    priceX: { small: 1, big: 1 },                    // 42 F-1: prop prices as listed (PROPS price; the beta x is below)
     xp: { codex: 10, grown: 4, pet: 1, petDaily: 10, login: 5, achieve: 10 },
     play: { price: { seesaw: 70, ball: 30, hammock: 60, feeder: 40, campfire: 50, slide: 120, fountain: 150, musicbox: 80, bubbles: 60, lights: 70, fireworks: 60, pinhill: 90, bell: 50, rail: 10, railcurve: 10, railfork: 20, railbridge: 40, table: 40, shelf: 50, platform: 70, doll: 30, hillock: 40, puddle: 40, flowermound: 50, rockmound: 50 }, level: { 'set:friends': 6, 'prop:slide': 10, 'prop:fountain': 12, 'set:toys': 8, 'set:train': 7, 'set:home': 5, 'brush:stonepath': 3, 'prop:hillock': 3, 'brush:fenceline': 4, 'prop:puddle': 4, 'brush:plank': 5, 'prop:flowermound': 5, 'brush:wall': 6, 'prop:rockmound': 6 } },
   },
@@ -58,6 +59,7 @@ export const PACE = {
     codexHeart: 3,                                   // inbox 38: hearts when a codex cell is filled for the first time
     unlock: { codex: 0.2, hearts: 30 },
     expand: [20, 45, 140, 200, 400, 650],
+    priceX: { small: 0.75, big: 0.5 },               // 42 F-1: prop prices x (big: listed ♥100 and up), to 5 hearts. inbox 51: small 1 -> 0.75 (the player found props dear); sim: one every 10~20 min, a big one on day 2
     xp: { codex: 8, grown: 2, pet: 1, petDaily: 10, login: 5, achieve: 10 },
     play: { price: { seesaw: 70, ball: 30, hammock: 60, feeder: 40, campfire: 50, slide: 120, fountain: 150, musicbox: 80, bubbles: 60, lights: 70, fireworks: 60, pinhill: 90, bell: 50, rail: 10, railcurve: 10, railfork: 20, railbridge: 40, table: 40, shelf: 50, platform: 70, doll: 30, hillock: 40, puddle: 40, flowermound: 50, rockmound: 50 }, level: { 'set:friends': 6, 'prop:slide': 10, 'prop:fountain': 12, 'set:toys': 8, 'set:train': 7, 'set:home': 5, 'brush:stonepath': 3, 'prop:hillock': 3, 'brush:fenceline': 4, 'prop:puddle': 4, 'brush:plank': 5, 'prop:flowermound': 5, 'brush:wall': 6, 'prop:rockmound': 6 } },
   },
@@ -89,9 +91,9 @@ export const BALANCE = {
     at: [0, 15, 40, 70, 100, 150, 210, 290, 380, 570, 660, 750, 840, 930, 1020, 1110, 1200, 1290, 1390, 1490],
     after: 100,
     unlock: {
-      2: ['set:ranch'], 3: ['expand:2', 'brush:sand'], 4: ['set:woods'], 5: ['set:water', 'prop:picnic'], 6: ['prop:windmill'], 7: ['set:night'],
-      8: ['expand:3', 'prop:well'], 9: ['set:play', 'brush:gravel'], 10: ['prop:arch'], 11: ['expand:4'], 12: ['brush:bloom'], 13: ['prop:falls'],
-      14: ['expand:5'], 15: ['prop:lighthouse'], 16: ['prop:barn'], 17: ['prop:greenhouse'], 18: ['expand:6'], 19: ['prop:waterpav'], 20: ['prop:treehouse'],
+      2: ['set:ranch'], 3: ['expand:2', 'brush:sand'], 4: ['set:woods', 'prop:tunnel'], 5: ['set:water', 'prop:picnic'], 6: ['prop:windmill'], 7: ['set:night', 'prop:snowslide'],
+      8: ['expand:3', 'prop:well'], 9: ['set:play', 'brush:gravel', 'prop:carousel'], 10: ['prop:arch'], 11: ['expand:4', 'prop:gym'], 12: ['brush:bloom', 'prop:balloon'], 13: ['prop:falls'],
+      14: ['expand:5', 'prop:tower'], 15: ['prop:lighthouse'], 16: ['prop:barn'], 17: ['prop:greenhouse'], 18: ['expand:6', 'prop:waterwheel'], 19: ['prop:waterpav'], 20: ['prop:treehouse'], // 42 F-2: the big props along the levels
     },
   },
   attract: { per: 0.25, max: 0.5 },                  // each placed prop a species likes (PROPS effect): that species' weight in the habitat's nest eggs +25 %, at most +50 %.
@@ -198,8 +200,9 @@ export const LEGEND_ITEMS = {
 // adult horse = 1.00; a baby is `baby` of its adult (0.70~0.80). unit = the adult horse in world units. Change a number
 // here to resize a species. Species not in the game yet are written ahead. inbox 1 (temporary, the user to confirm):
 // duck 0.40 -> 0.30 (a long low body read as big as the pig), rabbit 0.40 -> 0.48 (ears count in its height), chicken 0.44.
+// inbox 42 C2: unit 4.5 -> 3.375 (the animals x0.75 against the world; the trees, rocks and big props grew instead: NAT_K, PROPS k)
 export const SIZE = {
-  unit: 4.5, baby: 0.75,
+  unit: 3.375, baby: 0.75,
   horse: 1.00, cow: 0.95, polarBear: 1.05, reindeer: 0.95, flamingo: 0.85, sheep: 0.70, pig: 0.60, swan: 0.60, capybara: 0.55, // the polar bear is also the longest
   penguin: 0.55, seal: 0.45, arcticFox: 0.45, rabbit: 0.48, chicken: 0.44, otter: 0.40, snowyOwl: 0.40, duck: 0.30, turtle: 0.30, // the seal lies down
 };
@@ -537,6 +540,10 @@ export const SPECIES = [
     legendary: [{ id: 'snowspirit', name: '눈의 정령', mat: 'snowspirit', effect: 'snow' }] },
 ];
 
+// inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the
+// world is UNIT times that (the first board 54 x 87, step 6 102 x 111)
+export const UNIT = 1.5;
+
 // 28-1 땅 넓히기 구역: step n opens ZONES[habitat][n-1], a strip w wide along one side of the board as it was (side: +x right,
 // -x left, +z front, toward the camera; habitat/zones.js). line: what happens there, for the 「새 구역」 card (only what the
 // game really does there)
@@ -599,17 +606,17 @@ export const HABITATS = [
 // obstacle). water: on the pond only. effect: a species id: each one placed raises that species' weight in this habitat's
 // nest eggs (BALANCE.attract). paid: bought with money; a paid prop is decoration only and never has an effect
 // (tools/check-eggs.mjs fails otherwise). 21-3, for looking at only: light: glows by night. shelter: land animals gather
-// by it in the rain (walk.js). open: animals walk over it or under it (no body but its model's posts). 28-2 use: animals
+// by it in the rain (walk.js; inbox 42 D: cover, the room under it [y, core, r] x its size, or 'side': by its wall). open: animals walk over it or under it (no body but its model's posts). 28-2 use: animals
 // come and use it (USES; src/animals/play.js), the shop's note.
 export const PROPS = [
-  { id: 'hay', name: '건초 더미', habitat: 'meadow', price: 40, r: 0.8, effect: 'horse' },
-  { id: 'trough', name: '물통', habitat: 'meadow', price: 60, r: 0.85, effect: 'horse' },
+  { id: 'hay', name: '건초 더미', habitat: 'meadow', price: 40, r: 0.8, k: 1.3, effect: 'horse' },
+  { id: 'trough', name: '물통', habitat: 'meadow', price: 60, r: 0.85, k: 1.4, effect: 'horse' },
   { id: 'lily', name: '연잎', habitat: 'pond', price: 40, r: 0.75, water: true, effect: 'duck' },
   { id: 'duckhouse', name: '작은 오리 집', habitat: 'pond', price: 60, r: 0.9, effect: 'duck' },
   { id: 'flowers', name: '꽃밭', price: 30, r: 0.9 },
-  { id: 'bench', name: '나무 벤치', price: 30, r: 0.95, shelter: true, pal: 'wood' },
+  { id: 'bench', name: '나무 벤치', price: 30, r: 0.95, k: 1.3, pal: 'wood' },
   // 21-3: fences and paths, flowers and grass, stones, mushrooms and logs, lights, furniture, water things, ornaments
-  { id: 'fence', name: '나무 울타리', price: 30, r: 1.0, pal: 'wood' },
+  { id: 'fence', name: '나무 울타리', price: 30, r: 1.0, pal: 'wood' }, // inbox 42 C2: taller model (props.js), not k: a fence line keeps its length
   { id: 'path', name: '돌길', price: 30, r: 1.0, open: true, pal: 'stone' },
   { id: 'tulips', name: '튤립 화분', price: 30, r: 0.55, small: true },
   { id: 'tallgrass', name: '풀숲', price: 30, r: 0.6, pal: 'leaf' },
@@ -618,10 +625,10 @@ export const PROPS = [
   { id: 'log', name: '통나무', price: 40, r: 0.95, pal: 'wood' },
   { id: 'lantern', name: '등불', price: 40, r: 0.45, light: true, small: true },
   { id: 'jar', name: '반딧불 병', price: 30, r: 0.4, light: true, small: true },
-  { id: 'mushlamp', name: '버섯 등', price: 40, r: 0.5, light: true, small: true },
+  { id: 'mushlamp', name: '버섯 등', price: 40, r: 0.5, k: 1.6, light: true, small: true },
   { id: 'starlamp', name: '별 등', price: 50, r: 0.45, light: true, small: true },
-  { id: 'swing', name: '그네', price: 50, r: 1.6, shelter: true, use: '작은 동물이 와서 타요' }, // 28-2: bigger, so they fit (1.0)
-  { id: 'gazebo', name: '작은 정자', price: 60, r: 2.3, shelter: true, open: true },
+  { id: 'swing', name: '그네', price: 50, r: 1.6, use: '작은 동물이 와서 타요' }, // 28-2: bigger, so they fit (1.0)
+  { id: 'gazebo', name: '작은 정자', price: 60, r: 2.3, k: 1.3, shelter: true, open: true },
   { id: 'boat', name: '작은 나룻배', habitat: 'pond', price: 60, r: 1.1, water: true },
   { id: 'stepping', name: '징검다리', habitat: 'pond', price: 50, r: 1.3, water: true },
   { id: 'pinwheel', name: '바람개비', price: 30, r: 0.35 },
@@ -629,21 +636,31 @@ export const PROPS = [
   { id: 'mailbox', name: '우체통', price: 40, r: 0.4 },
   // 22-2 큰 소품 (2 x 2 cells or more). light: the greenhouse's inside, the lighthouse's turning beam. open: the arch (its two
   // posts only) and the picnic mat (walked over)
-  { id: 'barn', name: '헛간', habitat: 'meadow', price: 250, r: 2.2, shelter: true },
-  { id: 'windmill', name: '풍차', price: 280, r: 1.5 },
-  { id: 'greenhouse', name: '온실', price: 220, r: 1.6, light: true },
-  { id: 'treehouse', name: '나무집', price: 300, r: 1.8, shelter: true },
-  { id: 'well', name: '우물', price: 120, r: 1.1, pal: 'stone' },
+  { id: 'barn', name: '헛간', habitat: 'meadow', price: 250, r: 2.2, k: 2.6, shelter: true, cover: 'side' },
+  { id: 'windmill', name: '풍차', price: 280, r: 1.5, k: 2.25 },
+  { id: 'greenhouse', name: '온실', price: 220, r: 1.6, k: 2, light: true },
+  { id: 'treehouse', name: '나무집', price: 300, r: 1.8, k: 1.7, shelter: true, cover: [1.54, 0.5, 1.05] },
+  { id: 'well', name: '우물', price: 120, r: 1.1, k: 1.4, pal: 'stone' },
   { id: 'arch', name: '정원 아치', price: 120, r: 1.2, open: true },
   { id: 'picnic', name: '피크닉 매트', price: 100, r: 1.3, open: true },
   { id: 'falls', name: '작은 폭포 바위', price: 180, r: 1.4 },
-  { id: 'lighthouse', name: '작은 등대', habitat: 'pond', price: 200, r: 1.1, water: true, light: true },
+  { id: 'lighthouse', name: '작은 등대', habitat: 'pond', price: 200, r: 1.1, k: 2.5, water: true, light: true },
   { id: 'waterpav', name: '수상 정자', habitat: 'pond', price: 260, r: 2.2, water: true },
+  // 42 F-2 큰 소품 (k 1: the models are this big; 2~4 x the others). Landmarks the animals use (play.js), climb or shelter under.
+  // The mushroom opens from Lv 1, the others along BALANCE.level.unlock
+  { id: 'mushroom', name: '큰 버섯 쉼터', price: 160, r: 2.6, shelter: true, cover: [3.6, 0.72, 2.45] },
+  { id: 'tunnel', name: '풀 터널', price: 180, r: 3.2, use: '동물들이 굴을 지나가요' },
+  { id: 'snowslide', name: '눈 미끄럼 언덕', habitat: 'snow', price: 200, r: 3.7, use: '올라가서 눈 위를 미끄러져요' },
+  { id: 'carousel', name: '회전 놀이기구', price: 240, r: 2.45, use: '여럿이 타고 빙글빙글 돌아요' },
+  { id: 'gym', name: '큰 놀이터', price: 260, r: 3.9, use: '올라가서 미끄럼을 타요' },
+  { id: 'balloon', name: '열기구', price: 300, r: 2.3, use: '작은 동물이 타면 둥실 떠올라요' },
+  { id: 'tower', name: '전망대', price: 280, r: 3.0, use: '계단을 올라가 구경해요' },
+  { id: 'waterwheel', name: '물레방아', price: 260, r: 2.7, shelter: true, cover: 'side' },
   // 25-1 설원 (the snow set; under 100 hearts, so small props). light: the ice lamp glows at night
-  { id: 'snowman', name: '눈사람', habitat: 'snow', price: 40, r: 0.88 }, // inbox 26: x1.25 (0.7)
-  { id: 'igloo', name: '이글루', habitat: 'snow', price: 90, r: 2, shelter: true }, // inbox 26: x1.25 (1.6)
+  { id: 'snowman', name: '눈사람', habitat: 'snow', price: 40, r: 0.88, k: 1.3 }, // inbox 26: x1.25 (0.7)
+  { id: 'igloo', name: '이글루', habitat: 'snow', price: 90, r: 2, k: 1.6, shelter: true, cover: 'side' }, // inbox 26: x1.25 (1.6)
   { id: 'sled', name: '썰매', habitat: 'snow', price: 50, r: 0.9 },
-  { id: 'icelamp', name: '얼음 등불', habitat: 'snow', price: 40, r: 0.45, light: true, small: true },
+  { id: 'icelamp', name: '얼음 등불', habitat: 'snow', price: 40, r: 0.44, k: 1.7, light: true, small: true }, // inbox 42 C2: r 0.45 -> 0.44 so it stays a cell across (x k)
   // 28-2 놀이 소품 (and the swing, above): prices in PACE play. The fountain: the water birds' bath, so the pond's
   { id: 'seesaw', name: '시소', price: P.play.price.seesaw, r: 2.3, use: '두 마리가 같이 타요' },
   { id: 'ball', name: '굴리는 공', price: P.play.price.ball, r: 1.5, open: true, use: '공을 굴리며 놀아요' },
@@ -666,9 +683,9 @@ export const PROPS = [
   { id: 'railfork', name: '갈림길 레일', price: P.play.price.railfork, r: 2, open: true, rail: 1, use: '기차가 두 길로 번갈아 가요' },
   { id: 'railbridge', name: '레일 다리', price: P.play.price.railbridge, r: 4, open: true, rail: 2, use: '길이나 개울을 건너요' },
   // 28-5 쌓기: top: the spots on it where a small prop (small: true) goes, [x, y, z] in its own units at size 보통 (turned and sized with it)
-  { id: 'table', name: '둥근 탁자', price: P.play.price.table, r: 0.95, pal: 'wood', top: [[-0.36, 0.74, 0], [0.36, 0.74, 0]] },
-  { id: 'shelf', name: '낮은 선반', price: P.play.price.shelf, r: 0.95, pal: 'wood', top: [[-0.48, 0.92, 0], [0.48, 0.92, 0]] },
-  { id: 'platform', name: '평상', price: P.play.price.platform, r: 1.3, pal: 'wood', shelter: true, top: [[-0.5, 0.46, -0.45], [0.5, 0.46, -0.45], [-0.5, 0.46, 0.45], [0.5, 0.46, 0.45]] },
+  { id: 'table', name: '둥근 탁자', price: P.play.price.table, r: 0.95, k: 1.3, pal: 'wood', top: [[-0.36, 0.74, 0], [0.36, 0.74, 0]] },
+  { id: 'shelf', name: '낮은 선반', price: P.play.price.shelf, r: 0.95, k: 1.3, pal: 'wood', top: [[-0.48, 0.92, 0], [0.48, 0.92, 0]] },
+  { id: 'platform', name: '평상', price: P.play.price.platform, r: 1.3, k: 1.3, pal: 'wood', top: [[-0.5, 0.46, -0.45], [0.5, 0.46, -0.45], [-0.5, 0.46, 0.45], [0.5, 0.46, 0.45]] },
   { id: 'doll', name: '오뚝이 인형', price: P.play.price.doll, r: 0.4, small: true },
   // 28-6 지형 도장 (the 땅 tab): stamp: the ground under it rises (or sinks) that much at its middle, to nothing at r (src/habitat/stamps.js);
   // animals walk over the open ones and round the rest. Never on water or by it (placeable keeps r + 0.8 off)
@@ -687,12 +704,16 @@ export const PROPS = [
   { id: 'att_rainbow', name: '무지개 아치', price: 0, r: 0.9, gift: '출석 선물' },
   { id: 'firstday', name: '첫날 기념 나무', price: 0, r: 0.45, gift: '첫날 할 일 선물' },
 ];
+// 42 F-1: list = the price as listed (release); price = what this edition charges (PACE priceX; big: list ♥100 and up). Gifts stay 0
+for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5, Math.round(p.price * P.priceX[p.price >= 100 ? 'big' : 'small'] / 5) * 5); }
 // inbox 41 C 출석부: one slot a day (dayOf), the next one even after days away (no penalty), back to 1 after 7. eggs: plain nest
 // eggs (rules give: the habitat's odds, its pity). The 7th adds the next of ATTEND_PROPS, the 7 in turn
 export const ATTEND = [{ hearts: 20 }, { candy: 2 }, { eggs: 1 }, { hearts: 30 }, { candy: 3 }, { eggs: 1 }, { hearts: 50 }];
 export const ATTEND_PROPS = ['att_sunflower', 'att_birdhouse', 'att_balloons', 'att_wcan', 'att_signpost', 'att_cart', 'att_rainbow'];
 // inbox 41 D 첫날 할 일: shown on the first `days` days of a game (dayOf, from S.since) as a small list under the top bar. Each
 // task done once gives its hearts; all of them the `prop` (a 선물 prop) and `candy`. What counts: rules.js FIRST_V
+// 꾸미기 › 큰 소품 탭 (ui/decor.js TABS; first.js 「다음은 큰 소품」)
+export const BIGS = 'gazebo duckhouse barn windmill greenhouse treehouse well arch picnic falls lighthouse waterpav igloo mushroom tunnel snowslide carousel gym balloon tower waterwheel';
 export const FIRST = { days: 3, prop: 'firstday', candy: 2, tasks: [
   { id: 'hatch', text: '알 3번 깨우기', n: 3, hearts: 15 },
   { id: 'pet', text: '친구 5번 쓰다듬기', n: 5, hearts: 10 },
@@ -700,7 +721,7 @@ export const FIRST = { days: 3, prop: 'firstday', candy: 2, tasks: [
   { id: 'photo', text: '사진 한 장 찍기', n: 1, hearts: 10 },
   { id: 'codex', text: '도감 열어 보기', n: 1, hearts: 10 }] };
 // 28-5 소품 색: each prop's palette (pal: its own, else toy; rails none). 0: as made; the rest: the key colour of its model turned
-// to that one (meadow/props.js recolor). 크기: sz 0 보통, 1 작게, 2 크게 (its model, footprint and cells x sizeF)
+// to that one (meadow/props.js recolor). 크기: sz 0 보통, 1 작게, 2 크게, 3 아주 크게 (its model, footprint and cells x sizeF)
 export const PALETTES = {
   toy: [['원래'], ['빨강', '#e5584a'], ['파랑', '#4f8fe0'], ['노랑', '#f2c84b'], ['초록', '#6cbf5a'], ['분홍', '#f39ac0']],
   wood: [['원래'], ['밝은 나무', '#e3b77f'], ['짙은 나무', '#8f5f3c'], ['하얀 칠', '#f1ece2']],
@@ -708,21 +729,22 @@ export const PALETTES = {
   leaf: [['원래'], ['연두', '#a8d65a'], ['단풍', '#e9873e'], ['노랑', '#f0cf4a']],
 };
 export const paletteOf = P => P && !P.rail && !P.stamp ? PALETTES[P.pal ?? 'toy'] : null;
-export const SIZES = ['보통', '작게', '크게'];
+export const SIZES = ['보통', '작게', '크게', '아주 크게'];
 // its size factor: 작게 / 크게 take its footprint (2r across, rounded to cells) a cell down / up, x0.75 or less / x1.3..1.7
 // (a small one, for the top spots, x1.6 at most: bigger hits the next spot); one a cell across stays 1 cell at 작게 (x0.75), a thin
-// one (r under about .45) at 크게 too
-export const sizeF = (P, sz) => { if (!sz || !P) return 1; const n = Math.max(1, Math.round(2 * P.r));
-  return sz === 1 ? (n > 1 ? Math.min(0.75, (n - 0.52) / (2 * P.r)) : 0.75) : Math.min(P.small ? 1.6 : 1.7, Math.max(1.3, (n + 0.52) / (2 * P.r))); };
+// one (r under about .45) at 크게 too. inbox 42 F-3 아주 크게: x2 (a small one then stands on the ground only, not on a top spot)
+// inbox 42 C2: k, a big prop's own growth (its model and r as built x k, then x its size)
+export const sizeF = (P, sz) => { if (!P) return 1; const k = P.k || 1; if (!sz) return k; if (sz === 3) return 2 * k; const n = Math.max(1, Math.round(2 * P.r * k));
+  return k * (sz === 1 ? (n > 1 ? Math.min(0.75, (n - 0.52) / (2 * P.r * k)) : 0.75) : Math.min(P.small ? 1.6 : 1.7, Math.max(1.3, (n + 0.52) / (2 * P.r * k)))); };
 export const sizable = P => !!P && !P.rail && !P.use && !P.stamp && !(P.open && P.shelter); // play props (their seats), rails, the gazebo (who fits under it) keep their size
 // 28-2 「소품 쓰기」: the play props each species uses now and then (src/animals/play.js; one too big for a prop passes it by)
-export const USES = {
-  horse: 'feeder campfire', cow: 'feeder campfire', sheep: 'feeder campfire ball train', pig: 'feeder campfire ball hammock slide train',
-  rabbit: 'swing slide seesaw feeder campfire ball hammock train', chicken: 'swing slide seesaw feeder campfire ball train',
-  duck: 'fountain', swan: 'fountain', flamingo: 'fountain campfire', turtle: 'slide feeder campfire train',
-  otter: 'swing slide ball hammock campfire train', capybara: 'hammock feeder campfire seesaw ball train',
-  penguin: 'slide seesaw ball campfire train', polarBear: 'campfire', seal: 'ball campfire hammock',
-  arcticFox: 'swing slide seesaw ball hammock campfire train', reindeer: 'feeder campfire', snowyOwl: 'swing seesaw campfire',
+export const USES = { // 42 F-2: + the big props (tunnel ... snowslide) at the end of each
+  horse: 'feeder campfire tunnel', cow: 'feeder campfire tunnel', sheep: 'feeder campfire ball train tunnel tower gym carousel', pig: 'feeder campfire ball hammock slide train tunnel tower gym carousel',
+  rabbit: 'swing slide seesaw feeder campfire ball hammock train tunnel tower gym carousel balloon', chicken: 'swing slide seesaw feeder campfire ball train tunnel tower gym carousel balloon',
+  duck: 'fountain', swan: 'fountain', flamingo: 'fountain campfire tunnel', turtle: 'slide feeder campfire train tunnel gym carousel balloon',
+  otter: 'swing slide ball hammock campfire train tunnel tower gym carousel', capybara: 'hammock feeder campfire seesaw ball train tunnel tower gym carousel',
+  penguin: 'slide seesaw ball campfire train tunnel gym carousel balloon snowslide', polarBear: 'campfire tunnel', seal: 'ball campfire hammock tunnel snowslide',
+  arcticFox: 'swing slide seesaw ball hammock campfire train tunnel tower gym carousel balloon snowslide', reindeer: 'feeder campfire tunnel', snowyOwl: 'swing seesaw campfire tunnel tower balloon snowslide',
 };
 
 // 23-1 소품 세트: every small prop is in one. A level opens a set (BALANCE.level.unlock); the garden set is there from the start.
@@ -746,12 +768,14 @@ export const SETS = [
 // nor the stones of the stream and the shore), saved as props (nat: 1, s: size, v: colour) the first time a habitat (or a band
 // of 땅 넓히기) opens, so they can be moved, cut (put away) and planted again. Never sold, not counted in decorCap, no effect.
 // r, h: footprint and height at size 1 (meadow/props.js kit). open: animals walk through it.
+// inbox 42 C2: kit() (meadow/props.js) plants each kind this much bigger than its shapes, so a size-1 tree is 2.3 adult horses
+export const NAT_K = { tree: 1.6, pine: 2, bush: 1.25, rock: 1.5 };
 export const NATURE = [
-  { id: 'tree', name: '나무', r: 1.7, h: 4.8 },
-  { id: 'bush', name: '덤불', r: 0.9, h: 1.25 },
-  { id: 'rock', name: '바위', r: 1.05, h: 1 },
+  { id: 'tree', name: '나무', r: 1.7 * NAT_K.tree, h: 4.8 * NAT_K.tree },
+  { id: 'bush', name: '덤불', r: 0.9 * NAT_K.bush, h: 1.25 * NAT_K.bush },
+  { id: 'rock', name: '바위', r: 1.05 * NAT_K.rock, h: NAT_K.rock },
   { id: 'wildflowers', name: '들꽃 무리', r: 0.9, h: 0.45, open: true },
-  { id: 'snowpine', name: '눈 덮인 전나무', r: 1.3, h: 3.6 }, // 25-1: the snow's trees
+  { id: 'snowpine', name: '눈 덮인 전나무', r: 1.3 * NAT_K.pine, h: 3.6 * NAT_K.pine }, // 25-1: the snow's trees
 ];
 // 22-1 땅 칠하기: a brush per grid cell (1 x 1 on the first board), stored as its index; looks only (animals walk as before)
 export const BRUSHES = [{ id: 'grass', name: '풀', c: '#86bf45', hab: ['meadow', 'pond'] }, { id: 'dirt', name: '흙길', c: '#e2bf86', hab: ['meadow', 'pond'], way: 1 }, { id: 'sand', name: '모래', c: '#efdcaa', hab: ['meadow', 'pond'] }, { id: 'gravel', name: '자갈', c: '#c4bdb0' }, { id: 'bloom', name: '꽃밭', c: '#7cb843', hab: ['meadow', 'pond'] },

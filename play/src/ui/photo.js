@@ -90,9 +90,12 @@ export function initPhoto(getApi, getHab) {
   function paint() { // the preview: the filter on the 3D canvas, deco over it at the screen's pixels
     const api = getApi(); if (!api || !on) return;
     api.canvas.style.filter = FILTERS[o.fx][1];
-    // inbox 25: the panel open, the picture (3D and deco) slides down under it, so its sky and rainbow show; 접기 shows it whole
     const f = el.querySelector('[data-follow]'); if (f) f.value = api.followed() ?? ''; // 26-4: who the camera follows now (a tap or a drag changes it)
-    const lift = o.fold ? 0 : el.offsetHeight; api.snap(true, lift); ov.style.transform = lift ? `translateY(${lift}px)` : '';
+    // inbox 42 G: the whole picture (3D and deco) shrunk into the room under the panel, the saved file as seen. It was slid down
+    // under the panel (inbox 25), so about half its bottom (the QR tile, the near ground) was off the screen on a phone
+    const sb = el.appendChild(document.createElement('i')); sb.style.cssText = 'position:absolute;height:var(--sa-b)'; // and above the home bar (inbox 40)
+    const top = el.offsetHeight, k = Math.max(0.2, (ov.clientHeight - top - sb.offsetHeight) / ov.clientHeight); sb.remove();
+    api.snap(true); for (const c of [api.canvas, ov]) { c.style.transformOrigin = '50% 0'; c.style.transform = `translateY(${top}px) scale(${k})`; }
     const r = ratio(), w = Math.round(ov.clientWidth * r), h = Math.round(ov.clientHeight * r);
     if (ov.width !== w || ov.height !== h) { ov.width = w; ov.height = h; }
     const x = ov.getContext('2d'); x.clearRect(0, 0, w, h); deco(x, w, h, o, code);
@@ -109,7 +112,7 @@ export function initPhoto(getApi, getHab) {
   }
   function leave() {
     if (!on) return; on = false; VIEW.hour = VIEW.weather = null;
-    const api = getApi(); if (api) { api.snap(false); api.canvas.style.filter = ''; } ov.style.transform = '';
+    const api = getApi(); if (api) { api.snap(false); api.canvas.style.filter = api.canvas.style.transform = ''; } ov.style.transform = '';
     if (!/[?&]photo/.test(location.search)) document.body.classList.remove('photo');
     el.hidden = ov.hidden = true;
   }

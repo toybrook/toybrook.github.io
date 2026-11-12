@@ -4,12 +4,12 @@ import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
 import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap } from '../game/rules.js';
 import { PROPS } from '../game/data.js';
-import { toast, hideToast, heart, span, josa, overlayOpen, clock, tip } from './hud.js';
+import { toast, hideToast, heart, span, josa, overlayOpen, clock, tip, resting } from './hud.js';
 import { openCodex, hasNew } from './codex.js';
 import { initNest } from './nest.js';
 import { openStore, leaveStore } from './store.js';
 import { openFriends, leaveFriends } from './friends.js';
-import { openDecor, leaveDecor, onPropTap, onEdit, onPaint } from './decor.js';
+import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep } from './decor.js';
 import { openCabinet } from './cabinet.js';
 import { figureThumb } from './thumbs.js';
 import { sfx } from './sound.js';
@@ -23,7 +23,7 @@ const pct = (r, now) => Math.floor(gauge(r, now) * 100);
 const growText = (r, now) => r.hold ? `성장 멈춤 · ${pct(r, now)}%` : `자라는 중 ${pct(r, now)}% · ${span(Math.max(60000, growLeft(r, now) ?? 0))} 남음`;
 
 export function initPlay(nav) {
-  let hab = null, habId = null, bubbleFor = null, bubbleUntil = 0, press = null;
+  let hab = null, habId = null, bubbleFor = null, bubbleUntil = 0, press = null, pats = 0;
   const hearts = $('hearts'), bubble = $('bubble'), codexBtn = $('codexBtn'), stage = $('stage'), nest = initNest(nav);
   const friendsBtn = $('friendsBtn'), decorBtn = $('decorBtn'), pill = $('nestPill');
   // the bubble stays with its animal until a tap somewhere else, the animal leaves the screen, or 10 s without a touch
@@ -88,14 +88,14 @@ export function initPlay(nav) {
       if (out.length && !persisted) { persisted = true; navigator.storage?.persist?.()?.catch(() => {}); } // inbox 39: once a page, when there is something to keep
       if (out.length && !homeT && home.hidden && homeHintDue(DEV, G.S.flags)) { quiet = Date.now(); homeT = setTimeout(homeCard, 800); }
     }
-    hab?.sync(G.S.animals); hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId]);
+    hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId]); hab?.sync(G.S.animals); // inbox 42 B: the props first, so no one comes out inside one
   }
 
   function onTap(kind, rec, x, y) {
     if (G.tapHeart(rec.id)) { // temporary heart rule (game/hearts.js); the tap that reaches the day's cap says so, once
       heart(x, y); if (G.S.pet.n >= B.heart.daily) toast('오늘 쓰다듬기 하트는 다 모았어요', 2200, true);
     }
-    showBubble(rec);
+    showBubble(rec); if (++pats >= 2) tip('carry', bubble); // inbox 42 E: from the second tap on a friend, once
   }
 
   // the small card over an animal: its name; a baby also how far it has grown, 먹이 주기 (3 a day) and the 꼬마 사탕
@@ -137,7 +137,7 @@ export function initPlay(nav) {
 
   // "○○가 다 자랐어요!": every grown animal whose card wasn't seen (several at once after time away), baby and adult side by side
   const card = $('grown'); let later = 0;
-  const busy = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo');
+  const busy = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo') || resting(); // inbox 43
   function cards() {
     if (!hab || !card.hidden) return;
     const list = G.S.animals.filter(a => a.card); if (!list.length) return;
@@ -167,7 +167,7 @@ export function initPlay(nav) {
     home.hidden = true; G.flag('homeHintSeen'); };
 
   return {
-    onTap, events, onPropTap, onEdit, onPaint,
+    onTap, events, onPropTap, onEdit, onPaint, onSweep,
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
     attach(api, id) { hab = api; habId = id; nest.attach(api, id); draw(); hint(); setTimeout(cards, 1200); }, // grown while away: the cards together
     openNest: () => nest.open(), cards,

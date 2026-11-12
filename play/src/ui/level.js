@@ -5,7 +5,7 @@
 import * as G from '../game/game.js';
 import { BALANCE as B, SETS, BRUSHES } from '../game/data.js';
 import { PROP, HAB, xpAt, unlocksBetween } from '../game/rules.js';
-import { overlayOpen, topWindow, tip, toast } from './hud.js';
+import { overlayOpen, topWindow, tip, toast, resting } from './hud.js';
 import { ACH, ACH_BY } from '../game/achieve.js';
 import { sfx } from './sound.js';
 const propThumb = (...a) => import('./thumbs.js').then(m => m.propThumb(...a)); // 26-1: three.js comes after the first screen
@@ -77,12 +77,13 @@ export function initLevel(getApi) {
   }
   function show() {
     if (topWindow() || overlayOpen() || document.body.classList.contains('photo')) return;
+    const onMap = !$('world').classList.contains('hidden') || !$('loading').hidden; // inbox 43: a card left from the last visit waits for the habitat (on the map it would eat the 초원 tap)
     const xa = B.level.xp.achieve;
     if (got.length === 1) toast(`도전 과제 「${got[0].title}」 · ${got[0].text} · XP +${xa}`, 3200);
     else if (got.length) toast(`도전 과제 ${got.length}개를 이뤘어요 · XP +${got.length * xa} · 위의 Lv에서 볼 수 있어요`, 3200);
     got = [];
     const since = G.now() - (G.S.flags.lvCard?.at || 0); // a clock set back (since < 0) does not hold the card
-    if (!pend || !card.hidden || (since >= 0 && since < GAP)) return;
+    if (!pend || !card.hidden || (since >= 0 && since < GAP) || onMap || resting()) return; // inbox 43
     const { level } = pend, unlocks = unlocksBetween(pend.from, level); pend = null; G.flag('lvCard', { lv: level, at: G.now() });
     card.innerHTML = `<div><h2>레벨 ${level}!</h2>${unlocks.length ? `<p class="sub">새로 풀린 것</p><ul>${unlocks.map(k => row(k, true)).join('')}</ul>` : '<p class="sub">정원사 레벨이 올랐어요</p>'}<button data-close>좋아요</button></div>`;
     thumbs(card);

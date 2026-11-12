@@ -14,9 +14,10 @@ export function buildMeadow(scene, ui, sunDir, level = 0, top = level) {
   // everything an animal behaviour (src/animals/<move>.js) may ask of the habitat
   const ctx = {
     scene, heightAt: layout.heightAt, walkable: layout.walkable, pathClear: layout.pathClear, bridgeEnds: layout.bridgeEnds, deckAt: layout.deckAt,
-    onSleepTick: ui.zzz, pond: layout.pond, water: layout.WATER_Y + 0.04, shelter: layout.occupied.filter(o => o.h >= 3 && o.z > -22), // 21-2: trees and roofs for the rain (walk.js)
-    spawn: () => { const O = layout.O; for (let k = 0; ; k++) { const x = O[0] + 3 + Math.random() * (O[1] - O[0] - 6), z = -20 + Math.random() * (O[3] - 23); if (layout.walkable(x, z) || k > 200) return [x, z]; } },
-    spots: layout.Z.spots.filter(s => s.k <= level), // 28-1: the open zones' spots (walk.js)
+    onSleepTick: ui.zzz, pond: layout.pond, water: layout.WATER_Y + 0.04, shelter: layout.occupied.filter(o => o.cover && o.z > -22 * layout.S), // 21-2: trees and roofs for the rain (walk.js)
+    spawn: () => { const O = layout.O; for (let k = 0; ; k++) { const x = O[0] + 3 + Math.random() * (O[1] - O[0] - 6), z = -20 * layout.S + Math.random() * (O[3] - 3 + 20 * layout.S); if (layout.walkable(x, z) || k > 200) return [x, z]; } },
+    spots: [...layout.Z.spots.filter(s => s.k <= level), // 28-1: the open zones' spots (walk.js)
+      { x: layout.paddock.x + layout.paddock.w / 4, z: layout.paddock.z, r: 2, act: 'rest', k: -1, w: 0.35 }], // inbox 42 B: now and then in by the gate, the paddock's open half (w: how often of the 12%)
   };
   // 서식지 꾸미기: the placed props (layout.decor), where one may stand, its look, how high it sits
   const decor = { list: layout.decor, placeable: layout.placeable, model: decorModel, y: (x, z, water) => water ? ctx.water : layout.heightAt(x, z) };
@@ -28,6 +29,6 @@ export function buildMeadow(scene, ui, sunDir, level = 0, top = level) {
   // (open grass: off the water, the back shelf and the board's rim)
   const paintable = (x, z) => inRect(layout.O, x, z, 0.5) && z > layout.CLIFF_Z + 0.6 && layout.Z.wd(x, z, true) > 0.2
     && layout.dist2D(layout.sPts, x, z) > layout.SW + 0.2 && Math.hypot(x - layout.pond.x, z - layout.pond.z) > layout.pond.r + 0.2;
-  return { ctx, decor, floor, solid: layout.occupied, update(dt, t) { updWater(t); updZone(t); P.zone.update(t, ctx); }, built: layout.R, unit: 1,
+  return { ctx, decor, floor, solid: layout.occupied, update(dt, t) { updWater(t); updZone(t); P.zone.update(t, ctx); }, built: layout.R, unit: layout.S,
     natives: { list: P.natives, rings: level + 1 }, grass: P.grass, ground, paintable };
 }
