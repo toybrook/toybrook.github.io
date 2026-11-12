@@ -766,21 +766,21 @@ export function decorModel(id) {
     for (const [x, z, k] of [[1.9, 1.5, 0.32], [2.35, 0.9, 0.22], [-2.0, 1.3, 0.26]]) {
       part(g, lathe([[0, 0], [0.3 * k, 0], [0.26 * k, 0.9 * k], [0, 0.9 * k]], 10), '#f3e6cf', x, 0, z);
       part(g, new THREE.SphereGeometry(0.75 * k, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2), '#e8735a', x, 0.85 * k, z); }
-  } else if (id === 'tunnel') { // 42 F-2 a grass hill with a round tunnel through it along z (play.js G.tunnel: the bevel makes its inside r 1.2 on walls 2.3 high), stone rims at its mouths, a dirt floor
+  } else if (id === 'tunnel') { // 42 F-2 a grass hill with a round tunnel through it along z (play.js G.tunnel: the bevel makes its inside r 1.3 on walls 2.3 high; inbox 63: 1.2 -> 1.3, a baby polar bear at x0.9 is 2.36 across), stone rims at its mouths, a dirt floor
     const T = PLAY.tunnel, hill = x => 4.6 * Math.max(0, 1 - (x / 3) ** 2) ** 0.6, sh = new THREE.Shape();
     const arc = (s, r, back) => { for (let i = 0; i <= 16; i++) { const a = (back ? 16 - i : i) / 16 * Math.PI; s.lineTo(r * Math.cos(a), T.wall + r * Math.sin(a)); } };
     const band = (r0, r1, d) => { const s = new THREE.Shape(); s.moveTo(r1, 0); arc(s, r1); s.lineTo(-r1, 0); s.lineTo(-r0, 0); arc(s, r0, true); s.lineTo(r0, 0);
       return new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false }).translate(0, 0, -d / 2); };
     sh.moveTo(-3, 0); for (let i = 1; i <= 24; i++) sh.lineTo(-3 + i / 4, hill(-3 + i / 4));
-    sh.lineTo(1.4, 0); arc(sh, 1.4); sh.lineTo(-1.4, 0);
+    sh.lineTo(1.5, 0); arc(sh, 1.5); sh.lineTo(-1.5, 0);
     const hg = new THREE.ExtrudeGeometry(sh, { depth: T.len, bevelEnabled: true, bevelThickness: 0.2, bevelSize: 0.2, bevelSegments: 3 }).translate(0, 0, -T.len / 2), P = hg.attributes.position, N = hg.attributes.normal;
     for (let i = 0; i < P.count; i++) { const x = P.getX(i) * 3 / 3.2, y = P.getY(i); // the sides (not the ends, the floor or the hole): the hill's own slope
-      if (Math.abs(N.getZ(i)) > 0.3 || y < 0.05 || Math.hypot(x, Math.max(0, y - T.wall)) < 1.75) continue;
+      if (Math.abs(N.getZ(i)) > 0.3 || y < 0.05 || Math.hypot(x, Math.max(0, y - T.wall)) < 1.85) continue;
       const u = Math.max(0.02, 1 - (x / 3) ** 2), n = new THREE.Vector3(4.6 * 0.6 * u ** -0.4 * 2 * x / 9, 1, 0).normalize(); N.setXYZ(i, n.x, n.y, n.z); }
     part(g, hg, '#86c24a');
-    part(g, band(1.16, 1.26, T.len + 0.3), '#6b5a44');
-    for (const s of [-1, 1]) part(g, band(1.15, 1.65, 0.35), '#c0b9ac', 0, 0, s * (T.len / 2 + 0.2), { mat: { roughness: 0.55 } });
-    part(g, roundedBox(2.3, 0.04, T.len + 0.8, 0.02), '#c9a47a', 0, 0.02, 0);
+    part(g, band(1.26, 1.36, T.len + 0.3), '#6b5a44');
+    for (const s of [-1, 1]) part(g, band(1.25, 1.75, 0.35), '#c0b9ac', 0, 0, s * (T.len / 2 + 0.2), { mat: { roughness: 0.55 } });
+    part(g, roundedBox(2.5, 0.04, T.len + 0.8, 0.02), '#c9a47a', 0, 0.02, 0);
     const bud = new THREE.SphereGeometry(0.16, 12, 8), top = x => hill(x * 3 / 3.2) + 0.2;
     for (const [x, z, c] of [[-0.9, -0.6, '#fff7ee'], [0.3, -1.7, '#ff9cc4'], [1.6, 1.5, '#fff7ee'], [-1.4, 1.2, '#ffd54a'], [0.4, 2.1, '#ff9cc4'], [2.0, 0.2, '#fff7ee']]) part(g, bud, c, x, top(x) + 0.02, z);
     play(g, 'tunnel', {});

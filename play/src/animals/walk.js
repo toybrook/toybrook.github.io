@@ -9,7 +9,8 @@ import { MODELS, UNIT } from '../game/data.js';
 import { SP } from '../game/rules.js';
 import { choose, start, pose as playPose, leave, due } from './play.js';
 
-const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(40,40,10,0.55)'); gr.addColorStop(1, 'rgba(40,40,10,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+// inbox 63: a little darker (0.55 -> 0.68 in the middle, 0.42 half way out) so they stand out on the wide board
+const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(40,40,10,0.68)'); gr.addColorStop(0.55, 'rgba(40,40,10,0.42)'); gr.addColorStop(1, 'rgba(40,40,10,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
 const shGeo = new THREE.PlaneGeometry(2.2, 1.2);
 // 26-9: the walkers' blobs in a scene are one InstancedMesh (one draw, not one each); a blob's alpha rides in its instance
 // colour's red. It doubles when full; a free slot is a zero matrix
@@ -62,7 +63,7 @@ export function createActor(ctx, rec) {
   // where it may go: dry ground, and for a water animal (walk.water 'swim' / 'wade') the pond as ctx.wet sees it
   const ok = W.water ? (x, z) => walkable(x, z) || ctx.wet(x, z, W.water) : walkable;
   const open = (x, z) => free(ctx.crowd, body, x, z, Math.atan2(-(z - h.z), x - h.x)) && ctx.bridgeEnds.every(e => Math.hypot(e.x - x, e.z - z) > 2.5);
-  const go = (state, tx, tz, speed) => { if (state === 'cross') h.at = h.now; h.ghost = false; h.state = state; h.sp = speed; h.wait = 0; h.cut = h.stuck = null; h.slide = false; h.sx = h.x; h.sz = h.z; h.tx = tx; h.tz = tz; h.t = 0; h.dur = Math.max(1, Math.hypot(tx - h.x, tz - h.z) / (state === 'hop' ? speed : speed * W.pace)); }; // W.pace: a slow walker (the cow)
+  const go = (state, tx, tz, speed) => { if (state === 'cross') h.at = h.now; h.ghost = false; h.nw = 0; h.state = state; h.sp = speed; h.wait = 0; h.cut = h.stuck = null; h.slide = false; h.sx = h.x; h.sz = h.z; h.tx = tx; h.tz = tz; h.t = 0; h.dur = Math.max(1, Math.hypot(tx - h.x, tz - h.z) / (state === 'hop' ? speed : speed * W.pace)); }; // W.pace: a slow walker (the cow)
   function pick() {
     const r = Math.random();
     if (h.after) { const f = h.after; h.after = null; f(true); } // 28-1: done what it was sent for (the orchard's fruit: eaten)
@@ -100,10 +101,14 @@ export function createActor(ctx, rec) {
       if (W.water && Math.random() < W.wet + (1 - W.wet) * 0.7 * (ctx.rain || 0)) for (let k = 0; k < 10; k++) { const q = ctx.waterSpot(W.shallow ? 'wade' : W.water, h.x, h.z); if (q && open(...q) && pathClear(h.x, h.z, ...q, ok)) return go('walk', ...q, 1.3); } // into the water (walks in, never hops)
       if (Math.random() < 0.15) { const R = land(), q = R?.spot(R.id(h.x, h.z)); // inbox 42 B: now and then far off on its own land (round props, out by the gate)
         if (q && near(...q) && open(...q)) { h.goal = { x: q[0], z: q[1], act: 'roam', n: 4 }; if (toward()) return; h.goal = null; } }
-      for (let k = 0; k < 25; k++) { const nx = h.x + (Math.random() - 0.5) * 14, nz = h.z + (Math.random() - 0.5) * 12; if (walkable(nx, nz) && near(nx, nz) && open(nx, nz) && pathClear(h.x, h.z, nx, nz, ok)) {
+      // inbox 63: alone (no friend within 10 m): half its wanders go the nearest friend's way (a step as long as ever, just not away)
+      let pal = null, pd = 1e9; for (const o of ctx.crowd) if (o.pal && o !== body) { const d = Math.hypot(o.x - h.x, o.z - h.z); if (d < pd) { pd = d; pal = o; } }
+      if (!(pd > 10 && Math.random() < 0.5)) pal = null;
+      for (let k = 0; k < 25; k++) { const nx = h.x + (Math.random() - 0.5) * 14, nz = h.z + (Math.random() - 0.5) * 12; if (pal && k < 15 && (nx - h.x) * (pal.x - h.x) + (nz - h.z) * (pal.z - h.z) <= 0) continue; if (walkable(nx, nz) && near(nx, nz) && open(nx, nz) && pathClear(h.x, h.z, nx, nz, ok)) {
         // 25-1 the penguin (walk.slide): a long walk over dry ground now and then as a belly slide, faster (2.4/s)
         if (W.slide && Math.random() < W.slide && Math.hypot(nx - h.x, nz - h.z) > 3 && pathClear(h.x, h.z, nx, nz)) { go('walk', nx, nz, 2.4 / W.pace); h.slide = true; return; }
-        return Math.random() < W.hop && (!W.water || pathClear(h.x, h.z, nx, nz)) ? go('hop', nx, nz, 3.2) : go('walk', nx, nz, 1.3); } } } // out of the water: walks
+        return Math.random() < W.hop && (!W.water || pathClear(h.x, h.z, nx, nz)) ? go('hop', nx, nz, 3.2) : go('walk', nx, nz, 1.3); } } // out of the water: walks
+      if ((h.nw = (h.nw || 0) + 1) >= 2) { h.nw = 0; return unstick(); } } // inbox 63: no way to walk 2 picks running (resting in a pocket between props, so the 20 s watch never runs): out as 끼임
     h.tuck = W.oneLeg && Math.random() < W.oneLeg; // this rest on one leg (the flamingo)
     if (r < 0.78) { h.state = 'graze'; h.t = 0; h.dur = 2.5 + Math.random() * 3; return; }
     if (r < 0.9) { h.state = 'sleep'; h.t = 0; h.dur = 4 + Math.random() * 3; return; }

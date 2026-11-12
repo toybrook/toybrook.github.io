@@ -219,8 +219,9 @@ export const LEGEND_ITEMS = {
 // here to resize a species. Species not in the game yet are written ahead. inbox 1 (temporary, the user to confirm):
 // duck 0.40 -> 0.30 (a long low body read as big as the pig), rabbit 0.40 -> 0.48 (ears count in its height), chicken 0.44.
 // inbox 42 C2: unit 4.5 -> 3.375 (the animals x0.75 against the world; the trees, rocks and big props grew instead: NAT_K, PROPS k)
+// inbox 63: 3.375 -> 4.05 (x0.9 of 0.71: too small to see on the wide board); NAT_K and the board stay, small props keep their size
 export const SIZE = {
-  unit: 3.375, baby: 0.75,
+  unit: 4.05, baby: 0.75,
   horse: 1.00, cow: 0.95, polarBear: 1.05, reindeer: 0.95, flamingo: 0.85, sheep: 0.70, pig: 0.60, swan: 0.60, capybara: 0.55, // the polar bear is also the longest
   penguin: 0.55, seal: 0.45, arcticFox: 0.45, rabbit: 0.48, chicken: 0.44, otter: 0.40, snowyOwl: 0.40, duck: 0.30, turtle: 0.30, // the seal lies down
 };

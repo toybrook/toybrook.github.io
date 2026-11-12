@@ -14,14 +14,14 @@ import { windTime } from './toyKit.js';
 import { daylight, fireflies, hourNow } from './daylight.js';
 import { butterflies } from './butterflies.js';
 import { weather, weatherNow } from './weather.js';
-import { glassLite } from '../animals/materials.js';
+import { glassLite, RIM } from '../animals/materials.js';
 import { natureLayer, grassMask } from './nature.js';
 import { free, gapTo } from '../animals/crowd.js';
 import { stamps, bump } from './stamps.js';
 import { linesLayer } from './lines.js';
 import { loadModel, loadAcc } from '../animals/figure.js';
 import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
-import { SPECIES, MODELS, PROPS, NATURE, BALANCE, SETS, SIZES, BRUSHES, sizeF, paletteOf, sizable } from '../game/data.js';
+import { SPECIES, MODELS, PROPS, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable } from '../game/data.js';
 import { SP, variantOf, habitatOf, known, topAt } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
 import { ambience, sfx, music, playing, hear, pet } from '../ui/sound.js';
@@ -118,7 +118,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   camera.far = Math.max(300, 160 * kR); camera.updateProjectionMatrix(); // inbox 42 A: the bigger board's far side, zoomed all the way out
   // inbox 43: the start view is near while few friends are out here (0-3: 0.6 of the whole board's distance), farther with each one
   // past 3 and each step the board was widened, at most the whole board (homeRadius: the farthest zoom out, 꾸미기 and the zone view)
-  const homeFit = n => homeRadius() * THREE.MathUtils.clamp(0.6 + Math.max(0, n - 3) * 0.045 + level * 0.08, 0.6, 1);
+  const homeFit = n => homeRadius() * THREE.MathUtils.clamp(0.6 + Math.max(0, n - 3) * 0.045 + level * 0.08, 0.6, 1); // inbox 63: none out (0) / the whole board (99); friends: setHome
   camera.position.copy(mid0).addScaledVector(homeDir, homeFit(records.filter(r => !r.stored && !r.pending && habitatOf(r) === habId).length));
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -797,15 +797,21 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const deg = THREE.MathUtils.degToRad, wrap = a => Math.atan2(Math.sin(a), Math.cos(a)), smooth = k => k * k * (3 - 2 * k);
   const HOME = { target: mid0.clone(), radius: camera.position.distanceTo(controls.target), phi: 0.0, theta: 0, wide: homeRadius() };
   HOME.phi = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target)).phi;
-  // inbox 43: the home view (the start, 전체 보기). 1-3 friends out: on them, their middle, at homeFit or only as far as they all
-  // show between the top bar and the bottom buttons; none or more: the board's middle, farther with each friend and each step
-  const homeCam = new THREE.PerspectiveCamera(), fv = new THREE.Vector3();
+  // inbox 63: the home view (the start, the default) is on the friends: the middle of the biggest group (those within 12 m of
+  // one), as near as a grown horse fills SHARE of the screen height (0.105 with 1-3 friends out, 0.095 with 8 or more), backed
+  // off till that group shows between the top bar and the bottom buttons but never past 0.0887 (90% of 0.71's 0.0985, 375x812).
+  // 전체 보기 (wide): the whole board, its middle at homeRadius; from there the button reads 친구들 보기 and comes back.
+  // d = 2.643 H / share: measured (horse 71 px of 812 at 102 m, H 3.375; this tilt and fov)
+  const homeCam = new THREE.PerspectiveCamera(), fv = new THREE.Vector3(), atShare = s => Math.min(HOME.wide, 2.643 * SIZE.unit / s);
+  let wide = false;
   function setHome() {
-    const as = [...actors.values()], n = as.length; HOME.target.copy(mid0); HOME.radius = homeFit(n); if (!n) return;
-    const t = HOME.target; if (n <= 3) { t.set(0, 0, 0); for (const a of as) t.add(a.position); t.divideScalar(n).setY(0); t.x = THREE.MathUtils.clamp(t.x, ...panX); t.z = THREE.MathUtils.clamp(t.z, ...panZ); } // more: the board's middle, backed off till all are in
+    const as = [...actors.values()], n = as.length; HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(THREE.MathUtils.clamp(0.12 - (n - 3) * 0.0018, 0.111, 0.12)); if (wide || !n) return;
+    const near = a => as.filter(b => Math.hypot(b.position.x - a.position.x, b.position.z - a.position.z) < 12);
+    const g = as.map(near).reduce((x, y) => y.length > x.length ? y : x), t = HOME.target.set(0, 0, 0);
+    for (const a of g) t.add(a.position); t.divideScalar(g.length).setY(0); t.x = THREE.MathUtils.clamp(t.x, ...panX); t.z = THREE.MathUtils.clamp(t.z, ...panZ);
     homeCam.copy(camera);
-    const shows = r => { homeCam.position.copy(t).addScaledVector(homeDir, r); homeCam.lookAt(t); homeCam.updateMatrixWorld(); return as.every(a => { fv.copy(a.position).project(homeCam); return Math.abs(fv.x) < 0.8 && fv.y > -0.55 && fv.y < 0.65; }); };
-    while (HOME.radius < HOME.wide && !shows(HOME.radius)) HOME.radius = Math.min(HOME.radius * 1.08, HOME.wide);
+    const shows = r => { homeCam.position.copy(t).addScaledVector(homeDir, r); homeCam.lookAt(t); homeCam.updateMatrixWorld(); return g.every(a => { fv.copy(a.position).project(homeCam); return Math.abs(fv.x) < 0.8 && fv.y > -0.55 && fv.y < 0.65; }); };
+    const far = atShare(0.0887); while (HOME.radius < far && !shows(HOME.radius)) HOME.radius = Math.min(HOME.radius * 1.05, far);
   }
   if (pose) { controls.target.copy(pose.target); camera.position.copy(pose.position); controls.update(); } // the old board's view; the reveal glides out to this one's (below)
   let watch = false; // 26-4 보러 가기 (look): following until the screen is touched (사진 모드: drags circle it, as a tapped one)
@@ -837,7 +843,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (a) { lift = 0.5 * height(a); near = fit(a, NEAR_FILL, FRONT_PHI, faceOf(a)); glide = { radius: 1.4 * near }; }
     controls.zoomToCursor = !a; // following: zoom toward the animal
   }
-  function overview() { setFocus(null); aim = null; goingHome = true; setHome(); } // inbox 43: on the friends out now (as many as there are)
+  function overview(w = false) { setFocus(null); aim = null; goingHome = true; wide = w; setHome(); } // inbox 63: w, the whole board (전체 보기); else on the friends
+  const toggle = () => overview(!(wide && !focus && !away())); // the button: at the whole board -> the friends; else -> the whole board
   // 정면: an eased move (slow start, slow stop) to its face over FRONT_T; after that it keeps to its face as it turns
   function front() {
     if (!focus) return;
@@ -872,14 +879,14 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const phi = sph.phi + (THREE.MathUtils.clamp(sph.phi, lo, hi) - sph.phi) * (1 - Math.exp(-dt * 6));
     if (phi !== sph.phi) { sph.phi = phi; camera.position.copy(controls.target).add(off.setFromSpherical(sph)); }
     controls.minPolarAngle = Math.min(lo, phi); controls.maxPolarAngle = Math.max(hi, phi); // the hard limits never snap it
-    controls.minDistance = Math.min(snapOn ? 1.9 : focus ? near : decorOn ? 7.5 : 4.5, sph.radius); // inbox 42 C2: x0.75 with the animals
+    controls.minDistance = Math.min(snapOn ? 2.25 : focus ? near : decorOn ? 9 : 5.4, sph.radius); // inbox 42 C2: x0.75 with the animals; inbox 63: x0.9 of 0.71
     const turn = decorOn ? Math.max(TURN, Math.abs(sph.theta)) : Infinity; controls.minAzimuthAngle = -turn; controls.maxAzimuthAngle = turn;
   }
-  // the 전체 보기 button shows while following, or once the free camera has left the start view
+  // the 전체 보기 button shows while following, or once the free camera has left the start view (inbox 63: always but decorating, the way to the whole board)
   const away = () => controls.target.distanceTo(HOME.target) > 0.6 || Math.abs(camera.position.distanceTo(controls.target) - HOME.radius) > 2
     || off.copy(camera.position).sub(controls.target).normalize().dot(homeDir) < 0.998;
   let camState = null;
-  function camUi() { const s = decorOn ? '' : focus ? 'f' : !goingHome && away() ? 'a' : ''; if (s !== camState) ui.onCam?.(camState = s); }
+  function camUi() { const s = decorOn ? '' : focus ? 'f' : wide && !goingHome && !away() ? 'w' : 'a'; if (s !== camState) ui.onCam?.(camState = s); } // inbox 63 w: at the whole board (the button: 친구들 보기)
   // drawn only: the camera never shows the inside of the ground, the water, a tree or the barn. It is drawn from the
   // nearest clear point on its line to the target (or lifted off the ground); the real position stays, so zoom and turn feel the same.
   const real = new THREE.Vector3(), shown = new THREE.Vector3();
@@ -959,11 +966,13 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       a.shoo(nx, nz, (b.x - T.x) * nx + (b.z - T.z) * nz);
     }
   }
+  // inbox 63: in the free view too, a prop between the camera and any animal on screen (its middle) fades the same way
+  const mids = [];
   function fadeProps(dt) {
-    const on = focus && !decorOn;
+    let n = 0; if (!decorOn) for (const a of focus ? [focus] : actors.values()) if (a.obj.visible) { const v = mids[n] ??= new THREE.Vector3(); n++; v.a = a; if (a === focus) v.copy(controls.target); else v.copy(a.obj.position).setY(a.obj.position.y + 0.5 * SIZE.unit * (SIZE[a.rec.species] ?? 0.5) * (a.rec.stage === 'baby' ? SIZE.baby : 1)); } // its middle (data.js sized)
     for (const o of [...habitat.solid, ...D.list]) {
       if (!o.fade) continue;
-      const want = on && !o.play?.seats.includes(focus) && hides(o, camera.position, controls.target) ? FADE : 1; // 28-2: not the play prop it is on
+      let want = 1; for (let i = 0; i < n; i++) if (!o.play?.seats.includes(mids[i].a) && hides(o, camera.position, mids[i])) { want = FADE; break; } // 28-2: not the play prop it is on
       if (want === 1 && !o.twin?.on) continue;
       const tw = twinOf(o);
       if (!tw.on) { tw.on = true; scene.add(tw.g); tw.swap.forEach(f => f(false)); }
@@ -1069,7 +1078,8 @@ GPU ${gpu}`; }
     want.copy(controls.target); controls.update();
     if (focus && held && !decorOn && (panned += want.distanceTo(controls.target)) > 0.08 * near) setFocus(null); // the view moved: stop following
     camUi();
-    guard(); rEnd = real.distanceTo(controls.target); clearView(); fadeProps(dt); sky.draw(t, w, L); renderer.render(scene, camera);
+    guard(); rEnd = real.distanceTo(controls.target); clearView(); fadeProps(dt); sky.draw(t, w, L);
+    RIM.value = snapOn ? 0 : 0.2 * THREE.MathUtils.clamp((rEnd - 90) / 90, 0, 1); renderer.render(scene, camera); RIM.value = 0; // inbox 63: faint rim only far out
     perf(raw);
   }
   function project(obj, lift = 2.4) { const v = obj.position.clone(); v.y += lift; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }
@@ -1081,7 +1091,7 @@ GPU ${gpu}`; }
   window.addEventListener('resize', resize, sig);
   // 27-1: the habitat on screen (a built one entered again is only set active, not started again)
   const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, ed: () => ed }; if (DEBUG) window.__hab = dbg; // ed: the held prop (inbox 52 tests)
-  if (reveal) overview(); // out to the wider board's home view while the mist draws back
+  if (reveal) overview(true); // out to the wider board while the mist draws back
   // 28-1: a zone just opened (main.js): the camera glides out over it, and up to 4 animals run to its spots
   function showZone(k) {
     const s = strip(habId, k), sp = habitat.ctx.spots.filter(p => p.k === k), C = THREE.MathUtils.clamp;
@@ -1111,7 +1121,7 @@ GPU ${gpu}`; }
   tick();
   if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus });
   return {
-    resize, overview, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, showZone, topView,
+    resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, showZone, topView,
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw
     // 'isReady' of undefined there, uncaught, and the curtain never lifted. Here gone = ready, and it always ends (10 s at most)

@@ -28,7 +28,7 @@ export const G = {
   fountain: { water: 0.34, ring: 1.55, rim: 2.6, top: 2.25 }, // the basin's water, the circle bathers paddle round, the rim, the bowl's lip the drops fall from (inbox 35: 1.5 times as wide)
   ball: { r: 0.38 },
   // 42 F-2 큰 소품 (k 1: these are their sizes)
-  tunnel: { len: 5.0, wall: 2.3, arch: 1.2 }, // the grass hill along z (mouths at z ±len/2); inside (the stone rims): walls this high under a round arch
+  tunnel: { len: 5.0, wall: 2.3, arch: 1.3 }, // the grass hill along z (mouths at z ±len/2); inside (the stone rims): walls this high under a round arch
   tower: { top: 3.6, drum: 1.6, deck: 1.85, stair: 2.3, steps: 16 }, // the deck's top, the drum, the deck's rim; the stair's middle line, one turn up from the front
   gym: { deck: 1.5, half: 1.5, foot: -3.7, x1: 3.3, y1: 0.22, lip: 3.9 }, // the deck (its top, half its side), the ramp's foot on -x, the slide down to x1 (y1 high), its lip's end
   carousel: { r: 2.2, seat: 1.45, y: 0.62, top: 3.7 }, // the turning floor, the seats' circle and their top, the canopy's lowest
@@ -37,7 +37,8 @@ export const G = {
 };
 // the most a user may measure (world: w across, L nose to tail, h tall; MODELS of its stage) to fit on it
 const FIT = { swing: { w: 1.05, h: 2.4 }, slide: { w: 1.7, h: 2.6 }, seesaw: { L: 2.4 }, hammock: { L: 4.2, w: 1.9 }, ball: { L: 3.6 }, fountain: { L: 3.0 }, train: { L: 2.6, w: 1.5 },
-  tunnel: { h: 3.45, w: 2.3 }, tower: { w: 1.4, L: 2.8 }, gym: { w: 1.4, h: 2.6, L: 2.8 }, carousel: { L: 2.8, h: 2.9 }, balloon: { L: 2.1, w: 1.2, h: 2.2 }, snowslide: { w: 1.7, L: 3.2 } };
+  tunnel: { h: 3.5, w: 2.5 }, // inbox 63: the hole 2.4 -> 2.6 wide (a baby polar bear 2.36; a grown one 2.52 still too big)
+  tower: { w: 1.4, L: 2.8 }, gym: { w: 1.4, h: 2.6, L: 2.8 }, carousel: { L: 2.8, h: 2.9 }, balloon: { L: 2.1, w: 1.2, h: 2.2 }, snowslide: { w: 1.7, L: 3.2 } };
 const fits = (kind, me) => { const f = FIT[kind] ?? {}; return !(me.w > f.w || me.h > f.h || me.L > f.L); };
 const USE = Object.fromEntries(Object.entries(USES).map(([sp, s]) => [sp, s.split(' ')]));
 

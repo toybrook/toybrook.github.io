@@ -26,8 +26,22 @@ const cache = new Map();
 function looks(id, colors = {}) {
   if (!LOOKS[id]) { console.warn(`no material "${id}" yet, using gold`); id = 'gold'; }
   const k = id + JSON.stringify(colors);
-  if (!cache.has(k)) cache.set(k, LOOKS[id](colors));
+  if (!cache.has(k)) { const set = LOOKS[id](colors); for (const m of Object.values(set)) rim(m); cache.set(k, set); }
   return cache.get(k);
+}
+// inbox 63: a very faint light rim (fresnel) seen from far, so a figure reads on the wide board. habitat.js sets RIM.value
+// round its own render only (0 near and for every other render: thumbs, the nest). A look whose shader has no lit end skips it.
+export const RIM = { value: 0 };
+const rimmed = new WeakSet();
+function rim(m) {
+  if (!m?.isMaterial || rimmed.has(m)) return; rimmed.add(m);
+  const prev = m.onBeforeCompile, k0 = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => {
+    prev.call(m, sh, r); sh.uniforms.uRim = RIM; const f = sh.fragmentShader;
+    if (!f.includes('#include <dithering_fragment>') || !f.includes('vViewPosition')) return;
+    sh.fragmentShader = 'uniform float uRim;\n' + f.replace('#include <dithering_fragment>', '#include <dithering_fragment>\nif (uRim > 0.0) { float rn = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition))); gl_FragColor.rgb += uRim * rn * rn * rn * vec3(1.0, 0.97, 0.88); }');
+  };
+  m.customProgramCacheKey = () => k0 + '-rim';
 }
 
 // Put a figure mesh on screen with its material's needs: fake glass grabs the screen right before
