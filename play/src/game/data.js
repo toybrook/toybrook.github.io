@@ -42,6 +42,8 @@ const STROLL = { hours: [1, 4, 8], hearts: { 1: 3, 4: 6, 8: 8 }, candy: { 1: 0, 
 const SCENE = { hearts: 10 };
 // 13-3 오늘의 진열대: n props every `hours` (a fixed order), one at -off; every `every`-th display one shows a 진열대 색
 const SHELF = { hours: 3, n: 3, off: 0.2, every: 2 };
+// 15-1 계절 이벤트 (EVENTS below): 「곧 끝나요」 on the top bar this many days before an event ends
+const EVENT = { soon: 2 };
 export const PACE = {
   release: {
     nest: { every: 60 * MIN, max: 8, start: 1, startRarity: 'common', early: { n: 0, every: 60 * MIN }, onUnlock: 0 },
@@ -59,6 +61,7 @@ export const PACE = {
     stroll: STROLL,
     scene: SCENE,
     shelf: SHELF,
+    event: EVENT,
   },
   beta: { // max 20: 10 h of eggs (the night between the last visit and the first); slots 3: with 2 the snow opened on day 4 (inbox-31.md)
     nest: { every: 30 * MIN, max: 20, start: 1, startRarity: 'common', early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3 }, // 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
@@ -76,11 +79,12 @@ export const PACE = {
     stroll: STROLL,
     scene: SCENE,
     shelf: SHELF,
+    event: EVENT,
   },
 };
 const P = PACE[EDITION];
 export const BALANCE = {
-  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, // PACE (above)
+  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, event: P.event, // PACE (above)
   candy: { price: 15, free: 1 },                     // 꼬마 사탕 (inbox 14): holds a baby's growth (nothing shows on it); given back when it grows on. Hearts; a new game has `free`
   pity: { heroic: 30, legendary: 180 },              // shard gauges per egg type: every egg cracked +1 to each; full = the next egg is that rarity (legendary first).
                                                      // A natural one of that rarity or better empties the gauge. Guaranteed eggs prefer variants not owned yet
@@ -720,9 +724,43 @@ export const PROPS = [
   { id: 'walk_cairn', name: '조약돌 탑', price: 0, r: 0.3, small: true, gift: '산책 선물' }, // 13-1: STROLL_PROPS, in turn
   { id: 'walk_acorn', name: '큰 도토리', price: 0, r: 0.3, small: true, gift: '산책 선물' },
   { id: 'walk_pinecone', name: '솔방울', price: 0, r: 0.3, small: true, gift: '산책 선물' },
+  // 15-1 이벤트 소품: bought with an event's coins in its window (EVENTS shop), never with hearts; nothing back when put away
+  // (gift, price 0). ev: the event (sold again when it comes back, not yet). as: drawn with that prop's model (props.js
+  // decorModel), its other looks copied here. 15-2 gives 첫눈 its own models
+  { id: 'ev_igloo', name: '눈 이글루', as: 'igloo', price: 0, r: 2, k: 1.6, shelter: true, cover: 'side', gift: '첫눈 이벤트', ev: 'firstsnow' },
+  { id: 'ev_sled', name: '첫눈 썰매', as: 'sled', price: 0, r: 0.9, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  { id: 'ev_snowman', name: '첫눈 눈사람', as: 'snowman', price: 0, r: 0.88, k: 1.3, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  { id: 'ev_icelamp', name: '눈꽃 등불', as: 'icelamp', price: 0, r: 0.44, k: 1.7, light: true, small: true, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  { id: 'ev_bigsnowman', name: '첫눈 기념 큰 눈사람', as: 'snowman', price: 0, r: 1.35, k: 2, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  { id: 'ev_album', name: '눈 속의 친구 액자', as: 'icelamp', price: 0, r: 0.7, k: 2.7, light: true, gift: '첫눈 이벤트', ev: 'firstsnow' },
 ];
 // 42 F-1: list = the price as listed (release); price = what this edition charges (PACE priceX; big: list ♥100 and up). Gifts stay 0
 for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5, Math.round(p.price * P.priceX[p.price >= 100 ? 'big' : 'small'] / 5) * 5); }
+// 15-1 계절 이벤트 (docs/event.md; rules.js evTick; ui/event.js). start: 'MM-DD' every year (KST) unless play/events.json
+// moves that year's run; days: how long. coin: the event's own coins (hearts: what each one left is worth at the end).
+// earn: coins for the day's first visit (day) and one every pet-th petting heart (pet); 15-2 adds the snow piles. look: the
+// habitats' weather odds while it runs (weather.js; 15-2 the snow on everything). shop: its props for coins. track: the free
+// 보상 길, by the coins got in all (at), each step given at once (rules give: hearts, candy, a prop; never eggs). album: photo
+// slots (need: hab, night, sky (photo.js SKIES), prop placed in that habitat), all filled = its prop. news, mail: once a run.
+// Fixed rewards, nothing random, nothing paid; the odds and pity never change for one
+export const EVENTS = [
+  { id: 'firstsnow', name: '첫눈', icon: '❄️', start: '12-05', days: 14,
+    coin: { name: '눈송이', icon: '❄️', hearts: 2 },
+    earn: { day: 20, pet: 5 },
+    look: { weather: { meadow: { clear: 45, rain: 35, fog: 20 }, pond: { clear: 45, rain: 35, fog: 20 }, snow: { clear: 40, snow: 45, fog: 15 } } },
+    shop: [{ prop: 'ev_igloo', price: 90 }, { prop: 'ev_sled', price: 40 }, { prop: 'ev_snowman', price: 30 }, { prop: 'ev_icelamp', price: 30 }],
+    track: [{ at: 10, hearts: 20 }, { at: 25, candy: 1 }, { at: 45, hearts: 30 }, { at: 70, prop: 'ev_icelamp' }, { at: 100, hearts: 40 },
+      { at: 130, candy: 2 }, { at: 160, hearts: 50 }, { at: 195, prop: 'ev_sled' }, { at: 230, hearts: 60 }, { at: 260, prop: 'ev_bigsnowman' }],
+    album: { prop: 'ev_album', slots: [
+      { id: 'night', name: '겨울밤의 친구', need: { night: true } },
+      { id: 'snow', name: '설원에서', need: { hab: 'snow' } },
+      { id: 'fog', name: '안개 낀 아침', need: { sky: 'fog' } },
+      { id: 'igloo', name: '이글루 옆에서', need: { prop: 'ev_igloo' } },
+      { id: 'snowman', name: '눈사람과 함께', need: { prop: 'ev_snowman' } },
+      { id: 'sled', name: '썰매 옆에서', need: { prop: 'ev_sled' } }] },
+    news: '첫눈 이벤트: 눈송이를 모아 보상 길을 걷고, 겨울 소품을 사고, 앨범을 채워요',
+    mail: { title: '첫눈이 왔어요', body: '첫눈 이벤트가 시작됐어요. 따뜻하게 지내라고 작은 선물을 보내요!', rewards: { hearts: 30, candy: 1 } } },
+];
 // inbox 41 C 출석부: one slot a day (dayOf), the next one even after days away (no penalty), back to 1 after 7. eggs: plain nest
 // eggs (rules give: the habitat's odds, its pity). The 7th adds the next of ATTEND_PROPS, the 7 in turn
 export const ATTEND = [{ hearts: 20 }, { candy: 2 }, { eggs: 1 }, { hearts: 30 }, { candy: 3 }, { eggs: 1 }, { hearts: 50 }];

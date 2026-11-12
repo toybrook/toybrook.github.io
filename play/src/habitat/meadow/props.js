@@ -423,6 +423,7 @@ export function part(g, geo, color, x = 0, y = 0, z = 0, o = {}) {
   m.castShadow = m.receiveShadow = true; g.add(m); return m;
 }
 export function decorModel(id) {
+  id = PROPS.find(p => p.id === id)?.as ?? id; // 15-1: an event prop drawn as another
   const g = new THREE.Group();
   if (id === 'hay') { // two round bales, one leaning on the other, with a band each
     const bale = lathe([[0, -0.42], [0.36, -0.42], [0.44, -0.34], [0.46, -0.2], [0.46, 0.2], [0.44, 0.34], [0.36, 0.42], [0, 0.42]], 16);

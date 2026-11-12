@@ -522,3 +522,17 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .dsh b{font-size:calc(12px*var(--fs));max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dsh small{font-size:calc(10px*var(--fs));color:#8a6a4c;white-space:nowrap}
 .dsh em{font-style:normal;font-size:calc(11.5px*var(--fs));font-weight:700;color:#6b4a2b}.dsh s{color:#a8927a;font-weight:400}
 .dsh.sale{border-color:#e8a04a;background:#fff1dc}.dsh i{position:absolute;top:4px;right:4px;width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #d6bb93}
+
+/* 15-1 계절 이벤트: the coin pill by the hearts, the window (mail's rows), the start card's falling flakes */
+.tools .evpill{display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}.evpill b{font-weight:700}
+.evpill small{font-size:calc(10px*var(--fs));font-weight:700;color:#ffd28a}
+.ev .evc b{color:#b0670f}.ev .evtabs{display:flex;gap:4px;margin:0 0 10px}
+.ev .evtabs button{flex:1;min-width:0;min-height:42px;padding:0 6px;border:1px solid #e3cba6;border-radius:999px;background:#fff6e6;color:#6b4a2b;font:inherit;font-size:calc(14px*var(--fs));font-weight:700;white-space:nowrap}
+.ev .evtabs button.on{background:#e8805f;border-color:#e8805f;color:#fff}
+.ev ul,.ev ol{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:6px;max-height:calc(46dvh - var(--sa-t) - var(--sa-b));overflow-y:auto}
+.ev li{min-height:44px}.ev li img{width:40px;height:40px;object-fit:contain;flex-shrink:0}.ev li span{flex:1;min-width:0}
+.ev ol li b{flex-shrink:0;min-width:3.2em;color:#b0670f;font-variant-numeric:tabular-nums}.ev li em{font-style:normal;color:#e5584a;flex-shrink:0}
+.ev li.done{opacity:.62}.ev li.next{border-color:#e8805f;box-shadow:0 0 0 1px #e8805f inset}.ev p.note{margin:0 0 10px}
+.evcard{position:relative;overflow:hidden}.evcard>*:not(.flakes){position:relative}
+.flakes{position:absolute;inset:0;margin:0;pointer-events:none}.flakes i{position:absolute;top:-1.2em;font-style:normal;color:#9cc7e8;font-size:calc(14px*var(--fs));animation:evfall 4s linear infinite;will-change:transform}
+@keyframes evfall{to{transform:translateY(380px) rotate(200deg)}}

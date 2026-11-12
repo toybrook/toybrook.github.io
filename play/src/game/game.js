@@ -111,6 +111,13 @@ export const claimLegend = () => act(now => R.claimLegend(S, now)); // 44
 export const useCode = (codes, input) => act(now => { const out = R.useCode(S, codes, input, now, usedHere());
   if (out.got) try { localStorage.setItem(CODES, JSON.stringify([...usedHere(), out.got[0].id])); } catch { /* full: the save still has it */ } return out; });
 // inbox 41 C 출석부: at = the habitat on screen (a gift prop goes there)
+// 15-1 계절 이벤트: the calendar (play/events.json, ui/event.js), the run now, its shop, album, cards and mail
+export const setCal = c => { R.setCal(c); if (S) act(() => {}); }; // 15-1: before start (the kept copy) only the calendar
+export const event = () => S && R.liveRun(S, clock());
+export const buyEv = (id, hab) => act(now => R.buyEv(S, id, hab, now));
+export const evShot = ctx => act(now => R.evShot(S, ctx, now));
+export const evSeen = (key, k) => act(() => R.evSeen(S, key, k));
+export const evMail = () => S ? R.evMail(S, clock()) : [];
 export const attendDue = () => R.attendDue(S, clock());
 export const attend = at => act(now => R.attend(S, now, Math.random, at));
 export const note = (k, n) => { if (n > (S.stats?.[k] || 0)) act(() => R.noteLive(S, k, n)); }; // 23-2: the habitat on screen (saved only when more)

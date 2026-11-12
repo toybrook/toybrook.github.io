@@ -27,7 +27,7 @@
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, FIRST, STROLL_PROPS, PLACES, SCENES, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, FIRST, STROLL_PROPS, PLACES, SCENES, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -61,7 +61,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {} }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {} }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   return S;
@@ -91,6 +91,10 @@ export function fromSave(raw, now) {
     S.cards = S.cards.filter(isObj).slice(-B.stroll.cards); S.strolls = Math.max(0, Math.floor(S.strolls) || 0); // 13-1
     S.scenes = Object.fromEntries(Object.entries(S.scenes).filter(([k, v]) => SCENES.some(s => s.id === k) && isObj(v) && Number.isFinite(v.at)).map(([k, v]) => [k, { at: v.at, sp: Object.hasOwn(SP, v.sp) ? v.sp : null }])); // 13-2
     for (const a of S.animals) if (a.stroll != null && !(isObj(a.stroll) && B.stroll.hours.includes(a.stroll.h) && Number.isFinite(a.stroll.end) && PLACES.some(p => p.id === a.stroll.pl))) { delete a.stroll; a.stored = true; } // a broken walk: it waits in storage
+    { const n = v => Math.max(0, Math.floor(v) || 0); // 15-1: runs of events this build knows
+      S.events = Object.fromEntries(Object.entries(S.events).filter(([, R]) => isObj(R) && EV[R.id] && Number.isFinite(R.start) && Number.isFinite(R.end)).map(([k, R]) => [k, { ...R,
+        c: n(R.c), got: n(R.got), step: Math.min(n(R.step), EV[R.id].track.length), pets: n(R.pets), dayAt: n(R.dayAt), day: typeof R.day === 'string' ? R.day : '',
+        buy: isObj(R.buy) ? R.buy : {}, shots: isObj(R.shots) ? R.shots : {} }])); }
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -339,6 +343,7 @@ export function advance(S, now, rng = Math.random) {
   const day = dayOf(now); if (S.xpDay !== day) { S.xpDay = day; S.xp += B.level.xp.login; bump(S, 'days'); } // the day's first visit (or the game left open past midnight)
   for (const a of newlyDone(S)) { S.ach = { ...S.ach, [a.id]: now }; S.xp += B.level.xp.achieve; ev.push({ type: 'achieve', id: a.id }); } // 23-2
   firstCheck(S, now, ev, rng); // 41 D
+  evTick(S, now, rng); // 15-1
   const L = gardenLevel(S.xp); if (L > S.lv) { ev.push({ type: 'level', from: S.lv, level: L, unlocks: unlocksBetween(S.lv, L) }); S.lv = L; }
   return ev;
 }
@@ -700,7 +705,7 @@ export function feed(S, id, now) {
 export function tapHeart(S, id, now) {
   const a = S.animals.find(a => a.id === id), n = a ? heartFor(S, a, now) : 0;
   if (n && growing(a)) { bank(a, now); a.g = Math.min(1, a.g + B.grow.pet); }
-  if (n) bump(S, 'pet');
+  if (n) { bump(S, 'pet'); const L = liveRun(S, now); if (L && ++L.R.pets % L.e.earn.pet === 0) evEarn(S, L.R, 1, now); } // 15-1: a coin every earn.pet hearts
   if (n && S.pet.n <= B.level.xp.petDaily) S.xp += B.level.xp.pet; // the day's first petDaily hearts (hearts.js counts them)
   S.hearts += n; return n;
 }
@@ -787,6 +792,57 @@ export function attend(S, now, rng = Math.random, at = null) {
   const got = { slot: k + 1, ...give(S, rw, now, rng, at) };
   return { got, events: [{ type: 'attend', got }] };
 }
+// 15-1 계절 이벤트 (data.js EVENTS, docs/event.md). The dates come from play/events.json (setCal; ui/event.js reads it and keeps
+// the last copy) or, for a year it does not name, the event's own 'MM-DD'; all KST. A run is one event in one year (key
+// 'id-year'): S.events[key] = { id, start, end, c (coins now), got (in all: the 보상 길), step (steps given), pets, day/dayAt (the
+// day's coins: dayOf, at most one a day, none on a day before the last one's time), buy: { prop: n }, shots: { slot: when },
+// cover (the album's prop given), seen (its start card), over (when its coins became hearts: paid), told (that card) }.
+// Made when it starts; from then it runs to its own end offline too. A calendar read later moves start and end till it is over
+// (an end at or before the start: the run is off). The UI reads it all from here (no events: a toast or card comes from the state)
+let CAL = null;
+export const setCal = c => { CAL = Array.isArray(c) ? c.filter(isObj) : null; };
+const EV = Object.fromEntries(EVENTS.map(e => [e.id, e])), kstYear = t => new Date(t + 9 * 3600e3).getUTCFullYear();
+function runAt(e, y) { // its run of year y (by the start): { start, end } or null
+  const c = CAL?.find(c => c.id === e.id && kstYear(kst(c.start)) === y), start = c ? kst(c.start) : kst(`${y}-${e.start}`);
+  const end = c?.end != null ? kstEnd(c.end) : start + e.days * DAY_MS;
+  return Number.isFinite(start) && Number.isFinite(end) ? { start, end } : null;
+}
+const evLive = (R, now) => !R.over && R.start <= now && now < R.end;
+export function liveRun(S, now) { for (const [key, R] of Object.entries(S.events)) if (evLive(R, now)) return { key, R, e: EV[R.id] }; return null; }
+function evEarn(S, R, n, now, rng = Math.random) {
+  const e = EV[R.id]; R.c += n; R.got += n;
+  while (R.step < e.track.length && R.got >= e.track[R.step].at) give(S, e.track[R.step++], now, rng, S.flags.lastHab);
+}
+function evTick(S, now, rng) {
+  const Y = kstYear(now);
+  for (const e of EVENTS) for (const y of [Y - 1, Y]) {
+    const key = `${e.id}-${y}`, r = runAt(e, y), R = S.events[key];
+    if (R) { if (CAL && r && !R.over) Object.assign(R, r); }
+    else if (r && r.start <= now && now < r.end) S.events[key] = { id: e.id, ...r, c: 0, got: 0, step: 0, pets: 0, day: '', dayAt: 0, buy: {}, shots: {} };
+  }
+  for (const R of Object.values(S.events)) {
+    if (!R.over && now >= R.end) { R.over = now; R.paid = R.c * EV[R.id].coin.hearts; R.left = R.c; S.hearts += R.paid; R.c = 0; }
+    else if (evLive(R, now) && dayOf(now) !== R.day && now >= R.dayAt) { R.day = dayOf(now); R.dayAt = now; evEarn(S, R, EV[R.id].earn.day, now, rng); }
+  }
+}
+export function buyEv(S, propId, hab, now) { // the event shop: its coins, into this habitat (put away: 꾸미기 › 선물)
+  const L = liveRun(S, now), it = L?.e.shop.find(i => i.prop === propId), P = PROP[propId]; if (!it || !P || L.R.c < it.price) return null;
+  L.R.c -= it.price; L.R.buy[propId] = (L.R.buy[propId] || 0) + 1;
+  const p = { uid: S.nextId++, prop: P.id, hab: P.habitat ?? hab, placed: false, x: 0, z: 0, rot: 0 }; S.props.push(p); return p;
+}
+// a photo saved while an event runs: ctx { hab, night, sky } (photo.js); fills the first empty slot it meets, all = album.prop
+export const shotFits = (S, n, { hab, night, sky }) => (!n.hab || n.hab === hab) && (n.night == null || n.night === !!night) && (!n.sky || n.sky === sky)
+  && (!n.prop || S.props.some(p => p.placed && p.hab === hab && p.prop === n.prop));
+export function evShot(S, ctx, now, rng = Math.random) {
+  const L = liveRun(S, now), A = L?.e.album, s = A?.slots.find(s => !L.R.shots[s.id] && shotFits(S, s.need, ctx)); if (!s) return null;
+  L.R.shots[s.id] = now; let cover = null;
+  if (A.slots.every(s => L.R.shots[s.id]) && !L.R.cover) { L.R.cover = now; cover = give(S, { prop: A.prop }, now, rng, ctx.hab).prop; }
+  return { slot: s.id, cover };
+}
+export function evSeen(S, key, k) { const R = S.events[key]; if (R && (k === 'seen' || k === 'told')) R[k] = 1; }
+// its mail, while it runs (ui/mail.js adds it to mail.json's; mailOpen: once)
+export const evMail = (S, now) => { const L = liveRun(S, now); if (!L) return [];
+  return [{ id: 'ev-' + L.key, ...L.e.mail, end: new Date(L.R.end + 9 * 3600e3 - 1).toISOString().slice(0, 10) }]; };
 // inbox 41 D 첫날 할 일 (data.js FIRST): on while today (dayOf) is one of the game's first FIRST.days days and not all are done.
 // advance gives each task's hearts once (S.first[id] = when); all of them: FIRST.prop (into the habitat last entered) + FIRST.candy
 const FIRST_V = { hatch: S => S.stats?.hatch || 0, pet: S => S.stats?.pet || 0, prop: S => S.props.filter(p => p.placed && !p.nat).length, photo: S => S.stats?.photo || 0, codex: S => S.stats?.codex || 0 };

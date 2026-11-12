@@ -128,6 +128,8 @@ export function initPhoto(getApi, getHab) {
       a.download = `toybrook-${getHab()}-${t.getFullYear()}${p(t.getMonth() + 1)}${p(t.getDate())}-${p(t.getHours())}${p(t.getMinutes())}${p(t.getSeconds())}.jpg`;
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
       msg = `저장했어요 · ${c.width}×${c.height} · 내려받은 파일이나 사진 앱에서 볼 수 있어요`; G.note('photo', 1); // 41 D 첫날 할 일
+      const sk = api.sky?.(), got = sk && G.event() && G.evShot({ hab: getHab(), night: sk.hour >= 20 || sk.hour < 5, sky: sk.kind }); // 15-1 이벤트 앨범
+      if (got) msg += ` · 이벤트 앨범 한 칸: 「${G.event()?.e.album.slots.find(s => s.id === got.slot)?.name ?? ''}」${got.cover ? ' · 앨범을 다 채워 소품을 받았어요' : ''}`;
     } catch { msg = '저장하지 못했어요 · 다시 해 주세요'; }
     busy = false; draw();
   }

@@ -15,8 +15,8 @@ const ease = x => THREE.MathUtils.smoothstep(x, 0, 1);
 // a game day's spells ({ from, to } in hours from its start, kind), the same every time for that habitat and day
 const days = new Map();
 export function day(hab, d) {
-  const key = hab + d; let S = days.get(key); if (S) return S;
-  const odds = WEATHER.by[hab] ?? WEATHER.odds, s = seedOf(hab), [a, b] = WEATHER.every, tot = Object.values(odds).reduce((x, y) => x + y); S = [];
+  const key = hab + d + (WEATHER.ev ? 'e' : ''); let S = days.get(key); if (S) return S;
+  const odds = WEATHER.ev?.[hab] ?? WEATHER.by[hab] ?? WEATHER.odds, s = seedOf(hab), [a, b] = WEATHER.every, tot = Object.values(odds).reduce((x, y) => x + y); S = [];
   for (let t = 0, k = 0; t < 24; k++) {
     let to = t + a + (b - a) * hash(s, d, k, 1), r = hash(s, d, k, 2) * tot, kind;
     if (24 - to < a) to = 24 - t <= b ? 24 : t + (24 - t) / 2; // no stub at midnight: the day's last 1~3 h (or two halves of it)

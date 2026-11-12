@@ -11,9 +11,9 @@ import { buildSnow } from './snow/index.js';
 import { rectAt, strip, zoneSet, BOARD0 } from './zones.js';
 import { mist } from './mist.js';
 import { windTime } from './toyKit.js';
-import { daylight, fireflies } from './daylight.js';
+import { daylight, fireflies, hourNow } from './daylight.js';
 import { butterflies } from './butterflies.js';
-import { weather } from './weather.js';
+import { weather, weatherNow } from './weather.js';
 import { glassLite } from '../animals/materials.js';
 import { natureLayer, grassMask } from './nature.js';
 import { free, gapTo } from '../animals/crowd.js';
@@ -1129,6 +1129,7 @@ GPU ${gpu}`; }
     // 24-1 사진 모드: the wider camera band; shot(ratio): this frame drawn again at that pixel ratio, copied out (a 2D canvas)
     // inbox 42 G: the preview is fitted under the panel by photo.js (a CSS transform; taps read the canvas rect), the view itself is whole
     canvas: renderer.domElement, snap(on) { snapOn = on; },
+    sky: () => ({ hour: hourNow(), kind: weatherNow(habId).kind }), // 15-1: what a photo shows (the event album)
     shot(ratio) {
       renderer.setPixelRatio(ratio); renderer.setSize(W(), H()); renderer.render(scene, camera);
       const c = document.createElement('canvas'); c.width = renderer.domElement.width; c.height = renderer.domElement.height; c.getContext('2d').drawImage(renderer.domElement, 0, 0);

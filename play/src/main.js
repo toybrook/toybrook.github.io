@@ -16,6 +16,7 @@ import { watch, track } from './ui/stats.js';
 import { openCode } from './ui/mail.js'; // inbox 41 B 우편함
 import { initAttend, todayRow, takeToday } from './ui/attend.js'; // inbox 41 C 출석부
 import './ui/first.js'; // inbox 41 D 첫날 할 일
+import { initEvent } from './ui/event.js'; // 15-1 계절 이벤트
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
 mapImg.src = ASSETS.worldmap;
@@ -58,6 +59,8 @@ const nav = {
 // 26-1: the first screen (the world map) needs none of the 3D. three.js, the habitats and their windows (ui/play.js) are
 // fetched in the quiet moment after the map is up, or at once if a habitat is opened first; what happened before the
 // windows were here is handed to them then.
+// inbox 62: a tap or key since the page opened (offline.js: a newer version found before it is taken at once)
+let touched = false; for (const k of ['pointerdown', 'keydown']) addEventListener(k, () => { touched = true; }, { capture: true, once: true });
 let play = null; const early = [];
 G.on(ev => { if (!play) early.push(...ev); });
 const code = () => code.p ??= (codeAsked(), Promise.all([import('./habitat/habitat.js'), import('./ui/play.js')]).then(([h, p]) => {
@@ -68,7 +71,7 @@ mapImg.decode().catch(() => {}).then(() => {
   const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400);
   idle(() => code().then(h => { // then the models of the habitat opened last (a new player: the first one)
     idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.S.animals).catch(() => {}));
-    if (OFFLINE) import('./ui/offline.js').then(m => m.initOffline());
+    if (OFFLINE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
   }).catch(() => {}));
 });
 const ui = {
@@ -255,6 +258,7 @@ addEventListener('visibilitychange', () => {
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone(); };
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
 initAttend(() => cur, firstDone);
+initEvent(() => cur, () => api);
 { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
 
 // 21-1 설정: choices kept in this browser apart from the save (config.js PREFS); the habitat reads them every frame

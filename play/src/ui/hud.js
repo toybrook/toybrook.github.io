@@ -44,7 +44,7 @@ export function ask(text, ok = '확인', no = '취소') {
 }
 
 // the windows, top first; each closes with its own close button (so its own code runs)
-const TOPS = ['#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#prefs', '#help', '#habMenu', '#attend', '#ret', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
+const TOPS = ['#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#event', '#prefs', '#help', '#habMenu', '#attend', '#ret', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
 const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden');
 export const topWindow = () => { for (const q of TOPS) { const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };
@@ -63,7 +63,7 @@ import { TIPS } from './tips.js';
 const waiting = []; let tipEl = null, calm = 0;
 // inbox 43: a game's first 10 minutes show one card or tip at a time, the next 40 s after the last one went (the start card
 // is the way in, not counted). resting(): wait. Tips, 출석부, level, grown and home cards all ask it.
-const CARDS = '#news,#attend,#ret,#lvup,#zoneCard,#grown,#homeHint,.tip'; let upAt = 0;
+const CARDS = '#news,#attend,#event,#ret,#lvup,#zoneCard,#grown,#homeHint,.tip'; let upAt = 0;
 export const resting = () => { if ([...document.querySelectorAll(CARDS)].some(shown)) upAt = Date.now(); return !!G.S && G.now() - G.S.since < 600e3 && Date.now() - upAt < 40e3; };
 setInterval(() => { if (!resting()) nextTip(); }, 250);
 export function tip(k, anchor) { // anchor: an element or a selector; shown once it is on screen and no other tip is up
@@ -89,5 +89,5 @@ function nextTip() {
 function endTip(off) { if (!tipEl) return; const k = tipEl.dataset.k; tipEl.remove(); tipEl = null; calm = Date.now() + 380; G.flag('tip_' + k); if (off) { G.flag('tipsOff'); waiting.length = 0; } setTimeout(nextTip, 400); }
 // any tap elsewhere also counts as seen
 addEventListener('pointerdown', e => { if (tipEl && !tipEl.contains(e.target)) endTip(false); }, true);
-G.on(() => nextTip());
+G.on(() => setTimeout(nextTip)); // a tick later: a card opened in the same step (level.js flags lvCard before it shows the card) is up first, so the tip waits instead of covering it
 export function resetTips() { for (const k in TIPS) G.flag('tip_' + k, false); G.flag('tipsOff', false); }
