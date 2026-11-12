@@ -15,7 +15,7 @@ const codeGot = () => performance.getEntriesByType('resource').filter(e => e.sta
 export function loadBar(on, codeDone = true) {
   if (!el) {
     el = document.getElementById('loading');
-    el.innerHTML = '<p>서식지 불러오는 중…</p><p class="lbar"><i></i></p><p class="ltip"></p>'; bar = el.querySelector('i');
+    el.innerHTML = '<p>서식지 불러오는 중…</p><p class="lbar"><i></i></p><button class="lfirst" hidden>바로 깨기</button><p class="ltip"></p>'; bar = el.querySelector('i');
   }
   el.hidden = !on; if (!on) return;
   el.querySelector('.ltip').innerHTML = loadTip();

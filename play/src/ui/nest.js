@@ -51,7 +51,7 @@ export function initNest(nav) {
   <div class="nlow"><div class="ngauges" id="ngauges"></div><div class="nslots" id="nslots"></div><div class="ncard" id="ncard" hidden></div></div>
 </div>`;
   const eggsEl = $('neggs'), stageEl = $('nstage'), gEl = $('ngauges'), slotsEl = $('nslots'), cardEl = $('ncard'), tabsEl = $('ntabs');
-  let habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {};
+  let habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {}, after = null;
   const nest = () => G.S.nests[habId] || { eggs: [], t: G.now() };
   const pending = () => G.S.animals.find(a => a.pending);
 
@@ -205,6 +205,7 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
   }
   function answer(go, e) {
     const a = G.S.animals.find(x => x.id === +cardEl.dataset.id && x.pending); if (!a) return;
+    if (G.S.stats.hatch === 1 && !G.S.flags.next61) { G.flag('next61'); setTimeout(() => toast('알마다 뭐가 나올지 몰라요 — 둥지에 다음 알이 있어요', 3600), 3400); } // inbox 61 B: once, after the first
     const nm = nameOf(a), gift = go && B.codexHeart && !G.S.codex[key(a.species, a.variant)] ? ` · ♥+${B.codexHeart}` : ''; // inbox 38
     if (gift) heart(e.clientX, e.clientY);
     if (go === 'store') { // its habitat is full or not open yet (rules.fits): it waits in storage
@@ -230,7 +231,7 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     if (!G.S.flags.nestTapped) { hideToast(); G.flag('nestTapped'); }
     draw(); resume();
   }
-  function close() { run++; busy = false; shown = null; cardEl.hidden = true; if (st) stageOff(); el.hidden = true; drawBtn(); }
+  function close() { run++; busy = false; shown = null; cardEl.hidden = true; if (st) stageOff(); el.hidden = true; drawBtn(); if (after) { const f = after; after = null; f(); } }
 
   btn.onclick = open;
   el.addEventListener('click', e => {
@@ -257,5 +258,7 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     attach(api, id) { hab = api; habId = id; draw(); },
     leave() { close(); hab = null; },
     open,
+    // inbox 61 B: a new player's first egg, from the loading screen's 바로 깨기 (main.js), before the board is built; done: the sheet closed
+    first(id, done) { habId ??= id; after = done; const i = G.takeEgg(id); if (i < 0) return close(); sfx('egg'); open(); hatchSlot(i); },
   };
 }

@@ -3,14 +3,14 @@
 import * as THREE from 'three';
 import { pond, shore, shoreR, stream, SW, waterY, heightAt, WATER_Y } from './layout.js';
 import { vert, frag } from '../meadow/water.js';
-import { skyLit, nightGlow, rainNow } from '../toyKit.js';
+import { skyLit, nightGlow, rainNow, snowNow } from '../toyKit.js';
 
 export function buildWater(scene, sunDir) {
   const uTime = { value: 0 };
   const mk = defines => new THREE.ShaderMaterial({ // as in the meadow: alpha-blended but flagged opaque, drawn after the ground
     vertexShader: vert, fragmentShader: frag, transparent: false, blending: THREE.CustomBlending, fog: true,
     blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor, defines,
-    uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), uTime, uSun: { value: sunDir }, uLit: skyLit, uNight: nightGlow, uRain: rainNow, uPond: { value: new THREE.Vector3() } }
+    uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), uTime, uSun: { value: sunDir }, uLit: skyLit, uNight: nightGlow, uRain: rainNow, uIce: snowNow, uPond: { value: new THREE.Vector3() } }
   });
   const Y = WATER_Y + 0.04, fallOf = (x, z) => 1 - THREE.MathUtils.clamp((WATER_Y - heightAt(x, z)) / 1.4, 0, 1) + Math.max(0, heightAt(x, z) - WATER_Y);
 

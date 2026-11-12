@@ -13,8 +13,11 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.73.2-345b2105">
+<meta name="build" content="toybrook-0.74.0-ee8152a1">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
+try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
+  document.head.append(Object.assign(document.createElement('link'), { rel: 'modulepreload', href: './' + u })); } catch { /* storage off: as before */ }</script>
 </head>
 <body>
 <div class="side">
@@ -24,7 +27,7 @@
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="880243" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="895440" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -95,9 +98,9 @@
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
       <li data-upd><i aria-hidden="true">🔄</i><span>새 판이 나오면 위에 「새로 고침」 띠가 떠요</span></li>
+      <li><i aria-hidden="true">❄️</i><span>12월 5일부터 2주 동안 첫눈 이벤트: 눈 덮인 초원에서 눈더미를 모아 눈사람을 만들고, 친구에게 털모자를 씌워요</span></li>
       <li><i aria-hidden="true">🔍</i><span>친구들이 조금 커지고, 들어가면 친구들이 모인 곳을 가까이 보여 줘요. 판 전체는 「전체 보기」로 봐요</span></li>
       <li><i aria-hidden="true">🐾</i><span>친구를 1·4·8시간 산책 보내요. 돌아오면 엽서와 하트를 들고 와요(보관함의 친구도 갈 수 있어요)</span></li>
-      <li><i aria-hidden="true">✨</i><span>친구들이 소품에서 노는 모습이 도감 「놀이 장면」에 모여요. 못 본 장면은 힌트로 남아요</span></li>
     </ul>
     <p class="note">베타 기간의 데이터는 정식 출시 때 초기화돼요.</p>
     <div class="nbtns"><button class="go" data-close>확인</button></div>

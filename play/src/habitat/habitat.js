@@ -10,7 +10,7 @@ import { buildPond } from './pond/index.js';
 import { buildSnow } from './snow/index.js';
 import { rectAt, strip, zoneSet, BOARD0 } from './zones.js';
 import { mist } from './mist.js';
-import { windTime } from './toyKit.js';
+import { windTime, toyMat, snowNow } from './toyKit.js';
 import { daylight, fireflies, hourNow } from './daylight.js';
 import { butterflies } from './butterflies.js';
 import { weather, weatherNow } from './weather.js';
@@ -162,9 +162,13 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const light = daylight(renderer, scene, sun, sunDir, paintBg); light(sky.now().gray); // 21-1: sun, sky, background by the hour
 
   // only the models of this habitat's species (and of guests here) are fetched, and only now (or a moment before: prefetch)
-  const models = modelsOf(habId, records), moves = {};
-  await Promise.all([...models.map(async m => { await loadModel(m); moves[m] = await import(`../animals/${MODELS[m].move}.js`); }),
-    ...records.filter(r => r.acc && habitatOf(r) === habId).map(r => loadAcc(r.acc))]); // 26-1: the secret accessories worn here
+  // inbox 61 A: the build waits only for the models of the animals out here; the rest of the species (an egg's) come after
+  const moves = {}, here = new Set(records.filter(r => !r.stored && habitatOf(r) === habId).map(r => SP[r.species]?.model).filter(Boolean));
+  const get = async m => { await loadModel(m); moves[m] = await import(`../animals/${MODELS[m].move}.js`); };
+  const [now, rest] = modelsOf(habId, records).reduce((o, m) => (o[here.has(m) ? 0 : 1].push(m), o), [[], []]);
+  let last = null; const later = Promise.all(rest.map(m => get(m).catch(() => {}))).then(() => { if (last) sync(last); });
+  await Promise.all([...now.map(get),
+    ...records.filter(r => habitatOf(r) === habId).flatMap(r => [r.acc, ...r.wear || []]).filter(Boolean).map(loadAcc)]); // 26-1: the secret accessories worn here (15-2: and event wear)
   stamps.length = 0; // 28-6: the terrain stamps of the habitat before (syncStamps puts this one's back)
   const habitat = BUILD[habId](scene, { zzz: obj => ui.zzz(project(obj)) }, sunDir, level, top);
   renderer.shadowMap.needsUpdate = true;
@@ -181,6 +185,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   let homed = false;
   const make = rec => { const a = moves[SP[rec.species].model].createActor(habitat.ctx, rec); actors.set(rec.id, a); return a; };
   function sync(records) {
+    last = records;
     const want = new Map(records.filter(r => !r.stored && !r.pending && known(r) && habitatOf(r) === habId && moves[SP[r.species].model]).map(r => [r.id, r]));
     for (const [id, a] of actors) if (want.get(id) !== a.rec) { a.dispose(); actors.delete(id); if (focus === a) overview(); } // gone, or a new save reused the id
     const sp = habitat.ctx.spawn, R = fitW * 0.4; // inbox 43: opening with 0-3 friends they start round the middle (where a new one lands), so the close first view has them all
@@ -207,6 +212,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // a baby sent out from the nest menu (or one taken out of storage): "퐁" onto open grass near the middle of the screen
   // (the pond: on its grass hill, ctx.landing; never water, never on someone), dust where it lands
   function drop(rec, look = false) {
+    if (!actors.has(rec.id) && !moves[SP[rec.species].model]) return void later.then(() => moves[SP[rec.species].model] && drop(rec, look)); // inbox 61 A: its model still on the way
     const a = actors.get(rec.id) ?? make(rec);
     const [x, z] = nearest((x, z) => habitat.ctx.walkable(x, z) && free(habitat.ctx.crowd, a.body, x, z), habitat.ctx.landing);
     a.drop(x, z); puffs.push({ x, z, t: -DROP.fall, bits: null });
@@ -731,12 +737,49 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   function updPuffs(dt) {
     puffs = puffs.filter(p => {
       p.t += dt; if (p.t < 0) return true;
-      if (!p.bits) p.bits = Array.from({ length: 7 }, (_, i) => { const m = new THREE.Mesh(puffGeo, puffMat.clone()), ang = i / 7 * Math.PI * 2 + Math.random() * 0.4; m.userData.d = [Math.cos(ang), Math.sin(ang)]; scene.add(m); return m; });
+      if (!p.bits) p.bits = Array.from({ length: 7 }, (_, i) => { const m = new THREE.Mesh(puffGeo, puffMat.clone()); if (p.c) m.material.color.set(p.c); const ang = i / 7 * Math.PI * 2 + Math.random() * 0.4; m.userData.d = [Math.cos(ang), Math.sin(ang)]; scene.add(m); return m; });
       const k = Math.min(1, p.t / 0.6), y = habitat.ctx.heightAt(p.x, p.z);
       for (const m of p.bits) { const [dx, dz] = m.userData.d; m.position.set(p.x + dx * (0.5 + 1.3 * k), y + 0.15 + 0.4 * k, p.z + dz * (0.5 + 1.3 * k)); m.scale.setScalar(0.6 + 1.1 * k); m.material.opacity = 0.85 * (1 - k); }
       if (k < 1) return true;
       for (const m of p.bits) { scene.remove(m); m.material.dispose(); } return false;
     });
+  }
+  // 15-2 첫눈 (ui/event.js drives it): a snow pile now and then (tap: coins, the friends near run over and roll in the snow), a snowman
+  // built in 3 taps where one fits near the middle (body, head, then its scarf and nose: saved, rules evBuild; the friends gather round),
+  // snowballs between two (walk.js 눈싸움: ctx.onBall)
+  const snowM = toyMat('#f4f7fb', { roughness: 0.85 }), ballGeo = new THREE.SphereGeometry(1, 16, 12);
+  const lump = (r, x, y, z, f = 0.8) => { const m = new THREE.Mesh(ballGeo, snowM); m.scale.set(r, r * f, r); m.position.set(x, y, z); m.castShadow = true; return m; };
+  const apart = (o, x, z, d) => !o || Math.hypot(x - o.position.x, z - o.position.z) > d; // the pile and the snowman's site apart
+  const spot = r => nearest((x, z) => fits({ r }, x, z) && apart(pileObj, x, z, r + 1.6) && apart(site?.obj, x, z, r + 1.6), [controls.target.x, controls.target.z]), snowPuff = (x, z) => puffs.push({ x, z, t: 0, c: '#ffffff' });
+  let pileObj = null, site = null, balls = [], ballAt = -1e9;
+  function pileShow(on) {
+    if (!on === !pileObj) return; if (pileObj) { scene.remove(pileObj); pileObj = null; } if (!on) return;
+    const [x, z] = spot(1.2); pileObj = new THREE.Group(); pileObj.position.set(x, habitat.ctx.heightAt(x, z), z);
+    pileObj.add(lump(0.9, 0, 0.15, 0), lump(0.6, 0.75, 0.05, 0.35), lump(0.55, -0.6, 0.05, -0.4), lump(0.42, 0.15, 0.7, -0.1)); scene.add(pileObj);
+  }
+  function pileTap() { const { x, z } = pileObj.position, n = ui.onPile?.(); if (!n) return; /* onPile's tick may take it away already */ sfx('place'); snowPuff(x, z); pileShow(false); gather(x, z, 3, 'roll', 2); }
+  function snowman(done) { // done(x, z as saved) builds it (false: not)
+    if (site) scene.remove(site.obj);
+    const [x, z] = spot(1.3), obj = new THREE.Group(); obj.position.set(x, habitat.ctx.heightAt(x, z), z); obj.add(lump(0.55, 0, 0, 0, 0.45)); scene.add(obj);
+    site = { obj, x, z, n: 0, done }; centre(new THREE.Vector3(x, 0, z)); snowPuff(x, z);
+  }
+  function siteTap() { const s = site; s.n++; sfx('place'); snowPuff(s.x, s.z);
+    if (s.n === 1) s.obj.add(lump(0.75, 0, 0.6, 0, 0.95)); else if (s.n === 2) s.obj.add(lump(0.5, 0, 1.55, 0, 0.95));
+    else { scene.remove(s.obj); site = null; if (s.done(+(s.x / U).toFixed(4), +(s.z / U).toFixed(4))) gather(s.x, s.z, 6, 'rest', 2.4); } }
+  habitat.ctx.onBall = (x0, z0, x1, z1) => { balls.push({ m: lump(0.24, x0, 0, z0, 1), x0, z0, x1, z1, t: 0 }); scene.add(balls.at(-1).m); ballAt = performance.now(); };
+  function updSnow(dt) {
+    habitat.ctx.snowy = habId === 'snow' || snowNow.value > 0.5; // walk.js: 눈싸움 only on snow
+    balls = balls.filter(b => { b.t += dt; const k = Math.min(1, b.t / 0.7), x = b.x0 + (b.x1 - b.x0) * k, z = b.z0 + (b.z1 - b.z0) * k;
+      b.m.position.set(x, habitat.ctx.heightAt(x, z) + 0.8 + Math.sin(k * Math.PI) * 1.2, z); if (k < 1) return true; scene.remove(b.m); snowPuff(x, z); return false; });
+  }
+  // up to n idle friends within 22 with a straight way there run to x, z: each to the side it is on, R-R+0.9 off, and do act there (walk.js arrive)
+  function gather(x, z, n, act, R0) {
+    const D = a => Math.hypot(a.position.x - x, a.position.z - z); let k = 0;
+    for (const a of idle().filter(a => D(a) < 22).sort((a, b) => D(a) - D(b))) { if (k >= n) break;
+      const g = Math.atan2(a.position.z - z, a.position.x - x), R = R0 + (k % 2) * 0.9; // spread round it; straight at it if that side is blocked
+      for (const d of [(k % 3 - 1) * 0.45, 0, (1 - k % 3) * 0.45]) { const tx = x + Math.cos(g + d) * R, tz = z + Math.sin(g + d) * R;
+        if (habitat.ctx.pathClear(a.position.x, a.position.z, tx, tz)) { if (a.send(tx, tz, act, { fast: true })) k++; break; } } }
+    return k;
   }
   const label = a => `${a.rec.nm ? a.rec.nm + ' · ' : ''}${SP[a.rec.species].name} · ${variantOf(a.rec.species, a.rec.variant).name} · ${STAGE_NAME[a.look.stage]}`;
   const height = a => new THREE.Box3().setFromObject(a.look.obj).max.y - a.obj.position.y;
@@ -756,6 +799,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       const uid = propUnder(e); if (uid != null) ui.onPropTap?.(uid);
       return;
     }
+    for (const [o, f] of [[site?.obj, siteTap], [pileObj, pileTap]]) if (o && ray.intersectObject(o, true).length) return void f(); // 15-2: tapped on purpose
     // 28-3: a prop that does something when tapped (props.js userData.tap), with no animal in front of it
     const toys = [...placed.values()].filter(p => p.obj.userData.tap), th = toys.length ? ray.intersectObjects(toys.map(p => p.obj), true)[0] : null;
     if (th && !(hit && hit.distance < th.distance)) { let q = th.object; while (q && !toys.some(p => p.obj === q)) q = q.parent; const p = toys.find(p => p.obj === q); if (p) { tapProp(p, shown); return; } }
@@ -783,13 +827,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (p.obj.userData.tap() === false) { sfx('undo'); ui.say?.('작은 폭죽은 밤에만 쏠 수 있어요'); return; }
     sfx(p.prop);
     if (p.prop === 'musicbox') { const n = music(); ui.say?.(n ? `오르골: ${n}${PREFS.mute || !PREFS.vAll || !PREFS.vAmb ? ' · 소리를 켜면 들려요' : ''}` : '오르골을 멈췄어요'); if (n) for (const a of shown) if (near(a, 14)) a.poke(); } // 27-7e: the sound off, it says why there is no tune
-    if (p.prop === 'bell') { // up to 6 idle ones within 22 with a straight way there (pathClear: not over the stream, out of the paddock or through a
-      // tree): each to the bell's side it is on, 2.4-3.3 off, and stays a while (walk.js arrive 'rest')
-      const D = a => Math.hypot(a.position.x - x, a.position.z - z); let n = 0;
-      for (const a of idle().filter(a => near(a, 22)).sort((a, b) => D(a) - D(b))) { if (n >= 6) break;
-        const g = Math.atan2(a.position.z - z, a.position.x - x), R = 2.4 + (n % 2) * 0.9; // spread round the bell; straight at it if that side is blocked
-        for (const d of [(n % 3 - 1) * 0.45, 0, (1 - n % 3) * 0.45]) { const tx = x + Math.cos(g + d) * R, tz = z + Math.sin(g + d) * R;
-          if (habitat.ctx.pathClear(a.position.x, a.position.z, tx, tz)) { if (a.send(tx, tz, 'rest', { fast: true })) n++; break; } } } }
+    if (p.prop === 'bell') gather(x, z, 6, 'rest', 2.4); // up to 6 run over (pathClear: not over the stream, out of the paddock or through a tree) and stay a while
   }
   // camera: tap an animal -> glide in and follow it; a drag then circles it (360 deg) and pinch zooms, still following; moving
   // the view (two fingers / right drag) lets it go. "정면" -> round to its face (it fills ~40% of the screen height) and stay
@@ -1056,7 +1094,7 @@ GPU ${gpu}`; }
     for (const a of actors.values()) a.update(dt, t);
     if (t > homeAt && !decorOn) { homeAt = t + 1; penCheck(); }
     hear(camera, controls.target, actors, habitat.ctx, D.list, underfoot); // 13-0: the world's sounds where they are
-    updPuffs(dt);
+    updPuffs(dt); updSnow(dt);
     for (const e of placed.values()) e.obj.userData.tick?.(t); ed?.obj.userData.tick?.(t); // props that move (pinwheel, swing, boat...)
     if (ed && ed.on == null && fits(ed.P, ed.x, ed.z, SZ(ed)) !== ed.ok) moveEdit(ed.x, ed.z); // animals walk in and out of the held prop's spot (28-5: at its size; one on a top spot has none)
     if (grassDirty) { grassDirty = false; mask(hideGrass); }
@@ -1090,7 +1128,7 @@ GPU ${gpu}`; }
   }
   window.addEventListener('resize', resize, sig);
   // 27-1: the habitat on screen (a built one entered again is only set active, not started again)
-  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, ed: () => ed }; if (DEBUG) window.__hab = dbg; // ed: the held prop (inbox 52 tests)
+  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }) }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests)
   if (reveal) overview(true); // out to the wider board while the mist draws back
   // 28-1: a zone just opened (main.js): the camera glides out over it, and up to 4 animals run to its spots
   function showZone(k) {
@@ -1122,6 +1160,7 @@ GPU ${gpu}`; }
   if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus });
   return {
     resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, showZone, topView,
+    pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw
     // 'isReady' of undefined there, uncaught, and the curtain never lifted. Here gone = ready, and it always ends (10 s at most)

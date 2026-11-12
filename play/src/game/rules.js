@@ -27,7 +27,7 @@
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, FIRST, STROLL_PROPS, PLACES, SCENES, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -94,7 +94,10 @@ export function fromSave(raw, now) {
     { const n = v => Math.max(0, Math.floor(v) || 0); // 15-1: runs of events this build knows
       S.events = Object.fromEntries(Object.entries(S.events).filter(([, R]) => isObj(R) && EV[R.id] && Number.isFinite(R.start) && Number.isFinite(R.end)).map(([k, R]) => [k, { ...R,
         c: n(R.c), got: n(R.got), step: Math.min(n(R.step), EV[R.id].track.length), pets: n(R.pets), dayAt: n(R.dayAt), day: typeof R.day === 'string' ? R.day : '',
-        buy: isObj(R.buy) ? R.buy : {}, shots: isObj(R.shots) ? R.shots : {} }])); }
+        buy: isObj(R.buy) ? Object.fromEntries(Object.entries(R.buy).map(([k, v]) => [k, n(v)])) : {}, shots: isObj(R.shots) ? R.shots : {},
+        pile: typeof R.pile === 'string' ? R.pile : '', pileAt: n(R.pileAt), built: n(R.built), luck: n(R.luck) }]));
+      const own = evOwned(S); // 15-2: worn event wear, known ones, no more of each than bought
+      for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -402,12 +405,15 @@ export function unlockInfo(S, habId) {
 
 // Player actions. Each returns something falsy when it can't happen.
 // An egg from the nest (that one, or the oldest) into the first empty hatch slot.
+export const firstEgg = S => !S.stats.hatch && !S.animals.length && S.slots.every(s => !s); // inbox 61 B: nothing hatched yet, nothing in a slot
 export function takeEgg(S, habId, now, eggId) {
   const n = S.nests[habId], i = S.slots.indexOf(null), j = !n ? -1 : eggId == null ? 0 : n.eggs.findIndex(e => e.id === eggId);
   if (j < 0 || j >= n.eggs.length || i < 0) return -1;
   if (n.eggs.length >= B.nest.max) n.t = now; // the hour to the next egg starts now
   const [e] = n.eggs.splice(j, 1);
-  S.slots[i] = { egg: e, start: now, end: now + B.hatch[e.rarity] * (EGG[e.type]?.hatchScale ?? 1) };
+  const first = firstEgg(S); // inbox 61 B: a new save's very first egg is ready at once (바로 깨기), and the next one is laid now
+  if (first) n.t = Math.min(n.t, now - eggGap(S)); // (「둥지에 다음 알이 있어요」); from the second on, the usual waits
+  S.slots[i] = { egg: e, start: now, end: first ? now : now + B.hatch[e.rarity] * (EGG[e.type]?.hatchScale ?? 1) };
   return i;
 }
 // A ready slot cracks. The animal waits (pending) for the reveal card's answer, so a reload shows the same card again.
@@ -702,10 +708,11 @@ export function feed(S, id, now) {
   bank(a, now); a.fed++; a.g = Math.min(1, a.g + B.grow.feed); bump(S, 'feed'); return true;
 }
 // petting: the heart rule (hearts.js); a tap that gives a heart also adds BALANCE.grow.pet to a growing baby
-export function tapHeart(S, id, now) {
+export function tapHeart(S, id, now, rng = Math.random) {
   const a = S.animals.find(a => a.id === id), n = a ? heartFor(S, a, now) : 0;
   if (n && growing(a)) { bank(a, now); a.g = Math.min(1, a.g + B.grow.pet); }
-  if (n) { bump(S, 'pet'); const L = liveRun(S, now); if (L && ++L.R.pets % L.e.earn.pet === 0) evEarn(S, L.R, 1, now); } // 15-1: a coin every earn.pet hearts
+  if (n) { bump(S, 'pet'); const L = liveRun(S, now); if (L) { if (++L.R.pets % L.e.earn.pet === 0) evEarn(S, L.R, 1, now); // 15-1: a coin every earn.pet hearts
+    if (L.e.earn.luck && rng() < L.e.earn.luck) { L.R.luck++; evEarn(S, L.R, 1, now); } } } // 15-2: now and then one more
   if (n && S.pet.n <= B.level.xp.petDaily) S.xp += B.level.xp.pet; // the day's first petDaily hearts (hearts.js counts them)
   S.hearts += n; return n;
 }
@@ -818,26 +825,52 @@ function evTick(S, now, rng) {
   for (const e of EVENTS) for (const y of [Y - 1, Y]) {
     const key = `${e.id}-${y}`, r = runAt(e, y), R = S.events[key];
     if (R) { if (CAL && r && !R.over) Object.assign(R, r); }
-    else if (r && r.start <= now && now < r.end) S.events[key] = { id: e.id, ...r, c: 0, got: 0, step: 0, pets: 0, day: '', dayAt: 0, buy: {}, shots: {} };
+    else if (r && r.start <= now && now < r.end) S.events[key] = { id: e.id, ...r, c: 0, got: 0, step: 0, pets: 0, day: '', dayAt: 0, buy: {}, shots: {}, pile: '', pileAt: 0, built: 0, luck: 0 };
   }
   for (const R of Object.values(S.events)) {
     if (!R.over && now >= R.end) { R.over = now; R.paid = R.c * EV[R.id].coin.hearts; R.left = R.c; S.hearts += R.paid; R.c = 0; }
     else if (evLive(R, now) && dayOf(now) !== R.day && now >= R.dayAt) { R.day = dayOf(now); R.dayAt = now; evEarn(S, R, EV[R.id].earn.day, now, rng); }
   }
 }
-export function buyEv(S, propId, hab, now) { // the event shop: its coins, into this habitat (put away: 꾸미기 › 선물)
-  const L = liveRun(S, now), it = L?.e.shop.find(i => i.prop === propId), P = PROP[propId]; if (!it || !P || L.R.c < it.price) return null;
+export function buyEv(S, propId, hab, now) { // the event shop: its coins, into this habitat (put away: 꾸미기 › 선물); 15-2 wear: one more to put on
+  const L = liveRun(S, now), it = L?.e.shop.find(i => (i.prop ?? i.wear) === propId), P = PROP[propId]; if (!it || L.R.c < it.price) return null;
+  if (it.wear) { if (!EV_ACC[propId]) return null; L.R.c -= it.price; L.R.buy[propId] = (L.R.buy[propId] || 0) + 1; return { wear: propId }; }
+  if (!P) return null;
   L.R.c -= it.price; L.R.buy[propId] = (L.R.buy[propId] || 0) + 1;
   const p = { uid: S.nextId++, prop: P.id, hab: P.habitat ?? hab, placed: false, x: 0, z: 0, rot: 0 }; S.props.push(p); return p;
 }
 // a photo saved while an event runs: ctx { hab, night, sky } (photo.js); fills the first empty slot it meets, all = album.prop
-export const shotFits = (S, n, { hab, night, sky }) => (!n.hab || n.hab === hab) && (n.night == null || n.night === !!night) && (!n.sky || n.sky === sky)
-  && (!n.prop || S.props.some(p => p.placed && p.hab === hab && p.prop === n.prop));
+export const shotFits = (S, n, { hab, night, sky, ball }) => (!n.hab || n.hab === hab) && (n.night == null || n.night === !!night) && (!n.sky || n.sky === sky)
+  && (!n.ball || !!ball) && (!n.prop || S.props.some(p => p.placed && p.hab === hab && [].concat(n.prop).includes(p.prop))); // 15-2: ball, a list of props
 export function evShot(S, ctx, now, rng = Math.random) {
   const L = liveRun(S, now), A = L?.e.album, s = A?.slots.find(s => !L.R.shots[s.id] && shotFits(S, s.need, ctx)); if (!s) return null;
   L.R.shots[s.id] = now; let cover = null;
   if (A.slots.every(s => L.R.shots[s.id]) && !L.R.cover) { L.R.cover = now; cover = give(S, { prop: A.prop }, now, rng, ctx.hab).prop; }
   return { slot: s.id, cover };
+}
+// 15-2 첫눈's play. Snow piles: one at each of piles' hours (KST), waiting till the next one (R.pile: the last taken, 'day:i';
+// none while the clock is before pileAt, turned back); a tap gives earn.pile coins
+const kstDay = t => new Date(t + 9 * 3600e3).toISOString().slice(0, 10), kstHour = t => new Date(t + 9 * 3600e3).getUTCHours();
+export function evPile(S, now) {
+  const L = liveRun(S, now), P = L?.e.piles; if (!P) return null;
+  const i = P.findLastIndex(h => kstHour(now) >= h), id = `${kstDay(now)}:${i}`;
+  return i < 0 || L.R.pile === id || now < L.R.pileAt ? null : { ...L, id };
+}
+export function tapPile(S, now) { const p = evPile(S, now); if (!p) return 0; p.R.pile = p.id; p.R.pileAt = now; evEarn(S, p.R, p.e.earn.pile, now); return p.e.earn.pile; }
+// a snowman built (3 taps, the habitat finds the spot: x, z as saved) for build.price coins: placed there at once, a prop to keep
+export function evBuild(S, hab, x, z, now) {
+  const L = liveRun(S, now), b = L?.e.build; if (!b || L.R.c < b.price || !HAB[hab] || !Number.isFinite(x) || !Number.isFinite(z)) return null;
+  L.R.c -= b.price; L.R.built++; const p = { uid: S.nextId++, prop: b.prop, hab, placed: true, x, z, rot: 0 }; S.props.push(p); return p;
+}
+// event wear (data.js EV_ACC): how many of each were bought in all runs; on a friend (a.wear: ids) while fewer are worn than bought.
+// Toggled; kept after the event (only its window changes it)
+export const evOwned = S => { const o = Object.fromEntries(Object.keys(EV_ACC).map(k => [k, 0])); for (const R of Object.values(S.events)) for (const k in o) o[k] += R.buy?.[k] || 0; return o; };
+export const evWorn = (S, k) => S.animals.filter(a => a.wear?.includes(k)).length;
+export function evWear(S, id, k) {
+  const a = S.animals.find(a => a.id === id); if (!a || !EV_ACC[k]) return false;
+  if (a.wear?.includes(k)) { a.wear = a.wear.filter(x => x !== k); if (!a.wear.length) delete a.wear; return true; }
+  if (evWorn(S, k) >= evOwned(S)[k]) return false;
+  a.wear = [...a.wear || [], k]; return true;
 }
 export function evSeen(S, key, k) { const R = S.events[key]; if (R && (k === 'seen' || k === 'told')) R[k] = 1; }
 // its mail, while it runs (ui/mail.js adds it to mail.json's; mailOpen: once)

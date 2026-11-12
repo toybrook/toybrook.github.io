@@ -1,7 +1,7 @@
 // Screen flow: world map <-> habitats. The game (game/game.js) runs underneath either way.
 import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // first: it listens for errors before the rest runs
 import * as G from './game/game.js';
-import { HAB, outIn, habitatOf, unlockInfo } from './game/rules.js';
+import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
 import { BALANCE, HABITATS, ZONES } from './game/data.js';
 import { initWorldMap } from './worldmap/worldmap.js';
 import { zzz, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
@@ -19,7 +19,6 @@ import './ui/first.js'; // inbox 41 D 첫날 할 일
 import { initEvent } from './ui/event.js'; // 15-1 계절 이벤트
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
-mapImg.src = ASSETS.worldmap;
 // 26-7 한 번에 한 탭: a tab opened second, or one another tab took over, is covered (nothing saved there) till 「여기서 하기」
 function tabOff(first) {
   if ($('tabOff')) $('tabOff').remove(); const el = document.createElement('section'); el.className = 'intro'; el.id = 'tabOff';
@@ -67,10 +66,15 @@ const code = () => code.p ??= (codeAsked(), Promise.all([import('./habitat/habit
   play = p.initPlay(nav); play.events([...offline, ...early]); early.length = 0; return h;
 }, e => { code.p = null; throw e; }));
 const idle = f => (window.requestIdleCallback || setTimeout)(f, { timeout: 2000 });
-mapImg.decode().catch(() => {}).then(() => {
+// inbox 61 A: a new player goes from 시작 straight into the first habitat: its code is asked for at once, and no models
+// ahead (the build waits for none: nothing is out there yet; the hatched one's comes with it)
+// and the map (0.37 MB, under the intro card) after that code, not sharing a slow line with it; the first screen doesn't wait for it
+const fresh = firstEgg(G.S), mapUp = () => { mapImg.src = ASSETS.worldmap; return mapImg.decode().catch(() => {}); };
+if (fresh) code().catch(() => {}).then(mapUp);
+(fresh ? Promise.resolve() : mapUp()).then(() => {
   const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400);
-  idle(() => code().then(h => { // then the models of the habitat opened last (a new player: the first one)
-    idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.S.animals).catch(() => {}));
+  idle(() => code().then(h => { // then the models of the habitat opened last (a new player: none, above)
+    if (!fresh) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.S.animals).catch(() => {}));
     if (OFFLINE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
   }).catch(() => {}));
 });
@@ -79,6 +83,7 @@ const ui = {
   lostLong: id => { // inbox 53: not given back in 3 s: built on a new canvas. None to be had (a probe first: three logs an error when it can't): 다시 불러오기
     const c = document.createElement('canvas'), g = c.getContext('webgl2') || c.getContext('webgl'); if (!g || g.isContextLost()) return glFail('no context');
     g.getExtension('WEBGL_lose_context')?.loseContext(); redo(id); built[id]?.then(glRebuilt, glFail); },
+  onPile: () => { const n = G.tapPile(), L = n && G.event(); if (n) toast(`눈더미에서 ${L.e.coin.icon} ${L.e.coin.name} ${n}개!`, 2200, true); return n; }, // 15-2 첫눈
   say: t => toast(t, 1800, true), // 28-3: a short note from the habitat (the music box's tune, the fireworks by day)
   zzz(xy) { if (!hab.classList.contains('hidden') && !overlayOpen() && !document.querySelector('body > section.pop:not([hidden])')) zzz(xy); }, // not over a sheet (28-5: nor 설정·꾸미기 코드·도움말, outside #habitat)
   onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; $('overview').textContent = s === 'w' ? '친구들 보기' : '전체 보기'; }, // following: 정면 + 전체 보기; away from the start view: 전체 보기; at the whole board (inbox 63): 친구들 보기
@@ -98,11 +103,19 @@ const built = {}, lv = {}; // each habitat's scene is built the first time it is
 // 22-1: a build hands the board's own trees, bushes, rocks and flowers to the save the first time (and a 땅 넓히기 step's new ones)
 const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r => setTimeout(r, 60)).then(code).then(h => h.startHabitat($('gl'), ui, id, G.S.animals, { level: lv[id], ...opt }))
   .then(api => { if (api.natives) G.addNatives(id, api.natives.list, api.natives.rings); return api; }); };
+// inbox 61 A·B: a new player's first egg is cracked on the loading screen as soon as the nest's code is here (seconds on a slow
+// phone); the board is built after the reveal card is answered, so the two never share the phone's time
+const firstHere = id => code().then(() => new Promise(done => {
+  const L = $('loading'), b = L.querySelector('.lfirst'), say = L.firstChild;
+  say.textContent = '첫 알이에요! 눌러서 깨워 보세요'; b.hidden = false; b.focus?.();
+  b.onclick = () => { b.onclick = null; b.hidden = true; say.textContent = '서식지 불러오는 중…'; play.firstEgg(id, done); };
+}), () => {});
 async function enter(id) {
   cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + ' 서식지 3D');
   $('habName').querySelector('b').textContent = HAB[id].name;
   loadBar(true, !!play); if (G.S.flags.lastHab !== id) G.flag('lastHab', id);
   track('habitat_open', { habitat: HAB[id].name }, 'open:' + id); // inbox 41 A: a day each
+  if (firstEgg(G.S) && !built[id]) await firstHere(id); // inbox 61 A·B
   try { api = await (built[id] ??= build(id)); }
   catch (e) { console.warn('enter', id, e); // 26-1: offline, and this habitat's files were never fetched (or the network dropped): back to the map, try again later
     delete built[id]; loadBar(false); if (cur === id) $('back').click(); toast('인터넷에 연결되면 열 수 있어요', 2600); return false;
@@ -195,6 +208,7 @@ fb.hidden = FEEDBACK_URL === 'TODO';
 const fbUrl = () => { const n = cur ? outIn(G.S, cur).length : G.S.animals.length; // out in this habitat (not stored), or all
   return `${FEEDBACK_URL}?usp=pp_url&${FEEDBACK_FIELD}=${encodeURIComponent(`ver=${VERSION} habitat=${cur || 'map'} animals=${n}`)}`; };
 fb.onclick = () => { fb.href = fbUrl(); }; // the href is set at the tap, before the link opens (inbox 20: on the world map; in a habitat a 설정 row)
+setTimeout(() => import('./ui/rate.js').then(m => m.initRate(FEEDBACK_URL === 'TODO' ? null : fbUrl)).catch(() => {}), 60e3); // inbox 61 C (3 minutes at the soonest)
 if (RATING.mark || RATING.number) {
   const img = rating.querySelector('img'); img.hidden = !RATING.mark; if (RATING.mark) img.src = RATING.mark;
   rating.querySelector('span').textContent = RATING.number; rating.hidden = false;
@@ -255,7 +269,8 @@ addEventListener('visibilitychange', () => {
   for (const [h, n] of Object.entries(eggsNow())) if (n > (was[h] || 0)) eggs[h] = n - (was[h] || 0);
   if (ret.hidden) away(eggs);
 });
-$('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone(); };
+$('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone();
+  if (!cur && firstEgg(G.S)) nav.go(HABITATS[0].id); }; // inbox 61 B: a new player, straight to the first egg (no map tap)
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
 initAttend(() => cur, firstDone);
 initEvent(() => cur, () => api);

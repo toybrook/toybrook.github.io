@@ -50,8 +50,14 @@ html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-s
 .boot{position:absolute;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:#f5dcbc;color:#5b4a3a;padding:0 36px;text-align:center;transition:opacity .35s}
 .boot.done{opacity:0;pointer-events:none}
 .boot b{display:block;font-size:calc(26px*var(--fs));letter-spacing:.04em;color:#6b4a2e;margin-bottom:14px}
-.lbar{width:200px;max-width:100%;height:8px;border-radius:5px;background:rgba(107,74,46,.16);overflow:hidden;margin:10px auto!important}
-.lbar i{display:block;height:100%;width:0;border-radius:5px;background:#e0894a;transition:width .25s}
+/* inbox 61 A: a wobbling egg, not a bar (a bar reads as time left) */
+.lbar{position:relative;width:36px;height:44px;margin:10px auto 6px!important}
+.lbar::before{content:'';position:absolute;inset:0;border-radius:50%/58% 58% 42% 42%;transform-origin:50% 92%;animation:lwob 1.2s ease-in-out infinite;
+  background:radial-gradient(circle at 34% 38%,#f2b27a 0 4px,transparent 5px),radial-gradient(circle at 64% 60%,#f2b27a 0 3px,transparent 4px),#fff7ea;box-shadow:inset -5px -6px 0 rgba(224,137,74,.22),0 3px 0 rgba(107,74,46,.14)}
+.lbar i{display:none}
+@keyframes lwob{0%,100%{transform:rotate(-10deg)}25%{transform:rotate(0) translateY(-3px)}50%{transform:rotate(10deg)}75%{transform:rotate(0) translateY(-3px)}}
+html.calm .lbar::before{animation:none}
+.loading .lfirst{margin:6px 0 4px;font-size:calc(17px*var(--fs));font-weight:700;min-height:52px;padding:0 28px;border-radius:999px;border:2px solid rgba(255,255,255,.6);background:#e8805f;color:#fff;box-shadow:0 0 14px 4px rgba(255,226,122,.75);cursor:pointer} /* inbox 61 B 바로 깨기 */
 .ltip{font-size:calc(13px*var(--fs));line-height:1.55;max-width:300px;opacity:.85;min-height:3.1em}
 .ltip b{display:inline;font-size:inherit;letter-spacing:0;margin:0;color:inherit}
 /* 26-1: a new version is ready (ui/offline.js); the player reloads when they like */
@@ -336,11 +342,19 @@ html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-s
 .cchips button{display:flex;align-items:center;gap:6px;min-height:44px;padding:0 12px 0 6px;border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b;border-radius:999px;font:inherit;font-size:calc(13px*var(--fs));cursor:pointer}
 .cchips button.on{border-color:#6b4a2b;box-shadow:inset 0 0 0 1px #6b4a2b;font-weight:700}
 .cchips u{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
-.photo :is(.bar,.fday,.tools,.dock,.npill,.tip,.ask,.nestbtn,.camb,.tag,.loading,#perf,#dbg,.toast,.label,.fx,.bubble,.side,.beta,.fb,.intro,.rating){display:none!important}
+.photo :is(.bar,.fday,.tools,.dock,.npill,.tip,.ask,.nestbtn,.camb,.tag,.loading,#perf,#dbg,.toast,.label,.fx,.bubble,.side,.beta,.fb,.intro,.rating,.rate){display:none!important}
 /* 20-1 open beta: BETA in the top left under the bar, the feedback link on the world map (bottom right), the intro card once, the rating slot */
 .beta{position:absolute;left:calc(12px + var(--sa-l));top:calc(66px + var(--sa-t));z-index:1000;pointer-events:none;font-size:calc(11px*var(--fs));font-weight:800;letter-spacing:.12em;color:#fff7e8;background:rgba(20,24,20,.45);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:3px 7px}
 .fb{position:absolute;right:calc(12px + var(--sa-r));bottom:calc(24px + var(--sa-b));z-index:1000;font-size:calc(13px*var(--fs));text-decoration:none;padding:0 12px}
 .fb[hidden],.intro[hidden],.rating[hidden]{display:none}
+/* inbox 61 C 「토이브룩 어때요?」 a small bar at the bottom, once a day */
+.rate{position:fixed;left:50%;bottom:calc(126px + 56px*var(--fs) + var(--sa-b));transform:translateX(-50%);z-index:900;display:flex;align-items:center;gap:4px;max-width:calc(100vw - 24px);box-sizing:border-box;background:rgba(255,250,240,.96);border-radius:999px;padding:4px 4px 4px 14px;box-shadow:0 2px 10px rgba(107,74,46,.22);font-size:calc(14px*var(--fs));color:#5b4a3a;white-space:nowrap;animation:rateIn .3s ease-out}
+.rate span{margin-right:4px;font-weight:700}
+.rate button,.rate a{min-width:44px;min-height:44px;border:0;background:none;font-size:calc(22px*var(--fs));cursor:pointer;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:inherit}
+.rate .x{font-size:calc(14px*var(--fs));color:#9a8574}
+.rate a.more{font-size:calc(14px*var(--fs));font-weight:700;background:#e8805f;color:#fff;padding:0 14px;text-decoration:none}
+@keyframes rateIn{from{opacity:0;transform:translate(-50%,12px)}}
+html.calm .rate{animation:none}
 .intro{position:absolute;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(30,22,14,.45);padding:calc(24px + var(--sa-t)) calc(24px + var(--sa-r)) calc(24px + var(--sa-b)) calc(24px + var(--sa-l))}
 .intro>div{background:#fbf1e1;color:#4a3626;border-radius:22px;padding:22px 22px 18px;max-width:320px;max-height:calc(100% - 40px);overflow-y:auto;overscroll-behavior:contain;box-shadow:0 10px 40px rgba(40,25,10,.35);text-align:center}
 .intro:is(.lvs,.lvup,.help,.ret,.cmpz,.fmenu)>div{max-height:100%} /* these count their padding in their size (border-box), so the 40px above would take it off twice */
@@ -533,6 +547,10 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .ev li{min-height:44px}.ev li img{width:40px;height:40px;object-fit:contain;flex-shrink:0}.ev li span{flex:1;min-width:0}
 .ev ol li b{flex-shrink:0;min-width:3.2em;color:#b0670f;font-variant-numeric:tabular-nums}.ev li em{font-style:normal;color:#e5584a;flex-shrink:0}
 .ev li.done{opacity:.62}.ev li.next{border-color:#e8805f;box-shadow:0 0 0 1px #e8805f inset}.ev p.note{margin:0 0 10px}
+/* 15-2: the shop in parts (one scroll for all), the snowman row, wear icons, 옷장's buttons */
+.ev .evscroll{max-height:calc(50dvh - var(--sa-t) - var(--sa-b));overflow-y:auto;margin:0 0 8px}.ev .evscroll ul{max-height:none;overflow:visible}
+.ev h3{margin:8px 0 4px;font-size:calc(13px*var(--fs));color:#8a6a4c}.ev .evi{width:40px;flex-shrink:0;text-align:center;font-style:normal;font-size:calc(24px*var(--fs))}
+.ev li.evbuild{border-color:#9cc7e8;background:#f2f8fd}.ev .evwear li{flex-wrap:wrap;gap:6px}.ev .evwear button{min-height:40px}.ev .evwear button[aria-pressed=true]{background:#fff6e6;box-shadow:0 0 0 1px #e8805f inset;color:#b0670f}
 .evcard{position:relative;overflow:hidden}.evcard>*:not(.flakes){position:relative}
 .flakes{position:absolute;inset:0;margin:0;pointer-events:none}.flakes i{position:absolute;top:-1.2em;font-style:normal;color:#9cc7e8;font-size:calc(14px*var(--fs));animation:evfall 4s linear infinite;will-change:transform}
 @keyframes evfall{to{transform:translateY(380px) rotate(200deg)}}

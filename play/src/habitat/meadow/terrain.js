@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { R, S, Z, SW, sPts, pPts, pond, paddock, dist2D, heightAt, occupied, CLIFF_Z, stream, rand as meadowRand } from './layout.js';
-import { toyMat, roundedBox, worldColor, glslColor, instanced, rainNow } from '../toyKit.js';
+import { toyMat, roundedBox, worldColor, glslColor, instanced, rainNow, snowNow, SNOW_RGB } from '../toyKit.js';
 import { BRUSHES } from '../../game/data.js';
 
 // distance from the board edge where the turf ends (edge rounding is 1.2 wide: ~0.6 of turf height stays green)
@@ -187,14 +187,17 @@ export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lu
     float turf = e - (TURF + 0.06 * sin((vWp.x + vWp.z) * 2.3) + 0.08 * (vnoise(vec2((vWp.x + vWp.z) * 3.0, 0.0)) - 0.5));
     if (turf < 0.0) { ${SOIL}
       diffuseColor.rgb = c * (1.0 - 0.35 * smoothstep(-0.2, 0.0, turf)); }
-    diffuseColor.rgb *= 1.0 - 0.2 * uWet; // 21-2: wet in the rain`.replace('TURF', TURF.toFixed(2)) + GRID);
+    diffuseColor.rgb *= 1.0 - 0.2 * uWet; // 21-2: wet in the rain
+    // 15-2 첫눈: lying snow in soft drifts (bare patches between), never on the cut
+    float sn = uSnow * smoothstep(0.32, 0.58, vnoise(vWp.xz * 0.33) * 0.75 + d * 0.25 + 0.12) * step(0.0, turf);
+    diffuseColor.rgb = mix(diffuseColor.rgb, ${SNOW_RGB} * (0.94 + 0.06 * d), sn * 0.92);`.replace('TURF', TURF.toFixed(2)) + GRID);
   // the paint: two RGBA textures, a texel per cell (A: dirt, sand, gravel, bloom; B.r: grass), linear so a cell is a soft blob
   const i0 = Math.floor(r[0] / U), j0 = Math.floor(r[2] / U), nI = Math.ceil(r[1] / U) - i0, nJ = Math.ceil(r[3] / U) - j0;
   const tex = (f = THREE.LinearFilter) => { const t = new THREE.DataTexture(new Uint8Array(nI * nJ * 4), nI, nJ); t.magFilter = t.minFilter = f; t.needsUpdate = true; return t; };
   const U8 = { uPA: { value: tex() }, uPB: { value: tex() }, uPC: { value: tex(THREE.NearestFilter) }, uPO: { value: new THREE.Vector2(i0, j0) }, uPN: { value: new THREE.Vector2(nI, nJ) }, uU: { value: U }, uGrid: { value: 0 } };
   const wrap = ground.onBeforeCompile;
-  ground.onBeforeCompile = sh => { wrap(sh); Object.assign(sh.uniforms, U8, { uWet: rainNow });
-    sh.fragmentShader = 'uniform float uWet, uU, uGrid;\nuniform sampler2D uPA, uPB, uPC;\nuniform vec2 uPO, uPN;\n' + SDF + sh.fragmentShader; };
+  ground.onBeforeCompile = sh => { wrap(sh); Object.assign(sh.uniforms, U8, { uWet: rainNow, uSnow: snowNow });
+    sh.fragmentShader = 'uniform float uWet, uSnow, uU, uGrid;\nuniform sampler2D uPA, uPB, uPC;\nuniform vec2 uPO, uPN;\n' + SDF + sh.fragmentShader; };
   const terrain = new THREE.Mesh(tg, ground);
   terrain.receiveShadow = true; scene.add(terrain);
   const base = cols.slice(), occ = new Float32Array(pos.count), nx = tg.parameters.widthSegments, ny = tg.parameters.heightSegments;

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { S, BW0 as BW, BD0 as BD, O, Z, SW, stream, pond, bridgeT, bP, bN, BL, bridgeArch as arch, paddock, fences, heightAt, occupied, freeBase as free, free as freeOpen, rand, dist2D, sPts0 as sPts, CLIFF_Z, WATER_Y } from './layout.js';
 import { ringIn } from '../zones.js';
 import { zoneProps } from '../zoneprops.js';
-import { toyMat, roundedBox, merge, lathe, addSway, instanced, windTime, nightGlow } from '../toyKit.js';
+import { toyMat, roundedBox, merge, lathe, addSway, instanced, windTime, nightGlow, snowNow, snowTop, SNOW_RGB } from '../toyKit.js';
 import { QUALITY, thin, calm } from '../../config.js';
 import { G as PLAY, newPlay, propTick } from '../../animals/play.js';
 import { playing } from '../../ui/sound.js';
@@ -300,7 +300,7 @@ export function partGeos() {
   const centreGeo = new THREE.SphereGeometry(0.07, 8, 6); centreGeo.scale(1, 0.6, 1);
   const white = o => toyMat('#ffffff', o);
   return PG = { geo: { canopy: sphere, trunk: trunkGeo, pine: pineGeo, snow: snowGeo, rock: rockGeo, post: postGeo, rail: railGeo, petal: petalGeo, centre: centreGeo, pebble: new THREE.SphereGeometry(1, 12, 7) },
-    mat: { canopy: addSway(white({ roughness: 0.5 }), 0.035, 1.2), trunk: white({ roughness: 0.55 }), pine: addSway(white({ roughness: 0.5 }), 0.02, 1.0), snow: addSway(white({ roughness: 0.62 }), 0.02, 1.0), rock: white({ roughness: 0.42 }), plain: white({ roughness: 0.5 }), centre: white({ roughness: 0.4 }) } };
+    mat: { canopy: addSway(white({ roughness: 0.5 }), 0.035, 1.2, true), trunk: white({ roughness: 0.55 }), pine: addSway(white({ roughness: 0.5 }), 0.02, 1.0, true), snow: addSway(white({ roughness: 0.62 }), 0.02, 1.0), rock: Object.assign(white({ roughness: 0.42 }), { onBeforeCompile: snowTop, customProgramCacheKey: () => 'rocksnow' }), plain: white({ roughness: 0.5 }), centre: white({ roughness: 0.4 }) } };
 }
 // one InstancedMesh per kind of L, then the fade lists' kind names (in occupied) turn into those meshes
 export function finish(scene, L, { rand, occupied }) {
@@ -360,18 +360,20 @@ export function makeGrassClump(n) {
 export function grassMat() {
   const m = toyMat('#ffffff', { roughness: 0.75, vertexColors: true, side: THREE.DoubleSide });
   m.onBeforeCompile = sh => {
-    sh.uniforms.uWind = windTime;
-    sh.vertexShader = 'uniform float uWind;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-      vec3 ip = instanceMatrix[3].xyz;
+    sh.uniforms.uWind = windTime; sh.uniforms.uSnow = snowNow;
+    sh.vertexShader = 'uniform float uWind;\nvarying float vGy;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vec3 ip = instanceMatrix[3].xyz; vGy = position.y;
       float hk = position.y * position.y * 2.4;
       float gust = 0.6 + 0.4 * sin(uWind * 0.55 - ip.x * 0.09 - ip.z * 0.05);
       transformed.x += (sin(uWind * 1.8 + ip.x * 0.4 + ip.z * 0.23) * 0.16 + 0.12 * gust) * hk;
       transformed.z += cos(uWind * 1.4 + ip.x * 0.21 - ip.z * 0.33) * 0.1 * hk;`);
-    sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;', ''))
+    sh.fragmentShader = 'uniform float uSnow;\nvarying float vGy;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      diffuseColor.rgb = mix(diffuseColor.rgb, ${SNOW_RGB}, uSnow * 0.9 * smoothstep(0.14, 0.34, vGy));`) // 15-2: snow on the tips
+      .replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('normal *= faceDirection;', ''))
       .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
       if (smoothstep(0.5, 1.2, length(vViewPosition)) < fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453)) discard;`); // a leaf right at the camera (a low view on a bank) dissolves instead of filling the screen
   };
-  m.customProgramCacheKey = () => 'grass3';
+  m.customProgramCacheKey = () => 'grass4';
   return m;
 }
 
@@ -1128,6 +1130,28 @@ export function decorModel(id) {
     part(g, new THREE.SphereGeometry(0.1, 12, 9), '#ffd27a', 0, 0.42, 0, { lit: true });
     part(g, roundedBox(0.4, 0.46, 0.4, 0.06), '#d6eef7', 0, 0.42, 0, { m: glassLit('#ffc870') });
     halo(g, '#ffcf7a', 1.5, 0, 0.45, 0);
+  } else if (id === 'ev_flakelamp') { // 15-2 첫눈 shop: a tall pale pole, a big six-armed snowflake atop it, glowing pale blue by night
+    part(g, new THREE.CylinderGeometry(0.28, 0.34, 0.16, 18), '#8fa6c4', 0, 0.08, 0); /* 15-2 check: chunky, as the toys (was a thin rod) */
+    part(g, new THREE.CylinderGeometry(0.1, 0.12, 1.7, 14), '#8fa6c4', 0, 0.95, 0);
+    const arm = roundedBox(0.15, 0.48, 0.13, 0.065), tip = roundedBox(0.12, 0.17, 0.11, 0.055);
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3, c = Math.cos(a), s = Math.sin(a);
+      part(g, arm, '#dff3ff', s * 0.26, 2.1 + c * 0.26, 0, { rz: -a, lit: true });
+      for (const k of [-1, 1]) part(g, tip, '#dff3ff', s * 0.37 + Math.sin(a + k * 0.85) * 0.08, 2.1 + c * 0.37 + Math.cos(a + k * 0.85) * 0.08, 0, { rz: -a - k * 0.85, lit: true }); }
+    part(g, new THREE.SphereGeometry(0.17, 16, 12), '#dff3ff', 0, 2.1, 0, { lit: true });
+    halo(g, '#bfe6ff', 1.7, 0, 2.1, 0);
+  } else if (id === 'ev_snowfam') { // 15-2: a snowman family, big, middle and little side by side, bead eyes, carrot noses, one scarf each
+    const snow = { mat: { roughness: 0.62 } };
+    for (const [x, s, c] of [[-0.55, 1, '#d9473f'], [0.25, 0.8, '#5fb3a5'], [0.85, 0.55, '#f2c14e']]) {
+      part(g, new THREE.SphereGeometry(0.36 * s, 18, 12), '#f6f9fc', x, 0.32 * s, 0, snow).scale.y = 0.92;
+      part(g, new THREE.SphereGeometry(0.25 * s, 18, 12), '#f6f9fc', x, 0.8 * s, 0, snow);
+      for (const e of [-0.08, 0.08]) part(g, new THREE.SphereGeometry(0.03 * s, 8, 6), '#1d1d22', x + e * s, 0.86 * s, 0.22 * s);
+      part(g, new THREE.ConeGeometry(0.04 * s, 0.18 * s, 8), '#f08a2c', x, 0.8 * s, 0.32 * s, { rx: Math.PI / 2 });
+      part(g, new THREE.TorusGeometry(0.2 * s, 0.05 * s, 8, 18), c, x, 0.61 * s, 0, { rx: Math.PI / 2 }); }
+  } else if (id === 'ev_mitten') { // 15-2: a chair that is a big red mitten: a soft seat, the mitten standing up as its back (thumb out to one side), a white cuff
+    part(g, roundedBox(0.95, 0.32, 0.8, 0.14), '#d9473f', 0, 0.16, 0);
+    const palm = part(g, new THREE.CapsuleGeometry(0.36, 0.5, 6, 16), '#d9473f', 0, 0.9, -0.28); palm.scale.z = 0.5;
+    part(g, new THREE.CapsuleGeometry(0.13, 0.22, 5, 12), '#d9473f', 0.42, 0.78, -0.26, { rz: -0.7 }).scale.z = 0.6;
+    part(g, roundedBox(0.84, 0.2, 0.42, 0.09), '#fbf7f0', 0, 0.38, -0.28);
   } else if (id === 'table') { // 28-5 a round wooden table on one thick leg and a round foot (its top spots: data.js top)
     part(g, lathe([[0, 0], [0.78, 0], [0.8, 0.03], [0.79, 0.07], [0.76, 0.09], [0, 0.09]], 28), '#c88a4b', 0, 0.65, 0);
     part(g, lathe([[0, 0], [0.13, 0], [0.11, 0.15], [0.1, 0.5], [0.12, 0.65], [0, 0.65]], 14), '#a8703f', 0, 0, 0);

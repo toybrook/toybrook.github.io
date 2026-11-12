@@ -3,7 +3,7 @@
 // covers 자리 비운 사이, a level card or a grown card; those wait for it in turn (TOPS, play.js busy, main.js away).
 // The rules (one a day, none on a clock turned back, the 7th's prop in turn) are in rules.js attend.
 import * as G from '../game/game.js';
-import { PROP, HAB } from '../game/rules.js';
+import { PROP, HAB, firstEgg } from '../game/rules.js';
 import { ATTEND, ATTEND_PROPS, GIFT } from '../game/data.js';
 import { topWindow, overlayOpen, resting } from './hud.js';
 import { sfx } from './sound.js';
@@ -39,7 +39,7 @@ box.onclick = e => {
   if (out) { track('attend', { day: G.S.attend.n }); return show(out.got); }
   box.hidden = true; done();
 };
-const busy = () => topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden || !at() || resting(); // inbox 43: only inside a habitat, never on the map; one card at a time
+const busy = () => firstEgg(G.S) || topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden || !at() || resting(); // inbox 61 B: after the first egg; inbox 43: only inside a habitat, never on the map; one card at a time
 setInterval(() => {
   if (!box.hidden || !G.attendDue() || busy()) { quiet = 0; return; }
   if ((quiet += 800) < 1600) return;

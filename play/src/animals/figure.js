@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from '../../vendor/GLTFLoader.js';
 import { MeshoptDecoder } from '../../vendor/meshopt_decoder.module.js';
 import { mergeGeometries } from '../../vendor/utils/BufferGeometryUtils.js';
-import { MODELS, ACCESSORIES, LEGEND_ITEMS } from '../game/data.js';
+import { MODELS, ACCESSORIES, LEGEND_ITEMS, EV_ACC } from '../game/data.js';
 import { SP, variantOf } from '../game/rules.js';
 import { toyMat, windTime, nightGlow } from '../habitat/toyKit.js';
 import { variantMats, eyeMat, wear } from './materials.js';
@@ -45,7 +45,9 @@ function withOp(geo, H, cx, off = [0, 0, 0], sz = 1) { // sz -1: a mirrored copy
 const ready = {}, loading = {}, accGeo = {}, accLoading = {};
 // 26-1: a secret accessory is fetched the first time a figure wears it (most players have none for a long while)
 // (never fails: offline, the figure goes without it and dress() puts it on once it is fetched later)
-export const loadAcc = k => ACCESSORIES[k] ? accLoading[k] ??= meshes(ACCESSORIES[k].file).then(g => { accGeo[k] = g; }, () => { delete accLoading[k]; }) : Promise.resolve();
+// 15-2: event wear (EV_ACC) is a secret accessory's shape (base) in its own colours; geometry is kept by the shape
+const gk = k => EV_ACC[k]?.base ?? k, AC = k => ACCESSORIES[k] ?? (EV_ACC[k] && ACCESSORIES[EV_ACC[k].base] && { ...ACCESSORIES[EV_ACC[k].base], ...EV_ACC[k] });
+export const loadAcc = k => { const b = gk(k); return ACCESSORIES[b] ? accLoading[b] ??= meshes(ACCESSORIES[b].file).then(g => { accGeo[b] = g; }, () => { delete accLoading[b]; }) : Promise.resolve(); };
 // Load a model's stage GLBs once (all its files at the same time); habitats await this for the species they hold.
 // 27-2: a failed one (offline) is asked again next time — it stayed failed until a reload, so the habitat never opened once back online
 export const loadModel = id => loading[id] ??= (async () => {
@@ -77,7 +79,7 @@ export const loadModel = id => loading[id] ??= (async () => {
 })().catch(e => { delete loading[id]; throw e; });
 
 const accMats = {};
-const accMat = (id, name, c = ACCESSORIES[id].colors[name] || '#ffffff') => (accMats[id + name] ??= !ACCESSORIES[id].glow?.includes(name) ? toyMat(c, { roughness: 0.5 })
+const accMat = (id, name, c = AC(id).colors[name] || '#ffffff') => (accMats[id + name] ??= !AC(id).glow?.includes(name) ? toyMat(c, { roughness: 0.5 })
   : Object.assign(toyMat(c, { roughness: 0.5, emissive: c, emissiveIntensity: 0.55 }), { onBeforeCompile: sh => { // `glow`: lit by night only (as props.js lit)
     sh.uniforms.uNight = nightGlow; sh.fragmentShader = 'uniform float uNight;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uNight;'); } }));
 
@@ -235,15 +237,18 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
   });
   const V = variantOf(spId, vId);
   for (const fx of [].concat(V?.effect || [])) if (FX[fx]) body.add(effect(fx, G.body.boundingBox));
-  const at = accGeo[acc] && S.attach?.[ACCESSORIES[acc].slot]; if (ACCESSORIES[acc] && !accGeo[acc]) loadAcc(acc); // not here yet: dress() puts it on when it is
-  if (G.items[V?.item] && !(at && [ACCESSORIES[acc].slot, ACCESSORIES[acc].also].includes(LEGEND_ITEMS[V.item].slot))) // the item in the look's materials (`item`; none = its body), unless a secret accessory has the slot
+  // acc: one id or a list (15-2: event wear first, then the secret one); one per slot, the first there wins
+  const on = [], taken = new Set();
+  for (const k of [].concat(acc || [])) { const A = AC(k); if (!A) continue; if (!accGeo[gk(k)]) { loadAcc(k); continue; } // not here yet: dress() puts it on when it is
+    const at = S.attach?.[A.slot]; if (!at || taken.has(A.slot) || taken.has(A.also)) continue; taken.add(A.slot); if (A.also) taken.add(A.also); on.push([k, at]); }
+  if (G.items[V?.item] && !taken.has(LEGEND_ITEMS[V.item].slot)) // the item in the look's materials (`item`; none = its body), unless a secret accessory has the slot
     for (const [name, geo] of Object.entries(G.items[V.item])) {
       const o = mesh(geo, m.item?.[name] || m.body, 3); body.add(o);
       if (name === 'body' && m.item?.halo) { const h = new THREE.Mesh(geo, haloMat(m.item.halo, 0.05)); h.renderOrder = 5; o.add(h); } // a glow round it
     }
-  if (at) { // the accessory keeps its own colours, whatever the variant; a baby's slot is sized for a baby
-    const f = sp.fit?.[acc] || {}, fit = { ...f, ...f[stage] }, a = new THREE.Group(); // data.js fit
-    for (const [name, geo] of Object.entries(accGeo[acc])) a.add(mesh(geo, accMat(acc, name), 3));
+  for (const [acc, at] of on) { // the accessory keeps its own colours, whatever the variant; a baby's slot is sized for a baby
+    const f = sp.fit?.[gk(acc)] || {}, fit = { ...f, ...f[stage] }, a = new THREE.Group(); // data.js fit
+    for (const [name, geo] of Object.entries(accGeo[gk(acc)])) a.add(mesh(geo, accMat(acc, name), 3));
     a.position.fromArray(at.p).add(new THREE.Vector3().fromArray(fit.p || [0, 0, 0]));
     a.rotation.fromArray(fit.r || at.r); a.scale.setScalar(at.s * (fit.s || 1));
     body.add(a);
@@ -321,8 +326,9 @@ export function dress(rec) {
   const obj = new THREE.Group(); let fig, stage, grow = -1, pop = -1, fx = null;
   // 26-10: the adult arctic fox's tail curls round its right side only; every other one (odd id) is its mirror image, so in a
   // habitat some show the tail on the left. The model is the confirmed one, unchanged (z is the figure's left-right)
-  const make = s => { const f = makeFigure(rec.species, rec.variant, s, rec.acc, rec.color); if (rec.species === 'arcticFox' && s === 'adult' && rec.id % 2) f.obj.scale.z = -1; return f; };
-  const set = s => { if (fig) { obj.remove(fig.obj); fig.skeleton?.dispose(); } stage = s; fig = make(s); obj.add(fig.obj); };
+  const accs = () => [...rec.wear || [], rec.acc].filter(Boolean), key = () => accs().map(k => k + (accGeo[gk(k)] ? '' : '?')).join();
+  const make = s => { const f = makeFigure(rec.species, rec.variant, s, accs(), rec.color); if (rec.species === 'arcticFox' && s === 'adult' && rec.id % 2) f.obj.scale.z = -1; return f; };
+  let worn; const set = s => { if (fig) { obj.remove(fig.obj); fig.skeleton?.dispose(); } stage = s; worn = key(); fig = make(s); obj.add(fig.obj); };
   set(rec.stage);
   function start() { // heights of both shapes; the sparkles round the baby, the burst at its middle
     const hb = tall(fig.obj), next = make(rec.stage), ha = tall(next.obj);
@@ -331,12 +337,11 @@ export function dress(rec) {
     const burst = sprite(); g.add(burst); obj.add(g);
     fx = { g, sparks, burst, hb, ha, next }; grow = 0; pop = -1;
   }
-  let bare = !!rec.acc && !accGeo[rec.acc]; // 26-1: its accessory was still on the way
   return {
     obj, get fig() { return fig; }, get stage() { return stage; },
     appear() { pop = 0; obj.scale.setScalar(0.01); }, // out of the egg
     update(dt) {
-      if (bare && accGeo[rec.acc] && grow < 0) { bare = false; set(stage); }
+      if (grow < 0 && key() !== worn) set(stage); // 26-1: an accessory came after it; 15-2: wear put on or taken off
       if (rec.stage !== stage && grow < 0) start();
       if (grow >= 0) {
         grow += dt; const { g, sparks, burst, hb, ha, next } = fx, k = Math.min(1, Math.max(0, (grow - GLINT) / GROW)), h = hb + (ha - hb) * smooth(k);

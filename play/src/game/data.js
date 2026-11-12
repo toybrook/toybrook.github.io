@@ -734,6 +734,11 @@ export const PROPS = [
   { id: 'ev_icelamp', name: '눈꽃 등불', as: 'icelamp', price: 0, r: 0.44, k: 1.7, light: true, small: true, gift: '첫눈 이벤트', ev: 'firstsnow' },
   { id: 'ev_bigsnowman', name: '첫눈 기념 큰 눈사람', as: 'snowman', price: 0, r: 1.35, k: 2, gift: '첫눈 이벤트', ev: 'firstsnow' },
   { id: 'ev_album', name: '눈 속의 친구 액자', as: 'icelamp', price: 0, r: 0.7, k: 2.7, light: true, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  // 15-2: the rest of 첫눈's shop (ev_snowman is also the one built with 3 taps, EVENTS build)
+  { id: 'ev_slide', name: '눈 미끄럼틀', as: 'snowslide', price: 0, r: 2.3, open: true, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  { id: 'ev_flakelamp', name: '큰 눈꽃 가로등', price: 0, r: 0.6, light: true, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  { id: 'ev_snowfam', name: '눈사람 가족', price: 0, r: 1.1, gift: '첫눈 이벤트', ev: 'firstsnow' },
+  { id: 'ev_mitten', name: '벙어리장갑 의자', price: 0, r: 0.7, gift: '첫눈 이벤트', ev: 'firstsnow' },
 ];
 // 42 F-1: list = the price as listed (release); price = what this edition charges (PACE priceX; big: list ♥100 and up). Gifts stay 0
 for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5, Math.round(p.price * P.priceX[p.price >= 100 ? 'big' : 'small'] / 5) * 5); }
@@ -747,23 +752,39 @@ for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5
 export const EVENTS = [
   { id: 'firstsnow', name: '첫눈', icon: '❄️', start: '12-05', days: 14,
     coin: { name: '눈송이', icon: '❄️', hearts: 2 },
-    earn: { day: 20, pet: 5 },
-    look: { weather: { meadow: { clear: 45, rain: 35, fog: 20 }, pond: { clear: 45, rain: 35, fog: 20 }, snow: { clear: 40, snow: 45, fog: 15 } } },
-    shop: [{ prop: 'ev_igloo', price: 90 }, { prop: 'ev_sled', price: 40 }, { prop: 'ev_snowman', price: 30 }, { prop: 'ev_icelamp', price: 30 }],
-    track: [{ at: 10, hearts: 20 }, { at: 25, candy: 1 }, { at: 45, hearts: 30 }, { at: 70, prop: 'ev_icelamp' }, { at: 100, hearts: 40 },
-      { at: 130, candy: 2 }, { at: 160, hearts: 50 }, { at: 195, prop: 'ev_sled' }, { at: 230, hearts: 60 }, { at: 260, prop: 'ev_bigsnowman' }],
-    album: { prop: 'ev_album', slots: [
-      { id: 'night', name: '겨울밤의 친구', need: { night: true } },
-      { id: 'snow', name: '설원에서', need: { hab: 'snow' } },
-      { id: 'fog', name: '안개 낀 아침', need: { sky: 'fog' } },
-      { id: 'igloo', name: '이글루 옆에서', need: { prop: 'ev_igloo' } },
-      { id: 'snowman', name: '눈사람과 함께', need: { prop: 'ev_snowman' } },
-      { id: 'sled', name: '썰매 옆에서', need: { prop: 'ev_sled' } }] },
-    news: '첫눈 이벤트: 눈송이를 모아 보상 길을 걷고, 겨울 소품을 사고, 앨범을 채워요',
+    earn: { day: 15, pet: 5, pile: 7, luck: 0.15 },
+    // 15-2 look: the weather odds (snow in every habitat; the snow habitat clearer, for its aurora nights, x aurora bright), cover:
+    // snow lying on the meadow and pond boards (weather.js; it melts over the day after the end)
+    look: { weather: { meadow: { clear: 40, snow: 40, fog: 20 }, pond: { clear: 40, snow: 40, fog: 20 }, snow: { clear: 60, snow: 30, fog: 10 } }, cover: true, aurora: 1.5 },
+    // 15-2 snow piles: one turns up at each of these hours (KST) and waits till the next; a tap: earn.pile coins, the friends near roll in it
+    piles: [0, 6, 12, 18],
+    // 15-2 a snowman: built in 3 taps (body, head, the scarf and nose) for price coins; it stays (prop), the friends gather round
+    build: { price: 15, prop: 'ev_snowman' },
+    // 15-2 shop: big / small / wear (wear: a knit hat or scarf put on a friend in 옷장; not a secret accessory, the odds never see it)
+    shop: [{ prop: 'ev_igloo', price: 90, kind: 'big' }, { prop: 'ev_slide', price: 80, kind: 'big' }, { prop: 'ev_flakelamp', price: 60, kind: 'big' },
+      { prop: 'ev_sled', price: 30, kind: 'small' }, { prop: 'ev_snowfam', price: 35, kind: 'small' }, { prop: 'ev_mitten', price: 30, kind: 'small' },
+      { wear: 'ev_beanie', price: 20, kind: 'wear' }, { wear: 'ev_scarf', price: 20, kind: 'wear' }],
+    track: [{ at: 15, hearts: 20 }, { at: 35, candy: 1 }, { at: 60, hearts: 30 }, { at: 90, prop: 'ev_icelamp' }, { at: 125, hearts: 40 },
+      { at: 165, candy: 2 }, { at: 205, hearts: 50 }, { at: 245, prop: 'ev_sled' }, { at: 290, hearts: 60 }, { at: 330, prop: 'ev_bigsnowman' }],
+    // need: hab, night, sky, prop (one of a list) placed in that habitat, ball (a snowball fight on screen, photo.js)
+    album: { name: '눈 속의 친구', prop: 'ev_album', slots: [
+      { id: 'snowman', name: '눈사람 옆에서', need: { prop: ['ev_snowman', 'ev_snowfam', 'ev_bigsnowman'] } },
+      { id: 'ball', name: '눈싸움 한 판', need: { ball: true } },
+      { id: 'cover', name: '눈 덮인 초원', need: { hab: 'meadow' } },
+      { id: 'flake', name: '눈 오는 날', need: { sky: 'snow' } },
+      { id: 'aurora', name: '오로라 밤', need: { hab: 'snow', night: true } },
+      { id: 'igloo', name: '이글루 옆에서', need: { prop: 'ev_igloo' } }] },
+    news: '첫눈 이벤트: 눈더미를 눌러 눈송이를 모으고, 눈사람을 만들고, 친구에게 털모자를 씌워요',
     mail: { title: '첫눈이 왔어요', body: '첫눈 이벤트가 시작됐어요. 따뜻하게 지내라고 작은 선물을 보내요!', rewards: { hearts: 30, candy: 1 } } },
 ];
 // inbox 41 C 출석부: one slot a day (dayOf), the next one even after days away (no penalty), back to 1 after 7. eggs: plain nest
 // eggs (rules give: the habitat's odds, its pity). The 7th adds the next of ATTEND_PROPS, the 7 in turn
+// 15-2 이벤트 치장 (EVENTS shop wear): bought with an event's coins, put on in its 옷장 (rules.js evWear), kept after it ends. Drawn as
+// the base secret accessory's model and fit in their own colours (animals/figure.js); never in ACCESSORIES (the hatch's draw)
+export const EV_ACC = {
+  ev_beanie: { name: '첫눈 털모자', base: 'beanie', colors: { body: '#e0574c', accent: '#fbf7f0' } },
+  ev_scarf: { name: '첫눈 목도리', base: 'scarf', colors: { body: '#5fb3a5', accent: '#fbf7f0' } },
+};
 export const ATTEND = [{ hearts: 20 }, { candy: 2 }, { eggs: 1 }, { hearts: 30 }, { candy: 3 }, { eggs: 1 }, { hearts: 50 }];
 export const ATTEND_PROPS = ['att_sunflower', 'att_birdhouse', 'att_balloons', 'att_wcan', 'att_signpost', 'att_cart', 'att_rainbow'];
 // 13-1 산책: where a walk goes (picked when it leaves) and the postcard's line ({n} the friend's name, {이/가} its josa).
@@ -850,6 +871,7 @@ export const SCENES = [
   { id: 'herd', name: '줄지어 걷기', social: 'herd', hint: '같은 종 친구가 여럿이면…' },
   { id: 'nap', name: '같이 낮잠', social: 'nap', night: false, hint: '낮에 친구들이 모여 누우면…' },
   { id: 'nap_night', name: '밤에 모여 자기', social: 'nap', night: true, hint: '밤이 되면 친구들이…' },
+  { id: 'snowball', name: '눈싸움', social: 'snowball', hint: '눈 쌓인 날 두 친구가 마주 보면…' }, // 15-2: on snow (the snow habitat, or 첫눈's cover)
 ];
 
 // 23-1 소품 세트: every small prop is in one. A level opens a set (BALANCE.level.unlock); the garden set is there from the start.

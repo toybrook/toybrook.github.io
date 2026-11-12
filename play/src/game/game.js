@@ -118,6 +118,12 @@ export const buyEv = (id, hab) => act(now => R.buyEv(S, id, hab, now));
 export const evShot = ctx => act(now => R.evShot(S, ctx, now));
 export const evSeen = (key, k) => act(() => R.evSeen(S, key, k));
 export const evMail = () => S ? R.evMail(S, clock()) : [];
+// 15-2 첫눈: snow piles, the snowman built, event wear (on a friend while fewer are worn than bought)
+export const pile = () => S && R.evPile(S, clock());
+export const tapPile = () => act(now => R.tapPile(S, now));
+export const evBuild = (hab, x, z) => act(now => R.evBuild(S, hab, x, z, now));
+export const evWear = (id, k) => act(() => R.evWear(S, id, k));
+export const evOwned = () => S ? R.evOwned(S) : {};
 export const attendDue = () => R.attendDue(S, clock());
 export const attend = at => act(now => R.attend(S, now, Math.random, at));
 export const note = (k, n) => { if (n > (S.stats?.[k] || 0)) act(() => R.noteLive(S, k, n)); }; // 23-2: the habitat on screen (saved only when more)

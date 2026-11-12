@@ -193,7 +193,7 @@ export function initPlay(nav) {
     onTap, events, scene, onPropTap, onEdit, onPaint, onSweep,
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
     attach(api, id) { hab = api; habId = id; nest.attach(api, id); draw(); hint(); setTimeout(cards, 1200); }, // grown while away: the cards together
-    openNest: () => nest.open(), cards,
+    openNest: () => nest.open(), cards, firstEgg: (id, done) => nest.first(id, done), // inbox 61 B
     leave() { leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); hideNote(); bubble.hidden = true; bubbleFor = null; card.hidden = home.hidden = true; clearTimeout(homeT); homeT = 0; hideToast(); },
   };
 }

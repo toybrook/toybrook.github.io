@@ -7,6 +7,7 @@
 // in tens, a day), each with day: days since the game began (0~29, 30+), never a date or time. 25 a day at most, errors 5 more.
 // inbox 54, the promotion funnel: start carries src (where the player came from, four ways only), play_1m/3m/10m (minutes on the
 // game screen today, hidden time not counted, a day each), first_nest, first_decor, hatch_3 (the first day only, once ever).
+// inbox 61 C: rate (love / ok / meh, the 「토이브룩 어때요?」 bar, a day at most).
 // No names, mail, device id or save. The service worker leaves other hosts alone (dist-web/sw.js), so the script is never stored.
 // report.js imports this before the game: nothing here may import the game.
 import { UMAMI_ID, STATS_HOST, PREFS } from '../config.js';
@@ -38,6 +39,9 @@ export function track(name, data, key = name) {
   st.sent.push(key); keep();
   if (window.umami) send(name, data); else { queue.push([name, data]); load(); }
 }
+// inbox 61 C: seconds on the game screen today; rateDay(): true the first time a day (the 「어때요?」 bar, kept even while off)
+export const playedToday = () => st.pv?.day === dayOf(Date.now()) ? st.pv.s : 0;
+export const rateDay = () => { const d = dayOf(Date.now()); if (st.rate === d) return false; st.rate = d; keep(); return true; };
 // once ever, marked even while off (turned on later, it is not sent late)
 const once = (name, data) => { if (st[name]) return; st[name] = 1; keep(); track(name, data); };
 

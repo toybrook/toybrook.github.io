@@ -74,7 +74,7 @@ export function createActor(ctx, rec) {
     if (h.soc && social()) return; // inbox 42 C: with another (follows, leads, runs, waits)
     if (ctx.night && Math.random() < 0.45 * ctx.night) { h.tuck = W.oneLeg && Math.random() < W.oneLeg; h.state = 'sleep'; h.t = 0; h.dur = 6 + Math.random() * 6; return; } // 21-1: dozes more (and longer) at night
     if (ctx.rain > 0.3 && !W.water && (shelter() || rainy())) return; // 21-2: a land animal waits out the rain under a tree or a roof (inbox 42 D: one it fits under; none: plays in the rain)
-    if (!(ctx.rain > 0.3) && Math.random() < 0.07 && startSocial()) return; // inbox 42 C 동물끼리
+    if ((!(ctx.rain > 0.3) || ctx.snowy) && Math.random() < 0.07 && startSocial()) return; // inbox 42 C 동물끼리 (15-2: on snow, snowing too: 눈싸움)
     if (h.atSet) { const k = h.atSet === 'perch' ? 2.5 : 1; h.atSet = false; h.state = Math.random() < 0.6 * k ? 'graze' : 'idle'; h.t = 0; h.dur = (3 + Math.random() * 4) * k; return; } // 23-2: got there: stays a while
     if (ctx.play?.length) { const m = me(); if (Math.random() < (due(ctx, h.now, m, st => !m.can || m.can(st.x, st.z)) ? 0.7 : 0.2) + 0.15 * (ctx.night || 0) && toPlay()) return; } // 28-2 소품 쓰기 (more by night: the campfire); inbox 42 C: 7 -> 20%, 70% while one of its kind waits (due)
     if (ctx.sets?.length && Math.random() < 0.3 && toSet()) return; // 23-2 세트 보너스: likes to play by a whole set
@@ -184,7 +184,7 @@ export function createActor(ctx, rec) {
   function startSocial(only) { // only: 'huddle' (inbox 42 D: in the rain, the nap)
     if (!walkable(h.x, h.z)) return false;
     const all = pals(), T = h.now, same = all.filter(o => o.rec.species === rec.species), P = all.filter(o => Math.hypot(o.body.x - h.x, o.body.z - h.z) < (only ? 20 : 12)), o = P[0]; // its own kind come from further (in the rain's huddle, any from 20)
-    const kinds = only || ctx.night ? ['nap'] : [...P.length ? ['follow', 'tag', 'greet'] : [], ...P.length > 1 ? ['nap', 'nap'] : [], ...same.length ? ['herd', 'herd'] : []];
+    const kinds = only || ctx.night ? ['nap'] : [...P.length ? ['follow', 'tag', 'greet'] : [], ...P.length && ctx.snowy ? ['ball', 'ball'] : [], ...P.length > 1 ? ['nap', 'nap'] : [], ...same.length ? ['herd', 'herd'] : []]; // 15-2: 눈싸움 on snow
     if (!kinds.length) return false; const kind = kinds[Math.floor(Math.random() * kinds.length)];
     if (kind === 'follow') { if (!o.join({ kind: 'lead', until: T + 14 })) return false; h.soc = { kind: 'tail', o, until: T + 14 }; say('follow', [o]); return social(); }
     if (kind === 'herd') { // two beside it, a third behind
@@ -192,6 +192,7 @@ export function createActor(ctx, rec) {
       if (!F.length) return false; h.soc = { kind: 'lead', until: T + 20 }; say('herd', F); return social(); }
     if (kind === 'tag') { if (!o.join({ kind: 'tag', o: api, it: false, until: T + 15 })) return false;
       h.soc = { kind: 'tag', o, it: true, until: T + 15, from: T + 1.2 }; say('tag', [o]); h.state = 'jump'; h.t = 0; h.dur = 0.55; return true; } // a hop: off we go
+    if (kind === 'ball') { if (!o.join({ kind: 'ball', o: api, until: T + 9 })) return false; h.soc = { kind: 'ball', o, until: T + 9 }; say('snowball', [o]); return social(); }
     if (kind === 'greet') { const b = o.body, d = Math.hypot(h.x - b.x, h.z - b.z) || 1, D = body.seg[1] + body.r + b.seg[1] + b.r + 0.05;
       if (!o.join({ kind: 'wait', o: api, until: T + 10 })) return false;
       h.goal = { x: b.x + (h.x - b.x) / d * D, z: b.z + (h.z - b.z) / d * D, act: 'greet', o, D, n: 4, done: ok => { if (!ok && o.soc?.o === api) o.soc = null; } };
@@ -217,6 +218,10 @@ export function createActor(ctx, rec) {
         if (walkable(x, z) && near(x, z) && open(x, z) && pathClear(h.x, h.z, x, z, ok)) { go('walk', x, z, 1.1); return true; } }
       h.soc = null; return false; }
     const b = o.body, d = Math.hypot(b.x - h.x, b.z - h.z);
+    if (s.kind === 'ball') { // 15-2 눈싸움: closer if far, then face the other and throw (the ball: habitat.js ctx.onBall), again and again till the time is up
+      if (d > 8) { const f = (d - 5) / d, tx = h.x + (b.x - h.x) * f, tz = h.z + (b.z - h.z) * f;
+        if (ok(tx, tz) && pathClear(h.x, h.z, tx, tz, ok)) { go('walk', tx, tz, 1.4); return true; } h.soc = null; return false; }
+      h.face = Math.atan2(-(b.z - h.z), b.x - h.x); h.state = 'throw'; h.t = 0; h.dur = 1.2 + Math.random() * 0.9; h.thrown = false; return true; }
     if (s.kind === 'tail') { // to its place behind (or beside) the one it follows
       const c = Math.cos(b.yaw), sn = -Math.sin(b.yaw), back = s.back ?? b.r - b.seg[0] + body.seg[1] + body.r + 0.4, side = s.side || 0;
       const x = b.x - c * back - sn * side, z = b.z - sn * back + c * side, L = Math.hypot(x - h.x, z - h.z);
@@ -268,6 +273,7 @@ export function createActor(ctx, rec) {
     if (g.act === 'play') { h.play = start(g.q, h.x, h.z, h.yaw, h.now); ctx.onPlay?.(g.q); h.state = 'play'; h.t = 0; h.pk = 0; return true; } // 28-2: on it (update's play)
     if (g.act === 'slide' && g.to && W.slide) { go('walk', g.to[0], g.to[1], 2.4 / W.pace); h.slide = true; return true; }
     if (g.act === 'run') { h.state = 'jump'; h.t = 0; h.dur = 0.55; return true; }
+    if (g.act === 'roll') { h.state = 'roll'; h.t = 0; h.dur = 2.6; g.done?.(true); return true; } // 15-2: by the snow pile, a roll in the snow
     if (g.act === 'bridge') { if (ctx.onBridge) { h.state = 'idle'; h.t = 0; h.dur = 1; } else { ctx.onBridge = h; go('cross', g.far.x, g.far.z, 1.3); } return true; } // inbox 42 C: at the landing: over (one at a time)
     if (g.act === 'eat') { h.after = g.done; h.state = 'graze'; h.t = 0; h.dur = 3; return true; }
     if (g.act === 'greet') { const o = g.o, b = o.body; h.state = 'idle'; h.t = 0; h.dur = 0.5; // inbox 42 C 코 맞대기: the other still waits for it: nose to nose
@@ -416,6 +422,11 @@ export function createActor(ctx, rec) {
         else { const hp = (h.t / 0.45) % 1, n = Math.floor(h.t / 0.45); lift = Math.sin(hp * Math.PI) * 0.22 * M[look.stage].s; sq = hp < 0.15 || hp > 0.85 ? 0.95 : 1.02; gait = 'jump'; ph = hp * 0.999; // 첨벙: little hops
           if (n > h.spl) { h.spl = n; splash(); } } // a ring of water as it lands
         if (k >= 1) { h.state = 'idle'; h.t = 0; h.dur = 0.6 + Math.random(); } }
+      else if (h.state === 'roll' || h.state === 'throw') { const k = Math.min(1, h.t / h.dur); // 15-2 첫눈
+        if (h.state === 'roll') { const e = Math.sin(k * Math.PI); roll = Math.sin(k * Math.PI * 4) * 0.75 * e; lie = e * 0.8; sq = 1 - 0.04 * e; } // on its belly, side to side
+        else { const q = Math.min(1, h.t / 0.6); rot = 0.18 * Math.sin(q * Math.PI * 2); lift = Math.sin(q * Math.PI) * 0.12 * M[look.stage].s; // rears up, then throws
+          const o = h.soc?.o?.body; if (!h.thrown && h.t > 0.35 && o) { h.thrown = true; ctx.onBall?.(h.x, h.z, o.x, o.z); } }
+        if (k >= 1) { h.state = 'idle'; h.t = 0; h.dur = 0.4; } }
       else if (h.state === 'drop') { ({ lift, sq } = dropPose(h.t)); if (h.t >= DROP.end) { h.state = 'idle'; h.t = 0; h.dur = h.goal ? 0.1 : 1.2; } } // inbox 42 E: put down on a prop: on to it at once
       else if (h.state === 'carry') { lift = DROP.carry; ({ rot, roll } = dangle(t, h.ph)); }
       else if (h.state === 'jump') { const k = Math.min(1, h.t / h.dur); lift = Math.sin(k * Math.PI) * 1.1; rot = Math.sin(k * Math.PI * 2) * 0.1; gait = 'jump'; ph = k * 0.999; if (k >= 1) { if (h.back) { h.state = 'cross'; h.t = h.back.t; h.dur = h.back.dur; h.back = null; } else { h.state = 'idle'; h.t = 0; h.dur = 1 + Math.random(); } } }

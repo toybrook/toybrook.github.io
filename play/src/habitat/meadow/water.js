@@ -2,7 +2,7 @@
 // soft foam at the banks and on the falls. No extra render passes, so it stays cheap on phones.
 import * as THREE from 'three';
 import { R, SW, streamLine, pond, waterY, edgeRound, CLIFF_Z, WATER_Y } from './layout.js';
-import { toyMat, instanced, skyLit, nightGlow, rainNow } from '../toyKit.js';
+import { toyMat, instanced, skyLit, nightGlow, rainNow, snowNow } from '../toyKit.js';
 import { poolAt } from '../zones.js';
 
 export const vert = `
@@ -12,7 +12,7 @@ void main(){ vUv = uv; vFall = aFall; vec4 w = modelMatrix * vec4(position, 1.0)
 #include <fog_vertex>
 }`;
 export const frag = `
-uniform float uTime; uniform vec3 uSun; uniform vec3 uPond; uniform vec3 uLit; uniform float uNight; uniform float uRain;
+uniform float uTime; uniform vec3 uSun; uniform vec3 uPond; uniform vec3 uLit; uniform float uNight; uniform float uRain; uniform float uIce;
 varying vec2 vUv; varying vec3 vW; varying float vFall;
 #include <fog_pars_fragment>
 float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -67,6 +67,11 @@ void main(){
   foam = clamp(foam, 0.0, 1.0);
   col = mix(col, vec3(0.97, 0.99, 1.0), foam * 0.85);
   float alpha = max(max(mix(0.42, 0.8, depth), max(foam * 0.92, streak * 0.9)), fres * 0.75);
+#ifdef POND
+  // 15-2 첫눈: thin ice round the edge, a pale frosted rim with a few lighter cracks
+  float ice = uIce * smoothstep(0.6, 0.78, edge + (fn - 0.5) * 0.16);
+  col = mix(col, vec3(0.86, 0.93, 0.97) + 0.08 * smoothstep(0.55, 0.6, vn(vW.xz * 3.1)), ice * 0.85); alpha = mix(alpha, 0.92, ice);
+#endif
 #ifdef MURK
   // inbox 34 the swamp's pools: dark olive water, hardly see-through
   col = mix(col, vec3(0.19, 0.23, 0.12) * (0.85 + 0.5 * fres) + spec * 0.5, 0.78 - foam * 0.4); alpha = max(alpha, 0.9);
@@ -98,7 +103,7 @@ export function buildWater(scene, sunDir) {
     // also draws it into the glass refraction buffer; transparent objects are left out of that pass.
     vertexShader: vert, fragmentShader: frag, transparent: false, blending: THREE.CustomBlending, fog: true, // 21-2: fogged as the rest
     blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor, defines,
-    uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), uTime, uSun: { value: sunDir }, uLit: skyLit, uNight: nightGlow, uRain: rainNow, uPond: { value: new THREE.Vector3(pond.x, pond.z, pond.r - 0.35) } }
+    uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), uTime, uSun: { value: sunDir }, uLit: skyLit, uNight: nightGlow, uRain: rainNow, uIce: snowNow, uPond: { value: new THREE.Vector3(pond.x, pond.z, pond.r - 0.35) } }
   });
 
   // --- stream ribbon: follows the shelf and drops down the cliff. At the front edge it necks into a thin
@@ -174,7 +179,7 @@ export function zoneWater(scene, sunDir, heightAt, Z, { cold = false } = {}) {
   const mk = defines => new THREE.ShaderMaterial({ // as buildWater's
     vertexShader: vert, fragmentShader: frag, transparent: false, blending: THREE.CustomBlending, fog: true,
     blendSrc: THREE.SrcAlphaFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor, defines,
-    uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), uTime, uSun: { value: sunDir }, uLit: skyLit, uNight: nightGlow, uRain: rainNow, uPond: { value: new THREE.Vector3() } }
+    uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), uTime, uSun: { value: sunDir }, uLit: skyLit, uNight: nightGlow, uRain: rainNow, uIce: snowNow, uPond: { value: new THREE.Vector3() } }
   });
   const add = (vtx, uv, fall, idx, mat) => {
     const g = new THREE.BufferGeometry();

@@ -20,6 +20,14 @@
         "hearts": 20,
         "legendEggs": 1
       }
+    },
+    {
+      "code": "THANKYOU",
+      "title": "고마워요 선물 코드",
+      "rewards": {
+        "hearts": 30,
+        "eggs": 1
+      }
     }
   ]
 }

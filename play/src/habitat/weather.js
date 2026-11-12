@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { WEATHER, WEATHER_Q, PREFS, VIEW, QUALITY } from '../config.js';
 import { gameHours } from './daylight.js';
-import { rainNow, skyLit } from './toyKit.js';
+import { rainNow, skyLit, snowNow } from './toyKit.js';
 
 const hash = (...k) => { let h = 2166136261; for (const n of k) { h = Math.imul(h ^ n, 16777619); h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15; } return (h >>> 0) / 4294967296; };
 const seedOf = id => [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 2166136261);
@@ -118,12 +118,12 @@ export function weather(scene, camera, controls, habId, area = [-20, 20, -31, 31
   return {
     now() { const w = weatherNow(habId); w.gray = Math.max(w.rain, w.snow * 0.45, w.fog * 0.6); return w; },
     draw(t, w, L) {
-      rainNow.value = w.rain;
+      rainNow.value = w.rain; snowNow.value = habId === 'snow' ? 0 : WEATHER.cover; // 15-2: the snow habitat is snowy anyway
       if (w.rain > 0 && !rain) scene.add(rain = rainMesh(area));
       if (rain) { rain.visible = w.rain > 0; rain.material.uniforms.uTime.value = t; }
       if (w.snow > 0 && !flakes) scene.add(flakes = rainMesh(area, true));
       if (flakes) { const u = flakes.material.uniforms; flakes.visible = w.snow > 0; u.uTime.value = t; u.uRain.value = w.snow; }
-      const au = habId === 'snow' ? L.night * (1 - Math.max(w.snow, w.fog)) : 0; // the aurora: the snow's clear nights
+      const au = habId === 'snow' ? L.night * (1 - Math.max(w.snow, w.fog)) * WEATHER.aur : 0; // the aurora: the snow's clear nights (15-2: brighter in 첫눈)
       if (au > 0.02 && !aur) scene.add(aur = auroraMesh());
       if (aur) { aur.visible = au > 0.02; if (aur.visible) { const hh = 250 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), hw = hh * camera.aspect;
         aur.position.copy(camera.position); aur.quaternion.copy(camera.quaternion); aur.translateZ(-250); aur.translateY(hh * 0.62); aur.scale.set(hw * 2.4, hh * 0.9, 1);

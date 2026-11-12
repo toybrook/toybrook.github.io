@@ -12,6 +12,14 @@ export const toyMat = (color, o = {}) => new THREE.MeshStandardMaterial({ color,
 export const nightGlow = { value: 0 }, skyLit = { value: new THREE.Color(1, 1, 1) };
 // 21-2: how hard it rains now, 0..1 (weather.js): rings on the water (water.js), the wet ground (terrain.js)
 export const rainNow = { value: 0 };
+// 15-2 첫눈: snow lying on the ground, the grass tips, the trees' and rocks' tops, the pond edges' thin ice (0..1; weather.js sets it
+// from WEATHER.cover, 0 in the snow habitat). Always in the shaders (no rebuild when it comes); 0: as before
+export const snowNow = { value: 0 }, SNOW_RGB = 'vec3(0.95, 0.965, 0.99)';
+export function snowTop(sh) { // the faces turned up go white with it (view-space normal against the world's up)
+  sh.uniforms.uSnow = snowNow;
+  sh.fragmentShader = 'uniform float uSnow;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+  diffuseColor.rgb = mix(diffuseColor.rgb, ${SNOW_RGB}, uSnow * smoothstep(0.3, 0.65, dot(normal, normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz))));`);
+}
 // the env map: a sky sphere (sky: { top, hor, gnd, glow } as [r, g, b], from daylight.js; none = the day's) blurred by PMREM
 const pmrems = new WeakMap(), DAY_SKY = { top: [0.50, 0.66, 0.92], hor: [1.0, 0.84, 0.66], gnd: [0.36, 0.44, 0.22], glow: [1.0, 0.86, 0.62] };
 const v3 = a => new THREE.Vector3(...a);
@@ -71,8 +79,8 @@ export const lathe = (pts, seg = 14) => new THREE.LatheGeometry(pts.map(([r, y])
 // Gentle wind sway in the vertex shader; amount grows with local height (position.y).
 // Shared uniform so one clock drives every swaying material.
 export const windTime = { value: 0 };
-export function addSway(mat, amp, freq = 1.3) {
-  mat.onBeforeCompile = sh => {
+export function addSway(mat, amp, freq = 1.3, snow = false) { // snow: 15-2 snowTop as well
+  mat.onBeforeCompile = sh => { if (snow) snowTop(sh);
     sh.uniforms.uWind = windTime;
     sh.vertexShader = 'uniform float uWind;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       #ifdef USE_INSTANCING
@@ -84,7 +92,7 @@ export function addSway(mat, amp, freq = 1.3) {
       transformed.x += sin(uWind * ${freq.toFixed(2)} + ip.x * 0.35 + ip.z * 0.21) * ${amp.toFixed(3)} * hk;
       transformed.z += cos(uWind * ${(freq * 0.8).toFixed(2)} + ip.x * 0.23 - ip.z * 0.3) * ${(amp * 0.6).toFixed(3)} * hk;`);
   };
-  mat.customProgramCacheKey = () => 'sway' + amp + freq;
+  mat.customProgramCacheKey = () => 'sway' + amp + freq + (snow ? 's' : '');
   return mat;
 }
 
