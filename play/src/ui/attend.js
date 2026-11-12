@@ -24,10 +24,10 @@ function draw() {
 <div class="nbtns"><button class="go" data-close>오늘 칸 받기</button></div></div>`;
   box.dataset.step = 'slots';
 }
+const gotText = got => { const P = PROP[got.prop]; return [got.hearts && `♥${got.hearts}`, got.candy && `꼬마 사탕 ${got.candy}개`, got.eggs && `둥지 알 ${got.eggs}개`, P && `소품 「${P.name}」`].filter(Boolean).join(' · ') || '♥0'; };
 function show(got) {
-  const P = PROP[got.prop], hab = P && G.S.props.findLast(p => p.prop === P.id)?.hab;
-  const what = [got.hearts && `♥${got.hearts}`, got.candy && `꼬마 사탕 ${got.candy}개`, got.eggs && `둥지 알 ${got.eggs}개`, P && `소품 「${P.name}」`].filter(Boolean).join(' · ');
-  box.innerHTML = `<div><h2>${got.slot}일째 출석</h2>${grid((G.S.attend.n - 1) % L + 1, -1)}<p class="note got">${what || '♥0'}</p>${
+  const P = PROP[got.prop], hab = P && G.S.props.findLast(p => p.prop === P.id)?.hab, what = gotText(got);
+  box.innerHTML = `<div><h2>${got.slot}일째 출석</h2>${grid((G.S.attend.n - 1) % L + 1, -1)}<p class="note got">${what}</p>${
     got.extra ? `<p class="note">둥지가 가득 차서 알 ${got.extra}개는 ♥${got.extra * GIFT.eggHearts}로 바꿨어요</p>` : ''}${
     P && HAB[hab] ? `<p class="note">${HAB[hab].name} 꾸미기 › 선물에 넣어 뒀어요</p>` : ''}
 <div class="nbtns"><button class="go" data-close>좋아요</button></div></div>`;
@@ -47,3 +47,11 @@ setInterval(() => {
 }, 800);
 // cur: the habitat on screen (a 7th-day prop goes there); after: called when the card closes (main.js firstDone)
 export function initAttend(cur, after) { at = cur; done = after; }
+// inbox 58: on a day back, 돌아왔어요 (main.js) shows today's slot as one of its rows and takes it there; this card then has nothing to show
+export const todayRow = () => { const n = G.S.attend.n, k = n % L; return [k + 1, cell(ATTEND[k]) + (k === L - 1 ? ` + ${PROP[ATTEND_PROPS[Math.floor(n / L) % ATTEND_PROPS.length]].name}` : '')]; };
+export function takeToday(where) {
+  const out = G.attend(where); if (!out) return null;
+  track('attend', { day: G.S.attend.n }); sfx('grown');
+  const { got } = out, P = PROP[got.prop], hab = P && G.S.props.findLast(p => p.prop === P.id)?.hab;
+  return gotText(got) + (got.extra ? ` · 가득 찬 둥지 대신 ♥${got.extra * GIFT.eggHearts}` : '') + (P && HAB[hab] ? ` · ${HAB[hab].name} 꾸미기 › 선물에` : '');
+}

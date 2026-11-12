@@ -24,7 +24,7 @@ import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
 import { SPECIES, MODELS, PROPS, NATURE, BALANCE, SETS, SIZES, BRUSHES, sizeF, paletteOf, sizable } from '../game/data.js';
 import { SP, variantOf, habitatOf, known, topAt } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
-import { ambience, sfx, music, playing } from '../ui/sound.js';
+import { ambience, sfx, music, playing, hear, pet } from '../ui/sound.js';
 import { tracksOf, network, railEnds, joinTurn, newTrain, moveTo, stepTrain, boardAt, TILE, CARS } from './train.js';
 import { trainModel, recolor, treeCover } from './meadow/props.js';
 import { newPlay } from '../animals/play.js';
@@ -78,7 +78,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const unhook = hooks(renderer);
   // inbox 49: the GL context lost and given back (an Android phone sending the app to the back): three makes its state again, but the board,
   // animals and props come back black (only the water drew). main.js builds this habitat again (under the cloud if it is on screen)
-  renderer.domElement.addEventListener('webglcontextrestored', () => ui.restored?.(habId), sig);
+  // inbox 53: not given back in 3 s (the GPU busy elsewhere, or the browser dropped it for good): main.js builds it again on a new canvas
+  let lostT = 0; // -1: the 3 s passed (a late restore is not built a second time)
+  renderer.domElement.addEventListener('webglcontextlost', () => { clearTimeout(lostT); lostT = setTimeout(() => { if (dead) return; lostT = -1; ui.lostLong?.(habId); }, 3000); }, sig);
+  renderer.domElement.addEventListener('webglcontextrestored', () => { if (lostT === -1) return; clearTimeout(lostT); ui.restored?.(habId); }, sig);
   renderer.setPixelRatio(pr);
   renderer.setSize(W(), H());
   renderer.shadowMap.enabled = G.shadow > 0; // 낮음: no shadow map (the animals' blob shadows stay)
@@ -614,6 +617,14 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }, { capture: true, ...sig });
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault(), sig); // a long press lifts (OrbitControls, off while carrying, no longer stops the phone's menu)
   Object.assign(renderer.domElement.style, { webkitTouchCallout: 'none', webkitUserSelect: 'none', userSelect: 'none' }); // iOS: no loupe or callout on a held finger
+  // inbox 53: a kept spot inside a fence goes once that land joins the main one (a fence opened or taken away), gets under ROOM,
+  // or the friend is on another land (walked out while it was open). Not while decorating: a fence lifted to be moved a cell
+  let homeAt = 0;
+  function penCheck() {
+    for (const a of actors.values()) { const hm = a.rec.home; if (!hm || carry?.a === a) continue;
+      const L = habitat.ctx.land(a.water || ''), M = L.root(L.id(...hm)), at = L.root(L.id(a.position.x, a.position.z));
+      if (M < 0 || M === L.main || L.area(M) < ROOM || at >= 0 && at !== M) ui.onHome?.(a.rec.id, null); }
+  }
   function letGo() {
     const { a, x, z, f } = carry, carry0 = carry.from, c = habitat.ctx; carry = null; controls.enabled = true; if (actors.get(a.rec.id) !== a) return; // gone meanwhile (put away)
     const L = c.land(a.water || ''), mine = (x, z, l) => l >= 0 && L.area(l) >= ROOM && free(c.crowd, a.body, x, z); // inbox 48: any land big enough to live on (inside a closed fence, an island): it lives there from then on
@@ -621,9 +632,15 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const here = L.id(x, z), small = here >= 0 && L.area(here) < ROOM; // a pocket too small (a ring closed too tight; the finger in it or on its fence, land.js id: within 1 m): to the nearest spot from the finger, said every time
     const [nx, nz] = ok(x, z) ? [x, z] : L.near(x, z, mine) ?? [carry0.x, carry0.z], st = D.list.find(o => o.play && !o.play.gone && Math.min(Math.hypot(o.x - x, o.z - z), Math.hypot(o.x - f[0], o.z - f[1])) < o.r + 0.4)?.play; // it, or the finger, over a play prop (its spot: the size it is)
     if (small) c.cramped?.(true);
+    const M = L.root(L.id(nx, nz)), pen = M >= 0 && M !== L.main && L.area(M) >= ROOM; // inbox 53: inside a closed fence: kept for next time
+    if (pen || a.rec.home) ui.onHome?.(a.rec.id, pen ? [nx, nz] : null);
     a.drop(nx, nz, DROP.carry); const [px, pz] = st && a.use(st) || [nx, nz]; // on a play prop: by its seat (walk.js use)
-    puffs.push({ x: px, z: pz, t: dropFrom(DROP.carry) - DROP.fall, bits: null });
+    puffs.push({ x: px, z: pz, t: dropFrom(DROP.carry) - DROP.fall, bits: null }); sfx('place', DROP.fall - dropFrom(DROP.carry)); // 13-0: a plastic 톡 as it lands
   }
+  // 13-0: what is underfoot at x, y, z (sound.js steps): a deck, shallow water (deeper: swimming, none), the paint, else the habitat's own
+  const underfoot = (x, y, z) => { const c = habitat.ctx; if (c.deckAt(x, z) > y - 0.3) return 'wood'; const d = c.water - c.heightAt(x, z);
+    if (d > 0.25) return null; if (d > 0.02) return 'water'; const b = paintNow[`${Math.floor(x / U)},${Math.floor(z / U)}`];
+    return b === 8 ? 'wood' : b === 5 || b === 6 ? 'snow' : [1, 2, 3, 7].includes(b) ? 'dirt' : habId === 'snow' ? 'snow' : 'grass'; };
   // 22-1 땅 칠하기: one finger paints the cells it passes over (paintable ones; the eraser: any), shown at once, saved when it lifts
   container.addEventListener('pointerdown', e => {
     if (!decorOn || brush === undefined || stroke || pinch || e.target !== renderer.domElement) return;
@@ -743,7 +760,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     lastTap = dbl ? null : { t, x: e.clientX, y: e.clientY };
     if (dbl && a) { setFocus(a); front(); return; }
     if (dbl) { if (ray.ray.intersectPlane(flat, mid)) centre(mid); return; }
-    if (a) { a.poke(); setFocus(a); ui.onTap('actor', a.rec, e.clientX, e.clientY); }
+    if (a) { a.poke(); pet(a); setFocus(a); ui.onTap('actor', a.rec, e.clientX, e.clientY); }
   }, sig);
   // the animal under a screen point (hit: the ray's own hit; a: that one, or on a phone's small moving targets a near miss within ~32 px)
   function actorAt(e) {
@@ -1025,6 +1042,8 @@ GPU ${gpu}`; }
     if (train && stepTrain(train.T, train.net, dt, habitat.ctx.crowd, train.st) === 'toot') sfx('train'); // 28-4: before the riders (play.js reads its cars)
     if (train) placeCars();
     for (const a of actors.values()) a.update(dt, t);
+    if (t > homeAt && !decorOn) { homeAt = t + 1; penCheck(); }
+    hear(camera, controls.target, actors, habitat.ctx, D.list, underfoot); // 13-0: the world's sounds where they are
     updPuffs(dt);
     for (const e of placed.values()) e.obj.userData.tick?.(t); ed?.obj.userData.tick?.(t); // props that move (pinwheel, swing, boat...)
     if (ed && ed.on == null && fits(ed.P, ed.x, ed.z, SZ(ed)) !== ed.ok) moveEdit(ed.x, ed.z); // animals walk in and out of the held prop's spot (28-5: at its size; one on a top spot has none)

@@ -43,8 +43,10 @@ export function createActor(ctx, rec) {
   for (let k = 0; k < 40 && !(free(ctx.crowd, body, x, z) && home(x, z)); k++) [x, z] = ctx.spawn();
   for (let k = 0; k < 60 && !walkable(x, z); k++) { x = THREE.MathUtils.clamp(x + (Math.random() - 0.5) * 6, -15 * UNIT, 15 * UNIT); z = THREE.MathUtils.clamp(z + (Math.random() - 0.5) * 6, -21 * UNIT, 26 * UNIT); }
   // inbox 42 B: never inside a closed fence (nor a pocket between props): on the board's main land (the user's own drop may put it there)
-  const land = () => ctx.land?.(W.water || ''), L0 = land();
-  if (L0 && L0.root(L0.id(x, z)) !== L0.main) [x, z] = L0.near(x, z, (px, pz, L) => L0.root(L) === L0.main && free(ctx.crowd, body, px, pz) && home(px, pz)) ?? [x, z];
+  // inbox 53: unless a hand put it in one (rec.home) that is still a land of its own, ROOM or more: in there
+  const land = () => ctx.land?.(W.water || ''), L0 = land(), hm = L0 && rec.home ? L0.root(L0.id(...rec.home)) : -1;
+  if (hm >= 0 && hm !== L0.main && L0.area(hm) >= ROOM) [x, z] = L0.near(...rec.home, (px, pz, L) => L0.root(L) === hm && free(ctx.crowd, body, px, pz)) ?? rec.home;
+  else if (L0 && L0.root(L0.id(x, z)) !== L0.main) [x, z] = L0.near(x, z, (px, pz, L) => L0.root(L) === L0.main && free(ctx.crowd, body, px, pz) && home(px, pz)) ?? [x, z];
   const sh = new THREE.Object3D(), blob = blobSlot(scene); sh.rotation.x = -Math.PI / 2;
   const h = { x, z, yaw: body.yaw, face: body.yaw, state: 'idle', t: 0, dur: 1 + Math.random() * 2, sx: x, sz: z, tx: x, tz: z, ph: Math.random() * 6, wait: 0 };
   Object.assign(body, { x, z }); root.position.set(x, heightAt(x, z), z); // inbox 43: where it stands from the start (the first view frames the friends before a frame runs)
@@ -347,6 +349,7 @@ export function createActor(ctx, rec) {
     free: () => !api.hold && !h.goal && !h.after && !h.play && !h.soc && !h.shel && !h.then && ctx.onBridge !== h && ['idle', 'graze', 'walk'].includes(h.state),
     join(s) { if (!api.free()) return false; h.soc = s; h.stuck = false; h.state = 'idle'; h.t = 0; h.dur = 0; return true; }, // its part, from its next pick
     get soc() { return h.soc; }, set soc(v) { h.soc = v; },
+    get state() { return h.state; }, // 13-0: what it is doing (sound.js: steps, breath asleep, bites grazing)
     nuzzle(x, z) { h.soc = null; h.face = Math.atan2(-(z - h.z), x - h.x); h.state = 'nuzzle'; h.t = 0; h.dur = 1.8; },
     poke() { if (h.play) { h.pk = 0.5; return; } // 28-2: on a prop, a little bounce (it stays on)
       if (h.state === 'cross') h.back = { t: h.t, dur: h.dur }; else if (h.then) { h.then = null; ctx.onBridge = null; } h.state = 'jump'; h.t = 0; h.dur = 0.55; }, // on the bridge it carries on after the jump; on the way there it gives up

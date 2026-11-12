@@ -27,6 +27,15 @@ if (rating && (on(SITE.RATING_MARK) || on(SITE.RATING_TEXT))) {
   rating.querySelector('span').textContent = on(SITE.RATING_TEXT) ? SITE.RATING_TEXT : '';
   rating.hidden = false;
 }
+// 들어온 길(inbox 54): threads·instagram·other·direct 네 갈래만 이 탭에 적어 두고, 게임의 start 이벤트가 읽습니다. 주소 원문은 적지 않습니다.
+// 프로필 링크는 ?s=th · ?s=ig를 붙입니다(이 두 표시만 읽고, s 값은 무엇이든 주소창에서 지움). 이 사이트 안에서 옮겨 다니면 처음 값을 둡니다.
+(() => {
+  const q = new URLSearchParams(location.search), s = { th: 'threads', ig: 'instagram' }[q.get('s')];
+  let h = ''; try { h = new URL(document.referrer).hostname; } catch { /* 없음 */ }
+  const ref = !h || h === location.hostname ? '' : /(^|\.)threads\.(net|com)$/.test(h) ? 'threads' : /(^|\.)instagram\.com$/.test(h) ? 'instagram' : 'other';
+  try { sessionStorage.setItem('toyhabitat.src', s || ref || sessionStorage.getItem('toyhabitat.src') || 'direct'); } catch { /* 적지 못함: 게임이 referrer로 정함 */ }
+  if (q.has('s')) { q.delete('s'); const r = q.toString(); history.replaceState(history.state, '', location.pathname + (r ? '?' + r : '') + location.hash); }
+})();
 // 이용 통계(inbox 41 A): 공개 주소에서만 페이지 보기를 셉니다. 게임 설정의 「이용 통계 보내기」를 끈 브라우저(같은 주소라 그 설정을 읽음)와
 // Do Not Track을 켠 브라우저에서는 스크립트를 넣지 않습니다.
 (() => {
@@ -35,4 +44,14 @@ if (rating && (on(SITE.RATING_MARK) || on(SITE.RATING_TEXT))) {
   const s = Object.assign(document.createElement('script'), { src: 'https://cloud.umami.is/script.js', defer: true });
   Object.assign(s.dataset, { websiteId: SITE.UMAMI_ID, doNotTrack: 'true', domains: 'toybrook.github.io', excludeSearch: 'true', excludeHash: 'true' });
   document.head.append(s);
+  // 첫 화면 → 게임 단추(inbox 54): data-btn 단추를 누르면 어느 단추인지만, 단추마다 하루 1번(이 기기). 스크립트가 아직 안 왔으면 보내지 않음
+  addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('[data-btn]'); if (!b || !b.href || !window.umami) return;
+    const k = 'toyhabitat.site', today = new Date().toDateString(); let c = null;
+    try { c = JSON.parse(localStorage.getItem(k)); } catch { /* 읽지 못함 */ }
+    if (!c || c.day !== today || !Array.isArray(c.sent)) c = { day: today, sent: [] };
+    if (c.sent.includes(b.dataset.btn)) return;
+    c.sent.push(b.dataset.btn); try { localStorage.setItem(k, JSON.stringify(c)); } catch { /* 가득 참 */ }
+    try { window.umami.track('play_click', { btn: b.dataset.btn }); } catch { /* 스크립트 문제는 사이트 문제가 아님 */ }
+  });
 })();

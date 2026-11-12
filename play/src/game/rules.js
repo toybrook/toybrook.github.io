@@ -49,7 +49,7 @@ export const habitatOf = a => a.hab || SP[a.species]?.habitat; // a.hab: a guest
 // (a.hab) till their own one opens, then move there. Run on every load and every unlock. Props bought there that moved too
 // (the lily pad, the duck house) go to the new habitat's storage once it is open (placed ones stay till then).
 const settle = S => {
-  for (const a of S.animals) { const h = SP[a.species]?.habitat; if (h && !S.unlocked.includes(h)) a.hab = S.unlocked[0]; else delete a.hab; }
+  for (const a of S.animals) { const h0 = habitatOf(a), h = SP[a.species]?.habitat; if (h && !S.unlocked.includes(h)) a.hab = S.unlocked[0]; else delete a.hab; if (habitatOf(a) !== h0) delete a.home; } // inbox 53: another habitat, no pen
   for (const p of S.props) { const h = PROP[p.prop]?.habitat; if (h && h !== p.hab && S.unlocked.includes(h)) { p.hab = h; p.placed = false; } }
 };
 export const known = a => !!variantOf(a.species, a.variant);
@@ -80,7 +80,7 @@ export function fromSave(raw, now) {
     for (const [h, n] of Object.entries(S.nests)) if (!isObj(n) || !Array.isArray(n.eggs)) delete S.nests[h]; else n.eggs = n.eggs.filter(isObj); // advance lays it again
     S.slots = Array.from({ length: Math.max(B.slots, S.slots.length) }, (_, i) => isObj(S.slots[i]?.egg) ? S.slots[i] : null);
     for (let v = raw.schemaVersion + 1; v <= SCHEMA_VERSION; v++) MIGRATIONS[v]?.(S, now); // each step in order, oldest first
-    for (const a of S.animals) { const n = cleanName(a.nm); if (n) a.nm = n; else delete a.nm; if (a.fav !== true) delete a.fav; } // 26-4: a backup code is text from outside
+    for (const a of S.animals) { const n = cleanName(a.nm); if (n) a.nm = n; else delete a.nm; if (a.fav !== true) delete a.fav; if (!(Array.isArray(a.home) && a.home.length === 2 && a.home.every(v => Number.isFinite(v) && Math.abs(v) < 1e3))) delete a.home; } // 26-4: a backup code is text from outside; 53 home
     tidy(S); // 28-5
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
     if (!Number.isFinite(raw.since)) S.since = Math.min(now, ...Object.values(S.codex).map(e => e?.at), ...S.animals.map(a => a.born)) || now; // 41: before 0.71, the first animal
@@ -375,7 +375,7 @@ function enforceCap(S) {
       const zone = ['swim', 'walk'].find(z => over(S, h, out, z));
       if (!zone && out.length <= capOf(S, h.id)) break;
       const i = adults.findIndex(a => !zone || zoneOf(a) === zone); if (i < 0) break;
-      const [a] = adults.splice(i, 1); out.splice(out.indexOf(a), 1); a.stored = true; ev.push({ type: 'stored', animal: a });
+      const [a] = adults.splice(i, 1); out.splice(out.indexOf(a), 1); a.stored = true; delete a.home; ev.push({ type: 'stored', animal: a });
     }
   }
   return ev;
@@ -428,7 +428,13 @@ export function store(S, id, now) {
   const a = S.animals.find(a => a.id === id && !a.stored); if (!a) return null;
   bank(a, now);
   if (a.pending) { a.pending = false; a.born = now; delete a.newColor; register(S, a, now, true); }
-  a.stored = true; return a;
+  a.stored = true; delete a.home; return a;
+}
+// inbox 53: where a hand put it inside a closed fence (habitat.js letGo: a land of ROOM or more, not the board's main one); null: none.
+// walk.js starts it there while that is still such a land
+export function setHome(S, id, home) {
+  const a = S.animals.find(a => a.id === id); if (!a) return;
+  if (home) a.home = home.map(v => Math.round(v * 10) / 10); else delete a.home;
 }
 export function unstore(S, id, now) {
   const a = S.animals.find(a => a.id === id && a.stored); if (!a || !fits(S, a)) return null;
@@ -610,7 +616,9 @@ export function saveLay(S, habId, k, name, now) {
 }
 // 26-4 아끼는 친구 and names. A name: up to 8 letters, without < > & " ' ` (names go into the windows' HTML) or control characters
 export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'` -]/g, '').trim()].slice(0, 8).join('').trim() : '';
-export const kindName = a => `${variantOf(a.species, a.variant)?.name ?? ''} ${SP[a.species]?.name ?? ''}`.trim();
+// inbox 58: a variant whose name has the species in it already (황금 복돼지) is not called 황금 복돼지 돼지
+export const twoName = (v = '', s = '') => (!v ? s : !s || v.includes(s) ? v : `${v} ${s}`);
+export const kindName = a => twoName(variantOf(a.species, a.variant)?.name, SP[a.species]?.name);
 export const callName = a => a.nm || kindName(a); // what the windows call it
 export function setFav(S, id, on) { const a = S.animals.find(a => a.id === id && !a.pending); if (!a) return null; if (on) a.fav = true; else delete a.fav; return a; }
 export function setName(S, id, text) { const a = S.animals.find(a => a.id === id && !a.pending), n = cleanName(text); if (!a) return null; if (n) a.nm = n; else delete a.nm; return a; }

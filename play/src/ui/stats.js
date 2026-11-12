@@ -5,6 +5,8 @@
 // inbox 51, for the release balance (docs/balance-data.md), bands only: buy (small/big/play, ♥0~49/50~99/100+), expand (habitat, step),
 // level (each 5th), hearts_day (the last play day's hearts got and spent, 0/1~49/50~119/120+, sent the next day) and codex (cells
 // in tens, a day), each with day: days since the game began (0~29, 30+), never a date or time. 25 a day at most, errors 5 more.
+// inbox 54, the promotion funnel: start carries src (where the player came from, four ways only), play_1m/3m/10m (minutes on the
+// game screen today, hidden time not counted, a day each), first_nest, first_decor, hatch_3 (the first day only, once ever).
 // No names, mail, device id or save. The service worker leaves other hosts alone (dist-web/sw.js), so the script is never stored.
 // report.js imports this before the game: nothing here may import the game.
 import { UMAMI_ID, STATS_HOST, PREFS } from '../config.js';
@@ -39,6 +41,13 @@ export function track(name, data, key = name) {
 // once ever, marked even while off (turned on later, it is not sent late)
 const once = (name, data) => { if (st[name]) return; st[name] = 1; keep(); track(name, data); };
 
+// inbox 54: threads / instagram / other / direct. The first screen's (site/config.js keeps it for this tab), else this page's referrer.
+// Never the address itself.
+const fromRef = r => { let h = ''; try { h = new URL(r).hostname; } catch { /* none */ }
+  return !h || h === location.hostname ? 'direct' : /(^|\.)threads\.(net|com)$/.test(h) ? 'threads' : /(^|\.)instagram\.com$/.test(h) ? 'instagram' : 'other'; };
+let src = null; try { src = sessionStorage.getItem('toyhabitat.src'); } catch { /* private mode */ }
+src ||= fromRef(document.referrer);
+
 // main.js, after the save is up. S: the game state (read only)
 const noon = t => new Date(t).setHours(12, 0, 0, 0);
 const hb = n => n < 1 ? '0' : n < 50 ? '1~49' : n < 120 ? '50~119' : '120+';
@@ -50,7 +59,7 @@ export function watch(G) {
     const today = dayOf(Date.now());
     if (st.hd?.day !== today) { if (st.hd?.d != null) track('hearts_day', { got: hb(st.hd.got), spent: hb(st.hd.spent), day: st.hd.d }); st.hd = { day: today, d: day(), got: 0, spent: 0 }; }
     const dh = G.S.hearts - h; h = G.S.hearts; if (dh) { st.hd[dh > 0 ? 'got' : 'spent'] += Math.abs(dh); keep(); }
-    track('start');
+    track('start', { src });
     track('codex', { cells: Math.floor(Object.keys(G.S.codex).length / 10) * 10, day: day() });
     for (const e of ev) {
       if (e.type === 'buy') track('buy', { kind: e.kind, price: e.price < 50 ? '0~49' : e.price < 100 ? '50~99' : '100+', day: day() }, 'buy#');
@@ -59,6 +68,19 @@ export function watch(G) {
     }
     if (st.t0 !== 'old' && !st.return_d1 && today !== dayOf(st.t0)) { if (today === dayOf(st.t0 + DAY)) once('return_d1'); else { st.return_d1 = 1; keep(); } } // the next day only
     if (G.S.stats.hatch && !st.first_hatch) once('first_hatch');
+    // inbox 54: the first day only; once ever, marked even when nothing went (a later day, or off)
+    const first = (name, done) => { if (!done || st[name]) return; st[name] = 1; keep(); if (st.t0 !== 'old' && today === dayOf(st.t0)) track(name); };
+    first('first_nest', G.S.flags.nestTapped); first('first_decor', G.S.props.some(p => p.placed && !p.nat)); first('hatch_3', G.S.stats.hatch >= 3);
   };
   tick(); G.on(tick);
+  // inbox 54: time on the game screen today (hidden or asleep not counted: a gap over 10 s counts 10 s)
+  let last = Date.now();
+  addEventListener('visibilitychange', () => { last = Date.now(); });
+  setInterval(() => {
+    const t = Date.now(), dt = Math.min(t - last, 10000), today = dayOf(t); last = t;
+    if (document.hidden) return;
+    if (st.pv?.day !== today) st.pv = { day: today, s: 0 };
+    st.pv.s += dt / 1000; keep();
+    for (const m of [1, 3, 10]) if (st.pv.s >= m * 60) track(`play_${m}m`, { day: day() });
+  }, 5000);
 }

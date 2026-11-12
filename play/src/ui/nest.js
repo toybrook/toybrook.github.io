@@ -5,17 +5,17 @@
 import * as THREE from 'three';
 import * as G from '../game/game.js';
 import { BALANCE as B, ACCESSORIES, HABITATS } from '../game/data.js';
-import { SP, RAR, HAB, EGG, RANK, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap } from '../game/rules.js';
+import { SP, RAR, HAB, EGG, RANK, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap, kindName } from '../game/rules.js';
 import { toast, hideToast, heart, clock, span, josa, tip } from './hud.js';
 import { eggThumb, studio } from './thumbs.js';
 import { makeEgg, HATCH } from '../animals/growth.js';
 import { dress, loadModel, loadAcc } from '../animals/figure.js';
 import { eggMat } from '../animals/materials.js';
-import { sfx } from './sound.js';
+import { sfx, cry } from './sound.js';
 import { calm } from '../config.js';
 
 const $ = id => document.getElementById(id);
-const nameOf = a => `${variantOf(a.species, a.variant).name} ${SP[a.species].name}`;
+const nameOf = kindName;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const GAUGES = Object.keys(B.pity).sort((a, b) => RANK[a] - RANK[b]);
 // the habitat an egg type comes from (the hatch slots are shared, so a pond egg can hatch in the meadow)
@@ -182,7 +182,7 @@ export function initNest(nav) {
     }
     cur.t0 = performance.now();
     await sleep(HATCH.crack * 1000); if (tok !== run) return;
-    sfx('hatch'); await sleep(150); if (tok !== run) return; // 26-2: the small bell when the shell cracks
+    sfx('hatch'); cry(r.animal.species); await sleep(150); if (tok !== run) return; // 26-2: the small bell when the shell cracks
     const up = GAUGES.filter(k => r.shards.after[k] > r.shards.before[k]);
     Promise.all(up.map(k => shellTo(k, r.egg.rarity))).then(() => { if (tok === run) { shown = null; drawGauges(); } });
     if (!up.length) { shown = null; drawGauges(); }

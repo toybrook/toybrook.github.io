@@ -1,37 +1,32 @@
-// 26-2 소리: all of it made here with Web Audio (noise through filters, a few oscillators); no sound files.
-// Ambience by habitat, hour and weather (habitat.js calls ambience() every frame; it moves slowly to what it is told),
-// short effects (sfx), and the volumes in PREFS (설정: 전체 / 배경 / 효과, 모두 끄기). Nothing plays before the first
-// touch (iPhone needs one), and everything stops while the tab is hidden. Light: no three.js (the first screen has it).
-import { PREFS } from '../config.js';
+// 26-2 소리, 13-0 녹음한 소리: the beds and the world's sounds are recordings (assets/sounds, made by tools/make-sounds.mjs from
+// CC0 sources: docs/assets.md); the small effects of the buttons and toys and the music box are still made here with Web Audio.
+// Beds by habitat, hour and weather (habitat.js calls ambience() every frame; they move slowly to what they are told); the
+// world's sounds where they happen (hear(), every frame: birds in the trees, bees at the flowers, frogs at the pond's rim, the
+// animals' calls, steps, breath and eating, the play props), heard from the camera (near: louder, left or right: that side);
+// short effects (sfx); the volumes in PREFS (설정: 전체 / 배경 / 효과 / 동물 소리, 모두 끄기). Nothing plays before the first touch
+// (iPhone needs one), everything stops while the tab is hidden, and a habitat's files are fetched when it is entered (not with the
+// first screen). Light: no three.js (the first screen has it).
+import { DEBUG, PREFS } from '../config.js';
 import { HABITATS } from '../game/data.js';
+import { LOOP, BEDS, SPRITES, SHOTS } from './sound-map.js';
 
-let A = null, out, amb, fx, white, brown;
-const L = {}; // ambience layers: name -> { g: GainNode, want: 0..1 }
-// each layer's loudness at full volume, and how slowly it follows (s, setTargetAtTime: about 3x this to settle)
-// (measured at the default 40%: the beds about -33..-24 dBFS RMS, the effects peak 4..12 dB over them; FX_GAIN lifts the effects)
-const LEVEL = { wind: 0.38, water: 0.42, rain: 0.16, hush: 0.3, birds: 0.75, insects: 0.75 }, FADE = 2.5, FX_GAIN = 1.6;
-const rnd = (a, b) => a + Math.random() * (b - a);
+let A = null, out, amb, fx, ani, white, meter = null;
+// each bed's loudness at full volume (the files are about -22 dBFS RMS; rainLeaves -28 and rainWater -35, their drops kept under the
+// peak: lifted here), and how slowly they follow (s, setTargetAtTime: about 3x this to settle). The world's sounds a little over
+// the beds; FX_GAIN lifts the effects, ANI_GAIN the animals
+const LEVEL = { birdsFar: 0.5, grassWind: 0.4, nightField: 0.3, insects: 0.2, stream: 0.3, frogs: 0.3, pond: 0.4, snowWind: 0.45, hush: 0.4,
+  rainLight: 0.4, rainHeavy: 0.4, rainLeaves: 0.45, rainWater: 0.6 }, FADE = 2.5, FX_GAIN = 1.6, ANI_GAIN = 1;
+const MAX = 8, MAX_CALLS = 3, NEAR = 14, SP_GAP = 8; // one-shots at once, animal calls at once, steps / breath / eating heard within (m), the same species' calls apart (s)
+const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.random() * a.length | 0];
 
-// 4 s of noise, looping: white (rain, splashes) or brown (wind, water, the snow's hush); the ends meet (no click each loop)
-function noise(kind) {
-  const n = A.sampleRate * 4, b = A.createBuffer(1, n, A.sampleRate), d = b.getChannelData(0);
-  let v = 0;
-  for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; d[i] = kind === 'brown' ? (v = (v + 0.02 * w) / 1.02) * 3.5 : w; }
-  const step = (d[n - 1] - d[0]) / (n - 1); for (let i = 0; i < n; i++) d[i] -= step * i;
+// 1 s of white noise, looping (the effects' taps, shutter, crackles)
+function noise() {
+  const n = A.sampleRate, b = A.createBuffer(1, n, A.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
   return b;
 }
 const filter = (type, f, Q = 0.7) => { const x = A.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = Q; return x; };
 const panTo = (node, pan) => { if (!pan || !A.createStereoPanner) return node; const p = A.createStereoPanner(); p.pan.value = pan; p.connect(node); return p; };
-function lfo(param, hz, depth) { const o = A.createOscillator(), g = A.createGain(); o.frequency.value = hz; g.gain.value = depth; o.connect(g).connect(param); o.start(); }
-
-// a looping bed of noise through filters into its layer (layers without one only gather scheduled sounds: birds, insects)
-function layer(name, buf = null, filters = []) {
-  const g = A.createGain(); g.gain.value = 0; g.connect(amb); L[name] = { g, want: 0 };
-  if (!buf) return L[name];
-  const s = A.createBufferSource(); s.buffer = buf; s.loop = true;
-  filters.reduce((n, f) => n.connect(f), s).connect(g); s.start(0, rnd(0, 4));
-  return L[name];
-}
 
 // one note: an oscillator with a quick rise and a fall (to: glide to this pitch over the note)
 function tone(t, f, dur, { type = 'sine', gain = 0.2, to = 0, attack = 0.005, pan = 0, dest = fx } = {}) {
@@ -40,15 +35,67 @@ function tone(t, f, dur, { type = 'sine', gain = 0.2, to = 0, attack = 0.005, pa
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g).connect(panTo(dest, pan)); o.start(t); o.stop(t + dur + 0.05);
 }
-// a short puff of noise through one filter (taps, shutter, raindrops)
+// a short puff of noise through one filter (taps, shutter)
 function puff(t, dur, type, f, gain, { Q = 0.7, pan = 0, dest = fx } = {}) {
   const s = A.createBufferSource(), g = A.createGain(); s.buffer = white;
   g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  s.connect(filter(type, f, Q)).connect(g).connect(panTo(dest, pan)); s.start(t, rnd(0, 3.5)); s.stop(t + dur + 0.05);
+  s.connect(filter(type, f, Q)).connect(g).connect(panTo(dest, pan)); s.start(t, rnd(0, 0.9)); s.stop(t + dur + 0.05);
 }
 // a small bell: a few partials that ring out, the high ones first
 function bell(t, f, dur, gain, dest = fx, pan = 0) {
   [[1, 1], [2.76, 0.45], [5.4, 0.22], [8.93, 0.1]].forEach(([k, a], i) => tone(t, f * k, dur / (1 + i), { gain: gain * a, attack: 0.003, dest, pan }));
+}
+
+// the files: a habitat's own are fetched when it is entered (all of them, so the service worker keeps them for offline play),
+// decoded when first played, let go when not wanted (a bed silent 30 s; another habitat's)
+const raw = {}, dec = {};
+const fetchRaw = url => raw[url] ??= fetch(url).then(r => r.ok ? r.arrayBuffer() : null).catch(() => null);
+const decode = url => dec[url] ??= fetchRaw(url).then(b => b && new Promise(ok => A.decodeAudioData(b.slice(0), ok, () => ok(null)))); // the callback form: older Safari
+const ready = {}; // shot group (sound-map.js SPRITES) -> its AudioBuffer once decoded
+function need(g) { if (g in ready) return; ready[g] = null; decode(SPRITES[g]).then(b => { if (g in ready) ready[g] = b; }); }
+
+// a bed: its file looping (two of it half a loop apart, a little left and right: some width from one mono file) into its gain
+const L = {}; // name -> { g, want, src: null | [] (loading) | [{ s, p }], idle }
+function bed(k, v) {
+  let l = L[k];
+  if (!l) { if (!v) return; l = L[k] = { g: A.createGain(), want: 0, src: null, idle: 0 }; l.g.gain.value = 0; l.g.connect(amb); }
+  if (Math.abs(l.want - v) > 0.02 || (!v && l.want)) { l.want = v; l.g.gain.setTargetAtTime(v * LEVEL[k], A.currentTime, FADE); }
+  if (!v || l.src) return;
+  l.src = []; decode(BEDS[k]).then(b => {
+    if (!b || l.src?.length !== 0) return; // let go meanwhile, or failed (silent)
+    const o = rnd(0, LOOP.len);
+    l.src = [-0.5, 0.5].map((pan, i) => { const s = A.createBufferSource(), p = panTo(l.g, pan); s.buffer = b; s.loop = true; s.loopStart = LOOP.pad; s.loopEnd = LOOP.pad + LOOP.len;
+      s.connect(p); s.start(0, LOOP.pad + (o + i * LOOP.len / 2) % LOOP.len); return { s, p }; });
+  });
+}
+
+// one take of a recorded sound (sound-map.js SHOTS). at: [x, y, z] in the world (none: in the middle), ref: how near it is at its
+// full loudness (m; further: softer as ref / distance, and duller); rate: its pitch; call: an animal's call (MAX_CALLS);
+// roll: [n, s apart] the same take again and again, softer each time (the woodpecker). false: not now (not loaded, too many)
+const busy = { all: 0, call: 0 }, ear = { x: 0, y: 0, z: 0 }; // ear: the camera
+const stats = { max: 0, maxCalls: 0, n: {} }; // ?debug: the most at once (13-0 report)
+function play(name, { at, ref = 3, rate = 1, gain = 1, delay = 0, bus = ani, lp = 0, call = false, roll = null } = {}) {
+  const S = SHOTS[name], b = S && ready[S[0]];
+  if (!b || A.state !== 'running' || busy.all >= MAX || (call && busy.call >= MAX_CALLS)) return false;
+  const [from, len] = pick(S[1]), t = A.currentTime + delay, g = A.createGain(); g.gain.value = gain;
+  let tail = g, head = g;
+  if (at) {
+    const p = tail = A.createPanner(); p.panningModel = 'equalpower'; p.distanceModel = 'inverse'; p.refDistance = ref; p.rolloffFactor = 1;
+    if (p.positionX) { p.positionX.value = at[0]; p.positionY.value = at[1]; p.positionZ.value = at[2]; } else p.setPosition(...at);
+    g.connect(p); lp = Math.min(lp || 2e4, 18000 / (1 + Math.hypot(at[0] - ear.x, at[1] - ear.y, at[2] - ear.z) / 12)); // far off: the highs go first
+  }
+  if (lp && lp < 15000) { head = filter('lowpass', lp); head.connect(g); }
+  tail.connect(bus);
+  const [n, every] = roll || [1, 0]; let s;
+  for (let i = 0; i < n; i++) {
+    s = A.createBufferSource(); s.buffer = b; s.playbackRate.value = rate;
+    if (i) { const k = A.createGain(); k.gain.value = 0.86 ** i; s.connect(k).connect(head); } else s.connect(head);
+    s.start(t + i * every, from, len);
+  }
+  busy.all++; if (call) busy.call++;
+  s.onended = () => { busy.all--; if (call) busy.call--; head.disconnect(); g.disconnect(); tail.disconnect(); };
+  if (DEBUG) { stats.max = Math.max(stats.max, busy.all); stats.maxCalls = Math.max(stats.maxCalls, busy.call); stats.n[name] = (stats.n[name] || 0) + 1; }
+  return true;
 }
 
 // the effects (s: when, from now). Each at most twice at once, and not again within 50 ms (taps in a row stay quiet).
@@ -58,7 +105,8 @@ const FX = {
   hatch: t => { bell(t, 1568, 1.6, 0.16); bell(t + 0.13, 2093, 1.5, 0.12); },
   grown: t => { [523, 659, 784].forEach((f, i) => tone(t + i * 0.1, f, 0.4, { type: 'triangle', gain: 0.16 })); bell(t + 0.3, 1047, 1.2, 0.1); },
   level: t => { [523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.085, f, 0.45, { type: 'triangle', gain: 0.17 })); bell(t + 0.36, 2093, 1.5, 0.11); bell(t + 0.48, 1568, 1.3, 0.08); },
-  place: t => { puff(t, 0.05, 'bandpass', 1100, 0.5, { Q: 3 }); tone(t, 430, 0.1, { gain: 0.2, to: 260 }); },
+  // 13-0: a plastic 「톡」 (a prop put down, an animal let go: habitat.js); the old made one until the recordings are in
+  place: t => { if (!play('toy', { bus: fx, gain: 0.6, rate: rnd(0.94, 1.08), delay: t - A.currentTime })) { puff(t, 0.05, 'bandpass', 1100, 0.5, { Q: 3 }); tone(t, 430, 0.1, { gain: 0.2, to: 260 }); } },
   undo: t => tone(t, 700, 0.15, { type: 'triangle', gain: 0.13, to: 380 }),
   photo: t => { puff(t, 0.03, 'highpass', 2500, 0.24); puff(t + 0.07, 0.04, 'highpass', 1800, 0.2); tone(t, 3200, 0.02, { gain: 0.04 }); },
   // 28-3 누르는 장난감: the calling bell (ding-ding), soap bubbles popping, the string lights' switch, a small firework (kept
@@ -70,14 +118,14 @@ const FX = {
   fireworks: t => { tone(t, 650, 0.75, { to: 1500, gain: 0.02 }); puff(t + 0.8, 0.4, 'lowpass', 700, 0.2); for (let i = 0; i < 7; i++) puff(t + 0.9 + i * rnd(0.05, 0.11), 0.02, 'highpass', 3000, 0.04, { pan: rnd(-0.6, 0.6) }); },
   pinhill: t => { puff(t, 0.9, 'bandpass', 700, 0.14, { Q: 1.2 }); puff(t + 0.12, 0.8, 'bandpass', 1300, 0.08, { Q: 1.2 }); },
 };
-const DUR = { hatch: 1.8, grown: 1.6, level: 2, bell: 1.8, fireworks: 1.6, train: 0.7 }, busy = {}, lastAt = {};
+const DUR = { hatch: 1.8, grown: 1.6, level: 2, bell: 1.8, fireworks: 1.6, train: 0.7 }, fxBusy = {}, lastAt = {};
 const BUZZ = { hatch: [25, 70, 25], grown: 40 }; // 26-3 진동 (Android Chrome; iPhone browsers have no navigator.vibrate)
 export function sfx(name, delay = 0) {
   if (!FX[name]) return; // 28-3: a prop's own sound by its id (habitat.js), when it has one
   if (BUZZ[name] && PREFS.buzz) navigator.vibrate?.(BUZZ[name]);
   if (!A || A.state !== 'running' || PREFS.mute) return;
-  const t = A.currentTime + delay; if ((busy[name] || 0) >= 2 || t - (lastAt[name] ?? -1) < 0.05) return;
-  busy[name] = (busy[name] || 0) + 1; lastAt[name] = t; setTimeout(() => busy[name]--, (delay + (DUR[name] || 0.3)) * 1000);
+  const t = A.currentTime + delay; if ((fxBusy[name] || 0) >= 2 || t - (lastAt[name] ?? -1) < 0.05) return;
+  fxBusy[name] = (fxBusy[name] || 0) + 1; lastAt[name] = t; setTimeout(() => fxBusy[name]--, (delay + (DUR[name] || 0.3)) * 1000);
   FX[name](t);
 }
 
@@ -112,58 +160,166 @@ function tunes() {
     const [b, m, g] = T.ev[mus.k], t = mus.at + b / T.bps; if (t > now + 0.3) break; tine(t, m, g, mus.g); mus.k++; }
 }
 
-// sounds that come and go inside a layer: birds, crickets, splashes, raindrops, a far tinkle in the snow (each its own clock)
-const VOICES = [
-  { layer: 'birds', gap: [1.5, 5], play(t) { const f = rnd(2400, 3800), up = Math.random() < 0.5, pan = rnd(-0.7, 0.7);
-    for (let i = 0, n = 2 + (Math.random() * 4 | 0); i < n; i++) tone(t + i * rnd(0.09, 0.13), f * (1 + 0.12 * Math.sin(i * 1.7)), 0.08, { to: f * (up ? 1.35 : 0.75), gain: rnd(0.04, 0.08), pan, dest: L.birds.g }); } },
-  { layer: 'birds', gap: [3, 8], play(t) { const pan = rnd(-0.8, 0.8); tone(t, 1900, 0.22, { to: 1500, gain: 0.05, pan, dest: L.birds.g }); tone(t + 0.28, 1700, 0.3, { to: 1250, gain: 0.045, pan, dest: L.birds.g }); } },
-  ...[[4300, -0.6], [4750, 0.25], [5150, 0.7]].map(([f, pan]) => ({ layer: 'insects', gap: [0.55, 0.95], play(t) { for (let p = 0; p < 3; p++) tone(t + p * 0.045, f, 0.032, { gain: 0.022, attack: 0.004, pan, dest: L.insects.g }); } })),
-  { layer: 'water', gap: [0.15, 0.8], play(t) { const f = rnd(320, 800); tone(t, f, 0.07, { to: f * 2.3, gain: rnd(0.05, 0.12), pan: rnd(-0.6, 0.6), dest: L.water.g }); } },
-  { layer: 'rain', gap: [0.03, 0.12], play(t) { puff(t, 0.012, 'highpass', 3200, rnd(0.03, 0.09), { pan: rnd(-0.8, 0.8), dest: L.rain.g }); } },
-  { layer: 'hush', gap: [4, 9], play(t) { bell(t, rnd(2600, 3400), 2, 0.01, L.hush.g, rnd(-0.5, 0.5)); } },
+// what plays: the habitat (null: none, the world map), its night (0..1), rain and snow (0..1, weather.js)
+const cur = { hab: null, night: 0, rain: 0, snow: 0 };
+const day = () => 1 - cur.night, dry = () => 1 - Math.min(1, cur.rain + cur.snow);
+const gust = () => 0.5 + 0.5 * Math.sin(A.currentTime * 2 * Math.PI / 47); // the wind comes and goes (47 s), the leaves rustle at its top
+
+// the world's own sounds, each on its own clock: which (a take of one of s), where (spot), how often now (k 0..1: gap s apart at 1)
+const NATURE = [
+  { s: ['robin', 'blackbird', 'blackcap'], at: 'tree', k: () => cur.hab !== 'snow' && day() * dry(), gap: [5, 12], gain: 0.4, ref: 8 },
+  { s: ['knock'], at: 'tree', k: () => cur.hab === 'meadow' && day() * dry(), gap: [50, 110], gain: 0.35, ref: 8, roll: [13, 1 / 16], rate: [1.25, 1.4] }, // a woodpecker
+  { s: ['bee'], at: 'flower', k: () => cur.hab !== 'snow' && day() * dry(), gap: [6, 14], gain: 0.4, ref: 2 },
+  { s: ['leaf'], at: 'tree', k: () => cur.hab !== 'snow' && gust() > 0.75, gap: [5, 12], gain: 0.35, ref: 6 },
+  { s: ['nightingale'], at: 'tree', k: () => cur.hab === 'meadow' && cur.night * dry(), gap: [20, 45], gain: 0.35, ref: 8 },
+  { s: ['owl'], at: 'tree', k: () => cur.hab !== 'pond' && cur.night * (1 - cur.rain), gap: [30, 70], gain: 0.3, ref: 10 },
+  { s: ['cricket'], at: 'grass', k: () => cur.hab === 'meadow' && cur.night * dry(), gap: [5, 10], gain: 0.25, ref: 3 }, // the fireflies' night
+  { s: ['frog', 'toad'], at: 'rim', k: () => cur.hab === 'pond' ? 0.4 + 0.6 * cur.night : cur.hab === 'meadow' && 0.7 * cur.night * (1 - cur.rain), gap: [6, 14], gain: 0.4, ref: 5 }, // by the lilies
+  { s: ['splash'], at: 'water', k: () => cur.hab !== 'snow' && 1 - 0.6 * cur.rain, gap: [15, 35], gain: 0.3, ref: 5 }, // a fish
+  { s: ['thunder'], at: null, k: () => cur.rain > 0.6, gap: [50, 140], gain: 0.3, rate: [0.8, 0.95] }, // far off and low (fx-rain)
 ];
-function schedule() {
-  if (A.state !== 'running') return;
-  const now = A.currentTime; tunes();
-  for (const v of VOICES) {
-    if (L[v.layer].want < 0.02) { v.next = 0; continue; }
-    if (!v.next || v.next < now) v.next = now + rnd(...v.gap) * 0.5;
-    while (v.next < now + 0.3) { v.play(v.next); v.next += rnd(...v.gap); }
+// where: a tree near what the camera looks at (or somewhere up off to the side), a flower patch near it, open ground near it,
+// the pond's rim, its water (ctx.pond: x, z, r and k, the ellipse's z over x)
+let W = null; // the world habitat.js last passed (hear)
+function spot(kind) {
+  const { target: c, ctx, list } = W, near = (o, r) => Math.hypot(o.x - c.x, o.z - c.z) < r, up = (x, z, h) => [x, ctx.heightAt(x, z) + h, z], a = rnd(0, 2 * Math.PI);
+  if (kind === 'tree') { const t = list.filter(o => (o.prop === 'tree' || o.prop === 'snowpine') && near(o, 30)), o = t.length && pick(t); const r = rnd(10, 22);
+    return o ? up(o.x, o.z, (o.h || 6) * 0.7) : up(c.x + r * Math.cos(a), c.z + r * Math.sin(a), 5); }
+  if (kind === 'flower') { const f = list.filter(o => o.prop === 'wildflowers' && near(o, 18)), o = f.length && pick(f); return o ? up(o.x + rnd(-0.6, 0.6), o.z + rnd(-0.6, 0.6), 0.5) : null; }
+  if (kind === 'grass') { const r = rnd(2, 9), x = c.x + r * Math.cos(a), z = c.z + r * Math.sin(a); return ctx.walkable(x, z) ? up(x, z, 0.1) : null; }
+  const p = ctx.pond, r = kind === 'rim' ? 0.92 : 0.6 * Math.sqrt(Math.random()); if (!p) return null;
+  return [p.x + Math.cos(a) * p.r * r, ctx.water, p.z + Math.sin(a) * p.r * (p.k || 1) * r];
+}
+function nature(now) {
+  for (const n of NATURE) {
+    const k = +n.k() || 0; if (k < 0.05) { n.next = 0; continue; }
+    if (!n.next) n.next = now + rnd(...n.gap) * 0.5 / k; // just come on: sooner than its gap
+    if (now < n.next) continue; n.next = now + rnd(...n.gap) / k;
+    const at = n.at && spot(n.at); if (n.at && !at) continue;
+    play(pick(n.s), { at, ref: n.ref, gain: n.gain, bus: amb, roll: n.roll, rate: n.rate ? rnd(...n.rate) : rnd(0.95, 1.05) });
   }
 }
 
-function build() {
-  const lim = A.createDynamicsCompressor(); lim.threshold.value = -6; lim.knee.value = 3; lim.ratio.value = 12; lim.attack.value = 0.002; lim.release.value = 0.2; lim.connect(A.destination); // never clips when several stack
-  out = A.createGain(); out.connect(lim); amb = A.createGain(); amb.connect(out); fx = A.createGain(); fx.connect(out);
-  white = noise('white'); brown = noise('brown');
-  // phone speakers give little under ~400 Hz: every bed keeps some of itself between 400 and 1500 Hz (the rumble below is cut)
-  const wind = filter('lowpass', 900); lfo(wind.frequency, 0.07, 450); // gusts: the wind opens and closes
-  layer('wind', brown, [filter('highpass', 200), wind]); // the layer's own gain is the cross-fade; the slow swell goes after it
-  const swell = A.createGain(); L.wind.g.disconnect(); L.wind.g.connect(swell).connect(amb); lfo(swell.gain, 0.11, 0.35);
-  const lap = A.createGain(); layer('water', brown, [filter('bandpass', 560, 0.9), lap]); lfo(lap.gain, 0.23, 0.35); // lapping
-  layer('rain', white, [filter('highpass', 900), filter('lowpass', 6500)]);
-  layer('hush', brown, [filter('highpass', 150), filter('lowpass', 520)]); // a snowy day: almost nothing, muffled
-  layer('birds'); layer('insects');
-  setInterval(schedule, 100);
+// the animals. call: its call (a shot), rate: its pitch, b: its breath's pitch (petted, asleep, a first cry), bird: petted it
+// says its call softly; gain. No call: the quiet ones (rabbit, turtle, otter, capybara, arctic fox); the big snow ones huff
+// (their own calls had no free recording: docs/reports/13-0.md); swan and flamingo: the duck's, lower
+const VOICE = {
+  horse: { call: 'horse', b: 1, gain: 0.7 }, sheep: { call: 'sheep', b: 1.25 }, rabbit: { b: 1.9 }, pig: { call: 'pig', b: 1.15, gain: 0.7 }, cow: { call: 'cow', b: 0.85, gain: 0.6 },
+  chicken: { call: 'hen', b: 1.4, bird: 1, gain: 0.7 }, duck: { call: 'duck', b: 1.3, bird: 1 }, turtle: { b: 1.4 }, otter: { b: 1.6 }, swan: { call: 'duck', rate: 0.72, b: 1.1, bird: 1 },
+  flamingo: { call: 'duck', rate: 0.82, b: 1.2, bird: 1 }, capybara: { b: 1.15 }, penguin: { call: 'penguin', b: 1.3, bird: 1 }, polarBear: { call: 'breath', rate: 0.62, b: 0.7 },
+  seal: { call: 'breath', rate: 0.9, b: 1.05 }, arcticFox: { b: 1.6 }, reindeer: { call: 'breath', rate: 0.8, b: 0.9 }, snowyOwl: { call: 'owl', rate: 1.15, b: 1.3, bird: 1, gain: 0.5 },
+};
+const QUIET = new Set(['carry', 'drop', 'jump', 'play', 'sleep', 'nuzzle']); // no steps (held up, falling, on a prop, ...)
+const mem = new WeakMap(), pm = new WeakMap(), lastCall = {}; // each animal's and play prop's own, the species' last call
+function animal(a, now) {
+  if (a.hold || !a.obj.visible) return;
+  const p = a.position, st = a.state, V = VOICE[a.rec.species] || {}, baby = a.look?.stage === 'baby' ? 1.2 : 1;
+  let m = mem.get(a); if (!m) mem.set(a, m = { x: p.x, z: p.z, d: 0, call: now + rnd(5, 60), br: 0, pet: 0 });
+  const dd = Math.hypot(p.x - m.x, p.z - m.z), d = Math.hypot(p.x - ear.x, p.y - ear.y, p.z - ear.z), at = () => [p.x, p.y + 0.3, p.z]; m.x = p.x; m.z = p.z;
+  // steps: very quiet, by the ground under it, only near the camera
+  if (d < NEAR && dd < 0.5 && !QUIET.has(st)) { if ((m.d += dd) > (a.body?.r || 0.4) + 0.35) { m.d = 0; const k = W.ground(p.x, p.y, p.z); if (k) play('step_' + k, { at: [p.x, p.y, p.z], ref: 1.5, gain: 0.3, rate: rnd(0.9, 1.1) * baby }); } }
+  else m.d = 0;
+  // now and then its call (fewer at night; never two of a species within SP_GAP, never more than MAX_CALLS at once)
+  if (now > m.call) { m.call = now + rnd(60, 150) * (cur.night > 0.5 ? 2.5 : 1);
+    if (V.call && st !== 'sleep' && st !== 'carry' && now - (lastCall[a.rec.species] ?? -99) > SP_GAP && play(V.call, { at: at(), ref: 6, rate: (V.rate || 1) * baby * rnd(0.92, 1.08), gain: V.gain ?? 0.8, call: true })) lastCall[a.rec.species] = now; }
+  // asleep: slow breaths; grazing: small bites (near only)
+  if (d < NEAR && now > m.br && (st === 'sleep' || st === 'graze')) {
+    if (st === 'sleep') { m.br = now + rnd(3.2, 4.4); play('breath', { at: at(), ref: 2, rate: V.b * 0.8 * baby * rnd(0.95, 1.05), gain: 0.3, lp: 1500 }); }
+    else { m.br = now + rnd(2.2, 3.6); play('eat', { at: at(), ref: 2, rate: Math.min(1.6, V.b) * rnd(0.92, 1.08), gain: 0.35 }); }
+  }
+}
+// the play props (play.js): the swing creaks at the front, the seesaw thuds at each end, the ball bounces as it is pushed along,
+// the slide whooshes 0.4 s after one gets on (the chute)
+function prop(st, now) {
+  let s = pm.get(st); if (!s) pm.set(st, s = { a: 0, v: 0, d: 0, bx: null, bz: null, on: false, t: 0 });
+  const at = [st.x, (st.y || 0) + 0.8, st.z], gain = 0.45;
+  if (st.kind === 'swing' || st.kind === 'seesaw') {
+    const x = (st.kind === 'swing' ? st.ang : st.th) || 0, v = x - s.a; s.a = x;
+    if (st.kind === 'swing' ? st.on[0] && v < 0 && s.v > 0 && x > 0.2 : st.on[0] && st.on[1] && v * s.v < 0) play(st.kind === 'swing' ? 'creak' : 'knock', { at, ref: 3, gain, rate: st.kind === 'swing' ? rnd(0.95, 1.05) : rnd(0.5, 0.6), lp: st.kind === 'seesaw' ? 1200 : 0 });
+    if (v) s.v = v;
+  } else if (st.kind === 'ball') {
+    if (st.bx != null && s.bx != null && (s.d += Math.hypot(st.bx - s.bx, st.bz - s.bz)) > 1.6) { s.d = 0; play('bounce', { at: [st.bx, st.y || 0, st.bz], ref: 3, gain, rate: rnd(0.9, 1.1) }); }
+    s.bx = st.bx; s.bz = st.bz;
+  } else if (st.kind === 'slide') {
+    const on = !!st.on[0]; if (on && !s.on) s.t = now + 0.4; s.on = on;
+    if (s.t && now >= s.t) { s.t = 0; play('whoosh', { at, ref: 3, gain, rate: rnd(0.9, 1.1) }); }
+  }
+}
+// every frame (habitat.js, after the animals moved): the camera (the ear), what it looks at, the animals, the habitat's ctx, its
+// props and natives (D.list), and ground(x, y, z): what is underfoot there ('grass' 'dirt' 'wood' 'snow' 'water', null: swimming)
+export function hear(cam, target, actors, ctx, list, ground) {
+  W = { target, ctx, list, ground };
+  if (!A || A.state !== 'running' || !cur.hab) return;
+  const l = A.listener, e = cam.matrixWorld.elements; ear.x = e[12]; ear.y = e[13]; ear.z = e[14];
+  if (l.positionX) { l.positionX.value = e[12]; l.positionY.value = e[13]; l.positionZ.value = e[14]; l.forwardX.value = -e[8]; l.forwardY.value = -e[9]; l.forwardZ.value = -e[10]; l.upX.value = e[4]; l.upY.value = e[5]; l.upZ.value = e[6]; }
+  else { l.setPosition(e[12], e[13], e[14]); l.setOrientation(-e[8], -e[9], -e[10], e[4], e[5], e[6]); }
+  const now = A.currentTime;
+  for (const a of actors.values()) animal(a, now);
+  for (const st of ctx.play || []) prop(st, now);
+}
+// petted (habitat.js, a tap on it): a content little breath (a bird: its call, soft and a little higher), once a second at most
+export function pet(a) {
+  if (!A || A.state !== 'running') return;
+  const V = VOICE[a.rec.species] || {}, p = a.position, baby = a.look?.stage === 'baby' ? 1.2 : 1, m = mem.get(a), now = A.currentTime;
+  if (m) { if (now < m.pet) return; m.pet = now + 1; }
+  if (V.bird) play(V.call, { at: [p.x, p.y + 0.3, p.z], ref: 4, rate: (V.rate || 1) * 1.12 * baby, gain: 0.45 });
+  else play('breath', { at: [p.x, p.y + 0.3, p.z], ref: 4, rate: (V.b || 1) * baby * rnd(0.95, 1.05), gain: 0.6, lp: 3000 });
+}
+// a first cry as its shell opens (nest.js): a bird peeps; the others a small breath, and their call, high, when it is loaded here
+export function cry(species) {
+  if (!A || A.state !== 'running') return;
+  const V = VOICE[species] || {}; need('common');
+  setTimeout(() => { if (V.bird) play('chick', { rate: rnd(0.95, 1.1), gain: 0.5 });
+    else { play('breath', { rate: (V.b || 1) * 1.5, gain: 0.45 }); if (V.call && V.call !== 'breath') play(V.call, { rate: (V.rate || 1) * 1.35, gain: 0.35, delay: 0.25 }); } }, 350);
 }
 
-// what plays: the habitat (null: none, the world map), its night (0..1), rain and snow (0..1, weather.js)
-const now = { hab: null, night: 0, rain: 0, snow: 0 };
+// a habitat entered: its shots wanted (and the common ones), another's let go, all its files fetched (beds decoded when they play).
+// The meadow has a pond too: the pond's shots as well (its frogs at night, a fish)
+let here;
+function enter(hab) {
+  here = hab;
+  const H = HABITATS.find(h => h.id === hab), beds = Object.keys(H?.sound?.({ day: 1, night: 1, dry: 1, rain: 1, snow: 1 }) || {}), wet = beds.some(k => k.startsWith('rain'));
+  if (wet) beds.push('rainLight', 'rainHeavy');
+  const own = hab === 'meadow' ? [hab, 'pond'] : [hab], keep = new Set([...beds.map(k => BEDS[k]), SPRITES.common, ...own.map(g => SPRITES[g]), wet && SPRITES.rain]);
+  for (const g in ready) if (!keep.has(SPRITES[g])) { delete ready[g]; delete dec[SPRITES[g]]; }
+  for (const u in raw) if (!keep.has(u)) delete raw[u];
+  if (!hab) return;
+  for (const u of keep) if (u) fetchRaw(u);
+  for (const g of ['common', ...own]) if (SPRITES[g]) need(g);
+}
 export function ambience(hab, night = 0, rain = 0, snow = 0) {
-  if (hab !== now.hab && mus.i) music(true); // 28-3: the music box's tune stays in its habitat
-  Object.assign(now, { hab, night, rain, snow });
+  if (hab !== cur.hab && mus.i) music(true); // 28-3: the music box's tune stays in its habitat
+  Object.assign(cur, { hab, night, rain, snow });
   if (!A) return;
-  const day = 1 - night, dry = 1 - Math.min(1, rain + snow), H = HABITATS.find(h => h.id === hab); // its layers: data.js HABITATS sound
-  const W = { wind: 0, water: 0, birds: 0, insects: 0, rain: hab ? rain : 0, hush: hab ? snow : 0, ...H?.sound?.({ day, night, dry, rain, snow }) };
-  for (const k in W) { const l = L[k]; if (Math.abs(l.want - W[k]) > 0.02 || (!W[k] && l.want)) { l.want = W[k]; l.g.gain.setTargetAtTime(W[k] * LEVEL[k], A.currentTime, FADE); } }
+  if (hab !== here) enter(hab);
+  const H = HABITATS.find(h => h.id === hab), h = 0.5 + 0.5 * Math.sin(A.currentTime * 2 * Math.PI / 150); // the rain comes harder and softer (2.5 min)
+  const want = hab ? { ...H?.sound?.({ day: day(), night, dry: dry(), rain, snow }) } : {};
+  if ('rainLeaves' in want || 'rainWater' in want) Object.assign(want, { rainLight: rain * (1 - 0.6 * h), rainHeavy: rain * h });
+  if (rain > 0.05 && 'rainLight' in want) need('rain');
+  for (const k in L) if (!(k in want)) bed(k, 0);
+  for (const k in want) bed(k, want[k] * (k.endsWith('Wind') ? 0.7 + 0.3 * gust() : 1));
 }
 
 // the volumes and 모두 끄기 (설정 calls this after a change)
 export function applySound() {
   if (!A) return void touched(); // 27-7e: 켜기 itself (a tap) makes the sound, not the touch after it
   const t = A.currentTime;
-  out.gain.setTargetAtTime(PREFS.vAll, t, 0.05); amb.gain.setTargetAtTime(PREFS.vAmb, t, 0.05); fx.gain.setTargetAtTime(PREFS.vFx * FX_GAIN, t, 0.05);
+  out.gain.setTargetAtTime(PREFS.vAll, t, 0.05); amb.gain.setTargetAtTime(PREFS.vAmb, t, 0.05); fx.gain.setTargetAtTime(PREFS.vFx * FX_GAIN, t, 0.05); ani.gain.setTargetAtTime(PREFS.vAnimal * ANI_GAIN, t, 0.05);
   wake();
+}
+// every 0.1 s: the music box's next notes, the world's sounds, beds silent 30 s let go (their decoded sound: memory)
+function tick() {
+  if (A.state !== 'running') return;
+  const now = A.currentTime; tunes(); if (cur.hab && W) nature(now);
+  for (const k in L) { const l = L[k]; if (l.want) { l.idle = 0; continue; }
+    if ((l.idle += 0.1) > 30 && l.src) { for (const { s, p } of l.src) { s.stop(); s.disconnect(); if (p !== l.g) p.disconnect(); } l.src = null; delete dec[BEDS[k]]; } }
+}
+function build() {
+  const lim = A.createDynamicsCompressor(); lim.threshold.value = -6; lim.knee.value = 3; lim.ratio.value = 12; lim.attack.value = 0.002; lim.release.value = 0.2; lim.connect(A.destination); // never clips when several stack
+  out = A.createGain(); out.connect(lim); amb = A.createGain(); amb.connect(out); fx = A.createGain(); fx.connect(out); ani = A.createGain(); ani.connect(out);
+  white = noise();
+  setInterval(tick, 100);
+  if (DEBUG) { meter = A.createAnalyser(); meter.fftSize = 4096; lim.connect(meter); window.__snd = { get A() { return A; }, L, ready, busy, stats, cur, meter, play, buses: { out, amb, fx, ani } }; } // 13-0: measured in the report
 }
 // running only when it may be heard: touched once, the tab shown, not muted (a silent context still costs battery)
 function wake() {
@@ -174,7 +330,7 @@ function touched() {
   if (!A) {
     if (PREFS.mute) return; // 27-7e 모두 끄기: no sound made at all (made at the first touch after 켜기)
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
-    A = new C(); build(); applySound(); ambience(now.hab, now.night, now.rain, now.snow);
+    A = new C(); build(); applySound(); ambience(cur.hab, cur.night, cur.rain, cur.snow);
   }
   wake(); // iPhone: also after a call or the lock screen ('interrupted'), the next touch brings it back
 }

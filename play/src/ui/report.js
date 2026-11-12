@@ -18,6 +18,7 @@ let placeOf = () => '', gl = 'ok';
 export const placeFrom = f => { placeOf = f; };
 addEventListener('webglcontextlost', () => { gl = 'lost'; }, true); // the canvases in the page (capture: the event doesn't bubble)
 addEventListener('webglcontextrestored', () => { gl = 'restored'; }, true);
+export const glRebuilt = () => { gl = 'rebuilt'; }; // inbox 53: not given back in 3 s, built again on a new canvas (main.js)
 const band = w => w < 360 ? '~359' : w < 400 ? '360~399' : w < 480 ? '400~479' : w < 768 ? '480~767' : w < 1200 ? '768~1199' : '1200~';
 export function note(msg, at = '') {
   const m = String(msg).replace(/^Uncaught /, '').replace(/\w+:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 160), last = list[list.length - 1];

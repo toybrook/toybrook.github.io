@@ -36,4 +36,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-동물·치장 모델, 지형, 소품, 소리는 이 프로젝트가 코드로 직접 만든 것입니다.
+동물·치장 모델, 지형, 소품, 버튼 효과음과 오르골은 이 프로젝트가 코드로 직접 만든 것입니다.
+
+녹음한 소리 (play/assets/sounds/, 잘라 다듬은 것). 모두 CC0 1.0이라 표기 의무는 없지만 고마움을 담아 적습니다.
+
+4. BigSoundBank: 배경 소리, 새·벌레·개구리 소리, 동물 소리, 발소리, 놀이 소품 소리
+   Additional sounds: Joseph SARDIN - BigSoundBank.com
+   https://bigsoundbank.com/  (CC0 1.0, https://bigsoundbank.com/licenses.html)
+
+5. "Penguin Sounds" by AntumDeluge (recorded by Bidone, Freesound #66150)
+   https://opengameart.org/content/penguin-sounds  (CC0)

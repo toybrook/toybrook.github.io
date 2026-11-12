@@ -9,7 +9,7 @@ import { eggMat } from '../animals/materials.js';
 import { SP, variantsOf } from '../game/rules.js';
 
 const SIZE = 192, BG = '#fbf1e1', NIGHT_BG = '#2b3356'; // BG = the cell colour in style.css (fake glass bends what is behind it); NIGHT_BG = .codex.night .cell
-let S, R, scene, cam;
+let S, R, scene, cam, gone = true; // gone: none yet, or its context lost (inbox 53)
 const cache = new Map(), sil = new THREE.MeshBasicMaterial({ color: '#d8c4a4' });
 
 // a renderer and an empty scene lit like the habitat (also the nest menu's hatch stage)
@@ -29,11 +29,13 @@ export function nightLights(s, on) {
   nightGlow.value = on ? 1 : 0;
 }
 function setup() {
+  R?.dispose(); gone = false; // inbox 53: lost, or lost and given back (its sky texture is gone then): a new one on a new canvas, so no thumb comes out blank
   S = studio({ preserveDrawingBuffer: true }); ({ R, scene } = S); R.setSize(SIZE, SIZE, false);
+  const c = R.domElement, drop = () => { if (R?.domElement === c) gone = true; }; c.addEventListener('webglcontextlost', drop); c.addEventListener('webglcontextrestored', drop);
   cam = new THREE.PerspectiveCamera(22, 1, 0.1, 200);
 }
 function shoot(obj, silhouette = false, night = false) {
-  if (!R) setup();
+  if (gone) setup();
   const was = nightGlow.value; if (night) { nightLights(S, true); R.setClearColor(NIGHT_BG, 1); }
   obj.rotation.y = -Math.PI / 2 + 0.45; scene.add(obj); // facing us, turned a little (like tools/lineup.html ?a=front)
   const box = new THREE.Box3().setFromObject(obj), c = box.getCenter(new THREE.Vector3()), r = box.getSize(new THREE.Vector3()).length() / 2;

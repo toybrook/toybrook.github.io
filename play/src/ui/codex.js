@@ -15,7 +15,7 @@ import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { makeFigure, loadModel } from '../animals/figure.js';
 import * as G from '../game/game.js';
 import { HABITATS, RARITIES, ACCESSORIES, SPECIES } from '../game/data.js';
-import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, displayColor, unlockInfo } from '../game/rules.js';
+import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, displayColor, unlockInfo, twoName } from '../game/rules.js';
 import { toast, tip, lockText, josa } from './hud.js';
 import { DEBUG, calm } from '../config.js';
 import { figureThumb, silhouetteThumb, studio, nightLights } from './thumbs.js';
@@ -72,8 +72,8 @@ function detail(c) {
   const wrap = box.querySelector('.c3d');
   const paint = async () => {
     const e = G.S.codex[c.key], adult = e.adult != null; if (!adult) stage = 'baby';
-    box.querySelector('b').textContent = `${c.variant.name} ${c.species.name}`;
-    wrap.setAttribute('aria-label', `${c.variant.name} ${c.species.name} ${stage === 'baby' ? '새끼' : '성체'} 3D 모습`);
+    box.querySelector('b').textContent = twoName(c.variant.name, c.species.name);
+    wrap.setAttribute('aria-label', `${twoName(c.variant.name, c.species.name)} ${stage === 'baby' ? '새끼' : '성체'} 3D 모습`);
     for (const b of box.querySelectorAll('[data-st]')) { b.classList.toggle('on', b.dataset.st === stage); b.disabled = b.dataset.st === 'adult' && !adult; b.textContent = b.dataset.st === 'baby' ? '새끼' : adult ? '성체' : '성체 · ?'; }
     for (const b of box.querySelectorAll('[data-m]')) b.classList.toggle('on', b.dataset.m === c.key);
     box.querySelector('.crec').innerHTML = `처음 만난 날: ${e.at ? new Date(e.at).toLocaleDateString('ko-KR') : '기록 없음'}<br>처음 깬 곳: ${HAB[e.h] ? HAB[e.h].name + ' 둥지' : '기록 없음'}${adult ? '' : '<br><small>다 자라면 성체 모습도 볼 수 있어요</small>'}`;
@@ -113,7 +113,7 @@ function drawAlbum() {
   const ids = Object.keys(ACCESSORIES), got = ids.filter(id => G.S.album[id]);
   el.innerHTML = `<div class="chead"><b>치장 앨범</b><span>${got.length}/${ids.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>${tabs()}
 <div class="cbody"><div class="crow">${ids.map(id => { const e = G.S.album[id];
-    return `<div class="cell${e ? '' : ' unk'}"><img alt="${e ? ACCESSORIES[id].name : '아직 못 본 치장'}"><span>${e ? ACCESSORIES[id].name : '?'}</span>${e ? `<small>${variantOf(e.species, e.variant)?.name ?? ''} ${SP[e.species]?.name ?? ''}<br>${new Date(e.at).toLocaleDateString('ko-KR')}</small>` : ''}</div>`; }).join('')}</div>
+    return `<div class="cell${e ? '' : ' unk'}"><img alt="${e ? ACCESSORIES[id].name : '아직 못 본 치장'}"><span>${e ? ACCESSORIES[id].name : '?'}</span>${e ? `<small>${twoName(variantOf(e.species, e.variant)?.name, SP[e.species]?.name)}<br>${new Date(e.at).toLocaleDateString('ko-KR')}</small>` : ''}</div>`; }).join('')}</div>
 <p class="cnote">시크릿으로 처음 만난 동물이 남아요 · 도감 수에는 들어가지 않아요</p></div>`;
   el.querySelectorAll('.cell img').forEach((img, i) => { const id = ids[i], e = G.S.album[id];
     (e ? figureThumb(e.species, e.variant, e.color ?? null, id, 'adult', night) : silhouetteThumb(SPECIES[0].id, id, night)).then(u => { img.src = u; }); });
@@ -126,7 +126,7 @@ function draw() {
   const stored = G.S.animals.filter(a => a.stored && known(a) && habitatOf(a) === tab).length;
   const seen = c => G.S.colors[c.key] || [];
   const dots = c => { const cs = colorsOf(c.species.id, c.variant.id); return got(c) && cs.length ? `<b class="dots" aria-label="색 ${cs.filter(x => seen(c).includes(x.id)).length}/${cs.length}">${cs.map(x => `<u${seen(c).includes(x.id) ? ' class="on"' : ''}></u>`).join('')}</b>` : ''; };
-  const cell = c => `<div class="cell${got(c) ? '' : ' unk'}" role="button" data-k="${c.key}"><img alt="${got(c) ? `${c.variant.name} ${c.species.name}` : '아직 못 찾은 변종'}">${!isNew(c.key) ? '' : got(c) ? '<i>NEW</i>' : '<i class="slot">새 칸</i>'}<span>${got(c) ? c.variant.name : '?'}</span>${dots(c)}</div>`;
+  const cell = c => `<div class="cell${got(c) ? '' : ' unk'}" role="button" data-k="${c.key}"><img alt="${got(c) ? twoName(c.variant.name, c.species.name) : '아직 못 찾은 변종'}">${!isNew(c.key) ? '' : got(c) ? '<i>NEW</i>' : '<i class="slot">새 칸</i>'}<span>${got(c) ? c.variant.name : '?'}</span>${dots(c)}</div>`;
   const groups = RARITIES.map(r => {
     const cs = cells.filter(c => c.rarity === r.id); if (!cs.length) return '';
     const rows = [...new Set(cs.map(c => c.species))].map(sp => `<div class="crow">${cs.filter(c => c.species === sp).map(cell).join('')}</div>`);

@@ -388,6 +388,15 @@ html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-s
 .mail li button:disabled{background:#e9dccb;color:#a08a72}.mail li span{flex:1;min-width:0}.mail li button{width:auto;min-width:0;min-height:44px;padding:0 14px;border:0;border-radius:999px;background:#e8805f;color:#fff;justify-content:center;font-size:calc(14px*var(--fs));font-weight:700;flex-shrink:0}.mail li button::after{content:none}
 .mail input{width:100%;box-sizing:border-box;min-height:46px;margin:4px 0 8px;padding:0 14px;border:1px solid #e3cba6;border-radius:14px;background:#fff;color:#4a3626;font:inherit;font-size:calc(16px*var(--fs));text-transform:uppercase;letter-spacing:.06em;text-align:center}
 .mail p.note{min-height:1.4em;margin:0 0 12px}.mail .nbtns .sb{flex:1}.mail .nbtns .go{flex:1}.news h2 small{font-size:calc(13px*var(--fs));font-weight:400;color:#8a6a4c}
+.ret li button.take::after{content:'받기';font-size:calc(13px*var(--fs));font-weight:700;color:#fff;background:#e8805f;border-radius:10px;padding:5px 10px}
+.ret li button.take:disabled{opacity:1}.ret li button.take:disabled::after{content:'✓';background:none;color:#e5584a;font-size:calc(18px*var(--fs))}
+.ret .minis{display:flex;justify-content:center;gap:6px;margin:4px 0 0}.ret .minis span{display:flex;align-items:center;gap:1px}
+.ret .minis img{width:40px;height:40px;object-fit:contain}.ret .minis img[alt=새끼]{width:32px;height:32px}.ret .minis b{color:#b08a64;font-size:calc(11px*var(--fs))}
+/* inbox 58: no card shows through the start screen while it fades (they wait under it); the scenes swap at once under 돌아왔어요's cloud */
+body:has(#boot) .intro{visibility:hidden}
+.scene.now{transition:none}
+/* inbox 58: a first-time tip (the decor one sits right over it) hides the line at the bottom of the decor sheet */
+#stage:has(> .tip) .dhint{visibility:hidden}
 .ret p.note{font-size:calc(12.5px*var(--fs));color:#6b4a2b;text-align:center}
 /* inbox 41 C 출석부: 4 + 3 slots (the 7th, its gift, two wide); a done one has a round stamp, today's an orange edge */
 .att{list-style:none;margin:0 0 12px;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}

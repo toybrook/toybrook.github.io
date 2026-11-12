@@ -581,23 +581,23 @@ export const ZONES = {
 // the land 118 adult horses of 17-1 (the fewest of 20 random non-overlapping fills of the walkable ground, 646 sq units; 16-3),
 // kept as that number when the horse grew (17-2).
 // 28-6c map: the world map marker and its label in the 390x693 map space (tied to the painted map, ASSETS.worldmap) and the
-// sign's picture (worldmap.js ICON). sound: the ambience layers this habitat plays, 0..1 (sound.js; rain and hush everywhere),
-// from day/night 0..1, dry (1 - rain - snow), rain and snow 0..1
+// sign's picture (worldmap.js ICON). sound: the beds this habitat plays, 0..1 (13-0: recorded, sound-map.js BEDS; sound.js adds rainLight and rainHeavy
+// wherever it rains), from day/night 0..1, dry (1 - rain - snow), rain and snow 0..1
 export const HABITATS = [
   { id: 'meadow', name: '초원', ready: true, nest: 'meadow_nest', room: { swim: 9 * bodyArea(MODELS.duck.adult), walk: 427 },
-    map: { at: [168, 466], label: [168, 505], icon: 'horse' }, sound: ({ day, night, dry, rain }) => ({ wind: 0.4 * dry + 0.15, birds: day * dry, insects: night * (1 - rain) }) },
+    map: { at: [168, 466], label: [168, 505], icon: 'horse' }, sound: ({ day, night, dry, rain }) => ({ grassWind: 0.4 * dry + 0.15, birdsFar: day * dry, nightField: night * (1 - rain), insects: night * dry, frogs: 0.5 * night * (1 - rain), stream: 0.45, rainLeaves: rain }) },
   // Pond (19-2, resized in inbox 7, the water grown to ~60% of the board in inbox 10): its swim lanes (swim.js: radius
   // pond.r x pond.lanes 0.15~0.66 + 1.2, z x pond.k; 445 sq units) cover 13.0x the meadow's (34), so 117 adult ducks; the
   // land as in the meadow: 427 / 646 of the walkable ground (372 sq units with the island tops, the same 0.25 grid that gives
   // the meadow's 646). The water the turtle, otter, capybara and flamingo also go in (918 sq units, 286 of it shallow) is
   // not counted: it is the ducks' room.
   { id: 'pond', name: '연못', ready: true, nest: 'pond_nest', room: { swim: 117 * bodyArea(MODELS.duck.adult), walk: 246 },
-    map: { at: [98, 292], label: [98, 331], icon: 'duck' }, sound: ({ rain }) => ({ water: 1 - 0.3 * rain }) },
+    map: { at: [98, 292], label: [98, 331], icon: 'duck' }, sound: ({ day, night, dry, rain }) => ({ pond: 1 - 0.3 * rain, stream: 0.6, frogs: (0.3 + 0.7 * night) * (1 - 0.5 * rain), birdsFar: 0.6 * day * dry, rainWater: rain }) },
   // Snow (25-1): its land the same way, 427 / 646 of the walkable ground (873 sq units with the ice floes on the same 0.25
   // grid, 857 of it the mainland). The ice pond is for the penguin, seal and polar bear (walkers that swim), so it has no
   // swim room of its own
   { id: 'snow', name: '설원', ready: true, nest: 'snow_nest', room: { swim: 0, walk: 577 },
-    map: { at: [292, 210], label: [292, 243], icon: 'penguin' }, sound: ({ snow }) => ({ wind: 1 - 0.6 * snow }) },
+    map: { at: [292, 210], label: [292, 243], icon: 'penguin' }, sound: ({ snow }) => ({ snowWind: 1 - 0.6 * snow, hush: 0.3 + 0.7 * snow }) },
   { id: 'dino', name: '공룡 정글', ready: false, map: { at: [125, 147], label: [125, 180] } },
 ];
 

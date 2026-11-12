@@ -84,6 +84,7 @@ export const buyProp = (id, hab) => act(() => { const h = S.hearts, p = R.buyPro
   return p && { p, events: [{ type: 'buy', kind: P.list >= 100 ? 'big' : P.use || P.rail ? 'play' : 'small', price: h - S.hearts }] }; })?.p ?? null;
 export const buyExpand = hab => act(() => R.buyExpand(S, hab));
 export const refit = (hab, moves) => act(() => R.refit(S, hab, moves)); // inbox 42 A
+export const setHome = (id, home) => act(() => R.setHome(S, id, home)); // inbox 53
 export const placeProp = (uid, x, z, rot, ex) => act(() => R.placeProp(S, uid, x, z, rot, ex)); // 28-5 ex: { c, sz, on, sl }
 export const placeRing = (hab, cells, clear) => act(() => R.placeRing(S, hab, cells, clear)); // inbox 37 작은 고리
 export const saveLay = (hab, k, name) => act(now => R.saveLay(S, hab, k, name, now)); // 28-5 배치 저장 칸
