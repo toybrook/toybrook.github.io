@@ -238,7 +238,7 @@ export function choose(ctx, who, me, x, z, far = 22) {
     if (st.gone || !kinds.includes(st.kind) || !fits(st.kind, me) || Math.hypot(st.x - x, st.z - z) > (late ? (me.swim ? 2 * far : Infinity) : far) || !st.seats.includes(null)) continue;
     if (me.can && !st.seats.some((s, i) => { const p = !s && K[st.kind].spot(st, i, me, x, z); return p && me.can(p[0], p[1]); })) continue; // inbox 42 B: a seat on its own land (not past a closed fence; round a ring, any one)
     const used = st.seats.filter(Boolean).length;
-    list.push([st, (1 + Math.max(0, idle - 30) / 6) * (st.kind === 'campfire' ? (n > 0.3 ? 4 : 0.3) * (1 + used) : st.kind === 'feeder' ? 1 + 2 * used : st.kind === 'seesaw' ? (used ? 8 : 1) : st.kind === 'hammock' && n > 0.3 ? 0.4 : st.kind === 'train' ? 0.6 : 1), late]);
+    list.push([st, (1 + Math.max(0, idle - 30) / 6) * (st.kind === 'campfire' ? (n > 0.3 ? 4 : 0.3) * (1 + used) : st.kind === 'feeder' ? (1 + 2 * used) * (me.pe === 'glutton' ? 3 : 1) : st.kind === 'seesaw' ? (used ? 8 : 1) : st.kind === 'hammock' && n > 0.3 ? 0.4 : st.kind === 'train' ? 0.6 : 1), late]);
   }
   const wait = list.filter(f => f[2]).sort((a, b) => a[0].last - b[0].last); // one that has waited LATE goes first: the longest waiting
   let r = Math.random() * list.reduce((s, [, w]) => s + w, 0); const pick = wait[0]?.[0] ?? list.find(([, w]) => (r -= w) < 0)?.[0];
@@ -254,7 +254,7 @@ export const due = (ctx, T, me, at) => (ctx.play ?? []).some(st => !st.gone && T
 // got to (ax, az): x, z, yaw where it stands now, T the clock
 export function start(q, x, z, yaw, T) {
   const k = K[q.st.kind]; q.st.last = T; Object.assign(q, { A: { x, z, y: q.st.y, yaw }, T0: T, ph: Math.random() * 6, dir: Math.random() < 0.5 ? 1 : -1, doze: q.night > 0.6 && Math.random() < 0.5, off: null });
-  k.start?.(q); q.D = k.dur(q); return q;
+  k.start?.(q); q.D = k.dur(q) * (q.st.kind === 'feeder' && q.me?.pe === 'glutton' ? 2 : 1); return q; // 17-1 먹보: at the feeder twice as long
 }
 export const pose = (q, t, T) => K[q.st.kind].pose(q, t, T);
 // done, given up or cut short: the seat is free again (the ball rolls home)

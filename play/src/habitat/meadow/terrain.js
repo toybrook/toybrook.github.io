@@ -99,17 +99,17 @@ const PAINT = `
       vec2 pt = (pq - uPO) / uPN; vec4 pa = texture2D(uPA, pt), pb = texture2D(uPB, pt); float pg = pb.r;
       if (pa.r + pa.g + pa.b + pa.a + pb.r + pb.g + pb.b > 0.01) {
         float sh = clamp(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)) / LUM, 0.62, 1.12); // keeps the slopes and contact shadows
-        vec4 k = smoothstep(0.32, 0.6, pa); float kg = smoothstep(0.32, 0.6, pg);
+        vec4 k = smoothstep(0.18, 0.72, pa); float kg = smoothstep(0.18, 0.72, pg); // inbox 67-3: a wide soft edge, no disc
         vec3 grass = ${v3(BRUSH_RGB[0])} * (0.92 + 0.16 * vnoise(vWp.xz * 0.9));
         vec3 sand = ${v3(BRUSH_RGB[2])} * (0.96 + 0.08 * vnoise(vWp.xz * 4.0));
         float gv = vnoise(vWp.xz * 9.0); vec3 gravel = ${v3(BRUSH_RGB[3])} * (0.82 + 0.3 * step(0.55, gv) - 0.12 * step(gv, 0.2));
         vec2 fc = floor(vWp.xz * 4.0), ff = fract(vWp.xz * 4.0) - 0.5; float fh = hash12(fc), fd = length(ff - (vec2(hash12(fc + 3.1), hash12(fc + 7.7)) - 0.5) * 0.4);
         vec3 fcol = fh > 0.93 ? ${CC('#fff7ee')} : fh > 0.86 ? ${CC('#ffd54a')} : fh > 0.79 ? ${CC('#ff9cc4')} : ${CC('#b9a0f2')};
-        vec3 bloom = mix(${v3(BRUSH_RGB[4])}, fcol, (fh > 0.72 ? 1.0 : 0.0) * (1.0 - smoothstep(0.14, 0.2, fd)));
+        vec3 bloom = mix(${v3(BRUSH_RGB[4])}, fcol, (fh > 0.9 ? 0.6 : 0.0) * (1.0 - smoothstep(0.06, 0.14, fd))); // inbox 67-3: a few soft specks, not a painted carpet
         vec3 c = diffuseColor.rgb;
         c = mix(c, grass * sh, kg); c = mix(c, sand * sh, k.g); c = mix(c, gravel * sh, k.b); c = mix(c, bloom * sh, k.a);
         // 25-1 the snow's: fresh snow with a few glints, smooth pale ice (paler streaks, a crack line here and there)
-        vec2 kb = smoothstep(0.32, 0.6, pb.gb); float sg = step(0.985, hash12(floor(vWp.xz * 14.0)));
+        vec2 kb = smoothstep(0.18, 0.72, pb.gb); float sg = step(0.985, hash12(floor(vWp.xz * 14.0)));
         vec3 snow = ${v3(BRUSH_RGB[5])} * (0.97 + 0.05 * vnoise(vWp.xz * 1.5)) + sg * 0.12;
         float ck = 1.0 - smoothstep(0.0, 0.04, abs(vnoise(vWp.xz * 1.1 + 3.0) - 0.5)); vec3 ice = mix(${v3(BRUSH_RGB[6])}, ${CC('#eef8fc')}, 0.35 * vnoise(vWp.xz * 0.7) + 0.4 * ck);
         c = mix(c, snow * sh, kb.x); c = mix(c, ice * sh, kb.y);

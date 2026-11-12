@@ -203,7 +203,28 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }
   // 28-1: the animals free to be sent somewhere (walk.js send); the nearest one that can go sent to x, z (the orchard's fruit, zoneprops.js)
   const idle = () => [...actors.values()].filter(a => a.send && !a.hold && a.obj.visible && !a.busy());
-  habitat.ctx.sendNear = (x, z, act, o) => { const d = a => Math.hypot(a.position.x - x, a.position.z - z); return idle().sort((p, q) => d(p) - d(q)).some(a => a.send(x, z, act, o)); }; // the nearest that can go (mid-jump or swimming: the next)
+  habitat.ctx.sendNear = (x, z, act, o) => { const d = a => Math.hypot(a.position.x - x, a.position.z - z) - (habitat.ctx.bf && a.rec.pe === 'glutton' ? 10 : 0); return idle().sort((p, q) => d(p) - d(q)).some(a => a.send(x, z, act, o)); }; // the nearest that can go (mid-jump or swimming: the next); 17-1 먹보: from 10 m further
+  // 17-1 단짝 (ui/play.js setPals: id -> its 단짝's id; null while 설정 「성격·단짝」 is off; walk.js reads it as ctx.bf). Two of a pair
+  // within 6 m: a faint dotted pink string between them, a little heart at its middle (설정 「단짝 하트 끈」 PREFS.palLine)
+  habitat.ctx.bf = null; habitat.ctx.fresh = []; const ties = { dots: null, hearts: [] }, M4 = new THREE.Matrix4();
+  function heartSprite() {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#ff8fb3'; g.beginPath(); g.moveTo(32, 56);
+    g.bezierCurveTo(4, 36, 6, 10, 22, 10); g.bezierCurveTo(28, 10, 32, 16, 32, 20); g.bezierCurveTo(32, 16, 36, 10, 42, 10); g.bezierCurveTo(58, 10, 60, 36, 32, 56); g.fill();
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: Object.assign(new THREE.CanvasTexture(c), { colorSpace: THREE.SRGBColorSpace }), transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false })); s.scale.set(0.32, 0.32, 1); scene.add(s); return s;
+  }
+  function tie() {
+    const bf = habitat.ctx.bf; let n = 0, m = 0;
+    if (bf && PREFS.palLine !== false) for (const [id, a] of actors) { const b = actors.get(bf.get(id));
+      if (!b || id > b.rec.id || !a.obj.visible || !b.obj.visible) continue;
+      const p = a.position, q = b.position, d = Math.hypot(p.x - q.x, p.z - q.z); if (d > 6) continue;
+      if (!ties.dots) { ties.dots = new THREE.InstancedMesh(new THREE.SphereGeometry(0.035, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff9ab8, transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false }), 99); ties.dots.frustumCulled = false; scene.add(ties.dots); }
+      const ya = p.y + a.body.r * 1.1, yb = q.y + b.body.r * 1.1, sag = 0.12 + d * 0.05;
+      for (let i = 1; i < 10 && n < 99; i++) { const k = i / 10; ties.dots.setMatrixAt(n++, M4.makeTranslation(p.x + (q.x - p.x) * k, ya + (yb - ya) * k - sag * 4 * k * (1 - k), p.z + (q.z - p.z) * k)); }
+      (ties.hearts[m++] ??= heartSprite()).position.set((p.x + q.x) / 2, (ya + yb) / 2 - sag + 0.2, (p.z + q.z) / 2);
+    }
+    if (ties.dots) { ties.dots.count = n; ties.dots.instanceMatrix.needsUpdate = true; }
+    ties.hearts.forEach((s, i) => { s.visible = i < m; });
+  }
   // the spot nearest the middle of the screen (or at: [x, z]) where ok(x, z) holds (rings out from it), else the middle
   const flat = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), mid = new THREE.Vector3();
   // inbox 42 C2: R, how far out (refit: the whole board, the rings past 16 m finer, so a big prop finds a gap)
@@ -258,7 +279,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // off, animals go round the big ones, the camera guard and the fade see them) and a rain roof under each tree; the paint
   // (S.paint) on the ground; the grass clumps under both hidden (a native's footprint, a path, sand or gravel)
   const NAT = Object.fromEntries(NATURE.map(n => [n.id, n])), nature = natureLayer(scene, habitat.ctx.heightAt, U), mask = grassMask(habitat.grass || []);
-  let natSig = null, natSpots = [], natRoofs = [], paintNow = {}, paintSig = '{}', grassDirty = true, gridOn = false, brush, stroke = null, press = null, skipTap = false, sweepOn = false, box = null; // box: inbox 42 F-6 자연 정리, the rectangle being drawn
+  let propsIn = false, natSig = null, natSpots = [], natRoofs = [], paintNow = {}, paintSig = '{}', grassDirty = true, gridOn = false, brush, stroke = null, press = null, skipTap = false, sweepOn = false, box = null; // box: inbox 42 F-6 자연 정리, the rectangle being drawn
   const hideGrass = (x, z) => { const b = paintNow[`${Math.floor(x / U)},${Math.floor(z / U)}`]; if ((b >= 1 && b <= 3) || b >= 5) return true; // 25-1: snow and ice too
     for (const o of natSpots) if (!o.open && Math.abs(o.x - x) < o.r && Math.abs(o.z - z) < o.r && Math.hypot(o.x - x, o.z - z) < o.r) return true;
     const y = bump(x, z); return y < -0.1 ? true : Math.abs(y) > 0.005 ? y : false; }; // 28-6: on a stamp, raised (or lowered) with it; in a puddle, gone
@@ -294,7 +315,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const fades = nature.set(nats);
     natSpots = nats.map(p => { const N = NAT[p.prop], k = p.s || 1; return { x: p.x * U, z: p.z * U, r: N.r * k, h: N.h * k, open: !!N.open, nat: 1, prop: p.prop, uid: p.uid, fade: N.open ? null : fades.get(p.uid) }; }); // a flower patch never fades
     natRoofs = natSpots.filter(o => o.prop === 'tree' && o.h >= 3 && o.z > -22 * U).map(o => ({ x: o.x, z: o.z, r: o.r, cover: treeCover(o.h / 4.8) })); // as the trees in ctx.shelter were
-    D.list.push(...natSpots); habitat.ctx.shelter.push(...natRoofs);
+    D.list.push(...natSpots); habitat.ctx.shelter.push(...natRoofs); habitat.ctx.bushes = natSpots.filter(o => o.prop === 'bush'); // 17-1 겁쟁이 (walk.js hide)
     habitat.ground?.setNatAO(natSpots.filter(o => !o.open)); grassDirty = true; renderer.shadowMap.needsUpdate = true;
   }
   const putProp = (obj, x, z, rot, P) => { obj.position.set(x, D.y(x, z, P.water), z); obj.rotation.y = rot;
@@ -387,7 +408,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       if (P.rail) { for (const b of bodies) b.rail = true; [e.spot, ...e.more] = railSpots(P, x, z, r.rot).map(o => ({ ...o, uid, h: e.spot.h })); e.rail = { uid, prop: P.id, x, z, rot: r.rot }; } // 28-4
       const st = obj.userData.play; if (st) { Object.assign(st, { x, z, rot: r.rot, y: obj.position.y, r: P.r }); habitat.ctx.play.push(st); e.spot.play = st; } // 28-2 소품 쓰기 (play.js)
       for (const b of e.bodies) habitat.ctx.crowd.add(b); if (!e.top) D.list.push(e.spot, ...e.more ?? []); if (e.roof) habitat.ctx.shelter.push(e.roof); placed.set(uid, e); changed = true;
+      if (propsIn) habitat.ctx.fresh.push({ uid, x, z, r: P.r * f, until: performance.now() + 60e3 }); // 17-1 호기심쟁이 (walk.js peek): put down just now, for a minute
     }
+    propsIn = true;
     if (changed) { renderer.shadowMap.needsUpdate = true; syncSets(); syncTrain(); } // the shadow map is drawn once; props change it
     if (changed && playing() && ![...placed.values()].some(e => e.prop === 'musicbox')) music(true); // 28-3: the music box put away: its tune stops
   }
@@ -1117,6 +1140,7 @@ GPU ${gpu}`; }
     if (train && stepTrain(train.T, train.net, dt, habitat.ctx.crowd, train.st) === 'toot') sfx('train'); // 28-4: before the riders (play.js reads its cars)
     if (train) placeCars();
     for (const a of actors.values()) a.update(dt, t);
+    tie(); if (habitat.ctx.fresh[0]?.until < performance.now()) habitat.ctx.fresh.shift(); // 17-1
     if (t > homeAt && !decorOn) { homeAt = t + 1; penCheck(); }
     hear(camera, controls.target, actors, habitat.ctx, D.list, underfoot); // 13-0: the world's sounds where they are
     updPuffs(dt); updSnow(dt); myth?.tick(dt, t);
@@ -1193,7 +1217,7 @@ GPU ${gpu}`; }
   tick();
   if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus, fx });
   return {
-    resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, showZone, topView,
+    resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, showZone, topView, setPals: m => { habitat.ctx.bf = m; }, // 17-1
     myth, pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw

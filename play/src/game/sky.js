@@ -12,7 +12,7 @@ const DAY = 864e5, H = 36e5;
 export const nightNo = t => { const d = new Date(t - 5 * H); return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY); };
 const dateOf = n => new Date(n * DAY); // UTC fields = that night's local date
 export const skyTime = h => h >= 18 || h < 5; // the hour (0..24) the special sky is up
-const hash = (...k) => { let h = 2166136261; for (const n of k) { h = Math.imul(h ^ n, 16777619); h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15; } return (h >>> 0) / 4294967296; };
+export const hash = (...k) => { let h = 2166136261; for (const n of k) { h = Math.imul(h ^ n, 16777619); h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15; } return (h >>> 0) / 4294967296; };
 
 // the seven real showers, by their peak night (month, day; the evening of that date)
 export const SHOWERS = [

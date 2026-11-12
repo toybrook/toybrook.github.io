@@ -59,9 +59,9 @@ const POOL = (s, u, v, r, o) => { const [x, z] = at(s, u, v); return { t: 'pool'
 const SPOT = (s, u, v, act, o) => { const [x, z] = at(s, u, v); return { t: 'spot', x, z, act, ...o }; };
 const TINT = (s, u, v, a, b, c, k = 1, o) => { const [x, z] = at(s, u, v), X = s.side === '+z'; a *= S; b *= S; return { t: 'tint', x, z, rx: X ? b : a, rz: X ? a : b, c, a: k, ...o }; };
 const RECT = (r, c, k = 1, o) => ({ t: 'tint', r, c, a: k, ...o }); // a: how strong (f.k is the zone's step)
-// inbox 34 the zone's face: its own ground over the whole strip (a side strip's from the back shelf's foot), the edge crisp
-// (e: 0.6 m) so the zone reads from above at a glance
-const FACE = (s, c, k = 1, o) => RECT([s.r[0], s.r[1], s.side === '+z' ? s.r[2] : -23.4 * S, s.r[3]], c, k, { e: 0.6, ...o });
+// inbox 34 the zone's face: its own ground over the whole strip (a side strip's from the back shelf's foot). inbox 67-3: no
+// crisp line any more, the edge blends over e: 3 m (the zone still reads by its trees and landmark)
+const FACE = (s, c, k = 1, o) => RECT([s.r[0], s.r[1], s.side === '+z' ? s.r[2] : -23.4 * S, s.r[3]], c, k, { e: 3, ...o });
 const hash = (x, z) => { const h = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return h - Math.floor(h); };
 // a pattern: a share p of the ground (cells `cell` m wide, or each point of the grid) in one of cols
 const speck = (cols, p, cell) => (x, z) => { const n = cell ? hash(Math.floor(x / cell), Math.floor(z / cell)) : hash(x, z); return n < p ? cols[Math.floor(n / p * cols.length)] : null; };
@@ -75,7 +75,7 @@ const SP = l => P(l).map(([x, z, act, o]) => ({ t: 'spot', x, z, act, ...o }));
 const FORK = P([[-14.6, 32.6], [-10, 34.2], [-5, 33.4], [0, 34.3], [5.9, 33.7], [10.5, 34.2], [12.4, 33.7]]);
 const SHAPES = {
   meadow: {
-    flowerhill: s => [FACE(s, '#93cf4c', 0.85, { pat: speck(['#ff9ec4', '#ffe066', '#ffffff', '#c9a8f0', '#ff9a6b'], 0.42, 0.42) }), // a carpet of flowers
+    flowerhill: s => [FACE(s, '#93cf4c', 0.35), // inbox 67-3 the meadow's own green: the flowers stand in it (zoneprops.js drifts), none painted
       H(s, 0.5, 0.6, 3.6, 6.5, 2.8), H(s, 0.42, 0.22, 2.6, 3.4, 1.2), // the hill twice as high, its outline seen from the side
       SPOT(s, 0.5, 0.56, 'rest'), SPOT(s, 0.5, 0.62, 'nap'), SPOT(s, 0.42, 0.22, 'rest'), SPOT(s, 0.6, 0.75, 'rest')],
     grove: s => [FACE(s, '#4b7a30', 0.85, { pat: speck(['#6f9a3c', '#3b6326', '#5a8a34'], 0.35, 0.3) }), H(s, 0.55, 0.55, 2.8, 5, 0.5), // moss under the trees
@@ -233,7 +233,7 @@ export function zoneSet(hab, top) {
         if (f.steep) w *= sm((0.94 - ny) / 0.14);
         if (w <= 0) continue;
         let c = f.col ??= C(f.c);
-        if (f.pat) { const p = f.pat(x, z); if (p) c = (f.pc ??= {})[p] ??= C(p); }
+        if (f.pat) { const p = f.pat(x, z); if (p) c = (f.pc ??= {})[p] ??= C(p).lerp(f.col, 0.5); } // inbox 67-3: a pattern only half its colour, no patchwork
         col.lerp(c, w * f.a);
       }
       for (const f of paths) { const d = polyD(x, z, f.pts) + 0.06 * Math.sin(x * 3 + z * 2); if (d < f.w + 0.3) col.lerp(f.rim ??= C('#cfa66c'), sm((f.w + 0.2 - d) / 0.2)).lerp(f.col ??= C(f.c ?? PATH), sm((f.w - 0.1 - d) / 0.25)); }

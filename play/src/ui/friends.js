@@ -11,6 +11,7 @@ import { toast, heart, josa } from './hud.js';
 import { SORTS } from './store.js';
 import { pickStroll } from './stroll.js';
 import { sendSheet, openBook } from './visit.js';
+import { PE, mateOf } from '../game/pals.js';
 
 const el = document.getElementById('friends');
 const rarOf = a => variantOf(a.species, a.variant).rarity;
@@ -77,8 +78,9 @@ el.addEventListener('click', e => {
 function more(id) {
   const a = G.S.animals.find(x => x.id === id); if (!a) return;
   const nm = callName(a), home = SP[a.species].habitat, guest = habitatOf(a) !== home;
+  const m = G.S.animals.find(x => x.id === mateOf(G.S, a.id)), pe = G.S.flags.palOff || !PE[a.pe] ? '' : `<p class="sub pe">${PE[a.pe].name} · ${PE[a.pe].line}${m ? `<br>단짝: ${callName(m)}` : ''}</p>`; // 17-1 성격과 단짝
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
-  menu.innerHTML = `<div><h2>${star(a)}${nm}</h2>${a.nm ? `<p class="sub">${kindName(a)}</p>` : ''}<div class="col"><button data-do="go">보러 가기</button>
+  menu.innerHTML = `<div><h2>${star(a)}${nm}</h2>${a.nm ? `<p class="sub">${kindName(a)}</p>` : ''}${pe}<div class="col"><button data-do="go">보러 가기</button>
 <button data-do="fav" aria-pressed="${!!a.fav}">${a.fav ? '★ 별 떼기' : '☆ 아끼는 친구로'}</button><button data-do="name">${a.nm ? '이름 바꾸기' : '이름 짓기'}</button>
 <button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button><button data-do="visit">놀러 보내기</button><button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>`;
   menu.onclick = e => {

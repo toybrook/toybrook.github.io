@@ -148,6 +148,7 @@ export const skyTonight = (hab, n) => K.tonight(S, clock(), hab, n);
 export const skySeen = (n, slots) => act(now => K.seenNight(S, n, slots, now));
 export const skyBit = () => act(() => K.skyBit(S));
 export const skyMark = (k, v) => act(() => { S.sky[k] = v; });
+export const palSeen = () => act(() => { for (const p of S.pals.list) delete p.new; }); // 17-1 단짝 card seen
 export const skyScope = at => act(() => { if (S.sky.scope) return null; S.sky.scope = 1; return R.putGift(S, 'sky_scope', at, { cost: 0 }); });
 export const attendDue = () => R.attendDue(S, clock());
 export const attend = at => act(now => R.attend(S, now, Math.random, at));

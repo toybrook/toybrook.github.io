@@ -63,7 +63,10 @@ export function createActor(ctx, rec) {
   // where it may go: dry ground, and for a water animal (walk.water 'swim' / 'wade') the pond as ctx.wet sees it
   const ok = W.water ? (x, z) => walkable(x, z) || ctx.wet(x, z, W.water) : walkable;
   const open = (x, z) => free(ctx.crowd, body, x, z, Math.atan2(-(z - h.z), x - h.x)) && ctx.bridgeEnds.every(e => Math.hypot(e.x - x, e.z - z) > 2.5);
-  const go = (state, tx, tz, speed) => { if (state === 'cross') h.at = h.now; h.ghost = false; h.nw = 0; h.state = state; h.sp = speed; h.wait = 0; h.cut = h.stuck = null; h.slide = false; h.sx = h.x; h.sz = h.z; h.tx = tx; h.tz = tz; h.t = 0; h.dur = Math.max(1, Math.hypot(tx - h.x, tz - h.z) / (state === 'hop' ? speed : speed * W.pace)); }; // W.pace: a slow walker (the cow)
+  // 17-1 성격 (game/pals.js) and 단짝: only while 설정 「성격·단짝」 is on (ctx.bf: the pairs, habitat.js setPals); a guest has none.
+  // mate: its 단짝 when free near by (pals below)
+  const pe = () => ctx.bf ? rec.pe : null, mate = () => { const id = ctx.bf?.get(rec.id); return id == null ? null : pals().find(o => o.rec.id === id) ?? null; };
+  const go = (state, tx, tz, speed) => { if (state === 'walk' && speed < 2 && pe() === 'easy') speed *= 0.8; if (state === 'cross') h.at = h.now; h.ghost = false; h.nw = 0; h.state = state; h.sp = speed; h.wait = 0; h.cut = h.stuck = null; h.slide = false; h.sx = h.x; h.sz = h.z; h.tx = tx; h.tz = tz; h.t = 0; h.dur = Math.max(1, Math.hypot(tx - h.x, tz - h.z) / (state === 'hop' ? speed : speed * W.pace)); }; // W.pace: a slow walker (the cow)
   function pick() {
     const r = Math.random();
     if (h.after) { const f = h.after; h.after = null; f(true); } // 28-1: done what it was sent for (the orchard's fruit: eaten)
@@ -72,13 +75,20 @@ export function createActor(ctx, rec) {
     if (h.goal && toward()) return; // 28-1: on its way to a zone's spot, or sent (api.send)
     if (h.goal) { h.state = 'idle'; h.t = 0; h.dur = 0.5; return; } // inbox 42 C: no free step just now: again in a moment (toward gives up after n), never a second goal over it (its kept seat would stay kept)
     if (h.soc && social()) return; // inbox 42 C: with another (follows, leads, runs, waits)
-    if (ctx.night && Math.random() < 0.45 * ctx.night) { h.tuck = W.oneLeg && Math.random() < W.oneLeg; h.state = 'sleep'; h.t = 0; h.dur = 6 + Math.random() * 6; return; } // 21-1: dozes more (and longer) at night
+    if (ctx.night && Math.random() < 0.45 * ctx.night) { if (mate() && Math.random() < 0.6 && startSocial('pal')) return; // 17-1: beside its 단짝
+      h.tuck = W.oneLeg && Math.random() < W.oneLeg; h.state = 'sleep'; h.t = 0; h.dur = (6 + Math.random() * 6) * (pe() === 'sleepy' ? 1.6 : 1); return; } // 21-1: dozes more (and longer) at night
+    if (ctx.rain > 0.3 && pe() === 'shy' && !W.water && hide()) return; // 17-1 겁쟁이: into the bushes
     if (ctx.rain > 0.3 && !W.water && (shelter() || rainy())) return; // 21-2: a land animal waits out the rain under a tree or a roof (inbox 42 D: one it fits under; none: plays in the rain)
-    if ((!(ctx.rain > 0.3) || ctx.snowy) && Math.random() < 0.07 && startSocial()) return; // inbox 42 C 동물끼리 (15-2: on snow, snowing too: 눈싸움)
+    if (!(ctx.rain > 0.3) && ctx.bf?.has(rec.id) && Math.random() < 0.5) { // 17-1 단짝: walks side by side with it, or (the one with the bigger id: the two never swap places) goes over to it
+      const o = mate(), b = o?.body ?? [...ctx.crowd].find(b => b.pal?.rec.id === ctx.bf.get(rec.id)), d = b ? Math.hypot(b.x - h.x, b.z - h.z) : 0;
+      if (o && !ctx.night && d < 15 && o.join({ kind: 'tail', o: api, until: h.now + 20, side: body.r + o.body.r + 0.35, back: 0.3 })) { h.soc = { kind: 'lead', until: h.now + 20 }; if (social()) return; }
+      else if (d > 5 && rec.id > ctx.bf.get(rec.id)) { const a = Math.atan2(h.z - b.z, h.x - b.x), x = b.x + Math.cos(a) * 3.5, z = b.z + Math.sin(a) * 3.5; if (ok(x, z)) { h.goal = { x, z, act: 'roam', n: 4 }; if (toward()) return; h.goal = null; } } }
+    if ((!(ctx.rain > 0.3) || ctx.snowy) && Math.random() < (pe() === 'prank' ? 0.16 : 0.07) && startSocial()) return; // inbox 42 C 동물끼리 (15-2: on snow, snowing too: 눈싸움)
+    if (pe() === 'curious' && ctx.fresh?.length && peek()) return; // 17-1 호기심쟁이
     if (h.atSet) { const k = h.atSet === 'perch' ? 2.5 : 1; h.atSet = false; h.state = Math.random() < 0.6 * k ? 'graze' : 'idle'; h.t = 0; h.dur = (3 + Math.random() * 4) * k; return; } // 23-2: got there: stays a while
     if (ctx.play?.length) { const m = me(); if (Math.random() < (due(ctx, h.now, m, st => !m.can || m.can(st.x, st.z)) ? 0.7 : 0.2) + 0.15 * (ctx.night || 0) && toPlay()) return; } // 28-2 소품 쓰기 (more by night: the campfire); inbox 42 C: 7 -> 20%, 70% while one of its kind waits (due)
     if (ctx.sets?.length && Math.random() < 0.3 && toSet()) return; // 23-2 세트 보너스: likes to play by a whole set
-    if (ctx.spots?.length && Math.random() < 0.12) { // 28-1: to a spot of a zone (zones.js: a bench, the hot spring, the sled hill's top) within 20
+    if (ctx.spots?.length && Math.random() < (pe() === 'collector' ? 0.24 : 0.12)) { // 28-1: to a spot of a zone (zones.js: a bench, the hot spring, the sled hill's top) within 20
       const q = ctx.spots.filter(s => Math.hypot(s.x - h.x, s.z - h.z) < 20 && home(s.x, s.z) && (s.act !== 'slide' || W.slide || Math.random() < 0.3) && (s.act !== 'dig' || Math.random() < 3 * (W.dig || 0)) && Math.random() < (s.w ?? 1)); // 14-3: the fossil site's dig spots by walk.dig
       if (q.length) { const s = q[Math.floor(Math.random() * q.length)], a = Math.random() * 6.28, d = Math.random() * s.r;
         h.goal = { x: s.x + Math.cos(a) * d, z: s.z + Math.sin(a) * d, act: s.act, to: s.to, n: 4 }; if (toward()) return; }
@@ -97,7 +107,7 @@ export function createActor(ctx, rec) {
       const d = Math.hypot(q.x - h.x, q.z - h.z);
       if (d > 0.6 && d < 14 && open(q.x, q.z) && pathClear(h.x, h.z, q.x, q.z, ok)) { go('hop', q.x, q.z, 3.2); h.atSet = 'perch'; return; }
     }
-    if (r < W.roam) {
+    if (r < W.roam + (pe() === 'collector' ? 0.2 : pe() === 'easy' ? -0.15 : 0)) {
       if (W.water && Math.random() < W.wet + (1 - W.wet) * 0.7 * (ctx.rain || 0)) for (let k = 0; k < 10; k++) { const q = ctx.waterSpot(W.shallow ? 'wade' : W.water, h.x, h.z); if (q && open(...q) && pathClear(h.x, h.z, ...q, ok)) return go('walk', ...q, 1.3); } // into the water (walks in, never hops)
       if (Math.random() < 0.15) { const R = land(), q = R?.spot(R.id(h.x, h.z)); // inbox 42 B: now and then far off on its own land (round props, out by the gate)
         if (q && near(...q) && open(...q)) { h.goal = { x: q[0], z: q[1], act: 'roam', n: 4 }; if (toward()) return; h.goal = null; } }
@@ -110,8 +120,10 @@ export function createActor(ctx, rec) {
         return Math.random() < W.hop && (!W.water || pathClear(h.x, h.z, nx, nz)) ? go('hop', nx, nz, 3.2) : go('walk', nx, nz, 1.3); } } // out of the water: walks
       if ((h.nw = (h.nw || 0) + 1) >= 2) { h.nw = 0; return unstick(); } } // inbox 63: no way to walk 2 picks running (resting in a pocket between props, so the 20 s watch never runs): out as 끼임
     h.tuck = W.oneLeg && Math.random() < W.oneLeg; // this rest on one leg (the flamingo)
-    if (r < 0.78) { h.state = 'graze'; h.t = 0; h.dur = 2.5 + Math.random() * 3; return; }
-    if (r < 0.9) { h.state = 'sleep'; h.t = 0; h.dur = 4 + Math.random() * 3; return; }
+    const p = pe(); // 17-1: 깔끔이 shakes itself now and then; 잠꾸러기 naps more and longer; 먹보, 느긋이 graze longer
+    if (p === 'tidy' && Math.random() < 0.1) { h.state = 'shake'; h.t = 0; h.dur = 1.3; return; }
+    if (r < (p === 'sleepy' ? 0.62 : 0.78)) { h.state = 'graze'; h.t = 0; h.dur = (2.5 + Math.random() * 3) * (p === 'glutton' ? 1.6 : p === 'easy' ? 1.5 : 1); return; }
+    if (r < 0.9) { if (mate() && Math.random() < 0.5 && startSocial('pal')) return; h.state = 'sleep'; h.t = 0; h.dur = (4 + Math.random() * 3) * (p === 'sleepy' ? 2.2 : 1); return; }
     h.state = 'idle'; h.t = 0; h.dur = 1.5 + Math.random() * 2;
   }
   // 21-2 in the rain: to the nearest tree or roof (ctx.shelter), a few steps at a time, then stays by it (rests, grazes). inbox 42 D:
@@ -147,10 +159,30 @@ export function createActor(ctx, rec) {
   // inbox 42 D 비 즐기기: no shelter it fits (or all of them full): now and then shakes itself off, splashes in a puddle (little
   // hops, a ring of water at each), or two or three come and doze close beside it (startSocial's nap: 'huddle'); else wanders on
   function rainy() {
-    const r = Math.random(), still = (s, d) => { h.state = s; h.t = 0; h.dur = d; h.spl = 0; return true; };
-    if (r < 0.15) return still('shake', 1.3);
-    if (r < 0.3 && walkable(h.x, h.z)) return still('splash', 1.8);
+    const r = Math.random(), still = (s, d) => { h.state = s; h.t = 0; h.dur = d; h.spl = 0; return true; }, tidy = pe() === 'tidy'; // 17-1 깔끔이: shakes, never splashes
+    if (r < (tidy ? 0.35 : 0.15)) return still('shake', 1.3);
+    if (r < 0.3 && !tidy && walkable(h.x, h.z)) return still('splash', 1.8);
     return r < 0.45 && startSocial('huddle');
+  }
+  // 17-1 겁쟁이 in the rain: to the nearest bush (ctx.bushes, habitat.js) within 30, on its far side from the camera, and stays
+  // there (a long rest); none: a shelter as anyone, else it curls up where it is
+  function hide() {
+    const reach = Math.max(-body.seg[0], body.seg[1]) + body.r, az = ctx.az ?? Math.PI / 2;
+    const b = (ctx.bushes || []).map(o => [o, Math.hypot(o.x - h.x, o.z - h.z)]).filter(q => q[1] < 30).sort((p, q) => p[1] - q[1]);
+    for (const [o, D] of b.slice(0, 3)) {
+      if (D < o.r + reach + 0.6) { h.state = 'sleep'; h.t = 0; h.dur = 4 + Math.random() * 3; h.tuck = false; return true; }
+      for (let k = 0; k < 6; k++) { const a = az + Math.PI + (Math.random() - 0.5) * 2.4, d = o.r + body.r + 0.15, x = o.x + Math.cos(a) * d, z = o.z + Math.sin(a) * d;
+        if (ok(x, z) && open(x, z)) { h.goal = { x, z, act: 'hide', n: 6, fast: true }; if (toward()) return true; h.goal = null; } }
+    }
+    if (shelter()) return true;
+    h.state = 'sleep'; h.t = 0; h.dur = 3 + Math.random() * 2; h.tuck = false; return true;
+  }
+  // 17-1 호기심쟁이: to a prop just put down (ctx.fresh, habitat.js) it has not been to yet, and a long look at it
+  function peek() {
+    const o = ctx.fresh.find(o => !(h.seen ??= new Set()).has(o.uid) && Math.hypot(o.x - h.x, o.z - h.z) < 40); if (!o) return false; h.seen.add(o.uid);
+    for (let k = 0; k < 8; k++) { const a = Math.atan2(h.z - o.z, h.x - o.x) + (Math.random() - 0.5) * 1.6, d = o.r + reachOf(body) + 0.2 + Math.random() * 0.5, x = o.x + Math.cos(a) * d, z = o.z + Math.sin(a) * d;
+      if (ok(x, z) && open(x, z)) { h.goal = { x, z, act: 'look', o, n: 8, fast: true }; if (toward()) return true; h.goal = null; } }
+    return false;
   }
   // 23-2: to a spot by one of the props of a whole set (ctx.sets); far off, a few steps that way (it stays a while once there,
   // h.atSet). false: no way found
@@ -165,9 +197,9 @@ export function createActor(ctx, rec) {
   }
   // 28-2: to a play prop its species uses and it fits (play.js choose: the seat is kept for it); false: none, or no way there
   const me = () => { const S = M[look.stage], R = land(), lab = (x, z) => { const k = R.id(x, z); return k >= 0 && R.area(k) >= ROOM ? k : R.near(x, z, (a, b, L) => R.area(L) >= ROOM, 6)?.[2] ?? -1; }, mine = R && lab(h.x, h.z); return { T: h.now, can: R && ((x, z) => lab(x, z) === mine), lab: R && lab, mine, // inbox 42 C: this side of a bridge (toward walks one land, walk.js crosses by itself; a seat in a prop's kept-off ring, or it standing in one, or a pocket too small to stand in: the land 3 m round)
-     sp: rec.species, W, swim: false, s: S.s, reach: body.seg[1] + body.r, back: body.r - body.seg[0], w: 2 * body.r, L: body.seg[1] - body.seg[0] + 2 * body.r, h: S.h * S.s, fig: look.fig }; };
-  function toPlay() {
-    const q = choose(ctx, api, me(), h.x, h.z); if (!q) return false;
+     sp: rec.species, W, swim: false, s: S.s, reach: body.seg[1] + body.r, back: body.r - body.seg[0], w: 2 * body.r, L: body.seg[1] - body.seg[0] + 2 * body.r, h: S.h * S.s, fig: look.fig, pe: pe() }; }; // 17-1 pe: play.js choose (먹보)
+  function toPlay(c = ctx, far) { // 17-1: c, far: api.toProp
+    const q = choose(c, api, me(), h.x, h.z, far); if (!q) return false; if (far) q.late = true; // 17-1: to its 단짝: runs
     h.goal = { x: q.ax, z: q.az, act: 'play', q, n: 6, fast: q.late, done: ok => ok || leave(q) }; if (toward()) return true; // inbox 42 C: to one left waiting: runs
     h.goal = null; leave(q); return false;
   }
@@ -181,10 +213,10 @@ export function createActor(ctx, rec) {
     return out.sort(() => Math.random() - 0.5); };
   const over = () => { const R = land(), m = me(), L = R ? R.root(m.mine) : -1; return L >= 0 && due(ctx, h.now, m, st => !m.can(st.x, st.z) && R.root(m.lab(st.x, st.z)) === L); }; // inbox 42 C: one of its kind waits on the bridge's other side
   const say = (kind, os) => ctx.onSocial?.(kind, [api, ...os]); // 13-2 놀이 장면 (habitat.js -> ui): the apis (rec, body)
-  function startSocial(only) { // only: 'huddle' (inbox 42 D: in the rain, the nap)
+  function startSocial(only) { // only: 'huddle' (inbox 42 D: in the rain, the nap), 'pal' (17-1: its 단짝 dozes beside it)
     if (!walkable(h.x, h.z)) return false;
-    const all = pals(), T = h.now, same = all.filter(o => o.rec.species === rec.species), P = all.filter(o => Math.hypot(o.body.x - h.x, o.body.z - h.z) < (only ? 20 : 12)), o = P[0]; // its own kind come from further (in the rain's huddle, any from 20)
-    const kinds = only || ctx.night ? ['nap'] : [...P.length ? ['follow', 'tag', 'greet'] : [], ...P.length && ctx.snowy ? ['ball', 'ball'] : [], ...P.length > 1 ? ['nap', 'nap'] : [], ...same.length ? ['herd', 'herd'] : []]; // 15-2: 눈싸움 on snow
+    const all = pals(), T = h.now, m = ctx.bf?.get(rec.id), same = all.filter(o => o.rec.species === rec.species), P = only === 'pal' ? all.filter(o => o.rec.id === m) : all.filter(o => Math.hypot(o.body.x - h.x, o.body.z - h.z) < (only ? 20 : 12)).sort((a, b) => (b.rec.id === m) - (a.rec.id === m)), o = P[0]; // its own kind come from further (in the rain's huddle, any from 20); 17-1: its 단짝 first
+    const kinds = only || ctx.night ? ['nap'] : [...P.length ? ['follow', 'tag', 'greet'] : [], ...P.length && pe() === 'prank' ? ['tag', 'tag'] : [], ...P.length && ctx.snowy ? ['ball', 'ball'] : [], ...P.length > 1 ? ['nap', 'nap'] : [], ...same.length ? ['herd', 'herd'] : []]; // 15-2: 눈싸움 on snow; 17-1 장난꾸러기: 술래잡기
     if (!kinds.length) return false; const kind = kinds[Math.floor(Math.random() * kinds.length)];
     if (kind === 'follow') { if (!o.join({ kind: 'lead', until: T + 14 })) return false; h.soc = { kind: 'tail', o, until: T + 14 }; say('follow', [o]); return social(); }
     if (kind === 'herd') { // two beside it, a third behind
@@ -270,13 +302,15 @@ export function createActor(ctx, rec) {
   }
   function arrive(g) {
     const T = (a, b) => a + Math.random() * (b - a);
-    if (g.act === 'play') { h.play = start(g.q, h.x, h.z, h.yaw, h.now); ctx.onPlay?.(g.q); h.state = 'play'; h.t = 0; h.pk = 0; return true; } // 28-2: on it (update's play)
+    if (g.act === 'play') { h.play = start(g.q, h.x, h.z, h.yaw, h.now); ctx.onPlay?.(g.q); h.state = 'play'; h.t = 0; h.pk = 0; if (g.q.st.kind === 'seesaw' && !g.q.st.seats[1 - g.q.i] && ctx.bf?.has(rec.id)) [...ctx.crowd].find(b => b.pal?.rec.id === ctx.bf.get(rec.id))?.pal.toProp(g.q.st); return true; } // 28-2: on it (update's play); 17-1: its 단짝 to the seesaw's other end (not mate(): the seat is off its land)
+    if (g.act === 'look') { const o = g.o; h.face = Math.atan2(-(o.z - h.z), o.x - h.x); h.state = 'nuzzle'; h.t = 0; h.dur = 2.4; return true; } // 17-1 호기심쟁이: sniffs at the new prop
+    if (g.act === 'hide') { h.state = 'sleep'; h.t = 0; h.dur = T(5, 8); h.tuck = false; return true; } // 17-1 겁쟁이: by the bush
     if (g.act === 'slide' && g.to && W.slide) { go('walk', g.to[0], g.to[1], 2.4 / W.pace); h.slide = true; return true; }
     if (g.act === 'run') { h.state = 'jump'; h.t = 0; h.dur = 0.55; return true; }
     if (g.act === 'dig') { h.state = 'graze'; h.t = 0; h.dur = T(4, 6); ctx.onDig?.(h.x, h.z); g.done?.(true); return true; } // 14-3 화석 발굴: paws at the sand a while (habitat.js: a puff, now and then a fossil)
     if (g.act === 'roll') { h.state = 'roll'; h.t = 0; h.dur = 2.6; g.done?.(true); return true; } // 15-2: by the snow pile, a roll in the snow
     if (g.act === 'bridge') { if (ctx.onBridge) { h.state = 'idle'; h.t = 0; h.dur = 1; } else { ctx.onBridge = h; go('cross', g.far.x, g.far.z, 1.3); } return true; } // inbox 42 C: at the landing: over (one at a time)
-    if (g.act === 'eat') { h.after = g.done; h.state = 'graze'; h.t = 0; h.dur = 3; return true; }
+    if (g.act === 'eat') { h.after = g.done; h.state = 'graze'; h.t = 0; h.dur = pe() === 'glutton' ? 7 : 3; return true; } // 17-1 먹보: at the fruit a long while
     if (g.act === 'greet') { const o = g.o, b = o.body; h.state = 'idle'; h.t = 0; h.dur = 0.5; // inbox 42 C 코 맞대기: the other still waits for it: nose to nose
       if (o.soc?.kind === 'wait' && o.soc.o === api && Math.hypot(b.x - h.x, b.z - h.z) < g.D + 1) { h.face = Math.atan2(-(b.z - h.z), b.x - h.x); h.state = 'nuzzle'; h.dur = 1.8; o.nuzzle(h.x, h.z); say('greet', [o]); }
       else if (o.soc?.o === api) o.soc = null; return true; }
@@ -357,6 +391,7 @@ export function createActor(ctx, rec) {
       h.goal = { x, z, act, to, fast, done, q, yaw, dur, n: 6 }; if (!toward()) { h.state = 'idle'; h.t = 0; h.dur = 0.4; } return true;
     },
     busy: () => !!h.goal || !!h.after || !!h.play,
+    toProp: st => api.free() && toPlay({ play: [st], night: ctx.night }, 40), // 17-1: to the seesaw its 단짝 is on
     // inbox 42 C: free to join another (social): not held, sent, on a prop, with another, asleep or on the bridge
     free: () => !api.hold && !h.goal && !h.after && !h.play && !h.soc && !h.shel && !h.then && ctx.onBridge !== h && ['idle', 'graze', 'walk'].includes(h.state),
     join(s) { if (!api.free()) return false; h.soc = s; h.stuck = false; h.state = 'idle'; h.t = 0; h.dur = 0; return true; }, // its part, from its next pick

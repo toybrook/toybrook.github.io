@@ -18,8 +18,9 @@ import { fireflies } from './daylight.js';
 import { mergeGeometries } from '../../vendor/utils/BufferGeometryUtils.js';
 
 // per 100 m²: trees, bushes, rocks, flower clusters; grass: the share of the first board's density
+const DRIFT_PAL = [0, 3, 4]; // the flower hill's three colours (flowerPal: white, pink, yellow)
 const MIX = {
-  flowerhill: { tree: 0, bush: 0.3, rock: 0.2, fl: 9, grass: 1 }, grove: { tree: 0, bush: 1.0, rock: 0.6, fl: 0.6, grass: 1 },
+  flowerhill: { tree: 0, bush: 0.3, rock: 0.2, fl: 4, drift: 6, grass: 1 }, grove: { tree: 0, bush: 1.0, rock: 0.6, fl: 0.6, grass: 1 },
   fork: { tree: 0.3, bush: 0.8, rock: 0.4, fl: 2.2, grass: 1 }, orchard: { tree: 0, bush: 0.1, rock: 0.1, fl: 0.6, grass: 0.5 },
   lookout: { tree: 0.1, bush: 0.5, rock: 0.6, fl: 3, grass: 1 }, mushroom: { tree: 1.6, bush: 0.8, rock: 0.3, fl: 0.3, grass: 0.8 },
   reeds: { tree: 0.1, bush: 0.4, rock: 0.2, fl: 0.6, grass: 0.8 }, falls: { tree: 0.3, bush: 0.6, rock: 0.8, fl: 1, grass: 1 },
@@ -241,7 +242,13 @@ export function zoneProps(scene, hab, o) {
     if (mix.bush) place(n(mix.bush), (x, z) => low(0.9, x, z), (x, z) => N.add('bush', nk.bush, x, z, 0.9 + rnd() * 0.4));
     if (mix.rock) place(n(mix.rock), (x, z) => low(1, x, z), (x, z) => snow ? rock(x, z, 0.4 + rnd() * 0.45) : N.add('rock', nk.rock, x, z, 0.55 + rnd() * 0.5));
     if (mix.fern) place(n(mix.fern), (x, z) => low(0.5, x, z), (x, z) => K.fern(x, z, 0.8 + rnd() * 0.5)); // 14-3
-    if (mix.fl) place(n(mix.fl), (x, z) => low(0.4, x, z), (cx, cz) => { const pi = Math.floor(rnd() * flowerPal.length); N.flowers(cx, cz, pi); flowerCluster(N.Ls, cx, cz, flowerPal[pi], free, rnd, jitter, heightAt); });
+    if (mix.fl && mix.drift) { // inbox 67-3 the flower hill: no carpet. Drifts of small flower bushes in the grass, one colour
+      // each (of three), thick at a drift's middle and thinning out, sparse toward the strip's edges
+      const z0 = Math.max(r[2], back + 2.4), D = Array.from({ length: mix.drift }, (_, i) => ({ x: r[0] + 2 + rnd() * (r[1] - r[0] - 4), z: z0 + 2 + rnd() * (r[3] - z0 - 4), pi: DRIFT_PAL[i % DRIFT_PAL.length] }));
+      const near = (x, z) => D.reduce((b, d) => { const g = Math.exp(-((x - d.x) ** 2 + (z - d.z) ** 2) / (2 * (2.2 * UNIT) ** 2)); return g > b.g ? { g, d } : b; }, { g: 0, d: D[0] });
+      const edge = (x, z) => Math.min(1, Math.max(0, Math.min(x - r[0], r[1] - x, z - z0, r[3] - z) / (3 * UNIT)));
+      place(n(mix.fl), (x, z) => low(0.4, x, z) && rnd() < near(x, z).g * edge(x, z), (cx, cz) => { const pi = near(cx, cz).d.pi; N.flowers(cx, cz, pi); flowerCluster(N.Ls, cx, cz, flowerPal[pi], free, rnd, jitter, heightAt); });
+    } else if (mix.fl) place(n(mix.fl), (x, z) => low(0.4, x, z), (cx, cz) => { const pi = Math.floor(rnd() * flowerPal.length); N.flowers(cx, cz, pi); flowerCluster(N.Ls, cx, cz, flowerPal[pi], free, rnd, jitter, heightAt); });
     if (mix.grass) N.bare(() => place(Math.round(A * 1.1 * mix.grass), (x, z) => inRect(r, x, z, 0.4), (x, z) => {
       const w = Z.wd(x, z), bank = w > -0.1 && w < 0.7;
       if ((!bank && !free(x, z, 0)) || (bank && rnd() < 0.6)) return;

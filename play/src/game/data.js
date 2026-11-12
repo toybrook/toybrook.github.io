@@ -20,7 +20,7 @@ const MIN = 60 * 1000;
 export const EDITION = 'beta';
 // inbox 65: held back from the public build until the user okays them (14-1·14-2 신수와 이야기 카드, 14-3 공룡 정글). Off here;
 // tools/build-web.mjs turns this line on, tools/check-hold.mjs checks the built rules. The save's shape is the same either way
-export const HOLD = { myth: true, dino: true }; // release build: held back (inbox 65)
+export const HOLD = { myth: false, dino: true }; // release build: the jungle held back (inbox 65; 14-1·14-2 out from 0.77.0, inbox 66-0)
 // inbox 31 진행 속도, one table per edition. beta: quick and fun (the open beta; check-eggs sim 31 sets it against its goals:
 // 3 hatches and a first adult in a new game's first 10 minutes, the pond in a day, the snow in 3, level 10 in 2 days and 20
 // and 땅 넓히기 step 6 in about a week, for 3 visits a day of 10 minutes). release: the numbers as they were (sims 16~18), to be
@@ -54,6 +54,9 @@ const VISIT = { stay: 24 * 60 * MIN, max: 3, card: 10, cardDaily: 3 };
 // 16-2 특별한 하늘 (sky.js, 가안): a night's odds (a real meteor shower peak: 유성우 for sure); aurora: snow more often, red of the aurora nights;
 // bow2: a day's rainbow is a double one; miss: no 유성우·오로라 seen this many nights -> the next one has one; first: ♥ a 하늘 기록 slot first filled
 const SKY = { meteor: 0.25, aurora: 0.2, auroraSnow: 0.4, red: 0.05, comet: 0.07, bow2: 0.15, miss: 5, first: 5 };
+// 17-1 단짝 (game/pals.js, 가안): two friends whose 성격 go together, out in the same place `hours` in all (real time, the app shut
+// too) -> 단짝; one new pair a day, a place one pair per `per` friends out (1 at least)
+const PAL = { hours: 20, per: 6 };
 const MYTH = { beta: { day: 1, nights: 1, guest: 3 }, release: { day: 3, nights: 3, guest: 7 } }; // release: it comes in about a week, settles in about two (check-eggs 14-1)
 export const PACE = {
   release: {
@@ -76,6 +79,7 @@ export const PACE = {
     myth: MYTH.release,
     visit: VISIT,
     sky: SKY,
+    pal: PAL,
   },
   beta: { // max 20: 10 h of eggs (the night between the last visit and the first); slots 3: with 2 the snow opened on day 4 (inbox-31.md)
     nest: { every: 30 * MIN, max: 20, start: 1, startRarity: 'common', early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3 }, // 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
@@ -97,11 +101,12 @@ export const PACE = {
     myth: MYTH.beta,
     visit: VISIT,
     sky: SKY,
+    pal: PAL,
   },
 };
 const P = PACE[EDITION];
 export const BALANCE = {
-  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, event: P.event, myth: P.myth, visit: P.visit, sky: P.sky, // PACE (above)
+  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, event: P.event, myth: P.myth, visit: P.visit, sky: P.sky, pal: P.pal, // PACE (above)
   candy: { price: 15, free: 1 },                     // 꼬마 사탕 (inbox 14): holds a baby's growth (nothing shows on it); given back when it grows on. Hearts; a new game has `free`
   pity: { heroic: 30, legendary: 180 },              // shard gauges per egg type: every egg cracked +1 to each; full = the next egg is that rarity (legendary first).
                                                      // A natural one of that rarity or better empties the gauge. Guaranteed eggs prefer variants not owned yet
@@ -946,7 +951,7 @@ export const PLACES = [
 // -> that night it comes -> a guest PACE myth.guest days -> it settles. pages: the story, page i shown when step i is done
 export const MYTHIC = [{
   id: 'firemane', name: '불갈기 천리마', habitat: 'meadow', hair: '붉은 갈기 털', scenes: 3,
-  model: { file: 'assets/models/myth_firemane.glb', h: 2.517, r: 0.389, seg: [-0.43, 0.934], legs: { hip: 0.8432, foot: 0.165, x: [0.4, -0.42], z: 0.19 }, wing: [0.041, 1.266, 0.26] }, // tools/bake-mythic.mjs prints these
+  model: { file: 'assets/models/myth_firemane.glb', h: 2.517, r: 0.389, seg: [-0.43, 0.934], legs: { hip: 0.8432, foot: 0.165, x: [0.4, -0.42], z: 0.19 } }, // tools/bake-mythic.mjs prints these
   place: { id: 'firehill', name: '불의 언덕', lines: ['{n}{은/는} 따뜻한 언덕에서 붉은 털 한 가닥을 물고 왔어요', '{n}{이/가} 언덕의 그을린 풀밭을 한참 냄새 맡았어요', '{n}{은/는} 언덕 꼭대기에서 불씨 같은 털을 찾았어요'] },
   tales: { at: '옛 제단', // 14-2 이야기 카드 (game/story.js): its coming, its settling
     meet: ['하늘에서 불씨 하나가 천천히 내려왔어요.', '제단의 불 세 개가 한꺼번에 환해졌어요.', '친구들이 모두 고개를 들고 바라봤어요.'],

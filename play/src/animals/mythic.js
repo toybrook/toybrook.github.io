@@ -1,7 +1,7 @@
 // 14-1 신수: the 불갈기 천리마's figure (data.js MYTHIC, baked by tools/bake-mythic.mjs). Not a SPECIES, so not figure.js's
 // makeFigure: one model, its own materials (matte vinyl coat, gold harness, a 단청 saddle cloth) and its fire, a translucent
 // resin in three layers (white core, yellow, orange outside: a fresnel ramp), embers and, at night, a warm pool of light.
-// Rearing pivots the body on the hind hips (hinge); the front legs paw, the mane flares, variant B's wings open.
+// Rearing pivots the body on the hind hips (hinge); the front legs paw, the mane flares (inbox 66-0: A, no wings, for good).
 import * as THREE from 'three';
 import { MYTHIC, sized } from '../game/data.js';
 import { meshes } from './figure.js';
@@ -9,9 +9,8 @@ import { toyMat, windTime } from '../habitat/toyKit.js';
 import { eyeMat } from './materials.js';
 import { calm } from '../config.js';
 
-export const WINGS = false; // 14-1 A/B: false = A (no wings), true = B (small folded flame wings at the shoulders, open when it rears)
 const M = MYTHIC[0].model;
-export const MS = sized('firemane', 'adult', M); // s, r, seg in world units (crowd.js), legs / wing in model units
+export const MS = sized('firemane', 'adult', M); // s, r, seg in world units (crowd.js), legs in model units
 let G = null, loading = null;
 export const loadMyth = () => loading ??= meshes(M.file).then(g => { G = g; });
 
@@ -31,9 +30,9 @@ const fireMat = (core, mid, rim, a0 = 0.96, a1 = 0.72) => new THREE.ShaderMateri
 export const dot = (c0, c1) => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
   r.addColorStop(0, c0); r.addColorStop(1, c1); g.fillStyle = r; g.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
 
-// wings: null = WINGS. obj stands at its hooves; pose(p) as figure.js's ({ gait 'still' | 'walk' | 'trot' | 'run', ph, lie, rear, flare });
+// obj stands at its hooves; pose(p) as figure.js's ({ gait 'still' | 'walk' | 'trot' | 'run', ph, lie, rear, flare });
 // tick(night 0..1) each frame
-export function makeMyth(wings = WINGS) {
+export function makeMyth() {
   const s = MS.s, L = M.legs, root = new THREE.Group(), body = new THREE.Group(), hinge = new THREE.Group(), inner = new THREE.Group();
   body.scale.setScalar(s); root.add(body); hinge.position.set(L.x[1], L.hip, 0); inner.position.set(-L.x[1], -L.hip, 0); hinge.add(inner); body.add(hinge);
   const coat = toyMat('#c24a33', { emissive: '#ff6a3a', emissiveIntensity: 0 }), gold = new THREE.MeshStandardMaterial({ color: '#e2a93c', metalness: 0.5, roughness: 0.4 });
@@ -44,7 +43,6 @@ export function makeMyth(wings = WINGS) {
   inner.add(mesh('fire', fire), mesh('gem', gem));
   const legs = [L.x[0], L.x[1]].flatMap(x => [L.z, -L.z].map(z => { const g = new THREE.Group(); g.position.set(x, L.hip, z); g.add(mesh('leg'), mesh('hoof'), mesh('hooffire', fire));
     g.userData = { front: x > 0, pair: (x > 0) === (z > 0) }; (x > 0 ? inner : body).add(g); return g; }));
-  const wing = wings ? [1, -1].map(k => { const w = new THREE.Group(); w.position.set(M.wing[0], M.wing[1], M.wing[2] * k); w.scale.z = k; w.add(mesh('wing', fire)); w.userData.k = k; inner.add(w); return w; }) : [];
   // embers: rise off the mane and back, fade out (fewer when motion is calmed)
   const N = calm() ? 8 : 24, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), seed = Array.from({ length: N }, (_, i) => [Math.random(), -1.2 + 1.9 * Math.random(), (Math.random() - 0.5) * 0.5, 2 + Math.random() * 1.6]);
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -56,7 +54,7 @@ export function makeMyth(wings = WINGS) {
   const bodyMin = 0.7; // the belly's lowest point in model units (bake print): lying down brings it near the ground
   let night = 0;
   return {
-    obj: root, embers, pool, wings: wing.length,
+    obj: root, embers, pool,
     pose(p) {
       const lie = p.lie || 0, rear = p.rear || 0, ph = p.ph || 0, sn = Math.sin(ph * Math.PI * 2), run = p.gait === 'run', trot = p.gait === 'trot' || p.gait === 'walk';
       body.position.y = -lie * (bodyMin - 0.12) * s + (run || trot ? Math.abs(sn) * (run ? 0.09 : 0.05) * s : 0);
@@ -73,7 +71,6 @@ export function makeMyth(wings = WINGS) {
       }
       const fl = Math.max(p.flare || 0, rear);
       fire.uniforms.uF.value = fl; fire.uniforms.uW.value = calm() ? 0.3 : 1 + fl;
-      for (const w of wing) { const o = rear; w.rotation.set(w.userData.k * 1.05 * o, 0, -0.7 * o); }
     },
     tick(t, n = night) {
       night = n; coat.emissiveIntensity = 0.1 * n; fire.uniforms.uN.value = gem.uniforms.uN.value = n; pool.material.opacity = 0.55 * n;

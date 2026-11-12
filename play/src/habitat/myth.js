@@ -1,6 +1,6 @@
 // 14-1 신수의 부름 in the meadow (habitat.js makes it, ui/myth.js drives it: set(stage, lit, wait)). The faint fire prints at the
 // board's far edge, the burnt hoofprints round a campfire, the altar's flames, and the 불갈기 천리마 once it came: it wanders and
-// trots, lies down by the altar at night, rears now and then (mane flared, B's wings open), runs a lap of the meadow in the morning
+// trots, lies down by the altar at night, rears now and then (mane flared), runs a lap of the meadow in the morning
 // with the horses after it (fire hoofprints that fade behind it), steams in the rain; friends come and stand round it.
 // cut(): its coming, ≤10 s (down from the sky onto the altar, a landing, a rear); a tap or skip() ends it.
 import * as THREE from 'three';

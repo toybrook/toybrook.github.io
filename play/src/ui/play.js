@@ -14,6 +14,7 @@ import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep } from './de
 import { openCabinet } from './cabinet.js';
 import { figureThumb } from './thumbs.js';
 import { guestName } from '../game/visit.js';
+import { PE } from '../game/pals.js';
 import { sfx } from './sound.js';
 import { homeHintDue, appHintDue } from '../game/backup.js';
 import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
@@ -94,6 +95,7 @@ export function initPlay(nav) {
       if (out.length && !appT && appHintDue(DEV, G.S.flags)) { appQuiet = Date.now(); appT = setTimeout(appBand, 800); }
     }
     hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId]); hab?.sync(G.withGuests()); // 16-1: and the guests; inbox 42 B: the props first, so no one comes out inside one
+    hab?.setPals(G.S.flags.palOff ? null : new Map(G.S.pals.list.flatMap(p => [[p.a, p.b], [p.b, p.a]]))); // 17-1 성격·단짝 (walk.js)
   }
 
   function onTap(kind, rec, x, y) {
@@ -132,6 +134,7 @@ export function initPlay(nav) {
     if (bubbleFor && ev.some(e => e.type === 'grown' && e.animal.id === bubbleFor.id)) showBubble(bubbleFor); // grown up: says its name
     const grown = ev.filter(e => e.type === 'grown').map(e => e.animal);
     if (grown.length && hab) setTimeout(cards, 2200); // after the growing (figure.js: about 1.5 s), the "다 자랐어요" card
+    else if (ev.some(e => e.type === 'pal') && hab) setTimeout(cards, 1200); // 17-1 단짝 card
     const eggs = ev.filter(e => e.type === 'egg').length;
     if (eggs && hab) toast(eggs > 1 ? `둥지에 알이 ${eggs}개 생겼어요` : '둥지에 알이 생겼어요');
     for (const e of ev) { // later ones matter more: they win the toast
@@ -148,16 +151,23 @@ export function initPlay(nav) {
   const busy = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo') || resting(); // inbox 43
   function cards() {
     if (!hab || !card.hidden) return;
-    const list = G.S.animals.filter(a => a.card); if (!list.length) return;
+    const list = G.S.animals.filter(a => a.card), pal = !list.length && !G.S.flags.palOff && G.S.pals.list.find(p => p.new); if (!list.length && !pal) return;
     // 27-7c: the nest (opened by 자리 비운 사이's egg row), another card or a tip in the way: wait for it (was dropped until the next visit)
     if (busy()) { clearTimeout(later); later = setTimeout(cards, 800); return; }
+    if (pal) { // 17-1 "○○와 ○○가 단짝이 되었어요!" (after the grown cards)
+      const [a, b] = [pal.a, pal.b].map(id => G.S.animals.find(x => x.id === id)), na = nameOf(a), nb = nameOf(b);
+      card.innerHTML = `<div><h2>${na}${josa(na, '과', '와')} ${nb}${josa(nb, '이', '가')} 단짝이 되었어요!</h2><p class="pair"><img alt="${na}"><span>♥</span><img alt="${nb}"></p><p class="sub">${PE[a.pe].name} · ${PE[b.pe].name} · 나란히 걷고, 같이 낮잠 자고, 시소도 같이 타요</p><button data-close>좋아요</button></div>`;
+      card.querySelectorAll('.pair img').forEach((m, i) => { const x = [a, b][i]; figureThumb(x.species, x.variant, x.color, x.acc, x.stage).then(u => { m.src = u; }); });
+      card.querySelector('button').onclick = () => { card.hidden = true; G.palSeen(); };
+      card.hidden = false; sfx('grown'); return;
+    }
     const one = list.length === 1, nm = one && nameOf(list[0]), more = list.length - 4;
     card.innerHTML = `<div><h2>${one ? `${nm}${josa(nm, '이', '가')} 다 자랐어요!` : `친구 ${list.length}마리가 다 자랐어요!`}</h2>${
       list.slice(0, 4).map(a => `<p class="pair"><img alt="새끼"><span>→</span><img alt="성체"></p>`).join('')}${more > 0 ? `<p>그리고 ${more}마리 더</p>` : ''}${
       one ? '' : '<p class="sub">자란 모습은 도감에서도 볼 수 있어요</p>'}<button data-close>좋아요</button></div>`;
     card.querySelectorAll('.pair').forEach((p, i) => { const a = list[i], [b, c] = p.querySelectorAll('img');
       figureThumb(a.species, a.variant, a.color, a.acc, 'baby').then(u => { b.src = u; }); figureThumb(a.species, a.variant, a.color, a.acc, 'adult').then(u => { c.src = u; }); });
-    card.querySelector('button').onclick = () => { card.hidden = true; G.grownSeen(list.map(a => a.id)); };
+    card.querySelector('button').onclick = () => { card.hidden = true; G.grownSeen(list.map(a => a.id)); setTimeout(cards, 600); }; // 17-1: then a 단짝 card, if one waits
     card.hidden = false; sfx('grown');
   }
 

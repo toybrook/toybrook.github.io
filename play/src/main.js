@@ -300,9 +300,10 @@ const VOLS = [['vAll', '전체'], ['vAmb', '배경 소리'], ['vFx', '효과음'
 const LOOK_ROWS = [['gfx', '그래픽 품질', [['low', '낮음'], ['mid', '보통'], ['high', '높음']]], ['saver', '배터리 절약', [[false, '끄기'], [true, '켜기']]],
   ['deskSound', '책상 모드 소리', [[false, '끄기'], [true, '배경 소리만']]], ...navigator.wakeLock ? [['deskWake', '책상 모드 화면 켜 두기', [[true, '켜기'], [false, '끄기']]]] : [], // 16-3
   ['font', '글자 크기', [['s', '작게'], ['m', '보통'], ['l', '크게']]], ['calm', '움직임 줄이기', [[false, '끄기'], [true, '켜기']]], ['signs', '구역 팻말 보이기', [[true, '켜기'], [false, '끄기']]],
+  ['pal', '성격·단짝', [[true, '켜기'], [false, '끄기']]], ['palLine', '단짝 하트 끈', [[true, '켜기'], [false, '끄기']]], // 17-1: pal is the save's flags.palOff (game/pals.js)
   ...navigator.vibrate && matchMedia('(pointer:coarse)').matches ? [['buzz', '진동', [[false, '끄기'], [true, '켜기']]]] : [],
   ['stats', '이용 통계 보내기', [[true, '켜기'], [false, '끄기']]]]; // inbox 41 A (src/ui/stats.js)
-const segRow = ([k, name, opts]) => { const now = k === 'calm' ? calm() : PREFS[k];
+const segRow = ([k, name, opts]) => { const now = k === 'calm' ? calm() : k === 'pal' ? !G.S.flags.palOff : PREFS[k];
   return `<div class="row"><b>${name}</b><div class="seg">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}"${now === v ? ' class="on"' : ''}>${t}</button>`).join('')}</div></div>`; };
 const prefs = $('prefs'), rows = $('prefRows'), help = $('help');
 const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
@@ -333,6 +334,7 @@ rows.onclick = e => {
     ask(ok === false ? '복사하지 못했어요.\n의견 양식에 겪은 일을 적어 주세요.' : '버전·기기·최근 오류를 복사했어요.\n의견 양식의 글칸에 붙여 넣고 겪은 일을 적어 주세요.', '양식 열기', '닫기');
     $('ask').querySelector('[data-ok]').addEventListener('click', () => open(fbUrl(), '_blank', 'noopener')); return; } // opened in the tap itself, not after a promise (popup blockers)
   if (!d.k) return;
+  if (d.k === 'pal') { G.flag('palOff', d.v !== 'true'); return drawPrefs(); } // 17-1
   const opt = [...PREF_ROWS, ...LOOK_ROWS].find(r => r[0] === d.k)[2].find(o => String(o[0]) === d.v), was = PREFS[d.k];
   PREFS[d.k] = opt[0]; savePrefs(); applyLook(); drawPrefs(); applySound();
   if (d.k === 'gfx' && was !== opt[0]) regfx(); // 26-3: the habitat is built again at the new quality

@@ -30,6 +30,7 @@
 // game no longer knows stay in the save untouched and are just not shown.
 import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
 import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
+import { blank as palBlank, tidyPals, palTick, peOf } from './pals.js'; // 17-1
 import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
@@ -64,7 +65,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 } }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   return S;
@@ -103,7 +104,7 @@ export function fromSave(raw, now) {
         pile: typeof R.pile === 'string' ? R.pile : '', pileAt: n(R.pileAt), built: n(R.built), luck: n(R.luck) }]));
       const own = evOwned(S); // 15-2: worn event wear, known ones, no more of each than bought
       for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
-    tidyVisit(S); tidySky(S); // 16-1, 16-2
+    tidyVisit(S); tidySky(S); tidyPals(S); // 16-1, 16-2, 17-1
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -355,6 +356,7 @@ export function advance(S, now, rng = Math.random) {
   evTick(S, now, rng); // 15-1
   mythTick(S, now, ev); // 14-1
   visitTick(S, now, ev); // 16-1
+  palTick(S, now, ev); // 17-1
   const L = gardenLevel(S.xp); if (L > S.lv) { ev.push({ type: 'level', from: S.lv, level: L, unlocks: unlocksBetween(S.lv, L) }); S.lv = L; }
   return ev;
 }
@@ -431,6 +433,7 @@ export function hatch(S, i, now, rng = Math.random, forced = false) {
   const c = crack(S, s.egg, now, rng, forced); if (!c) return null;
   const a = { id: S.nextId++, species: c.species, variant: c.variant, color: c.color, acc: c.acc, egg: s.egg.type, parents: s.egg.parents, stage: 'baby', born: now,
     g: 0, gAt: now, fed: 0, adultAt: null, stored: false, heartAt: 0, pending: true };
+  a.pe = peOf(a.id, now); // 17-1 성격
   const seen = a.color && (S.colors[key(a.species, a.variant)] ??= []);
   if (seen && !seen.includes(a.color)) { seen.push(a.color); a.newColor = true; }
   S.animals.push(a); S.slots[i] = null; bump(S, 'hatch');
@@ -976,5 +979,6 @@ export function skip(S, ms, now, rng = Math.random) {
   if (Number.isFinite(S.flags.lvCard?.at)) S.flags.lvCard.at -= ms; // 41 D: level.js's gap between level cards
   for (const k of MYTH_T) if (k !== 'bond' && k !== 'read' && Number.isFinite(S.myth[k])) S.myth[k] -= ms; // 14-1
   for (const g of S.visit.guests) { g.at -= ms; g.until -= ms; } // 16-1
+  if (S.pals.at) S.pals.at -= ms; for (const p of S.pals.list) p.at -= ms; // 17-1
   return advance(S, now, rng);
 }
