@@ -3,7 +3,7 @@
 // (an InstancedMesh of wings, two a butterfly).
 import * as THREE from 'three';
 
-const COL = { garden: '#ff9fbf', ranch: '#ffd75e', woods: '#ff9c4a', water: '#7fd0ff', night: '#e6ff9a', play: '#c9a6ff', toys: '#ff9a7a' };
+const COL = { garden: '#ff9fbf', ranch: '#ffd75e', woods: '#ff9c4a', water: '#7fd0ff', night: '#e6ff9a', play: '#c9a6ff', toys: '#ff9a7a', wild: '#fff3b0' }; // wild: 17-3 들꽃
 const MAX = 24;
 
 export function butterflies(scene) {

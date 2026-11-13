@@ -18,6 +18,7 @@ import { toast, josa, tip, ask } from './hud.js';
 import { openShare } from './share.js';
 import { sfx } from './sound.js';
 import { railEnds } from '../habitat/train.js';
+import { trails } from '../game/wild.js'; // 17-3
 
 const el = document.getElementById('decor'), habEl = document.getElementById('habitat');
 // 13-2: a play prop's 놀이 장면 (seen / all): a reason to buy and place it
@@ -44,13 +45,17 @@ let tab = 'nature', brush, grid = false, undo = [], redo = [], min = false, sy =
 const mine = () => PROPS.filter(P => (P.habitat ?? habId) === habId && (!P.gift || G.S.props.some(p => p.prop === P.id && p.hab === habId))); // 41: a gift one only once had here
 const stowed = id => G.S.props.filter(p => p.prop === id && p.hab === habId && !p.placed && !p.nat);
 const stowedNat = id => G.S.props.filter(p => p.nat && p.prop === id && p.hab === habId && !p.placed);
-const sig = () => JSON.stringify([G.S.hearts, G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], held?.uid, ok, held?.ring && hab.decor.clears(), tab, brush, sweep, grid, undo.length, redo.length, pick && [...pick], isRail(held) && heldLine()]);
+const sig = () => JSON.stringify([G.S.hearts, G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], held?.uid, ok, held?.ring && hab.decor.clears(), tab, brush, sweep, grid, undo.length, redo.length, pick && [...pick], isRail(held) && heldLine(), G.S.wild.h[habId]?.v]);
 const picks = () => G.S.props.filter(p => pick?.has(p.uid) && p.placed && p.hab === habId); // those picked still on the board
 // a size in 1 m cells (its footprint across; inbox 52: 1 m as the sizes and the rails step, not the 1.5 m 격자, so 작게·보통·크게·아주 크게
 // differ in number too - text only, the sizes and snapping are as they were), its set, a light at night
 const info = (P, N, f = 1) => { const n = Math.max(1, Math.round(2 * P.r * f)), s = !N && SETS.find(s => s.props.includes(P.id));
   return [`${n}×${P.id === 'railbridge' ? n / 2 : n}칸`, s && `${s.name} 세트`, N ? '처음부터 있던 것' : P.light && '밤에 빛나요'].filter(Boolean).join(' · '); };
 // before a change: the layout as it is, for 되돌리기 (a new change forgets what 다시 하기 had)
+// 17-3 정원이 숨 쉬어요: the animals' worn way made a real path (the brush held if it is a path one, else 흙길, 돌길 or 자갈: the
+// first this habitat has and the player may use), ↶ undoes it; what grew by itself cleared at once (자연 정리: it grows again)
+const firmB = () => [...BRUSHES[brush]?.way ? [brush] : [], 1, 7, 3].find(b => brushIn(b, habId) && can(G.S, 'brush:' + BRUSHES[b].id));
+const grown = () => { const H = G.S.wild.h[habId]; return H ? Object.keys(H.g).length + trails(G.S, habId).length : 0; };
 const keep = () => { undo.push(layoutOf(G.S, habId)); if (undo.length > UNDO) undo.shift(); redo = []; };
 
 export function openDecor(id, api) {
@@ -123,7 +128,7 @@ ${tools()}<div class="nbtns dpad"><button class="sb" data-mv="l" aria-label="왼
   }
   if (sweep) { // inbox 42 F-6 자연 정리: a finger draws a box, two move the view
     el.innerHTML = GRIP() + `<div class="dhead"><b>자연 정리</b><span>손가락으로 네모를 그리면 그 안의 나무·바위·덤불·들꽃을 한 번에 치워요</span></div>
-${tools()}<div class="nbtns"><button class="go" data-endsweep>다 했어요</button></div>
+${tools()}<div class="nbtns">${grown() ? '<button class="sb" data-wclear>자란 것 모두 치우기</button>' : ''}<button class="go" data-endsweep>다 했어요</button></div>
 <p class="dhint">두 손가락으로 화면을 옮기고 키워요 · 치운 것은 자연 탭에서 다시 심어요 · 물가 돌·다리·울타리 밖 숲은 그대로예요</p>`;
     return;
   }
@@ -131,7 +136,7 @@ ${tools()}<div class="nbtns"><button class="go" data-endsweep>다 했어요</but
   if (brush !== undefined) { // 땅 칠하기: the brushes; a finger paints the cells it passes, two move the view
     el.innerHTML = GRIP() + `<div class="dhead"><b>땅 칠하기</b><span>칸을 손가락으로 칠해요 · 길은 옆 칸과 저절로 이어지고, 울타리·돌담은 동물이 돌아가요</span></div>
 <div class="dbrush">${BRUSHES.map((b, i) => { if (!brushIn(i, habId) || b.id === 'bloom') return ''; /* 74: 꽃밭 merged into 풀 (67-3 made them alike; painted cells stay) */ const k = 'brush:' + b.id, lk = !can(G.S, k); return `<button class="${brush === i ? 'on' : lk ? 'lock' : ''}" data-brush="${i}"><i style="background:${b.c}"></i>${b.name}${lk ? `<small>Lv ${needFor(k)}</small>` : ''}</button>`; }).join('')}<button class="${brush === null ? 'on' : ''}" data-brush="x"><i class="erase"></i>지우개</button></div>
-${tools()}<div class="nbtns"><button class="go" data-endpaint>다 칠했어요</button></div>
+${tools()}<div class="nbtns">${trails(G.S, habId).length && firmB() != null ? `<button class="sb" data-firm>진짜 길로 굳히기<small>동물들이 다닌 길 ${trails(G.S, habId).length}칸 → ${BRUSHES[firmB()].name}</small></button>` : ''}<button class="go" data-endpaint>다 칠했어요</button></div>
 <p class="dhint">두 손가락으로 화면을 옮기고 키워요${habId === 'pond' ? ' · 연못은 물가 풀밭만 칠해요' : habId === 'snow' ? ' · 설원은 얼음 연못 밖 눈밭만 칠해요' : habId === 'dino' ? ' · 공룡 정글은 석호 밖 땅만 칠해요' : ''}</p>`;
     return;
   }
@@ -238,7 +243,7 @@ el.addEventListener('pointerdown', e => { if (!e.target.closest('[data-rot="15"]
 const unspin = () => { if (!spin) return; clearTimeout(spin.t); if (spin.i) { clearInterval(spin.i); spun = Date.now() + 400; } spin = null; };
 for (const k of ['pointerup', 'pointercancel']) addEventListener(k, unspin);
 el.addEventListener('contextmenu', e => { if (e.target.closest('[data-rot]')) e.preventDefault(); });
-el.addEventListener('click', e => {
+el.addEventListener('click', async e => {
   const b = e.target.closest('button'), d = b?.dataset;
   if (d?.fold != null || !b && e.target.closest('.dhead')) { if (Date.now() > swiped) fold(!min); return; }
   if (!b || b.disabled) return;
@@ -270,6 +275,10 @@ el.addEventListener('click', e => {
   else if (d.brush) { if (d.brush !== 'x' && !can(G.S, 'brush:' + BRUSHES[+d.brush].id)) return locked('brush:' + BRUSHES[+d.brush].id); brush = d.brush === 'x' ? null : +d.brush; hab.decor.paint(brush); draw(); }
   else if (d.sweep != null) { sweep = 1; hab.decor.sweep(true); draw(); }
   else if (d.endsweep != null) { sweep = 0; hab.decor.sweep(false); draw(); }
+  else if (d.firm != null) { const b = firmB(), c = trails(G.S, habId).map(([k]) => k.split(',').map(Number)); if (b == null || !c.length) return;
+    keep(); const n = G.paintCells(habId, c, b); if (!n) { undo.pop(); return; } toast(`동물들이 다닌 길 ${n}칸을 ${BRUSHES[b].name}로 굳혔어요 · ↶로 되돌릴 수 있어요`); sfx('place'); draw(); }
+  else if (d.wclear != null) { const n = grown(); if (!n || !await ask(`저절로 자란 들꽃·이끼·갈대·수련과 동물들이 다닌 길을 모두 치울까요? 며칠 지나면 다시 자라요.`, '치우기')) return;
+    G.wildClear(habId); toast('자란 것을 치웠어요 · 며칠 지나면 다시 자라요'); sfx('undo'); draw(); }
   else if (d.endpaint != null) { brush = undefined; hab.decor.paint(undefined); draw(); }
   else if (d.rot) { if (Date.now() > spun) hab.decor.rotate(+d.rot * Math.PI / 180); }
   else if (d.c || d.sz) { hab.decor.look(d.c ? { c: +d.c } : { sz: +d.sz }); draw(); }

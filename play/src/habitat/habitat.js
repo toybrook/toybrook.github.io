@@ -22,7 +22,7 @@ import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
 import { SPECIES, MODELS, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable } from '../game/data.js';
 import { SP, variantOf, habitatOf, known, topAt } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
-import { ambience, sfx, music, playing, hear, pet } from '../ui/sound.js';
+import { ambience, sfx, music, playing, hear, pet, lilies } from '../ui/sound.js';
 import { tracksOf, network, railEnds, joinTurn, newTrain, moveTo, stepTrain, boardAt, TILE, CARS } from './train.js';
 import { trainModel, recolor, treeCover } from './meadow/props.js';
 import { newPlay } from '../animals/play.js';
@@ -30,6 +30,8 @@ import { blobSlot, ROOM } from '../animals/walk.js';
 import { landOf } from './land.js';
 import { mythLayer } from './myth.js';
 import { skyLayer } from './skyfx.js';
+import { wildLayer } from './wildLayer.js';
+import { colOf, trailsOf, WILD } from '../game/wild.js';
 
 // scene of each habitat that is ready (HABITATS ready: true). 67-2: the meadow's comes with this file (the first egg's board);
 // the others only when one is built (a new player never fetches them before the first egg; the held dino not at all)
@@ -283,8 +285,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // (S.paint) on the ground; the grass clumps under both hidden (a native's footprint, a path, sand or gravel)
   const NAT = Object.fromEntries(NATURE.map(n => [n.id, n])), nature = natureLayer(scene, habitat.ctx.heightAt, U), mask = grassMask(habitat.grass || []);
   let propsIn = false, natSig = null, natSpots = [], natRoofs = [], paintNow = {}, paintSig = '{}', grassDirty = true, gridOn = false, brush, stroke = null, press = null, skipTap = false, sweepOn = false, box = null; // box: inbox 42 F-6 자연 정리, the rectangle being drawn
-  let growNow = 0, growPaint = {}, growSig = ''; const paintAt = k => paintNow[k] ?? growPaint[k]; // 66-2 명성: the path grown (syncGrow), under the player's paint
-  const hideGrass = (x, z) => { const b = paintAt(`${Math.floor(x / U)},${Math.floor(z / U)}`); if ((b >= 1 && b <= 3) || b >= 5) return true; // 25-1: snow and ice too
+  let growNow = 0, growPaint = {}, growSig = '', growRecs = []; const paintAt = k => paintNow[k] ?? growPaint[k]; // 66-2 명성: the path grown (syncGrow), under the player's paint
+  const trailPaint = { b: habId === 'snow' ? 3 : 1, at: {} }; // 17-3: the animals' worn ways, faint 흙길 colour (terrain uPA.r; on snow 자갈) under any paint (syncWild)
+  const hideGrass = (x, z) => { const k = `${Math.floor(x / U)},${Math.floor(z / U)}`, b = paintAt(k); if ((b >= 1 && b <= 3) || b >= 5 || trailPaint.at[k] >= 0.45) return true; // 25-1: snow and ice too; 17-3 a worn way
     for (const o of natSpots) if (!o.open && Math.abs(o.x - x) < o.r && Math.abs(o.z - z) < o.r && Math.hypot(o.x - x, o.z - z) < o.r) return true;
     const y = bump(x, z); return y < -0.1 ? true : Math.abs(y) > 0.005 ? y : false; }; // 28-6: on a stamp, raised (or lowered) with it; in a puddle, gone
   // 28-6 울타리·돌담: the standing brushes' cells (lines.js), a spot each in the decor list: animals go round, props keep off
@@ -293,7 +296,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     for (const o of lineSpots) { const i = D.list.indexOf(o); if (i >= 0) D.list.splice(i, 1); }
     lineSpots = lines.set(p).map(([x, z]) => ({ x, z, r: 0.5 * U, h: 0.85, line: 1, fade: null })); D.list.push(...lineSpots); renderer.shadowMap.needsUpdate = true;
   }
-  const showPaint = p => { habitat.ground.setPaint({ ...growPaint, ...p }); syncLines(p); }; // a stroke as it goes (or dropped)
+  const showPaint = p => { habitat.ground.setPaint({ ...growPaint, ...p }, trailPaint); syncLines(p); }; // a stroke as it goes (or dropped)
   // 66-2 명성 (68-3): each 땅 넓히기 Lv (rules.js growStage, 0..5) grows the board a step the 67-3 way: one more 들꽃 무더기 (a
   // drift of patches in the sun, a colour each with a few of the next; on snow the purple ones) on 꽃밭 ground, and a worn 오솔길
   // to it (모래 cells: soft-edged, so it winds as a worn trail does, not the grid of 흙길; on snow 자갈). A drift is in the first
@@ -330,8 +333,73 @@ export async function startHabitat(container, ui, habId, records = [], { level =
         const v = 6 * Math.floor(r() * 999) + (k % 4 === 3 ? pal2 : pal), rot = r() * 6.283;
         if (ok(x, z) && path[key(x, z)] !== WAY && wayD(x, z) > 1.6 && !shade(x, z, 0.9) && props.every(p => Math.hypot(p.x * U - x, p.z * U - z) > PR[p.prop].r * SZ(p) + 0.6)) recs.push({ uid: `grow${d}_${k}`, prop: 'wildflowers', x: x / U, z: z / U, rot, s: 1, v }); }
     }
-    grown.set(recs); const ps = JSON.stringify(path);
-    if (ps !== JSON.stringify(growPaint)) { growPaint = path; habitat.ground?.setPaint({ ...growPaint, ...paintNow }); grassDirty = true; }
+    grown.set(growRecs = recs); const ps = JSON.stringify(path);
+    if (ps !== JSON.stringify(growPaint)) { growPaint = path; habitat.ground?.setPaint({ ...growPaint, ...paintNow }, trailPaint); grassDirty = true; }
+  }
+  // 17-3 정원이 숨 쉬어요 (game/wild.js): where each may grow, sent to the game when it changes (never on paint, the 66-2 trail, a
+  // prop, a rail, a fence, the board's own path or things; flowers only round flowers, moss in the shade of the big trees and
+  // props, reeds where the ground meets the water, lilies on the pond near its edge); what has grown (wildLayer.js); the worn
+  // ways (trailPaint); the animals' steps (tick: a cell entered, on dry open ground, guests not counted), sent every 30 s
+  const wild = wildLayer(scene, habitat.ctx.heightAt, U, habitat.ctx.water), wildOn = habId !== 'dino' && !!habitat.paintable;
+  let wildH = null, wildV = '', wildSig = '', wildSent = '', wildT = 0, wildBugs = [], wildFlies = null, lilyK = 0, stepAt = 0, sendAt = 0;
+  const steps = {}, stepWho = {}, inCell = new WeakMap(), bare = new Map(); // bare: a cell of the board's own dirt or sand (no grass to wear; not on the snow board)
+  const shore = new Map(); // a cell's ground and water, worked out once (they never change while this board lives; 땅 넓히기 builds it again): hi too high, wet, r1 water within 1.3 m, r2 dry within 2.6 m
+  const bareAt = k => { if (habId === 'snow' || !habitat.ground?.bare) return false; if (!bare.has(k)) { const [i, j] = k.split(',').map(Number); bare.set(k, habitat.ground.bare((i + 0.5) * U, (j + 0.5) * U)); } return bare.get(k); };
+  const flushSteps = () => { if (!Object.keys(steps).length) return; ui.onWalk?.(habId, { ...steps }, { ...stepWho }); for (const k in steps) delete steps[k]; for (const k in stepWho) delete stepWho[k]; };
+  function wildCells() {
+    const key = (i, j) => `${i},${j}`, mid = i => (i + 0.5) * U, ij = k => k.split(',').map(Number), [x0, x1, z0, z1] = open;
+    const I0 = Math.floor(x0 / U), I1 = Math.floor(x1 / U), J0 = Math.floor(z0 / U), J1 = Math.floor(z1 / U), inB = (i, j) => i >= I0 && i <= I1 && j >= J0 && j <= J1;
+    const ways = habitat.ways ?? [], wayOff = (x, z, m) => ways.every(p => (p.x - x) ** 2 + (p.z - z) ** 2 > m * m); // farther than m from all the board's own path points
+    const wet = (x, z) => x > x0 + 1.2 && x < x1 - 1.2 && z > z0 + 1.2 && z < z1 - 1.2 && habitat.floor(x, z) > habitat.ctx.heightAt(x, z) + 0.06, W = habitat.ctx.water; // the board's rim rounds down (edgeRound, 1.2 m) and off it the ground drops away: not water
+    const user = k => paintNow[k] != null || growPaint[k] === WAY; // the player's paint, or the 66-2 오솔길
+    const clear = (x, z, m, but) => D.list.every(o => o === but || (o.nat && o.open) || Math.hypot(o.x - x, o.z - z) > o.r + m) && habitat.solid.every(o => Math.hypot(o.x - x, o.z - z) > (o.r || 0) + m);
+    const src = new Map(), add = (x, z, c) => { const k = key(Math.floor(x / U), Math.floor(z / U)); if (c && !src.has(k)) src.set(k, c); };
+    for (const p of propList) if (p.placed && p.hab === habId) {
+      if (p.nat && p.prop === 'wildflowers' && natSpots.some(o => o.uid === p.uid)) add(p.x * U, p.z * U, colOf('wildflowers', p.v));
+      else if (!p.nat && PR[p.prop] && p.on == null && p.uid !== ed?.uid) add(p.x * U, p.z * U, colOf(p.prop, 0, p.uid));
+    }
+    for (const r of growRecs) add(r.x * U, r.z * U, colOf('wildflowers', r.v));
+    const seeds = [...src.keys(), ...Object.keys(wildH?.g ?? {}).filter(k => wildH.g[k][0] === 'f')].map(ij), near = new Map();
+    for (const [si, sj] of seeds) for (let a = -3; a <= 3; a++) for (let b = -3; b <= 3; b++) { const k = key(si + a, sj + b), d = Math.max(Math.abs(a), Math.abs(b)); if (inB(si + a, sj + b) && !(near.get(k) <= d)) near.set(k, d); }
+    const f = []; for (const [k] of [...near].sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1))) { if (f.length >= WILD.keep.f) break; const [i, j] = ij(k), x = mid(i), z = mid(j); // nearest first: the rest are never looked at
+      if (!user(k) && habitat.paintable(x, z) && wayOff(x, z, 1.6) && natSpots.every(o => !o.open || Math.hypot(o.x - x, o.z - z) > o.r * 0.8) && D.placeable(x, z, 0.5)) f.push(k); }
+    const shade = new Map(), big = [...natSpots.filter(o => !o.open && ['tree', 'snowpine', 'treefern'].includes(o.prop)),
+      ...[...placed.values()].filter(e => !e.top && !e.rail && !e.spot.water && !e.spot.open && e.spot.r >= 1.4).map(e => e.spot)];
+    if (habId !== 'snow') for (const o of big) { const lo = o.nat ? o.r * 0.45 : o.r + 0.15, hi = o.r + 1.1;
+      for (let i = Math.floor((o.x - hi) / U); i <= Math.floor((o.x + hi) / U); i++) for (let j = Math.floor((o.z - hi) / U); j <= Math.floor((o.z + hi) / U); j++) {
+        const x = mid(i), z = mid(j), d = Math.hypot(o.x - x, o.z - z), k = key(i, j);
+        if (d >= lo && d <= hi && !shade.has(k) && inB(i, j) && !user(k) && habitat.paintable(x, z) && !wet(x, z) && wayOff(x, z, 1.2) && clear(x, z, 0.2, o)) shade.set(k, d - lo); } }
+    const s = [...shade].sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1)).slice(0, WILD.keep.s).map(([k]) => k), e = [], w = [];
+    const ring = (x, z, R) => [0, 1, 2, 3, 4, 5, 6, 7].map(n => wet(x + R * Math.cos(n * 0.785), z + R * Math.sin(n * 0.785)));
+    if (habId !== 'snow') for (let i = I0; i <= I1; i++) for (let j = J0; j <= J1; j++) { const x = mid(i), z = mid(j), k = key(i, j), t = shore.get(k) ?? shore.set(k, {}).get(k);
+      if (t.hi ??= habitat.ctx.heightAt(x, z) > W + 0.6) continue;
+      if (!(t.wet ??= wet(x, z))) { if (e.length < WILD.keep.e && (t.r1 ??= ring(x, z, 1.3).some(Boolean)) && !user(k) && wayOff(x, z, 1.8) && clear(x, z, 0.5)) e.push(k); }
+      else if (w.length < WILD.keep.w && D.placeable(x, z, 0.5, true) && (t.r2 ??= ring(x, z, 2.6).some(v => !v))) w.push(k); }
+    return { f, s, e, w, src: [...src].slice(0, WILD.keep.src) };
+  }
+  function wildGround() { // again when the board, the props, the paint or the flowers changed (a moment after the last change)
+    if (!wildOn || !active) return;
+    const sg = `${natSig}|${growSig}|${paintSig}|${[...placed.values()].map(e => e.sig + e.prop).join(';')}|${ed?.uid ?? ''}|${wildH ? Object.keys(wildH.g).filter(k => wildH.g[k][0] === 'f').join(';') : '-'}`;
+    if (sg === wildSig) return; wildSig = sg; clearTimeout(wildT);
+    wildT = setTimeout(() => { if (!active) { wildSig = ''; return; } const c = wildCells(), js = JSON.stringify(c); if (js !== wildSent) { wildSent = js; ui.onWild?.(habId, c); } }, 400);
+  }
+  // H: game/wild.js S.wild.h[habId] (null: 「정원이 자라요」 off, none drawn), today: S.wild.d
+  function syncWild(H, today) {
+    if (!wildOn || !active) return;
+    const v = H ? `${H.v}|${today}|${paintSig}` : 'off'; if (v !== wildV) { wildV = v; wildH = H;
+      wild.set(H?.g, today); trailPaint.at = {};
+      for (const [k, p] of trailsOf(H, paintNow)) trailPaint.at[k] = 0.45 + 0.4 * Math.min(1, Math.max(0, p - WILD.stay) / 4); // faint, deeper where walked more (every worn cell loses its grass blades: hideGrass from 0.45)
+      habitat.ground?.setPaint({ ...growPaint, ...paintNow }, trailPaint); grassDirty = true; renderer.shadowMap.needsUpdate = true;
+      // the signs (no score): more flowers, more butterflies; much grown, fireflies at night; more lilies, more frogs
+      const g = Object.entries(H?.g ?? {}), bloom = g.filter(([, x]) => x[0] === 'f' && today - x[2] >= WILD.bud), lush = bloom.length + g.filter(([, x]) => 'mur'.includes(x[0])).length;
+      wildBugs = bloom.length < 5 ? [] : [{ id: 'wild', spots: bloom.filter((_, i) => i % 5 === 0).slice(0, 8).map(([k]) => { const [i, j] = k.split(',').map(Number), x = (i + 0.5) * U, z = (j + 0.5) * U; return { x, y: habitat.ctx.heightAt(x, z), z, r: 0.4, h: 0.5 }; }) }];
+      syncSets(); lilyK = Math.min(1, g.filter(([, x]) => x[0] === 'l').length / 12);
+      const n = lush < 8 ? 0 : Math.min(30, Math.round(lush * 0.4 / 4) * 4);
+      if (n !== (wildFlies?.n ?? 0)) { if (wildFlies) { scene.remove(wildFlies.pts); wildFlies.pts.geometry.dispose(); wildFlies.pts.material.map.dispose(); wildFlies.pts.material.dispose(); }
+        const at = g.filter(([, x]) => x[0] !== 'l').map(([k]) => k.split(',').map(Number));
+        wildFlies = n ? Object.assign(fireflies(scene, habitat.ctx, n, () => { const [i, j] = at[Math.floor(Math.random() * at.length)]; return [(i + Math.random()) * U, (j + Math.random()) * U]; }), { n }) : null; }
+    }
+    wildGround();
   }
   // may a fence or wall go in the cell at x, z: nothing standing there (props, the board's own, animals), so none is walled in
   const standOk = (x, z) => D.list.every(o => o.line || o.water || Math.hypot(o.x - x, o.z - z) > (o.open && !o.rail ? 0.4 : o.r) + 0.2)
@@ -447,7 +515,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     // play.attach -> draw syncs it again when it is back. Before, the old board pushed its nature spots into the new board's list (unseen blockers)
     if (!active) return;
     propList = list; syncStamps(); syncNat(list); syncGhosts(ghost || []); growNow = grow; syncGrow(grow, list); // 66-2
-    const ps = JSON.stringify(paint || {}); if (ps !== paintSig) { paintSig = ps; paintNow = paint || {}; habitat.ground?.setPaint({ ...growPaint, ...paintNow }); syncLines(); grassDirty = true; }
+    const ps = JSON.stringify(paint || {}); if (ps !== paintSig) { paintSig = ps; paintNow = paint || {}; habitat.ground?.setPaint({ ...growPaint, ...paintNow }, trailPaint); syncLines(); grassDirty = true; }
     const want = new Map(list.filter(p => p.placed && p.hab === habId && !p.nat && PR[p.prop] && p.uid !== ed?.uid && (p.on == null || p.on !== ed?.uid)).map(p => [p.uid, p])); // 28-5: what stands on the held one goes with it
     const sigOf = r => `${r.x},${r.z},${r.rot},${r.c || 0},${r.sz || 0},${r.on ?? ''},${r.sl ?? ''}`;
     let changed = false;
@@ -467,13 +535,14 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     propsIn = true;
     if (changed) { renderer.shadowMap.needsUpdate = true; syncSets(); syncTrain(); } // the shadow map is drawn once; props change it
     if (changed && playing() && ![...placed.values()].some(e => e.prop === 'musicbox')) music(true); // 28-3: the music box put away: its tune stops
+    wildGround(); // 17-3
   }
   // 23-2: the sets whole here (the first placed one of each of its props)
   function syncSets() {
     const es = [...placed.values()], one = id => es.find(e => e.prop === id);
     const sets = SETS.map(s => ({ id: s.id, spots: s.props.map(one) })).filter(s => s.spots.every(Boolean))
       .map(s => ({ id: s.id, spots: s.spots.map(e => ({ x: e.spot.x, z: e.spot.z, y: e.obj.position.y, r: e.spot.r, h: e.spot.h, water: e.spot.water })) }));
-    habitat.ctx.sets = sets.flatMap(s => s.spots); bugs.set(sets);
+    habitat.ctx.sets = sets.flatMap(s => s.spots); bugs.set([...sets, ...wildBugs]); // 17-3: the flowers' butterflies after (not a set: walk.js does not go to them)
   }
   // ---- 28-4 장난감 기차: rail pieces (PROPS rail) go on a grid of 4x4 tiles, one to a tile (the bridge on two, its middle on their
   // edge), a quarter turn at a time; nothing else goes on them (their spots, r 2 a tile). Closed into a loop once (main.js ui.train),
@@ -1186,7 +1255,7 @@ GPU ${gpu}`; }
   }
 
   let active = true, lastTag = '', noteAt = 0;
-  function setActive(on) { active = on; renderer.domElement.style.display = on ? '' : 'none'; clock.getDelta(); fN = fT = slow = 0; camState = null; if (!on) ambience(null); else if (DEBUG) window.__hab = dbg; } // paused (and hidden: another habitat may share the container) while the world map is shown
+  function setActive(on) { if (!on) flushSteps(); active = on; renderer.domElement.style.display = on ? '' : 'none'; clock.getDelta(); fN = fT = slow = 0; camState = null; if (!on) ambience(null); else if (DEBUG) window.__hab = dbg; } // paused (and hidden: another habitat may share the container) while the world map is shown
   const clock = new THREE.Clock();
   function tick(id = loop) {
     if (dead || id !== loop) return;
@@ -1195,7 +1264,7 @@ GPU ${gpu}`; }
     if (PREFS.saver || deskOn) { const now = performance.now(); if (now - lastDraw < 1000 / fpsCap() - 4) return; lastDraw = now; } // 26-3 배터리 절약
     const raw = clock.getDelta(), dt = Math.min(PREFS.saver || deskOn ? 0.075 : 0.05, raw), t = clock.elapsedTime; // 15 fps: steps of 1/15 s keep the walk at speed
     const w = sky.now(), L = light(w.gray); habitat.ctx.night = L.night; habitat.ctx.rain = w.rain + w.snow; habitat.ctx.az = Math.atan2(camera.position.z - controls.target.z, camera.position.x - controls.target.x); flies?.(t, L.night); ambience(habId, L.night, w.rain, w.snow); // walk.js / swim.js: sleepier at night, shelter or swim in the rain (25-1: the snow's snow alike)
-    windTime.value = t; habitat.update(dt, t); mistTick(t, dt); bugs.tick(t, L.night, w.rain);
+    windTime.value = t; habitat.update(dt, t); mistTick(t, dt); bugs.tick(t, L.night, w.rain); wildFlies?.(t, L.night); lilies(lilyK); // 17-3
     if (t > noteAt) { noteAt = t + 2; const es = [...placed.values()]; // 23-2 도전 과제: what is on screen now
       if (L.night > 0.5) ui.note?.('lights', es.filter(e => e.light).length);
       if (w.rain > 0.3) ui.note?.('roof', Math.max(0, ...es.filter(e => e.roof?.under).map(e => [...actors.values()].filter(a => Math.hypot(a.position.x - e.roof.x, a.position.z - e.roof.z) < e.roof.under.r).length)));
@@ -1203,6 +1272,10 @@ GPU ${gpu}`; }
     if (train && stepTrain(train.T, train.net, dt, habitat.ctx.crowd, train.st) === 'toot') sfx('train'); // 28-4: before the riders (play.js reads its cars)
     if (train) placeCars();
     for (const a of actors.values()) a.update(dt, t);
+    if (wildOn && t > stepAt) { stepAt = t + 0.5; // 17-3: the steps (a cell entered)
+      for (const a of actors.values()) { if (a.rec.wg || a.rec.guest) continue; const x = a.position.x, z = a.position.z, k = `${Math.floor(x / U)},${Math.floor(z / U)}`;
+        if (inCell.get(a) === k) continue; inCell.set(a, k); if (!habitat.paintable(x, z) || bareAt(k)) continue; steps[k] = (steps[k] || 0) + 1; stepWho[a.rec.species] = (stepWho[a.rec.species] || 0) + 1; }
+      if (t > sendAt) { sendAt = t + 30; flushSteps(); } }
     tie(); if (habitat.ctx.fresh[0]?.until < performance.now()) habitat.ctx.fresh.shift(); // 17-1
     if (t > homeAt && !decorOn) { homeAt = t + 1; penCheck(); }
     hear(camera, controls.target, actors, habitat.ctx, D.list, underfoot); // 13-0: the world's sounds where they are
@@ -1249,7 +1322,7 @@ GPU ${gpu}`; }
   }
   window.addEventListener('resize', resize, sig);
   // 27-1: the habitat on screen (a built one entered again is only set active, not started again)
-  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }), myth }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests)
+  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, wild: () => ({ H: wildH, layer: wild, cells: wildCells, trail: trailPaint, bugs: wildBugs, flies: wildFlies?.n ?? 0, lily: lilyK, steps, flush: flushSteps }), ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }), myth }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests)
   if (reveal) overview(true); // out to the wider board while the mist draws back
   // 28-1: a zone just opened (main.js): the camera glides out over it, and up to 4 animals run to its spots
   function showZone(k) {
@@ -1292,10 +1365,10 @@ GPU ${gpu}`; }
     aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(ax + d * Math.sin(theta), ...panX), 0, THREE.MathUtils.clamp(az + d * Math.cos(theta), ...panZ)), radius: R, phi, theta };
   }
   tick();
-  if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus, fx });
+  if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus, fx, artView, overview });
   return {
     resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, artSpot, // 17-2
-    artView, showZone, topView, setPals: m => { habitat.ctx.bf = m; }, // 17-1
+    artView, syncWild, showZone, topView, setPals: m => { habitat.ctx.bf = m; }, // 17-1
     myth, pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw

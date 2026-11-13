@@ -93,7 +93,7 @@ export function fireflies(scene, ctx, n = 36, pick = () => [(Math.random() - 0.5
   gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.8)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32);
   const pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.9, map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   pts.frustumCulled = false; pts.renderOrder = 3; scene.add(pts);
-  return (t, night) => {
+  return Object.assign((t, night) => {
     pts.visible = night > 0.02; if (!pts.visible) return;
     F.forEach((f, i) => {
       pos[i * 3] = f.x + Math.sin(t * 0.3 * f.s + f.p) * 1.2; pos[i * 3 + 1] = f.y + Math.sin(t * 0.7 * f.s + f.p * 2) * 0.35; pos[i * 3 + 2] = f.z + Math.cos(t * 0.25 * f.s + f.p) * 1.2;
@@ -101,5 +101,5 @@ export function fireflies(scene, ctx, n = 36, pick = () => [(Math.random() - 0.5
       col[i * 3] = 0.85 * b; col[i * 3 + 1] = 1.0 * b; col[i * 3 + 2] = 0.45 * b;
     });
     g.attributes.position.needsUpdate = g.attributes.color.needsUpdate = true;
-  };
+  }, { pts }); // 17-3: pts, to take them away again
 }

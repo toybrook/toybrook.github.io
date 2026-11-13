@@ -23,6 +23,7 @@ import { figureThumb, silhouetteThumb, propThumb, artThumb, studio, nightLights,
 import { mythCard, mythHint } from './myth.js';
 import { openStories, cardsIn } from './story.js';
 import { SLOTS } from '../game/sky.js';
+import { BLOOMS, recipe } from '../game/wild.js'; // 17-3 들꽃 도감
 const SKY_N = SLOTS.length;
 
 const el = document.getElementById('codex');
@@ -33,7 +34,7 @@ export const hasNew = () => HABITATS.some(h => open(h.id) && codexCells(h.id).so
 
 export function openCodex(habId, api) { G.note('codex', 1); if (habId) tab = habId; hab = api; night = false; el.hidden = false; draw(); tip('codex', '#codex .cbar'); } // G.note: 41 D 첫날 할 일
 // live while open: redraw when what it shows changes (a variant registered, a habitat opened, someone stored), keeping the scroll
-const sig = () => [Object.keys(G.S.scenes).length, Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length, G.S.myth?.here, G.S.myth?.settled, JSON.stringify(G.S.guests?.seen ?? 0), JSON.stringify(G.S.guests?.big ?? 0), JSON.stringify(G.S.whole ?? 0)].join(); // 66-3: guest progress and gifts redraw too
+const sig = () => [Object.keys(G.S.scenes).length, Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length, G.S.myth?.here, G.S.myth?.settled, JSON.stringify(G.S.guests?.seen ?? 0), JSON.stringify(G.S.guests?.big ?? 0), JSON.stringify(G.S.whole ?? 0), Object.keys(G.S.wild.book).length].join(); // 66-3: guest progress and gifts redraw too
 let shown = '';
 G.on(() => { if (el.hidden || sig() === shown) return; const body = el.querySelector('.cbody'), y = body?.scrollTop || 0, up = V?.box?.isConnected && V.box; draw(); el.querySelector('.cbody').scrollTop = y; if (up) el.append(up); }); // the 3D view stays up
 
@@ -151,6 +152,14 @@ const artHtml = () => { const L = artBook();
   return `<details class="cscenes cart"${artOpen ? ' open' : ''}><summary>작품집 <small>${L.length}</small></summary>${L.length ? `<div class="crow ab">${L.map(b => `<div class="cell art"><img alt="${PROP[b.prop]?.name}"><span>${PROP[b.prop]?.name}</span><small>${b.who}<br>${new Date(b.at).toLocaleDateString('ko-KR')}</small></div>`).join('')}</div>` : ''}
 <p class="cnote">친구가 만든 작품을 「그대로 두기」나 「기록만 남기고 치우기」로 고르면 담겨요 · 도감 수에는 들어가지 않아요</p></details>`; };
 const fillArt = () => { const L = artBook(); el.querySelectorAll('.cell.art img').forEach((img, i) => { if (hab?.decor) artThumb(L[i].prop, hab.decor.model, night).then(u => { img.src = u; }, () => {}); }); };
+// 17-3 들꽃 도감: the colours of the 들꽃 that spread by themselves (game/wild.js), one cell each: the flower (its petals and middle),
+// the name, the day it first bloomed; not yet: ? and how it comes (the two colours mixed, or where the colour is). The garden's
+// whole (the same in each tab, as the codex count is not). A fold as the 놀이 장면 are; not part of the count
+let wildOpen = false;
+const wildHtml = () => { const B = G.S.wild.book, ids = Object.keys(BLOOMS), day = d => new Date(d * 864e5).toLocaleDateString('ko-KR', { timeZone: 'UTC' });
+  return `<details class="cscenes cwild"${wildOpen ? ' open' : ''}><summary>들꽃 도감 <small>${ids.filter(c => B[c] != null).length}/${ids.length}</small></summary><div class="crow ab">${ids.map(c => { const b = BLOOMS[c], got = B[c] != null, r = recipe(c);
+    return `<div class="cell bloom${got ? '' : ' unk'}"><b class="fl" style="--p:${b.c[0]};--m:${b.c[1]}" aria-hidden="true"></b><span>${got ? b.name : '?'}</span><small>${got ? day(B[c]) : r ? r.map(x => BLOOMS[x].name).join(' + ') : b.from}</small></div>`; }).join('')}</div>
+<p class="cnote">친구들이 꽃씨를 옮겨 들꽃이 저절로 퍼져요 · 다른 색이 가까이 피면 정해진 색으로 섞여요 · 도감 수에는 들어가지 않아요</p></details>`; };
 function fillScenes() {
   const fig = sp => figureThumb(sp, variantsOf(SP[sp])[0].id, null, null, 'adult', night);
   el.querySelectorAll('.cell.scene').forEach((d, i) => { const s = SCENES[i], e = G.S.scenes[s.id], [img, who] = d.querySelectorAll('img'), set = el => u => { el.src = u; };
@@ -194,9 +203,10 @@ function draw() {
   const egg = groups && `<h2 class="ctier">알 친구 <small>${cells.filter(got).length}/${cells.length}</small></h2>`;
   el.innerHTML = `<div class="chead"><b>도감</b><span>${cells.filter(got).length}/${cells.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>
 ${tabs()}${cells.length ? bar(tab, cells, cells.filter(got).length) : ''}
-<div class="cbody">${groups ? egg + groups : '<p class="cnote">준비 중이에요</p>'}${groups ? guestRow() + mythRow() + scenesHtml() + artHtml() : ''}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}${foot()}</div>`;
-  if (groups) fillScenes(), fillArt(); el.querySelector('.cscenes:not(.cart)')?.addEventListener('toggle', e => { sceneOpen = e.target.open; });
+<div class="cbody">${groups ? egg + groups : '<p class="cnote">준비 중이에요</p>'}${groups ? guestRow() + mythRow() + scenesHtml() + artHtml() + (tab === 'dino' ? '' : wildHtml()) : ''}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}${foot()}</div>`;
+  if (groups) fillScenes(), fillArt(); el.querySelector('.cscenes:not(.cart):not(.cwild)')?.addEventListener('toggle', e => { sceneOpen = e.target.open; });
   el.querySelector('.cart')?.addEventListener('toggle', e => { artOpen = e.target.open; }); // 17-2
+  el.querySelector('.cwild')?.addEventListener('toggle', e => { wildOpen = e.target.open; }); // 17-3
   for (const d of el.querySelectorAll('.cell[data-g]')) { const R = wanderersOf(tab).find(R => R.k === d.dataset.g), acc = R.mark === 'hat' ? 'strawhat' : 'bandana';
     (d.classList.contains('unk') ? silhouetteThumb(R.sp, acc, night) : figureThumb(R.sp, 'solid', colorsOf(R.sp, 'solid')[0]?.id ?? null, acc, 'adult', night)).then(u => { d.firstChild.src = u; }, () => {}); }
   const mi = el.querySelector('.cell.myth img'); if (mi) mythThumb(!G.S.myth?.here, night).then(u => { mi.src = u; }, () => {});

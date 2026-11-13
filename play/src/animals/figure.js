@@ -9,7 +9,7 @@ import { mergeGeometries } from '../../vendor/utils/BufferGeometryUtils.js';
 import { MODELS, ACCESSORIES, LEGEND_ITEMS, EV_ACC } from '../game/data.js';
 import { SP, variantOf } from '../game/rules.js';
 import { toyMat, windTime, nightGlow } from '../habitat/toyKit.js';
-import { variantMats, eyeMat, wear } from './materials.js';
+import { variantMats, eyeMat, wear, texBody } from './materials.js';
 import { calm } from '../config.js';
 import { fetched } from '../ui/loadbar.js'; // 26-1: how much of each model file has arrived (the loading bar)
 
@@ -30,7 +30,7 @@ export async function meshes(file) {
   try { gltf = await loader.loadAsync(url(file), e => { if (e.total) fetched[i] = e.loaded / e.total; }); } finally { fetched[i] = 1; }
   const geo = {};
   gltf.scene.updateMatrixWorld(true);
-  gltf.scene.traverse(o => { if (o.isMesh) geo[o.material.name] = floats(o); });
+  gltf.scene.traverse(o => { if (o.isMesh) { geo[o.material.name] = floats(o); if (o.material.map) geo[o.material.name].userData.map = o.material.map; } }); // 82: a painted body (Meshy)
   return geo;
 }
 // _op = pattern space for materials.js: model position / body height, x centred, legs where they stand.
@@ -226,7 +226,8 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
   const mesh = (geo, mat, ord) => { const o = wear(new THREE.Mesh(geo, mat), ord); o.receiveShadow = true; // tree and barn shade land on it
     if (m.halo && mat === m.body) { const h = new THREE.Mesh(geo, haloMat(m.halo)); h.renderOrder = 5; o.add(h); }
     return o; };
-  const eyes = mesh(G.eye, eyeMat, 4); body.add(mesh(G.body, m.body), eyes); // eyes after glass: not doubled in its screen copy (alone in their material: merge leaves them)
+  const V = variantOf(spId, vId), skin = G.body.userData.map && V?.rarity === 'common' ? texBody(G.body.userData.map) : m.body; // 82: a common wears the body's own texture
+  const eyes = mesh(G.eye, eyeMat, 4); body.add(mesh(G.body, skin), eyes); // eyes after glass: not doubled in its screen copy (alone in their material: merge leaves them)
   if (G.accent) body.add(mesh(G.accent, m.accent)); // none on an all-one-colour body (swan, flamingo)
   if (G.beak) body.add(mesh(G.beak, m.beak || m.hoof)); // a bird's beak (the hoof colour, like its feet), a pig's nostrils, a cow's nose (colors.beak)
   if (G.horn) body.add(mesh(G.horn, m.horn || m.body)); // a cow's horns (colors.horn)
@@ -239,7 +240,6 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
     g.userData = { front: x > 0, pair: (x > 0) === (z > 0) }; // diagonal pairs move together at a walk
     body.add(g); return g;
   });
-  const V = variantOf(spId, vId);
   for (const fx of [].concat(V?.effect || [])) if (FX[fx]) body.add(effect(fx, G.body.boundingBox));
   // acc: one id or a list (15-2: event wear first, then the secret one); one per slot, the first there wins
   const on = [], taken = new Set();

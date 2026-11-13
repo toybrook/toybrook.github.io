@@ -162,7 +162,8 @@ function tunes() {
 }
 
 // what plays: the habitat (null: none, the world map), its night (0..1), rain and snow (0..1, weather.js)
-const cur = { hab: null, night: 0, rain: 0, snow: 0 };
+const cur = { hab: null, night: 0, rain: 0, snow: 0, lily: 0 }; // 17-3 lily: 0..1 the lilies grown on the board here (more frogs)
+export const lilies = v => { cur.lily = v; };
 const day = () => 1 - cur.night, dry = () => 1 - Math.min(1, cur.rain + cur.snow);
 const gust = () => 0.5 + 0.5 * Math.sin(A.currentTime * 2 * Math.PI / 47); // the wind comes and goes (47 s), the leaves rustle at its top
 
@@ -175,7 +176,7 @@ const NATURE = [
   { s: ['nightingale'], at: 'tree', k: () => cur.hab === 'meadow' && cur.night * dry(), gap: [20, 45], gain: 0.35, ref: 8 },
   { s: ['owl'], at: 'tree', k: () => cur.hab !== 'pond' && cur.night * (1 - cur.rain), gap: [30, 70], gain: 0.3, ref: 10 },
   { s: ['cricket'], at: 'grass', k: () => cur.hab === 'meadow' && cur.night * dry(), gap: [5, 10], gain: 0.25, ref: 3 }, // the fireflies' night
-  { s: ['frog', 'toad'], at: 'rim', k: () => cur.hab === 'pond' ? 0.4 + 0.6 * cur.night : cur.hab === 'meadow' && 0.7 * cur.night * (1 - cur.rain), gap: [6, 14], gain: 0.4, ref: 5 }, // by the lilies
+  { s: ['frog', 'toad'], at: 'rim', k: () => (cur.hab === 'pond' ? 0.4 + 0.6 * cur.night : cur.hab === 'meadow' && 0.7 * cur.night * (1 - cur.rain)) * (1 + cur.lily), gap: [6, 14], gain: 0.4, ref: 5 }, // by the lilies
   { s: ['splash'], at: 'water', k: () => cur.hab !== 'snow' && 1 - 0.6 * cur.rain, gap: [15, 35], gain: 0.3, ref: 5 }, // a fish
   { s: ['thunder'], at: null, k: () => cur.rain > 0.6, gap: [50, 140], gain: 0.3, rate: [0.8, 0.95] }, // far off and low (fx-rain)
 ];

@@ -89,7 +89,7 @@ export function buildTerrain(scene) {
 }
 // The board's ground: the height field as a grid (150 x 240 on the first board), coloured per vertex by color(col, x, z, h, normal y), darkened
 // round the props (a contact shadow), with fine mottling close up and the soil cut at the rounded edge. (The pond's too.)
-// 22-1: returns { mesh, setNatAO(spots), setPaint(cells), grid(on) }: the natives' contact shadows (they move), the painted ground
+// 22-1: returns { mesh, setNatAO(spots), setPaint(cells, soft), grid(on) }: the natives' contact shadows (they move), the painted ground
 // (땅 칠하기: one texel per cell of U, cell i, j = floor(x / U), floor(z / U); brushes as data.js BRUSHES) and the 격자 lines.
 // 25-1: B.g snow, B.b ice
 const BRUSH_RGB = BRUSHES.map(b => new THREE.Color(b.c));
@@ -102,12 +102,13 @@ const PAINT = `
         vec4 k = smoothstep(0.18, 0.72, pa); float kg = smoothstep(0.18, 0.72, pg); // inbox 67-3: a wide soft edge, no disc
         vec3 grass = ${v3(BRUSH_RGB[0])} * (0.92 + 0.16 * vnoise(vWp.xz * 0.9));
         vec3 sand = ${v3(BRUSH_RGB[2])} * (0.96 + 0.08 * vnoise(vWp.xz * 4.0));
+        vec3 dirt = ${v3(BRUSH_RGB[1])} * (0.94 + 0.12 * vnoise(vWp.xz * 3.0)); // 17-3: a worn trail, soft (the 흙길 brush itself is drawn as a path, uPC)
         float gv = vnoise(vWp.xz * 9.0); vec3 gravel = ${v3(BRUSH_RGB[3])} * (0.82 + 0.3 * step(0.55, gv) - 0.12 * step(gv, 0.2));
         vec2 fc = floor(vWp.xz * 4.0), ff = fract(vWp.xz * 4.0) - 0.5; float fh = hash12(fc), fd = length(ff - (vec2(hash12(fc + 3.1), hash12(fc + 7.7)) - 0.5) * 0.4);
         vec3 fcol = fh > 0.93 ? ${CC('#fff7ee')} : fh > 0.86 ? ${CC('#ffd54a')} : fh > 0.79 ? ${CC('#ff9cc4')} : ${CC('#b9a0f2')};
         vec3 bloom = mix(${v3(BRUSH_RGB[4])}, fcol, (fh > 0.9 ? 0.6 : 0.0) * (1.0 - smoothstep(0.06, 0.14, fd))); // inbox 67-3: a few soft specks, not a painted carpet
         vec3 c = diffuseColor.rgb;
-        c = mix(c, grass * sh, kg); c = mix(c, sand * sh, k.g); c = mix(c, gravel * sh, k.b); c = mix(c, bloom * sh, k.a);
+        c = mix(c, grass * sh, kg); c = mix(c, dirt * sh, k.r); c = mix(c, sand * sh, k.g); c = mix(c, gravel * sh, k.b); c = mix(c, bloom * sh, k.a);
         // 25-1 the snow's: fresh snow with a few glints, smooth pale ice (paler streaks, a crack line here and there)
         vec2 kb = smoothstep(0.18, 0.72, pb.gb); float sg = step(0.985, hash12(floor(vWp.xz * 14.0)));
         vec3 snow = ${v3(BRUSH_RGB[5])} * (0.97 + 0.05 * vnoise(vWp.xz * 1.5)) + sg * 0.12;
@@ -213,8 +214,10 @@ export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lu
       for (let i = 0; i < pos.count; i++) { const k = 1 - occ[i] * 0.32; cols[i * 3] = base[i * 3] * k; cols[i * 3 + 1] = base[i * 3 + 1] * k; cols[i * 3 + 2] = base[i * 3 + 2] * k; }
       tg.attributes.color.needsUpdate = true;
     },
-    setPaint(cells = {}) { // { 'i,j': brush index }
+    setPaint(cells = {}, soft = null) { // { 'i,j': brush index }; 17-3 soft: { b: 2 | 3, at: { 'i,j': 0..1 } } a worn trail, faint (under any paint)
       const A = U8.uPA.value, B = U8.uPB.value, C = U8.uPC.value; A.image.data.fill(0); B.image.data.fill(0); C.image.data.fill(0);
+      if (soft) for (const k in soft.at) { const [i, j] = k.split(',').map(Number), t = (j - j0) * nI + (i - i0);
+        if (cells[k] == null && i >= i0 && j >= j0 && i - i0 < nI && j - j0 < nJ) A.image.data[t * 4 + soft.b - 1] = Math.round(255 * Math.min(1, soft.at[k])); }
       for (const k in cells) { const [i, j] = k.split(',').map(Number), b = cells[k], t = (j - j0) * nI + (i - i0);
         if (i < i0 || j < j0 || i - i0 >= nI || j - j0 >= nJ) continue;
         if (b === 0) B.image.data[t * 4] = 255; else if (b > 1 && b < 5) A.image.data[t * 4 + b - 1] = 255; else if (b === 5 || b === 6) B.image.data[t * 4 + b - 4] = 255;
@@ -222,6 +225,7 @@ export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lu
       A.needsUpdate = B.needsUpdate = C.needsUpdate = true;
     },
     grid(on) { U8.uGrid.value = on ? 1 : 0; },
+    bare(x, z) { color(col, x, z, heightAt(x, z), 1); return col.r > col.g; }, // 17-3: the board's own dirt or sand here (the paddock, its path, a wet bank): no grass to wear
     // 28-6 지형 도장: the ground in the box [x0, z0, x1, z1] (world units) again from heightAt: heights, normals (as
     // computeVertexNormals: each vertex the sum of its triangles' area-weighted normals), colours (as built, with both shadows)
     reshape([x0, z0, x1, z1]) {

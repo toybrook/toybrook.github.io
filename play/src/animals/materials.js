@@ -19,6 +19,9 @@ export function variantMats(spId, vId, cId) {
   const v = variantOf(spId, vId), c = colorOf(spId, vId, cId);
   return looks(v?.mat || v?.id || 'solid', v?.rarity === 'common' ? { ...SP[spId].colors, ...c } : c ?? {});
 }
+// 82: a common on a body with its own texture (the Meshy figures, data.js M82): the texture as it is, the commons' plastic
+const painted = new WeakMap();
+export const texBody = map => { if (!painted.has(map)) { const m = toyMat('#ffffff', { map }); rim(m); painted.set(map, m); } return painted.get(map); };
 // the body material of an egg of this rarity (its own colours, else the first colour of that look)
 export const eggMat = rarity => { const e = RAR[rarity].egg; return looks(e.mat, e.colors ?? SHARED_VARIANTS.find(v => v.id === e.mat)?.colors?.[0]).body; };
 

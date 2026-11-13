@@ -113,6 +113,7 @@ export function initPlay(nav) {
       if (out.length && !appT && appHintDue(DEV, G.S.flags)) { appQuiet = Date.now(); appT = setTimeout(appBand, 800); }
     }
     hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], growStage(G.S.lv)); hab?.sync(G.withGuests()); // 16-1: and the guests; inbox 42 B: the props first, so no one comes out inside one
+    hab?.syncWild?.(G.S.flags.wildOff ? null : G.S.wild.h[habId] ?? null, G.S.wild.d); // 17-3 정원이 숨 쉬어요
     hab?.setPals(G.S.flags.palOff ? null : new Map(G.S.pals.list.flatMap(p => [[p.a, p.b], [p.b, p.a]]))); // 17-1 성격·단짝 (walk.js)
   }
 

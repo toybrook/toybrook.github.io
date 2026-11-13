@@ -5,6 +5,7 @@ import * as K from './sky.js'; // 16-2
 import * as R from './rules.js';
 import * as GU from './guests.js'; // 66-1
 import * as A from './art.js'; // 17-2
+import * as W from './wild.js'; // 17-3
 import { PROPS } from './data.js';
 import { EDITION } from '../config.js';
 import { now as clock } from './clock.js';
@@ -183,6 +184,11 @@ export const artAt = (uid, x, z) => act(() => A.artAt(S, uid, x, z));
 export const artPick = (uid, what) => act(() => A.artPick(S, uid, what));
 export const artClear = hab => act(() => A.artClear(S, hab));
 export const artTold = uids => act(() => A.artTold(S, uids));
+// 17-3 정원이 숨 쉬어요 (wild.js): the board's steps and ground, 자연 정리, the 돌아왔어요 line seen
+export const wildWalk = (hab, t, n) => { if (!view) act(() => W.walk(S, hab, t, n)); };
+export const wildGround = (hab, c) => { if (!view) act(() => W.ground(S, hab, c)); };
+export const wildClear = hab => act(() => W.clear(S, hab));
+export const wildSeen = () => act(() => W.seen(S));
 export const skyScope = at => act(() => { if (S.sky.scope) return null; S.sky.scope = 1; return R.putGift(S, 'sky_scope', at, { cost: 0 }); });
 export const attendDue = () => R.attendDue(S, clock());
 export const attend = at => act(now => R.attend(S, now, Math.random, at));

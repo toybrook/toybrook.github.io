@@ -452,6 +452,17 @@ export const MODELS = {
   },
 };
 
+// 82 (a test behind ?m82, not public: tools/build-web.mjs turns M82 into false and leaves the meshy_ files out): the adult
+// arctic fox and T. rex from Meshy (tools/meshy-import.mjs: our concept art turned 3D, the baked adults' height). One body
+// with no legs of its own (it glides when it walks); commons wear its texture, every other look goes over it (figure.js).
+export const M82 = false; // release build (82 not approved: the meshy_ models are left out below)
+if (M82) {
+  Object.assign(MODELS.arcticFox.files, { adult: 'assets/models/meshy_fox_arctic.glb' });
+  MODELS.arcticFox.adult = sized('arcticFox', 'adult', { h: 1.951, r: 0.49, seg: [-0.92, 0.55], attach: { head: { p: [0.4, 1.71, 0], r: [0, 0, -0.1], s: 0.75 }, neck: { p: [0.42, 1.08, 0], r: [0, 0, -0.6], s: 1.25 }, back: { p: [-0.06, 1.22, 0], r: [0, 0, 1.0], s: 1 }, eye: { p: [0.685, 1.321, 0], r: [0, 0, 0], s: 0.84 } } });
+  Object.assign(MODELS.tRex.files, { adult: 'assets/models/meshy_rex.glb' }); Object.assign(MODELS.tRex.legend, { adult: 'assets/models/meshy_rex_bones.glb' });
+  MODELS.tRex.adult = sized('tRex', 'adult', { h: 2.619, r: 0.6, seg: [-1.3, 1.07], attach: { head: { p: [0.8, 2.6, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.5, 1.85, 0], r: [0, 0, -0.6], s: 1.55 }, back: { p: [-0.2, 1.86, 0], r: [0, 0, 0.4], s: 1.05 }, eye: { p: [0.957, 2.34, 0], r: [0, 0, 0], s: 1.15 } } });
+}
+
 // A body's capsule seen from above (crowd.js), in square world units: what one animal takes of its zone's room.
 export const bodyArea = m => Math.PI * m.r ** 2 + 2 * m.r * (m.seg[1] - m.seg[0]);
 
