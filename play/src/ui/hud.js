@@ -7,7 +7,7 @@ export function toast(text, ms = 2200, small = false) {
   toastEl.textContent = text; toastEl.classList.add('on'); toastEl.classList.toggle('small', small);
   toastEl.style.top = ''; // 64-A: below any top-row button it would cover (첫날 할 일, 진열장 …)
   const st = stageEl(), s = window.__stageScale || 1, sr = st.getBoundingClientRect();
-  const btns = [...st.querySelectorAll('.scene:not(.hidden) button')].filter(b => shown(b) && b.offsetParent && !b.closest('.scene > section,[role=dialog]')).map(b => b.getBoundingClientRect()).filter(r => r.width && r.top < sr.top + sr.height * .4);
+  const btns = [...st.querySelectorAll('.scene:not(.hidden) button, .tip')].filter(b => shown(b) && b.offsetParent && !b.closest('.scene > section,[role=dialog]')).map(b => b.getBoundingClientRect()).filter(r => r.width && r.top < sr.top + sr.height * .4);
   for (let k = 0; k < 4; k++) {
     const t = toastEl.getBoundingClientRect(), b = btns.find(r => r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top); if (!b) break;
     toastEl.style.top = (b.bottom - sr.top) / s + 6 + 'px';
@@ -93,7 +93,7 @@ function nextTip() {
   tipEl.style.setProperty('--ax', Math.max(14, Math.min(w - 14, cx - x)) + 'px');
   // a tall anchor: kept on screen; inbox 40: and off the home bar (--sa-b, style.css)
   if (top > H / 2) { tipEl.style.bottom = `max(calc(8px + var(--sa-b)), ${H - top + 10}px)`; tipEl.classList.add('up'); } else tipEl.style.top = `min(calc(100% - ${tipEl.offsetHeight + 8}px - var(--sa-b)), ${bot + 10}px)`;
-  tipFor = a; dodge();
+  tipFor = a; dodge(); requestAnimationFrame(() => tipEl && dodge()); // 66-1: the nest pill can show in the same step, after it
   tipEl.onclick = e => { const b = e.target.closest('button'); if (b) endTip(b.dataset.off != null); };
 }
 // inbox 64-A: never over another button (the 「자라기」 tip by 친구들 covered 「부화 시작」): moved past it, away from its anchor;
@@ -101,12 +101,17 @@ function nextTip() {
 let tipFor = null;
 function dodge() {
   const a = tipFor, st = stageEl(), s = window.__stageScale || 1, sr = st.getBoundingClientRect(), up = tipEl.classList.contains('up');
-  const others = [...(a.closest?.('.scene') || st).querySelectorAll('button')].filter(b => b !== a && !a.contains?.(b) && !tipEl.contains(b) && shown(b) && b.offsetParent && !b.closest('.scene > section,[role=dialog]')); // its own screen's buttons, not a sheet's
+  const others = [...(a.closest?.('.scene') || st).querySelectorAll('button, .npill')].filter(b => b !== a && !a.contains?.(b) && !tipEl.contains(b) && shown(b) && b.offsetParent && !b.closest('.scene > section,[role=dialog]')); // its own screen's buttons, not a sheet's
   for (let k = 0; k < 6; k++) {
-    const t = tipEl.getBoundingClientRect(), b = others.map(b => b.getBoundingClientRect()).find(r => r.width && r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top); if (!b) break;
+    const t = { left: sr.left + tipEl.offsetLeft * s, top: sr.top + tipEl.offsetTop * s }; t.right = t.left + tipEl.offsetWidth * s; t.bottom = t.top + tipEl.offsetHeight * s; // 66-1: where it rests, not where its slide-in has it now
+    const b = others.map(b => b.getBoundingClientRect()).find(r => r.width && r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top); if (!b) break;
     if (up) tipEl.style.bottom = (sr.bottom - b.top) / s + 8 + 'px'; else tipEl.style.top = (b.bottom - sr.top) / s + 8 + 'px';
   }
+  if (!toastEl.classList.contains('on')) return; // 66-1: a tip come up under a toast already showing: the toast goes below it
+  const tt = sr.top + tipEl.offsetTop * s, tb = tt + tipEl.offsetHeight * s, tl = sr.left + tipEl.offsetLeft * s, tr = tl + tipEl.offsetWidth * s, T = toastEl.getBoundingClientRect();
+  if (T.left < tr && T.right > tl && T.top < tb && T.bottom > tt) toastEl.style.top = (tb - sr.top) / s + 6 + 'px';
 }
+export const redodge = () => { if (tipEl) dodge(); }; // 66-1: a button that just grew under a tip (the nest pill's 「부화 시작」), not up to 250 ms later
 function endTip(off) { if (!tipEl) return; const k = tipEl.dataset.k; tipEl.remove(); tipEl = null; calm = Date.now() + 380; G.flag('tip_' + k); if (off) { G.flag('tipsOff'); waiting.length = 0; } setTimeout(nextTip, 400); }
 // any tap elsewhere also counts as seen
 addEventListener('pointerdown', e => { if (tipEl && !tipEl.contains(e.target)) endTip(false); }, true);

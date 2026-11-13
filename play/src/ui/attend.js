@@ -39,7 +39,7 @@ box.onclick = e => {
   if (out) { track('attend', { day: G.S.attend.n }); return show(out.got); }
   box.hidden = true; done();
 };
-const busy = () => firstEgg(G.S) || topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden || !at() || resting(); // inbox 61 B: after the first egg; inbox 43: only inside a habitat, never on the map; one card at a time
+const busy = () => firstEgg(G.S) || G.S.guests?.tut >= 0 || G.now() - G.S.since < 300e3 || topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden || !at() || resting(); // inbox 61 B: after the first egg; 66-1: after the guest tutorial; inbox 43: only inside a habitat, never on the map; one card at a time
 setInterval(() => {
   if (!box.hidden || !G.attendDue() || busy()) { quiet = 0; return; }
   if ((quiet += 800) < 1600) return;

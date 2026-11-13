@@ -8,6 +8,8 @@
 // inbox 54, the promotion funnel: start carries src (where the player came from, four ways only), play_1m/3m/10m (minutes on the
 // game screen today, hidden time not counted, a day each), first_nest, first_decor, hatch_3 (the first day only, once ever).
 // inbox 61 C: rate (love / ok / meh, the 「토이브룩 어때요?」 bar, a day at most).
+/// 66-1 (inbox 66·68): first_drag (a friend carried, the first day), hatch_2 (the second hatch, within 2 min of the first or not, the
+// first day), play_5m (with play_1m/3m: still here at 60/180/300 s), great_d1 (대만족 on the first day, sent the next day, in bands) and return_d7.
 // No names, mail, device id or save. The service worker leaves other hosts alone (dist-web/sw.js), so the script is never stored.
 // report.js imports this before the game: nothing here may import the game.
 import { UMAMI_ID, STATS_HOST, PREFS } from '../config.js';
@@ -56,7 +58,7 @@ src ||= fromRef(document.referrer);
 const noon = t => new Date(t).setHours(12, 0, 0, 0);
 const hb = n => n < 1 ? '0' : n < 50 ? '1~49' : n < 120 ? '50~119' : '120+';
 export function watch(G) {
-  if (!st.t0) { st.t0 = G.S.stats.days > 1 ? 'old' : Date.now(); if (G.S.stats.hatch) st.first_hatch = 1; keep(); } // a player from before 0.71: no first or next day
+  if (!st.t0) { st.t0 = G.S.stats.days > 1 ? 'old' : Date.now(); if (G.S.stats.hatch) st.first_hatch = 1; if (st.t0 !== 'old') st.g1 = 0; keep(); } // a player from before 0.71: no first or next day
   const day = (t = Date.now()) => { const d = Math.round((noon(t) - noon(G.S.since)) / DAY); return d >= 30 ? '30+' : Math.max(0, d); };
   let h = G.S.hearts; // hearts got and spent are what this page saw them do (not across a backup put in)
   const tick = (ev = []) => {
@@ -66,15 +68,20 @@ export function watch(G) {
     track('start', { src });
     track('codex', { cells: Math.floor(Object.keys(G.S.codex).length / 10) * 10, day: day() });
     for (const e of ev) {
+      if (e.type === 'guest' && e.what === 'great' && st.t0 !== 'old' && today === dayOf(st.t0)) { st.g1 = (st.g1 || 0) + 1; keep(); } // 66-1
       if (e.type === 'buy') track('buy', { kind: e.kind, price: e.price < 50 ? '0~49' : e.price < 100 ? '50~99' : '100+', day: day() }, 'buy#');
       if (e.type === 'expand') track('expand', { habitat: e.habitat, step: e.level, day: day() }, 'expand:' + e.habitat + e.level);
       if (e.type === 'level') for (let L = Math.floor(e.from / 5 + 1) * 5; L <= e.level; L += 5) track('level', { level: L, day: day() }, 'level' + L);
     }
     if (st.t0 !== 'old' && !st.return_d1 && today !== dayOf(st.t0)) { if (today === dayOf(st.t0 + DAY)) once('return_d1'); else { st.return_d1 = 1; keep(); } } // the next day only
-    if (G.S.stats.hatch && !st.first_hatch) once('first_hatch');
+    if (G.S.stats.hatch && !st.first_hatch) { once('first_hatch'); st.h1 = Date.now(); keep(); }
+    if (st.t0 !== 'old' && !st.return_d7 && today !== dayOf(st.t0) && today !== dayOf(st.t0 + DAY)) { if ([6, 7, 8].some(k => today === dayOf(st.t0 + k * DAY))) { st.return_d7 = 1; keep(); track('return_d7'); } } // 66-1: back on day 7 (the 6th~8th day after, a day's slack each side)
+    if (st.t0 !== 'old' && st.g1 != null && !st.g1s && today !== dayOf(st.t0)) { st.g1s = 1; keep(); track('great_d1', { n: st.g1 >= 6 ? '6+' : st.g1 >= 3 ? '3~5' : String(st.g1) }); }
     // inbox 54: the first day only; once ever, marked even when nothing went (a later day, or off)
     const first = (name, done) => { if (!done || st[name]) return; st[name] = 1; keep(); if (st.t0 !== 'old' && today === dayOf(st.t0)) track(name); };
     first('first_nest', G.S.flags.nestTapped); first('first_decor', G.S.props.some(p => p.placed && !p.nat)); first('hatch_3', G.S.stats.hatch >= 3);
+    first('first_drag', G.S.flags.carried); // 66-1
+    if (G.S.stats.hatch >= 2 && !st.hatch_2) { st.hatch_2 = 1; keep(); if (st.t0 !== 'old' && today === dayOf(st.t0) && st.h1) track('hatch_2', { in: Date.now() - st.h1 <= 120e3 ? '2분 안' : '2분 넘게' }); }
   };
   tick(); G.on(tick);
   // inbox 54: time on the game screen today (hidden or asleep not counted: a gap over 10 s counts 10 s)
@@ -85,6 +92,6 @@ export function watch(G) {
     if (document.hidden) return;
     if (st.pv?.day !== today) st.pv = { day: today, s: 0 };
     st.pv.s += dt / 1000; keep();
-    for (const m of [1, 3, 10]) if (st.pv.s >= m * 60) track(`play_${m}m`, { day: day() });
+    for (const m of [1, 3, 5, 10]) if (st.pv.s >= m * 60) track(`play_${m}m`, { day: day() });
   }, 5000);
 }

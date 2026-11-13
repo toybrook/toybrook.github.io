@@ -6,9 +6,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { buildMeadow } from './meadow/index.js';
-import { buildPond } from './pond/index.js';
-import { buildSnow } from './snow/index.js';
-import { buildDino } from './dino/index.js';
 import { rectAt, strip, zoneSet, BOARD0 } from './zones.js';
 import { mist } from './mist.js';
 import { windTime, toyMat, snowNow } from './toyKit.js';
@@ -34,7 +31,11 @@ import { landOf } from './land.js';
 import { mythLayer } from './myth.js';
 import { skyLayer } from './skyfx.js';
 
-const BUILD = { meadow: buildMeadow, pond: buildPond, snow: buildSnow, dino: buildDino }; // scene of each habitat that is ready (HABITATS ready: true)
+// scene of each habitat that is ready (HABITATS ready: true). 67-2: the meadow's comes with this file (the first egg's board);
+// the others only when one is built (a new player never fetches them before the first egg; the held dino not at all)
+const buildPond = () => import('./pond/index.js').then(m => m.buildPond), buildSnow = () => import('./snow/index.js').then(m => m.buildSnow),
+  buildDino = () => import('./dino/index.js').then(m => m.buildDino);
+const BUILD = { meadow: async () => buildMeadow, pond: buildPond, snow: buildSnow, dino: buildDino };
 // 27-1: three hangs a 'dispose' listener from each renderer on every geometry, material and texture that renderer draws,
 // and the listener holds the renderer's GL context. The shared (cached) ones outlive a habitat built again (main.js
 // rebuild), so every old renderer stayed alive (+0.5 MB a rebuild). Each habitat notes what its renderer hangs while it
@@ -62,7 +63,7 @@ function hooks(renderer) {
 // (the habitat this one replaces, main.js); reveal = the mist draws back off the band just bought
 const modelsOf = (habId, records) => [...new Set([...SPECIES.filter(s => s.habitat === habId), ...records.filter(r => habitatOf(r) === habId).map(r => SP[r.species])].filter(Boolean).map(s => s.model))];
 // 26-1: the habitat the player will most likely open, fetched in a quiet moment after the first screen
-export const prefetch = (habId, records) => Promise.all(modelsOf(habId, records).map(loadModel));
+export const prefetch = (habId, records) => Promise.all([BUILD[habId]?.(), ...modelsOf(habId, records).map(loadModel)]);
 
 export async function startHabitat(container, ui, habId, records = [], { level = 0, pose = null, reveal = false } = {}) {
   const W = () => container.clientWidth, H = () => container.clientHeight;
@@ -171,10 +172,11 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const get = async m => { await loadModel(m); moves[m] = await import(`../animals/${MODELS[m].move}.js`); };
   const [now, rest] = modelsOf(habId, records).reduce((o, m) => (o[here.has(m) ? 0 : 1].push(m), o), [[], []]);
   let last = null; const later = Promise.all(rest.map(m => get(m).catch(() => {}))).then(() => { if (last) sync(last); });
+  const builder = BUILD[habId](); builder.catch(() => {}); // 67-2: fetched alongside the models
   await Promise.all([...now.map(get),
     ...records.filter(r => habitatOf(r) === habId).flatMap(r => [r.acc, ...r.wear || []]).filter(Boolean).map(loadAcc)]); // 26-1: the secret accessories worn here (15-2: and event wear)
   stamps.length = 0; // 28-6: the terrain stamps of the habitat before (syncStamps puts this one's back)
-  const habitat = BUILD[habId](scene, { zzz: obj => ui.zzz(project(obj)) }, sunDir, level, top);
+  const habitat = (await builder)(scene, { zzz: obj => ui.zzz(project(obj)) }, sunDir, level, top);
   renderer.shadowMap.needsUpdate = true;
   const mistTick = mist(scene, habitat.floor, open, built, reveal && level > 0 ? rectAt(habId, level - 1) : open), U = habitat.unit; // U: saved decor x, z -> here
   const flies = habId === 'meadow' ? fireflies(scene, habitat.ctx) : null; // 21-1: fireflies over the meadow at night (the pond: sparkles on its water)
@@ -187,7 +189,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // the player's animals: one actor per saved record that lives here and isn't in storage
   const actors = new Map();
   let homed = false;
-  const make = rec => { const a = moves[SP[rec.species].model].createActor(habitat.ctx, rec); actors.set(rec.id, a); return a; };
+  const make = rec => { const sp = habitat.ctx.spawn; if (rec.at) habitat.ctx.spawn = () => [rec.at[0] + Math.random() * 2 - 1, rec.at[1] + Math.random() * 2 - 1]; // 66-1: a guest at its spot
+    try { const a = moves[SP[rec.species].model].createActor(habitat.ctx, rec); actors.set(rec.id, a); return a; } finally { habitat.ctx.spawn = sp; } };
   const asked = new Set(); // 16-1: a guest (ui/visit.js) that came after the build, of a species not fetched here: its model then
   function sync(records) {
     last = records;
@@ -226,7 +229,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     ties.hearts.forEach((s, i) => { s.visible = i < m; });
   }
   // the spot nearest the middle of the screen (or at: [x, z]) where ok(x, z) holds (rings out from it), else the middle
-  const flat = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), mid = new THREE.Vector3();
+  const flat = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), mid = new THREE.Vector3(), tmpV = new THREE.Vector3();
   // inbox 42 C2: R, how far out (refit: the whole board, the rings past 16 m finer, so a big prop finds a gap)
   function nearest(ok, at, R = 40) { // 42 F-2: 40 (was 16), so a big prop taken out on the snow or the pond (its middle busy) still finds a spot
     if (at) mid.set(at[0], 0, at[1]);
@@ -669,6 +672,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       const L = habitat.ctx.land(a.water || ''), M = L.root(L.id(...hm)), at = L.root(L.id(a.position.x, a.position.z));
       if (M < 0 || M === L.main || L.area(M) < ROOM || at >= 0 && at !== M) ui.onHome?.(a.rec.id, null); }
   }
+  let guestEnvAt = null; const GUEST_HIGH = 0.6, GUEST_BODY = { x: 0, z: 0, yaw: 0, r: 0.5, seg: [0, 0] }; // 66-1: 높은 곳, its middle this much (m) over the ring round it; a guest's room when it comes
   function letGo() {
     const { a, x, z, f } = carry, carry0 = carry.from, c = habitat.ctx; carry = null; controls.enabled = true; if (actors.get(a.rec.id) !== a) return; // gone meanwhile (put away)
     const L = c.land(a.water || ''), mine = (x, z, l) => l >= 0 && L.area(l) >= ROOM && free(c.crowd, a.body, x, z); // inbox 48: any land big enough to live on (inside a closed fence, an island): it lives there from then on
@@ -678,6 +682,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (small) c.cramped?.(true);
     const M = L.root(L.id(nx, nz)), pen = M >= 0 && M !== L.main && L.area(M) >= ROOM; // inbox 53: inside a closed fence: kept for next time
     if (pen || a.rec.home) ui.onHome?.(a.rec.id, pen ? [nx, nz] : null);
+    if (a.rec.wg) ui.onGuestMove?.(a.rec.wg, nx, nz); // 66-1: a guest carried: its spot (and its pair's) moves there
     a.drop(nx, nz, DROP.carry); const [px, pz] = st && a.use(st) || [nx, nz]; // on a play prop: by its seat (walk.js use)
     puffs.push({ x: px, z: pz, t: dropFrom(DROP.carry) - DROP.fall, bits: null }); sfx('place', DROP.fall - dropFrom(DROP.carry)); // 13-0: a plastic 톡 as it lands
   }
@@ -892,7 +897,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     // backing off below still stops at a grown horse's 0.0887
     const as = [...actors.values()], n = as.length; HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(n <= 3 ? 0.3 : THREE.MathUtils.clamp(0.12 - (n - 3) * 0.0018, 0.111, 0.12), Math.min(...as.map(hOf))); if (wide || !n) return;
     const near = a => as.filter(b => Math.hypot(b.position.x - a.position.x, b.position.z - a.position.z) < 12);
-    const g = as.map(near).reduce((x, y) => y.length > x.length ? y : x), t = HOME.target.set(0, 0, 0);
+    const tg = as.find(a => a.rec.tut), g = tg ? near(tg) : as.map(near).reduce((x, y) => y.length > x.length ? y : x), t = HOME.target.set(0, 0, 0); // 66-1: the tutorial's guest stays in the home view
     for (const a of g) t.add(a.position); t.divideScalar(g.length).setY(0); t.x = THREE.MathUtils.clamp(t.x, ...panX); t.z = THREE.MathUtils.clamp(t.z, ...panZ);
     homeCam.copy(camera);
     const shows = r => { homeCam.position.copy(t).addScaledVector(homeDir, r); homeCam.lookAt(t); homeCam.updateMatrixWorld(); return g.every(a => { fv.copy(a.position).project(homeCam); return Math.abs(fv.x) < 0.8 && fv.y > -0.55 && fv.y < 0.65; }); };
@@ -979,15 +984,17 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // drawn spot becomes the real one and, near a tree, pulls the camera in a little more every frame of a drag
   const unguard = () => { if (camera.position.equals(shown)) camera.position.copy(real); };
   for (const ev of ['pointerdown', 'pointermove']) container.addEventListener(ev, unguard, { capture: true, ...sig });
+  // 67-2: the floor under a tree or a prop, kept till it moves or the stamps change (asked for each animal every frame: 2% of a frame)
+  const floorOf = o => o.fy?.[0] === o.x && o.fy[1] === o.z && o.fy[2] === stampSig ? o.fy[3] : (o.fy = [o.x, o.z, stampSig, habitat.floor(o.x, o.z)])[3];
   function guard() {
     const C = camera.position, T = controls.target; real.copy(C);
     for (let pass = 0; pass < 3; pass++) {
       let moved = false;
-      for (const o of [...habitat.solid, ...D.list]) {
+      for (const L of [habitat.solid, D.list]) for (const o of L) { // 67-2: not spread into a new array (every frame)
         // a cylinder with a round top (inbox 14): coming down onto it from above, the push grows from nothing instead of
         // starting at full depth once below its top
         const dx = C.x - o.x, dz = C.z - o.z, R0 = o.r + 0.5; if (dx * dx + dz * dz >= R0 * R0) continue; // inbox 36: far off (the floor lookup costs)
-        const up = C.y - habitat.floor(o.x, o.z) - (o.h ?? 1.2) - 0.3;
+        const up = C.y - floorOf(o) - (o.h ?? 1.2) - 0.3;
         if (o.water || (o.nat && o.open) || up >= R0 || (T.x - o.x) ** 2 + (T.z - o.z) ** 2 < R0 * R0) continue; // above it, or looking at something in it (22-1: or a flower patch)
         const R = up > 0 ? Math.sqrt(R0 * R0 - up * up) : R0, c = dx * dx + dz * dz - R * R;
         if (c >= -1e-6) continue; // outside
@@ -1034,7 +1041,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (a < 1e-9 || D <= 0) return false;
     const t0 = Math.max(0, (-b - Math.sqrt(D)) / (2 * a)), t1 = Math.min(1, (-b + Math.sqrt(D)) / (2 * a));
     if (t0 >= t1) return false;
-    const y0 = habitat.floor(o.x, o.z), ya = C.y + (T.y - C.y) * t0, yb = C.y + (T.y - C.y) * t1;
+    const y0 = floorOf(o), ya = C.y + (T.y - C.y) * t0, yb = C.y + (T.y - C.y) * t1;
     return Math.max(ya, yb) > y0 && Math.min(ya, yb) < y0 + o.h + 0.3;
   }
   // following: another animal between the camera and the followed one steps (or swims) aside (walk.js / swim.js shoo), in any habitat
@@ -1055,7 +1062,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const mids = [];
   function fadeProps(dt) {
     let n = 0; if (!decorOn) for (const a of focus ? [focus] : actors.values()) if (a.obj.visible) { const v = mids[n] ??= new THREE.Vector3(); n++; v.a = a; if (a === focus) v.copy(controls.target); else v.copy(a.obj.position).setY(a.obj.position.y + 0.5 * SIZE.unit * (SIZE[a.rec.species] ?? 0.5) * (a.rec.stage === 'baby' ? SIZE.baby : 1)); } // its middle (data.js sized)
-    for (const o of [...habitat.solid, ...D.list]) {
+    for (const L of [habitat.solid, D.list]) for (const o of L) {
       if (!o.fade) continue;
       let want = 1; for (let i = 0; i < n; i++) if (!o.play?.seats.includes(mids[i].a) && hides(o, camera.position, mids[i])) { want = FADE; break; } // 28-2: not the play prop it is on
       if (want === 1 && !o.twin?.on) continue;
@@ -1255,5 +1262,25 @@ GPU ${gpu}`; }
     unfollow: () => { trainCam = false; setFocus(null); }, followed: () => trainCam ? 'train' : focus?.rec.id ?? null, // 26-4 사진 모드 따라가기
     hasTrain: () => !!train, followTrain() { if (!train) return false; setFocus(null); Object.assign(trainAim, { radius: 9, phi: 1 }); goingHome = false; trainCam = true; return true; }, // 28-4
     where(id) { const a = actors.get(id); return a?.obj.visible ? project(a.obj, height(a) + 0.3) : null; }, // screen point above an animal
+    // 66-1 떠돌이 손님 (game/guests.js judge): what is round x, z (m) within r: ground tags, prop ids, friends (not guests)
+    guestLook(x, z, r) { const c = habitat.ctx, h = c.heightAt, near = (o, rr = 0) => Math.hypot(o.x - x, o.z - z) < r + rr, ground = [];
+      const ring = [0, 1, 2, 3, 4, 5, 6, 7].map(k => [x + Math.cos(k * 0.785) * r, z + Math.sin(k * 0.785) * r]);
+      if (c.water != null && [[x, z], ...ring.map(([a, b]) => [(a + x) / 2, (b + z) / 2]), ...ring].some(([a, b]) => h(a, b) < c.water - 0.05)) ground.push('물가');
+      if (underfoot(x, h(x, z), z) === 'grass') ground.push('풀밭');
+      if (h(x, z) - ring.reduce((s, [a, b]) => s + h(a, b), 0) / 8 > GUEST_HIGH) ground.push('높은 곳');
+      if ((c.shelter || []).some(o => near(o, o.r || 1))) ground.push('그늘');
+      const props = [...[...placed.values()].filter(e => near(e.spot, e.spot.r)).map(e => e.prop), ...natSpots.filter(o => near(o, o.r)).map(o => o.prop)];
+      const pals = [...actors.values()].filter(a => !a.rec.guest && a.obj.visible && near(a.position)).map(a => ({ species: a.rec.species, baby: a.rec.stage === 'baby' }));
+      return { ground, props, pals }; },
+    guestEntry(from, rng, want, show) { const c = habitat.ctx, wet = (x, z) => c.water != null && [0, 1, 2, 3, 4, 5].some(k => c.heightAt(x + Math.cos(k * 1.05) * 2.5, z + Math.sin(k * 1.05) * 2.5) < c.water - 0.05);
+      const at = [controls.target.x + (rng() - 0.5) * 6, controls.target.z + (rng() - 0.5) * 6], L = c.land(''), ok = (x, z) => x > panX[0] - 2 && x < panX[1] + 2 && z > panZ[0] - 2 && z < panZ[1] + 2 && c.walkable(x, z) && free(c.crowd, GUEST_BODY, x, z) && L.root(L.id(x, z)) === L.main; // the main land: a friend can be brought (not an island, not a pen); where the camera can go
+      const seen = (x, z) => { tmpV.set(x, c.heightAt(x, z) + 0.4, z).project(camera); return tmpV.z < 1 && Math.abs(tmpV.x) < 0.7 && tmpV.y > -0.6 && tmpV.y < 0.55; }; // 66-1: in view (clear of the bars), else anywhere near
+      const fit = (s, w, d) => (x, z) => ok(x, z) && (!d || from !== 'stream' || wet(x, z)) && (!s || seen(x, z)) && (!w || !want || want(x, z));
+      if (show && (carry || decorOn)) return null; // the tutorial's guest waits till the camera may go to it (꾸미기 closing goes back to the full view)
+      const go = p => { if (show && !seen(...p)) { setFocus(null); aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(p[0], ...panX), 0, THREE.MathUtils.clamp(p[1], ...panZ)), radius: camera.position.distanceTo(controls.target), phi: sph.setFromVector3(off.copy(camera.position).sub(controls.target)).phi }; goingHome = false; } return p; };
+      for (const k of show ? [[1, 1, 1], [1, 1, 0], [0, 1, 1], [0, 1, 0]] : [[1, 1, 1], [1, 1, 0], [1, 0, 1], [1, 0, 0]]) { const p = nearest(fit(...k), at); if (fit(...k)(...p)) return go(p); } return go(nearest(fit(0, 0, 1), at)); }, // in view first, then not happy there yet, then by the stream it came down; 튜토리얼 손님: where its wish works (its ground met, not happy yet), the view glides to it
+    guestEnv() { if (snapOn && guestEnvAt) return guestEnvAt; const n = (habitat.ctx.night ?? 0) >= 0.5, w = weatherNow(habId), s = n && ui.skyNow?.(habId); // the real clock and weather (사진 모드's picked night or rain: the last real one)
+      return guestEnvAt = { hab: habId, night: n, rain: w.rain > 0.5, snow: w.snow > 0.5, sky: !!(s?.ev && (s.meteor || s.aurora || s.comet)) }; },
+    guestPos(id) { const a = actors.get(id); return a ? [a.position.x, a.position.z] : null; },
   };
 }

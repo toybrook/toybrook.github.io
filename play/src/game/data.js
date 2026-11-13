@@ -10,6 +10,7 @@
 //   new prop         = one line in PROPS (+ its look in that habitat's props.js decorModel)
 // Pure data: no DOM, no three.js, so tools/check-eggs.mjs can import it in Node.
 
+import { GUEST_PROPS } from './guests-data.js'; // 66-1
 export const SCHEMA_VERSION = 11; // shape of the save; bump with a migration in rules.js (2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups)
 export const CONTENT_VERSION = 9; // bump when the lists below change (3: launch materials, one legendary each; marble and gold left the lists; 4: colour ids glitter gold -> violet, amber yellow -> honey; 5: meadow rabbit, pig, chicken; 6: meadow sheep, cow; 7: pond (turtle, otter, swan, flamingo, capybara; the duck moved from the meadow); 8: snow (penguin, polar bear, seal, arctic fox, reindeer, snowy owl); 9: dino (triceratops, brachiosaurus, stegosaurus, ankylosaurus, T. rex, pteranodon))
 
@@ -428,8 +429,8 @@ export const MODELS = {
   pteranodon: {
     move: 'walk', walk: { hop: 0.6, trot: 1.5, pace: 0.8, roam: 0.45, rest: 'sit', perch: 0.4 }, legMat: 'hoof',
     files: { baby: 'assets/models/pteranodon_baby.glb', adult: 'assets/models/pteranodon_adult.glb' },
-    baby: sized('pteranodon', 'baby', { h: 1.785, r: 0.54, seg: [-0.143, 0.02], legs: { hip: 0.14, x: [0.12], z: 0.2 }, wing: [0.06, 1, 0.44], attach: { head: { p: [0.12, 1.62, 0], r: [0, 0, -0.1], s: 0.95 }, neck: { p: [0.18, 0.98, 0], r: [0, 0, -0.2], s: 1.25 }, back: { p: [-0.54, 0.8, 0], r: [0, 0, 1.571], s: 0.95 }, eye: { p: [0.24, 1.32, 0], r: [0, 0, 0], s: 1.05 } } }),
-    adult: sized('pteranodon', 'adult', { h: 2.039, r: 0.44, seg: [-0.179, 0.079], legs: { hip: 0.2, x: [0.08], z: 0.16 }, wing: [0.04, 1.14, 0.36], attach: { head: { p: [0.22, 1.8, 0], r: [0, 0, -0.1], s: 0.7 }, neck: { p: [0.12, 1.3, 0], r: [0, 0, -0.2], s: 0.95 }, back: { p: [-0.44, 0.85, 0], r: [0, 0, 1.571], s: 0.9 }, eye: { p: [0.28, 1.62, 0], r: [0, 0, 0], s: 0.75 } } }),
+    baby: sized('pteranodon', 'baby', { h: 1.405, r: 0.312, seg: [-0.225, 0.347], legs: { hip: 0.26, x: [-0.18], z: 0.2 }, wing: [0.2, 0.76, 0.26], attach: { head: { p: [0.4, 1.33, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.28, 0.88, 0], r: [0, 0, -0.6], s: 1.1 }, back: { p: [-0.08, 0.84, 0], r: [0, 0, 0.35], s: 0.9 }, eye: { p: [0.5, 1.2, 0], r: [0, 0, 0], s: 1.0 } } }), // inbox 70: on all fours
+    adult: sized('pteranodon', 'adult', { h: 1.605, r: 0.306, seg: [-0.305, 0.453], legs: { hip: 0.32, x: [-0.22], z: 0.2 }, wing: [0.26, 0.86, 0.26], attach: { head: { p: [0.52, 1.45, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.38, 1.0, 0], r: [0, 0, -0.6], s: 1.0 }, back: { p: [-0.1, 0.92, 0], r: [0, 0, 0.42], s: 0.9 }, eye: { p: [0.62, 1.33, 0], r: [0, 0, 0], s: 0.7 } } }),
   },
 };
 
@@ -883,6 +884,9 @@ export const PROPS = [
   { id: 'fos_egg', name: '공룡알 화석', price: 0, r: 0.55, gift: '화석 발굴' },
   { id: 'fos_skull', name: '머리뼈 화석', price: 0, r: 1.0, gift: '화석 발굴' },
 ];
+// 66-1 손님 선물 (guests-data.js GUEST_PROPS): only from a guest's 대만족; drawn with an existing prop's model (as), its size and light
+for (const g of GUEST_PROPS) { const A = PROPS.find(p => p.id === g.as);
+  PROPS.push({ id: g.id, name: g.name, as: g.as, habitat: g.hab, price: 0, r: A.r, ...A.k && { k: A.k }, ...A.small && { small: true }, ...A.light && { light: true }, ...A.water && { water: true }, gift: '떠돌이 손님' }); }
 // 14-3 화석 발굴: an animal digging at the dino jungle's fossil site (zones.js / dino/layout.js spots act 'dig', walk.js) turns up
 // the next of these (rules.js dig) with odds a dig, gap ms at least after the last find; each one once, a gift prop in the dino
 // habitat. Not part of BALANCE (no eggs, no hearts: decorations only)

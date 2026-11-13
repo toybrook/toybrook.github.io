@@ -73,7 +73,7 @@ export function makeMyth() {
       fire.uniforms.uF.value = fl; fire.uniforms.uW.value = calm() ? 0.3 : 1 + fl;
     },
     tick(t, n = night) {
-      night = n; coat.emissiveIntensity = 0.1 * n; fire.uniforms.uN.value = gem.uniforms.uN.value = n; pool.material.opacity = 0.55 * n;
+      night = n; coat.emissiveIntensity = 0.1 * n; fire.uniforms.uN.value = gem.uniforms.uN.value = n; pool.material.opacity = 0.55 * n; pool.visible = n > 0; // 67-2: by day nothing to draw (a draw call saved)
       for (let i = 0; i < N; i++) { const [o, x, z, per] = seed[i], k = (t / per + o) % 1, f = Math.sin(Math.PI * k) * (0.6 + 0.4 * n);
         pos[i * 3] = x + 0.12 * Math.sin(t * 1.7 + i) - 0.4 * k; pos[i * 3 + 1] = 1.75 - 0.25 * Math.abs(x + 0.2) + k * 1.3; pos[i * 3 + 2] = z + 0.1 * Math.cos(t * 1.3 + i * 2);
         col[i * 3] = f; col[i * 3 + 1] = f * 0.75; col[i * 3 + 2] = f * 0.4; }

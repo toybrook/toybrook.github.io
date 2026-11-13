@@ -38,7 +38,8 @@ export function makeSkyEnv(renderer, sunDir, sky = DAY_SKY) {
   });
   s.add(new THREE.Mesh(geo, mat));
   let pm = pmrems.get(renderer); if (!pm) pmrems.set(renderer, pm = new THREE.PMREMGenerator(renderer)); // kept: its blur shader compiles once
-  const tex = pm.fromScene(s, 0.03).texture; geo.dispose(); mat.dispose();
+  const rt = pm.fromScene(s, 0.03), tex = rt.texture; geo.dispose(); mat.dispose();
+  tex.dispose = () => rt.dispose(); // 67-2: the texture alone frees nothing (it is the target's): each light step left a 768×1024 one behind
   return tex;
 }
 
@@ -106,7 +107,7 @@ export function instanced(geo, mat, items, { cast = true, receive = true } = {})
     im.setMatrixAt(i, _m.compose(_p.set(it.x, it.y, it.z), _q, _s));
     if (it.c !== undefined) im.setColorAt(i, _c.set(it.c));
   });
-  im.count = items.length; im.castShadow = cast; im.receiveShadow = receive;
+  im.count = items.length; im.castShadow = cast; im.receiveShadow = receive; im.visible = items.length > 0; // 67-2: none here: no draw call
   im.computeBoundingSphere();
   return im;
 }

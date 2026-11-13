@@ -6,7 +6,6 @@ import * as G from '../game/game.js';
 import { HABITATS, PROPS } from '../game/data.js';
 import { levelOf, LAY_NAMES } from '../game/rules.js';
 import { encode, decode } from '../game/layout.js';
-import qrcode from '../../vendor/qrcode.js';
 import { ask, toast } from './hud.js';
 
 const $ = id => document.getElementById(id), el = $('share'), LIST = 'gardens/gardens.json';
@@ -16,9 +15,12 @@ const esc = t => String(t).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const okGarden = g => g && typeof g.title === 'string' && g.title.length <= 40 && HABITATS.some(h => h.id === g.hab) && typeof g.code === 'string'
   && !decode(g.code).error && decode(g.code).hab === g.hab && /^gardens\/[\w-]+\.(jpg|png|webp)$/.test(g.photo);
 let habId = null, hab = null, before = null, msg = '', gardens = null; // gardens: null (not asked yet), 'wait', 'err' or the list
+let qrcode = null; // 67-2: vendor/qrcode.js (52 KB) not with the first screen's code: when 꾸미기 코드 first opens
 
 // id: the habitat, api: its habitat.js, keep: decor.js's 되돌리기 step, taken just before a code is loaded
-export function openShare(id, api, keep) { habId = id; hab = api; before = keep; msg = ''; el.hidden = false; draw(); el.scrollTop = 0; }
+export function openShare(id, api, keep) { habId = id; hab = api; before = keep; msg = '';
+  const go = () => { el.hidden = false; draw(); el.scrollTop = 0; };
+  if (qrcode) go(); else import('../../vendor/qrcode.js').then(m => { qrcode = m.default; }, () => {}).then(go); }
 
 function qr(text) { try { const q = qrcode(0, 'L'); q.addData(text); q.make(); return q.createDataURL(4, 4); } catch { return null; } } // too long: none
 function gardenList() {

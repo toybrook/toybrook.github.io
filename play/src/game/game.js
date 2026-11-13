@@ -3,6 +3,7 @@
 import * as V from './visit.js'; // 16-1
 import * as K from './sky.js'; // 16-2
 import * as R from './rules.js';
+import * as GU from './guests.js'; // 66-1
 import { PROPS } from './data.js';
 import { EDITION } from '../config.js';
 import { now as clock } from './clock.js';
@@ -53,7 +54,7 @@ export async function takeOver() { await navigator.locks.request(LOCK, { steal: 
 export function start(h = {}) {
   hooks = h; const now = clock(); S = load(now) || R.newGame(now); S.edition = EDITION;
   const ev = R.advance(S, now); save(); claim(false); // saved as soon as this tab holds the lock
-  setInterval(() => { const ev = R.advance(S, clock()); if (ev.length) save(); emit(ev); }, 1000);
+  setInterval(() => { const ev = tick(clock()); if (ev.length) save(); emit(ev); }, 1000);
   addEventListener('visibilitychange', save); addEventListener('pagehide', save);
   return ev;
 }
@@ -136,7 +137,30 @@ export const evBuild = (hab, x, z) => act(now => R.evBuild(S, hab, x, z, now));
 export const evWear = (id, k) => act(() => R.evWear(S, id, k));
 export const evOwned = () => S ? R.evOwned(S) : {};
 // 16-1 놀러 보내기 (visit.js): the guests come with the animals to the habitat (no seat, not in S.animals)
-export const withGuests = () => [...S.animals, ...S.visit.guests];
+export const withGuests = () => [...S.animals, ...S.visit.guests, ...wanderers()];
+// 66-1 떠돌이 손님 (guests.js). The habitat on screen hands in its 3D side (ui/play.js: look, entry, pos; null: none on screen) and
+// the real sky and weather (env). A guest stands where its figure is (pos), so a swimmer is judged where it swims.
+let gw = null, genv = () => ({});
+export const guestWorld = (w, env) => { gw = w; if (env) genv = env; };
+function tick(now) {
+  const env = genv(); if (gw) for (const g of S.guests?.list || []) if (g.x != null && g.hab === env.hab) { const p = gw.pos('w' + g.id); if (p) [g.x, g.z] = p; }
+  return [...GU.guestTick(S, now, Math.random, env, gw), ...R.advance(S, now)];
+}
+// a guest's figure record: the same object while it stays (habitat.js makes a new figure for a new record). at: the spot it keeps to
+const wrec = new Map();
+function wanderers() {
+  const L = S.guests?.list || [], out = [];
+  for (const id of wrec.keys()) if (!L.some(g => 'w' + g.id === id)) wrec.delete(id);
+  for (const g of L) { if (g.x == null) continue; const id = 'w' + g.id, R0 = GU.rosterOf(g);
+    if (!wrec.has(id)) wrec.set(id, { id, wg: g.id, k: g.k, species: R0.sp, variant: 'solid', stage: 'adult', guest: true, tut: g.tut != null, hab: g.hab, acc: R0.mark === 'hat' ? 'strawhat' : 'bandana', at: [g.x, g.z] });
+    out.push(wrec.get(id)); }
+  return out;
+}
+export const guestOf = id => S.guests?.list.find(g => g.id === id);
+export const guestPreview = g => GU.preview(S, g);
+export const guestMet = g => gw && g.x != null ? GU.judge(g, gw, genv()) : null; // the bubble's ✓
+export const tutShop = () => S?.guests && GU.tutShop(S);
+export const moveGuest = (id, x, z) => act(() => { if (GU.moveGuest(S, id, x, z)) for (const g of S.guests.list) { const r = wrec.get('w' + g.id); if (r) r.at = [g.x, g.z]; } });
 export const sendVisit = id => act(now => V.sendVisit(S, id, now));
 export const takeVisit = v => act(now => V.takeVisit(S, v, now));
 export const pickCard = (lid, pic, line) => act(now => V.pickCard(S, lid, pic, line, now));

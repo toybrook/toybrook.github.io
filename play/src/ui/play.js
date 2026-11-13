@@ -4,13 +4,13 @@ import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
 import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf } from '../game/rules.js';
 import { PROPS } from '../game/data.js';
-import { toast, hideToast, heart, span, josa, overlayOpen, clock, tip, resting } from './hud.js';
+import { toast, hideToast, heart, span, josa, overlayOpen, clock, tip, resting, redodge } from './hud.js';
 import { openCodex, hasNew } from './codex.js';
 import { initNest } from './nest.js';
 import { openStore, leaveStore } from './store.js';
 import { pickStroll } from './stroll.js';
 import { openFriends, leaveFriends } from './friends.js';
-import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep } from './decor.js';
+import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep, tabName } from './decor.js';
 import { openCabinet } from './cabinet.js';
 import { figureThumb } from './thumbs.js';
 import { guestName } from '../game/visit.js';
@@ -18,6 +18,9 @@ import { PE } from '../game/pals.js';
 import { sfx } from './sound.js';
 import { homeHintDue, appHintDue } from '../game/backup.js';
 import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
+import { rosterOf } from '../game/guests.js'; // 66-1 떠돌이 손님
+import { WISH } from '../game/guests-data.js';
+import { PREFS, calm } from '../config.js';
 
 const $ = id => document.getElementById(id);
 const nameOf = callName; // 26-4: its name if it has one
@@ -71,7 +74,7 @@ export function initPlay(nav) {
     const done = G.S.slots.filter(s => s && now >= s.end).length; // C11: a finished egg said in words, not only the button's glow
     const n = G.S.nests[habId], next = !soon && !done && n && !eggs && n.t + eggGap(G.S) - now; // 27-7a: nothing to do -> when the next egg comes
     pillT.hidden = !soon && !done && !(next > 0); pillT.textContent = done ? `깨울 알 ${done}개 · 둥지를 눌러요` : soon ? `부화까지 ${clock(soon)}` : next > 0 ? `다음 알까지 ${clock(next)}` : '';
-    pillB.hidden = !fill; pill.hidden = pillT.hidden && !fill;
+    pillB.hidden = !fill; pill.hidden = pillT.hidden && !fill; redodge();
   }
 
   // the name tag of the animal followed (habitat.js): a baby's tag adds its growth gauge, kept up to date every tick
@@ -84,7 +87,7 @@ export function initPlay(nav) {
   }
 
   function draw() {
-    hearts.lastChild.textContent = G.S.hearts; if (tagFor) drawTag();
+    hearts.lastChild.textContent = G.S.hearts - flying; // 66-1: the hearts still flying in are added as they land if (tagFor) drawTag();
     codexBtn.classList.toggle('new', hasNew()); $('storeBtn').classList.toggle('new', G.S.cards.some(c => c.new)); // 13-1 a postcard not seen
     if (habId) {
       const out = outIn(G.S, habId); friendsBtn.lastChild.textContent = `${out.length}/${capOf(G.S, habId)}`;
@@ -99,6 +102,7 @@ export function initPlay(nav) {
   }
 
   function onTap(kind, rec, x, y) {
+    if (rec.wg) return showBubble(rec); // 66-1: a 떠돌이 손님 shows its wishes (no pat hearts)
     if (G.tapHeart(rec.id)) { // temporary heart rule (game/hearts.js); the tap that reaches the day's cap says so, once
       heart(x, y); if (G.S.pet.n >= B.heart.daily) toast('오늘 쓰다듬기 하트는 다 모았어요', 2200, true);
     }
@@ -110,6 +114,7 @@ export function initPlay(nav) {
   function showBubble(r, say = '') {
     const now = G.now(), baby = r.stage === 'baby', n = feedsLeft(r, now), c = G.S.candy || 0;
     const btn = (act, text, sub) => `<button data-act="${act}"${sub ? ' class="sub"' : ''}>${text}</button>`;
+    if (r.wg) bubble.innerHTML = guestHtml(r, say); else // 66-1
     if (r.guest) bubble.innerHTML = `${say ? say + ' ' : ''}${guestName(r)}<small>손님 · ${Math.max(1, Math.ceil((r.until - now) / 3600e3))}시간 더 머물러요</small><div class="row">${btn('book', '방명록', true)}</div>`; else // 16-1
     bubble.innerHTML = `${say ? say + ' ' : ''}${nameOf(r)}${baby ? `<small>${growText(r, now)}</small>` : ''}<div class="row">${
       baby && growing(r) ? btn('feed', n ? `먹이 주기 ${n}/${B.grow.feeds}` : '오늘 먹이 다 줬어요') + btn('candy', `꼬마 사탕 주기 ${c ? `(${c}개)` : `♥${B.candy.price}`}`, true) : ''}${
@@ -129,8 +134,59 @@ export function initPlay(nav) {
   }
 
   // what the game did (every tick, every action, and the catch-up at start)
+  // 66-1 떠돌이 손님: its bubble (name, each wish with ✓ while it holds there, time left, what it leaves: shown before)
+  const wishText = w => { const W = WISH[w] || {}; return `${W.icon ?? ''} ${W.riddle ? `「${W.riddle}」` : W.k === 'pals' ? `친구 ${W.n}마리 곁` : w}`; };
+  function guestHtml(r, say = '') {
+    const g = G.guestOf(r.wg); if (!g) return say || '';
+    const R = rosterOf(g), J = G.guestMet(g), P = G.guestPreview(g), egg = P.egg && HAB[P.egg]?.name;
+    return `${say ? say + ' ' : ''}${R.name}<small>떠돌이 손님 · ${Math.max(1, Math.ceil(g.on / 60e3))}분 더 머물러요</small><ul class="gw">${
+      g.w.map((w, i) => `<li${J?.met[i] ? ' class="ok"' : ''}>${J?.met[i] ? '✓' : '·'} ${wishText(w)}</li>`).join('')}${
+      g.b ? `<li class="bn${J?.bonus ? ' ok' : ''}">${J?.bonus ? '✓' : '+'} 덤 ${wishText(g.b)}</li>` : ''}</ul><small>만족 ♥${P.hearts}${P.great ? ` · 대만족 ♥${P.great}` : ''}${egg ? ` · ${egg} 알` : ''}${P.gift ? ` · 선물 ${Math.round(P.gift * 100)}%` : ''}</small>`;
+  }
+  // inbox 68 톡톡톡: the hearts fly from the guest into the counter, a 톡 and a short buzz as each lands, the number going up with them
+  let flying = 0;
+  function fly(from, n) {
+    const to = hearts.getBoundingClientRect(), k = calm() ? 1 : Math.min(8, Math.max(3, Math.ceil(n / 2))), [x0, y0] = from || [innerWidth / 2, innerHeight / 2];
+    flying += n; draw();
+    for (let i = 0; i < k; i++) { const part = Math.floor(n * (i + 1) / k) - Math.floor(n * i / k), e = document.createElement('div');
+      e.className = 'fx heart'; e.textContent = '♥'; Object.assign(e.style, { left: x0 + 'px', top: y0 + 'px', animation: 'none' }); document.body.append(e);
+      const dx = to.left + to.width * 0.3 - x0, dy = to.top + to.height / 2 - y0, ms = calm() ? 0 : 620, d = calm() ? 0 : i * 90;
+      const done = () => { e.remove(); flying -= part; draw(); hearts.classList.remove('pop'); void hearts.offsetWidth; hearts.classList.add('pop'); sfx('tok'); if (PREFS.buzz && !calm()) navigator.vibrate?.(8); };
+      if (!ms) { done(); continue; }
+      e.animate([{ transform: 'translate(-50%,-50%) scale(1.1)' }, { transform: `translate(calc(-50% + ${dx * 0.35 + (i % 2 ? 30 : -30)}px), calc(-50% + ${dy * 0.2 - 40}px)) scale(1.2)` }, { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.6)` }],
+        { duration: ms, delay: d, easing: 'ease-in', fill: 'both' }).finished.then(done, done);
+    }
+  }
+  const gName = e => { const R = rosterOf(e); return R ? R.name : '손님'; }, at = id => hab?.where('w' + id);
+  function guestEv(e) {
+    const nm = gName(e), here = !e.hab || e.hab === habId;
+    if (e.what === 'arrive' && here) { const g = G.guestOf(e.id);
+      if (e.pair != null && G.S.guests.list.some(o => o.pair === e.pair && o.id < e.id)) return; // the pair: one note for both
+      const two = e.pair != null && G.S.guests.list.filter(o => o.pair === e.pair);
+      toast(two ? `손님 둘이 함께 왔어요 · 둘의 소원이 서로 달라요. 눌러서 보상을 보고 골라 주세요` : `${nm}${josa(nm, '이', '가')} 놀러 왔어요 · 눌러서 소원을 들어 보세요`, 3200, true);
+      if (g?.tut != null) setTimeout(() => { const r = G.withGuests().find(x => x.wg === e.id); if (r && hab?.look(r.id)) showBubble(r); }, 900); // the tutorial's guest: the camera goes to it
+    }
+    if (e.what === 'wish') fly(at(e.id), e.hearts); // a wish met for the first time: its small burst
+    if (e.what === 'happy' || e.what === 'great') {
+      const p = at(e.id), x = [];
+      if (e.egg?.slot != null) x.push('알을 부화 칸에 넣었어요'); else if (e.egg?.nest) x.push(`${HAB[e.egg.hab]?.name ?? ''} 둥지에 알을 두고 갔어요`); else if (e.egg?.hearts) x.push(`알 대신 ♥+${e.egg.hearts}`);
+      if (e.slot != null && e.slot >= 0) x.push('부화가 빨라졌어요');
+      if (e.gift?.prop) x.push(`선물 「${PROPS.find(P => P.id === e.gift.prop)?.name ?? ''}」 · 꾸미기 › ${tabName(e.gift.prop)}`); else if (e.gift?.hearts) x.push(`선물 ♥+${e.gift.hearts}`);
+      toast(`${e.what === 'great' ? '대만족! ' : ''}${nm}${josa(nm, '이', '가')} 기뻐해요 · ♥+${e.hearts}${x.length ? ' · ' + x.join(' · ') : ''}`, 3600, true);
+      fly(p, e.hearts + (e.egg?.hearts || 0) + (e.gift?.hearts || 0)); if (e.what === 'great') sfx('grown');
+      if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; }
+    }
+    if (e.what === 'bye' && hab) { toast(`${nm}: 「다음에 또 올게」`, 2400, true); if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; } }
+    if (e.what === 'free') { const P = PROPS.find(p => p.id === e.prop); G.flag('ui:decorBtn'); decorBtn.classList.add('newly'); setTimeout(() => decorBtn.classList.remove('newly'), 4200);
+      toast(`「${P?.name ?? ''}」${josa(P?.name ?? '', '을', '를')} 받았어요 · 꾸미기 › ${tabName(e.prop)}에서 꺼내 손님 곁에 놓아 주세요`, 4200, true); }
+    if (e.what === 'hello') toast('떠돌이 손님이 찾아오기 시작했어요 · 소원을 들어주면 하트와 알을 두고 가요', 4200, true);
+    if (e.what === 'tutDone') { const R = e.night && rosterOf({ k: e.night }); toast(R ? `오늘 밤 손님 · 「${R.name}」${josa(R.name, '이', '가')} 올지도 몰라요` : '손님맞이를 다 익혔어요 · 이제 손님이 가끔 찾아와요', 4200, true); }
+  }
+
   function events(ev) {
+    for (const e of ev) if (e.type === 'guest') guestEv(e); // before draw: a guest just gone is still there to fly from
     draw();
+    if (bubbleFor?.wg && !bubble.hidden) bubble.innerHTML = guestHtml(bubbleFor); // its ✓ as things move
     if (bubbleFor && ev.some(e => e.type === 'grown' && e.animal.id === bubbleFor.id)) showBubble(bubbleFor); // grown up: says its name
     const grown = ev.filter(e => e.type === 'grown').map(e => e.animal);
     if (grown.length && hab) setTimeout(cards, 2200); // after the growing (figure.js: about 1.5 s), the "다 자랐어요" card
@@ -148,7 +204,8 @@ export function initPlay(nav) {
 
   // "○○가 다 자랐어요!": every grown animal whose card wasn't seen (several at once after time away), baby and adult side by side
   const card = $('grown'); let later = 0;
-  const busy = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo') || resting(); // inbox 43
+  const covered = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo'); // 66-1: a guest lands once none is up
+  const busy = () => covered() || resting(); // inbox 43
   function cards() {
     if (!hab || !card.hidden) return;
     const list = G.S.animals.filter(a => a.card), pal = !list.length && !G.S.flags.palOff && G.S.pals.list.find(p => p.new); if (!list.length && !pal) return;
@@ -176,7 +233,7 @@ export function initPlay(nav) {
   const home = $('homeHint'); let homeT = 0, quiet = 0, persisted = false;
   function homeCard() {
     homeT = 0; if (!hab || !home.hidden || !homeHintDue(DEV, G.S.flags)) return;
-    if (busy()) quiet = Date.now();
+    if (busy() || G.S.guests?.tut >= 0 || G.now() - G.S.since < 300e3) quiet = Date.now(); // 66-1: not in the first 5 minutes (the guest tutorial)
     if (Date.now() - quiet < 2000) { homeT = setTimeout(homeCard, 800); return; }
     home.hidden = false;
   }
@@ -220,8 +277,10 @@ export function initPlay(nav) {
   return {
     onTap, events, scene, onPropTap, onEdit, onPaint, onSweep,
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
-    attach(api, id) { hab = api; habId = id; nest.attach(api, id); draw(); hint(); setTimeout(cards, 1200); }, // grown while away: the cards together
+    attach(api, id) { hab = api; habId = id; nest.attach(api, id);
+      G.guestWorld({ look: (h, x, z, r) => h === habId && hab ? hab.guestLook(x, z, r) : {}, entry: (h, from, rng, want, show) => covered() || !hab ? null : hab.guestEntry(from, rng, want, show), pos: id => hab?.guestPos(id) }, () => hab ? hab.guestEnv() : {}); // 66-1
+      draw(); hint(); setTimeout(cards, 1200); }, // grown while away: the cards together
     openNest: () => nest.open(), cards, firstEgg: (id, done, onCard) => nest.first(id, done, onCard), // inbox 61 B
-    leave() { leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); hideNote(); bubble.hidden = true; bubbleFor = null; card.hidden = home.hidden = true; clearTimeout(homeT); homeT = 0; hideToast(); },
+    leave() { G.guestWorld(null); leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); hideNote(); bubble.hidden = true; bubbleFor = null; card.hidden = home.hidden = true; clearTimeout(homeT); homeT = 0; hideToast(); },
   };
 }

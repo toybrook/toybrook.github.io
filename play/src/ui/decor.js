@@ -11,7 +11,8 @@
 // habitat.js room; 27-7b: any prop held on a red spot), the first rail's tip.
 import * as G from '../game/game.js';
 import { BALANCE as B, BIGS, PROPS, SCENES, NATURE, BRUSHES, SETS, ZONES, brushIn, paletteOf, SIZES, sizeF, sizable } from '../game/data.js';
-import { SP, PROP, placedIn, railsIn, capped, levelOf, decorCap, layoutOf, can, needFor } from '../game/rules.js';
+import { SP, PROP, placedIn, railsIn, capped, levelOf, decorCap, layoutOf, can as canLv, needFor } from '../game/rules.js';
+const can = (S, k) => canLv(S, k) || k === 'prop:' + G.tutShop(); // 66-1: the tutorial's 등불 is sold before its Lv
 import { propThumb } from './thumbs.js';
 import { toast, josa, tip, ask } from './hud.js';
 import { openShare } from './share.js';
@@ -32,8 +33,9 @@ setInterval(() => { const s = !el.hidden && el.querySelector('[data-left]'); if 
 // the tabs and the props in each (one not listed goes under 가구; 28-2 놀이: the props animals use); the board's own nature put away shows under 자연
 const TABS = [['nature', '자연', 'flowers tulips tallgrass stones mushrooms log cycad'], ['path', '길', 'fence path'], ['light', '조명', 'lantern jar mushlamp starlamp icelamp lavalamp'],
   ['furniture', '가구', 'bench mailbox pinwheel vane hay trough snowman sled dinonest ribs'], ['big', '큰 소품', BIGS], ['water', '물가', 'lily boat stepping'],
-  ['play', '놀이', 'swing slide seesaw ball hammock fountain campfire feeder musicbox bubbles lights fireworks pinhill bell'], ['home', '집', 'table shelf platform doll'], ['land', '땅', 'hillock puddle flowermound rockmound'], ['train', '기차', 'rail railcurve railfork railbridge'], ['gift', '선물', 'att_sunflower att_birdhouse att_balloons att_wcan att_signpost att_cart att_rainbow firstday walk_cairn walk_acorn walk_pinecone sky_scope myth_altar ev_igloo ev_sled ev_snowman ev_icelamp ev_bigsnowman ev_album ev_slide ev_flakelamp ev_snowfam ev_mitten fos_ammonite fos_bone fos_egg fos_skull']].map(([id, name, ps]) => ({ id, name, ps: ps.split(' ') }));
+  ['play', '놀이', 'swing slide seesaw ball hammock fountain campfire feeder musicbox bubbles lights fireworks pinhill bell'], ['home', '집', 'table shelf platform doll'], ['land', '땅', 'hillock puddle flowermound rockmound'], ['train', '기차', 'rail railcurve railfork railbridge'], ['gift', '선물', 'att_sunflower att_birdhouse att_balloons att_wcan att_signpost att_cart att_rainbow firstday walk_cairn walk_acorn walk_pinecone sky_scope myth_altar ev_igloo ev_sled ev_snowman ev_icelamp ev_bigsnowman ev_album ev_slide ev_flakelamp ev_snowfam ev_mitten fos_ammonite fos_bone fos_egg fos_skull gst_kite gst_basket gst_milkcan gst_bottle gst_reedpipe gst_parasol gst_teapot gst_sleighbell gst_scarfpost']].map(([id, name, ps]) => ({ id, name, ps: ps.split(' ') }));
 const tabOf = P => (TABS.find(t => t.ps.includes(P.id)) ?? TABS[3]).id;
+export const tabName = id => TABS.find(t => t.id === tabOf({ id })).name; // 66-1: where a guest's gift waits
 const NAT = Object.fromEntries(NATURE.map(n => [n.id, n])), cut = id => id === 'rock' ? '치우기' : '베기';
 const UNDO = 20;
 

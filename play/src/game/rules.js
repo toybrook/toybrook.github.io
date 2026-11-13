@@ -31,6 +31,7 @@
 import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
 import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
 import { blank as palBlank, tidyPals, palTick, peOf } from './pals.js'; // 17-1
+import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
 import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
@@ -68,6 +69,7 @@ export function newGame(now) {
     animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
+  S.guests = guestsBlank(S); // 66-1
   return S;
 }
 
@@ -104,7 +106,7 @@ export function fromSave(raw, now) {
         pile: typeof R.pile === 'string' ? R.pile : '', pileAt: n(R.pileAt), built: n(R.built), luck: n(R.luck) }]));
       const own = evOwned(S); // 15-2: worn event wear, known ones, no more of each than bought
       for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
-    tidyVisit(S); tidySky(S); tidyPals(S); // 16-1, 16-2, 17-1
+    tidyVisit(S); tidySky(S); tidyPals(S); tidyGuests(S); // 16-1, 16-2, 17-1, 66-1
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -571,7 +573,7 @@ export function setDisplay(S, k, cId) {
 export const displayColor = (S, k) => S.display[k] ?? S.colors[k]?.[0] ?? null;
 // 꾸미기: buy with hearts (put away), place/turn (free; where it may go is the habitat's layout.js), put away
 export function buyProp(S, propId, habId) { // habId: where it was bought (a prop sold everywhere stays there)
-  const P = PROP[propId], hab = P?.habitat ?? habId; if (!P || P.paid || P.gift || S.hearts < P.price || !hab || !can(S, 'prop:' + P.id)) return null; // 41: a gift one only comes as a gift
+  const P = PROP[propId], hab = P?.habitat ?? habId; if (!P || P.paid || P.gift || S.hearts < P.price || !hab || !(can(S, 'prop:' + P.id) || tutShop(S) === P.id)) return null; // 41: a gift one only comes as a gift; 66-1: the tutorial's 등불 before its Lv
   S.hearts -= P.price;
   const p = { uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 };
   S.props.push(p); return p;
@@ -980,5 +982,6 @@ export function skip(S, ms, now, rng = Math.random) {
   for (const k of MYTH_T) if (k !== 'bond' && k !== 'read' && Number.isFinite(S.myth[k])) S.myth[k] -= ms; // 14-1
   for (const g of S.visit.guests) { g.at -= ms; g.until -= ms; } // 16-1
   if (S.pals.at) S.pals.at -= ms; for (const p of S.pals.list) p.at -= ms; // 17-1
+  skipGuests(S, ms); // 66-1
   return advance(S, now, rng);
 }

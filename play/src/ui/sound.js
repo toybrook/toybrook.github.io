@@ -107,6 +107,7 @@ const FX = {
   level: t => { [523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.085, f, 0.45, { type: 'triangle', gain: 0.17 })); bell(t + 0.36, 2093, 1.5, 0.11); bell(t + 0.48, 1568, 1.3, 0.08); },
   // 13-0: a plastic 「톡」 (a prop put down, an animal let go: habitat.js); the old made one until the recordings are in
   place: t => { if (!play('toy', { bus: fx, gain: 0.6, rate: rnd(0.94, 1.08), delay: t - A.currentTime })) { puff(t, 0.05, 'bandpass', 1100, 0.5, { Q: 3 }); tone(t, 430, 0.1, { gain: 0.2, to: 260 }); } },
+  tok: t => tone(t, 1700, 0.04, { type: 'triangle', gain: 0.07, to: 1250 }), // 66-1 톡톡톡: a heart landing on the counter
   undo: t => tone(t, 700, 0.15, { type: 'triangle', gain: 0.13, to: 380 }),
   photo: t => { puff(t, 0.03, 'highpass', 2500, 0.24); puff(t + 0.07, 0.04, 'highpass', 1800, 0.2); tone(t, 3200, 0.02, { gain: 0.04 }); },
   // 28-3 누르는 장난감: the calling bell (ding-ding), soap bubbles popping, the string lights' switch, a small firework (kept

@@ -71,9 +71,10 @@ const code = () => code.p ??= (codeAsked(), Promise.all([import('./habitat/habit
 const idle = f => (window.requestIdleCallback || setTimeout)(f, { timeout: 2000 });
 // inbox 61 A: a new player goes from 시작 straight into the first habitat: its code is asked for at once, and no models
 // ahead (the build waits for none: nothing is out there yet; the hatched one's comes with it)
-// and the map (0.37 MB, under the intro card) after that code, not sharing a slow line with it; the first screen doesn't wait for it
-const fresh = firstEgg(G.S), mapUp = () => { mapImg.src = ASSETS.worldmap; return mapImg.decode().catch(() => {}); };
-if (fresh) code().catch(() => {}).then(mapUp);
+// and the map (0.37 MB, under the intro card) after that code, not sharing a slow line with it; the first screen doesn't wait for it.
+// 67-2: 시작 tapped by then: not until the board is up (enter) or the map is opened (back): nothing on screen shows it
+const fresh = firstEgg(G.S), mapUp = () => mapUp.p ??= (mapImg.src = ASSETS.worldmap, mapImg.decode().catch(() => {}));
+if (fresh) code().catch(() => {}).then(() => cur || mapUp());
 (fresh ? Promise.resolve() : mapUp()).then(() => {
   const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400);
   idle(() => code().then(h => { // then the models of the habitat opened last (a new player: none, above)
@@ -100,7 +101,8 @@ const ui = {
   onPropTap: uid => play.onPropTap(uid), onEdit: ok => play.onEdit(ok), onPaint: (c, b) => play.onPaint(c, b), onSweep: u => play.onSweep(u), // decorate mode (ui/decor.js)
   note: (k, n) => { if (!snap.on()) G.note(k, n); }, // 23-2 도전 과제 (not while 사진 모드 can hold the night or the rain)
   onHome: (id, home) => G.setHome(id, home), // inbox 53 울타리 안 자리
-  onCarry: () => G.flag('tip_carry'), // inbox 42 E: found it alone: no tip for it
+  onCarry: () => { G.flag('tip_carry'); if (!G.S.flags.carried) G.flag('carried'); }, // inbox 42 E: found it alone: no tip for it; 66-1 first_drag
+  onGuestMove: (id, x, z) => G.moveGuest(id, x, z), // 66-1: a 떠돌이 손님 carried somewhere
   cramped(again) { if (again || !G.S.flags.cramped) { G.flag('cramped'); toast('울타리 안이 너무 좁아요', 2200, true); } }, // inbox 42 B: one put outside a fence closed too tight (once)
   train(hab, loop) { const k = 'train:' + hab; if (loop && !G.S.flags[k]) { G.flag(k); toast('고리가 닫혔어요! 태엽 기차가 달려요', 2600, true); } return !!G.S.flags[k]; }, // 28-4: once closed, it runs (a broken track: back and forth)
 };
@@ -132,7 +134,7 @@ async function enter(id) {
   // 27-2: the animals and props come out in attach; their shaders are made behind the curtain (the first frame after it froze 2.6 s in Chrome, 3.3 s in WebKit)
   api.setActive(true); play.attach(api, id);
   if (G.S.refit?.includes(id)) G.refit(id, api.decor.refit(G.S.props)); // inbox 42 A: the board grew (rules.js to11): what no longer fits moves
-  await api.warm(); loadBar(false); return true;
+  await api.warm(); loadBar(false); idle(mapUp); return true;
 }
 const mapUi = initWorldMap(world, { enter });
 G.on(ev => { if (ev.some(e => e.type === 'unlock' || e.type === 'reset')) mapUi.refresh(); });
@@ -171,7 +173,7 @@ const level = initLevel(() => api); level.events(offline); // 23-1 정원사 레
 const snap = initPhoto(() => api, () => cur); // 24-1 사진 모드
 initSky(() => api, () => cur);
 const habMenu = $('habMenu');
-$('back').onclick = () => { snap.leave(); hab.classList.add('hidden'); world.classList.remove('hidden'); api?.setActive(false); api = cur = null; play?.leave(); habMenu.hidden = true; };
+$('back').onclick = () => { mapUp(); snap.leave(); hab.classList.add('hidden'); world.classList.remove('hidden'); api?.setActive(false); api = cur = null; play?.leave(); habMenu.hidden = true; };
 
 // inbox 20 C8: the habitat's name at the top lists the habitats (moving without the world map)
 $('habName').onclick = () => {

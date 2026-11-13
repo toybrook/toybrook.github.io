@@ -5,7 +5,6 @@
 import * as G from '../game/game.js';
 import { HAB } from '../game/rules.js';
 import { storyCards, cardTitle, cardLines, cardName, encodeCard, decodeCard } from '../game/story.js';
-import qrcode from '../../vendor/qrcode.js';
 import { figureThumb, mythThumb } from './thumbs.js';
 import { sfx } from './sound.js';
 
@@ -46,6 +45,7 @@ async function copy(text) {
 }
 // the picture: 1080 x 1350, the card as on screen, its code as a QR in the corner, 토이브룩 at the foot
 async function saveImage(c) {
+  const qrcode = (await import('../../vendor/qrcode.js').catch(() => null))?.default; // 67-2: not with the first screen's code (none: the picture without it)
   const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
   x.fillStyle = '#fbf1e1'; x.fillRect(0, 0, W, H);
   const g = x.createLinearGradient(0, 90, 0, 650); g.addColorStop(0, '#fff4dc'); g.addColorStop(1, '#f6dcb0'); x.fillStyle = g;

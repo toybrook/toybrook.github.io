@@ -73,7 +73,10 @@ export function createActor(ctx, rec) {
     const was = h.shel; h.shel = null; // inbox 42 D: under a tree's crown (off its walkable ground) when the rain stops: out from under it first
     if (was?.cover && !(ctx.rain > 0.3) && !ok(h.x, h.z)) { const a = Math.atan2(h.z - was.z, h.x - was.x), d = was.r + 0.8; return go('walk', was.x + Math.cos(a) * d, was.z + Math.sin(a) * d, 1.3); }
     if (h.goal && toward()) return; // 28-1: on its way to a zone's spot, or sent (api.send)
-    if (h.goal) { h.state = 'idle'; h.t = 0; h.dur = 0.5; return; } // inbox 42 C: no free step just now: again in a moment (toward gives up after n), never a second goal over it (its kept seat would stay kept)
+    if (h.goal) { h.state = 'idle'; h.t = 0; h.dur = 0.5; return; }
+    if (rec.at) { const [ax, az] = rec.at; // 66-1 떠돌이 손님: keeps to its spot (its wishes are judged round it) and looks about
+      if (Math.hypot(ax - h.x, az - h.z) > 1.5 && ok(ax, az)) { h.goal = { x: ax, z: az, act: 'roam', n: 4 }; if (toward()) return; h.goal = null; }
+      h.state = r < 0.5 ? 'graze' : 'idle'; h.t = 0; h.dur = 2 + Math.random() * 3; return; } // inbox 42 C: no free step just now: again in a moment (toward gives up after n), never a second goal over it (its kept seat would stay kept)
     if (h.soc && social()) return; // inbox 42 C: with another (follows, leads, runs, waits)
     if (ctx.night && Math.random() < 0.45 * ctx.night) { if (mate() && Math.random() < 0.6 && startSocial('pal')) return; // 17-1: beside its 단짝
       h.tuck = W.oneLeg && Math.random() < W.oneLeg; h.state = 'sleep'; h.t = 0; h.dur = (6 + Math.random() * 6) * (pe() === 'sleepy' ? 1.6 : 1); return; } // 21-1: dozes more (and longer) at night
@@ -358,7 +361,7 @@ export function createActor(ctx, rec) {
   };
   // h.low: resting in the water a swimmer lies down (sinks by its leg length, no deeper than it floats); a shallow one (the capybara)
   // sinks to its float depth, half under even on the shallow rim (the rest of it is hidden under the bed)
-  const ground = () => { const g = Math.max(heightAt(h.x, h.z), ctx.deckAt(h.x, h.z)), S = M[look.stage];
+  const ground = (b = heightAt(h.x, h.z)) => { const g = Math.max(b, ctx.deckAt(h.x, h.z)), S = M[look.stage];
     return W.water === 'swim' ? Math.max(g - (h.low || 0), ctx.water - W.float * S.h * S.s) : g; };
 
   const api = {
@@ -470,10 +473,11 @@ export function createActor(ctx, rec) {
       const d = Math.atan2(Math.sin(h.face - h.yaw), Math.cos(h.face - h.yaw)), yaw = h.yaw + d * Math.min(1, dt * 7);
       if (!blocked(ctx.crowd, body, h.x, h.z, yaw)) h.yaw = yaw; // turn the short way, eased, but not into someone
       Object.assign(body, { x: h.x, z: h.z, yaw: h.yaw }); fit();
-      if (W.water === 'swim') { const S = M[look.stage], lie = ['graze', 'sleep', 'idle'].includes(h.state) && heightAt(h.x, h.z) < ctx.water - 0.06 && ctx.deckAt(h.x, h.z) === -Infinity ? (W.shallow ? Math.max(0, heightAt(h.x, h.z) - ctx.water + W.float * S.h * S.s) : (S.legs?.hip ?? 0) * S.s) : 0; // the seal: no legs
+      const bed = heightAt(h.x, h.z); // 67-2: once a frame here (it was asked 2-4 times at the same spot)
+      if (W.water === 'swim') { const S = M[look.stage], lie = ['graze', 'sleep', 'idle'].includes(h.state) && bed < ctx.water - 0.06 && ctx.deckAt(h.x, h.z) === -Infinity ? (W.shallow ? Math.max(0, bed - ctx.water + W.float * S.h * S.s) : (S.legs?.hip ?? 0) * S.s) : 0; // the seal: no legs
         h.low = (h.low || 0) + (lie - (h.low || 0)) * Math.min(1, dt * 1.5); }
-      const gy = ground(); if (py != null) lift = py - gy;
-      const bed = heightAt(h.x, h.z), wet = W.water && ctx.deckAt(h.x, h.z) === -Infinity && bed < ctx.water - 0.06; // in the pond: no shadow on the water
+      const gy = ground(bed); if (py != null) lift = py - gy;
+      const wet = W.water && ctx.deckAt(h.x, h.z) === -Infinity && bed < ctx.water - 0.06; // in the pond: no shadow on the water
       if (wet && gy > bed + 0.01) lift += Math.sin(t * 2.2 + h.ph) * 0.04; // afloat: bobs like the ducks
       root.position.set(h.x, gy + lift, h.z);
       root.rotation.y = h.yaw; root.rotation.x = roll; // roll: about its length (YXZ)

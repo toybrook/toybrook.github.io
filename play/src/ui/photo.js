@@ -7,9 +7,9 @@ import { VIEW } from '../config.js';
 import * as G from '../game/game.js';
 import { encode } from '../game/layout.js';
 import { outIn, callName } from '../game/rules.js';
-import qrcode from '../../vendor/qrcode.js';
 import { sfx } from './sound.js';
 import { skyPhoto } from './sky.js'; // 16-2 하늘 기록 사진
+let qrcode = null; // 67-2: vendor/qrcode.js (52 KB) is not on the first screen: here when 사진 모드 first opens (the 3D code has it by then)
 
 const HOURS = [['지금', null], ['아침', 7], ['낮', 12], ['노을', 18.5], ['밤', 23]];
 const SKIES = [['지금', null], ['맑음', 'clear'], ['비', 'rain'], ['안개', 'fog'], ['무지개', 'rainbow']]; // 25-1 the snow: 비 shows as 눈 (weather.js weatherNow turns 'rain' into its snow)
@@ -106,6 +106,7 @@ export function initPhoto(getApi, getHab) {
   }
   function enter() {
     const api = getApi(); if (!api || on) return;
+    if (qrcode === null) return void import('../../vendor/qrcode.js').then(m => m.default, () => false).then(q => { qrcode = q; enter(); qrcode ||= null; }); // offline and never fetched: no tile (asked again next time)
     on = true; msg = ''; text = encode(G.S, getHab());
     try { const q = qrcode(0, 'L'); q.addData(text); q.make(); code = q; } catch { code = null; } // too long for a QR: no tile
     document.body.classList.add('photo'); api.snap(true); el.hidden = ov.hidden = false; draw();
