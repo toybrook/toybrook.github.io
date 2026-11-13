@@ -4,6 +4,7 @@ import * as G from '../game/game.js';
 import { BALANCE as B, PLACES, PROPS, MYTHIC } from '../game/data.js';
 import { strollCap, strolling, callName, mythHill } from '../game/rules.js';
 import { figureThumb } from './thumbs.js';
+import { PHOTO_PLACES, cardPhoto, photoCard, prunePhotos } from './postcard3d.js'; // 78: the places whose cards are a photo
 import { toast, josa } from './hud.js';
 
 const FH = MYTHIC[0].place, PL = Object.fromEntries([...PLACES, FH].map(p => [p.id, p])), PNAME = Object.fromEntries(PROPS.map(p => [p.id, p.name]));
@@ -40,15 +41,19 @@ const SCENES = {
 };
 const scene = id => `<svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${SCENES[id] ?? sky('#cfe8f5')}</svg>`;
 const when = t => { const d = new Date(t); return `${d.getMonth() + 1}월 ${d.getDate()}일`; };
+const meta = c => `${PL[c.pl]?.name ?? ''} · ${c.h}시간 · ${when(c.at)} · ♥+${c.hearts}${c.candy ? ` · 사탕 ${c.candy}` : ''}${c.prop ? ` · ${PNAME[c.prop]}` : ''}${c.myth ? ` · ${c.myth}` : ''}`;
 
 const el = document.getElementById('cards');
 export function openCards() {
   const list = [...G.S.cards].reverse(), been = new Set(G.S.cards.map(c => c.pl).filter(p => p !== FH.id)).size;
   el.innerHTML = `<div class="chead"><b>엽서</b><span>${list.length}장 · 가 본 곳 ${been}/${PLACES.length}</span><button class="back" data-close>닫기</button></div>
-<div class="cbody">${list.length ? '' : '<p class="cnote">친구를 산책 보내면 엽서가 와요 · 친구를 누르거나 보관함에서 「산책」</p>'}<div class="pcards">${list.map(c => `<figure class="pcard">
-<div class="ppic">${scene(c.pl)}<img alt="${c.nm}">${c.new ? '<i>NEW</i>' : ''}</div><figcaption><b>${cardLine(c)}</b><small>${PL[c.pl]?.name ?? ''} · ${c.h}시간 · ${when(c.at)} · ♥+${c.hearts}${c.candy ? ` · 사탕 ${c.candy}` : ''}${c.prop ? ` · ${PNAME[c.prop]}` : ''}${c.myth ? ` · ${c.myth}` : ''}</small></figcaption></figure>`).join('')}</div></div>`;
-  el.querySelectorAll('.pcard img').forEach((img, i) => { const c = list[i]; figureThumb(c.sp, c.v, c.c, c.acc, c.st).then(u => { img.src = u; }); });
+<div class="cbody">${list.length ? '' : '<p class="cnote">친구를 산책 보내면 엽서가 와요 · 친구를 누르거나 보관함에서 「산책」</p>'}<div class="pcards">${list.map(c => PHOTO_PLACES.includes(c.pl) ? photoCard(c, cardLine(c), meta(c), PL[c.pl].name) : `<figure class="pcard">
+<div class="ppic">${scene(c.pl)}<img alt="${c.nm}">${c.new ? '<i>NEW</i>' : ''}</div><figcaption><b>${cardLine(c)}</b><small>${meta(c)}</small></figcaption></figure>`).join('')}</div></div>`;
+  el.querySelectorAll('.pcard').forEach((f, i) => { const c = list[i], img = f.querySelector('img'), fig = () => figureThumb(c.sp, c.v, c.c, c.acc, c.st);
+    (f.classList.contains('photo') ? cardPhoto(c).catch(fig) : fig()).then(u => { img.src = u; f.classList.add('shot'); }); }); // 78: a photo (shot once, kept); no WebGL: the figure
+  if (PHOTO_PLACES.length) prunePhotos(G.S.cards.filter(c => PHOTO_PLACES.includes(c.pl)));
   el.hidden = false;
   if (list.some(c => c.new)) G.cardsSeen();
 }
-el.addEventListener('click', e => { if (e.target.closest('[data-close]')) el.hidden = true; });
+el.addEventListener('click', e => { if (e.target.closest('[data-close]')) el.hidden = true; else e.target.closest('.pcard.photo')?.classList.toggle('flip'); }); // 78: tap a photo card: its back
+G.on(ev => { for (const e of ev) if (e.type === 'strollBack' && PHOTO_PLACES.includes(e.card.pl)) setTimeout(() => cardPhoto(e.card).catch(() => {}), 1500); }); // 78: shot as it comes back, ready for the album

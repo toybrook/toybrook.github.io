@@ -54,7 +54,8 @@ export const loadModel = id => loading[id] ??= (async () => {
   const M = MODELS[id], out = {}, stages = Object.keys(M.files);
   // the legendary items this model's species hold, loaded with it
   const items = [...new Set(Object.values(SP).filter(s => s.model === id).flatMap(s => (s.legendary || []).map(l => l.item)).filter(k => LEGEND_ITEMS[k]))];
-  const [itemGeo, geos] = await Promise.all([Promise.all(items.map(async k => [k, await meshes(LEGEND_ITEMS[k].file)])).then(Object.fromEntries), Promise.all(stages.map(st => meshes(M.files[st])))]);
+  const [itemGeo, geos, legendGeos] = await Promise.all([Promise.all(items.map(async k => [k, await meshes(LEGEND_ITEMS[k].file)])).then(Object.fromEntries), Promise.all(stages.map(st => meshes(M.files[st]))),
+    Promise.all(stages.map(st => M.legend?.[st] && meshes(M.legend[st])))]); // 71-2: one legendary's own parts (MODELS legend): the amber rex's bones, crystals
   for (const [i, stage] of stages.entries()) {
     const g = geos[i], S = M[stage];
     g.body.computeBoundingBox(); const b = g.body.boundingBox, H = b.max.y, cx = (b.min.x + b.max.x) / 2;
@@ -62,7 +63,9 @@ export const loadModel = id => loading[id] ??= (async () => {
     for (const k of M.paints || []) if (g[k]) withOp(g[k], H, cx); // more painted colour layers on the body (the penguin's face and ear patches)
     // one leg geometry per leg position (its _op differs)
     g.legs = !S.legs ? [] : S.legs.x.flatMap(x => [S.legs.z, -S.legs.z].map(z => ({ x, z,
-      leg: withOp(g.leg.clone(), H, cx, [x, S.legs.hip, z]), hoof: g.hoof && withOp(g.hoof.clone(), H, cx, [x, S.legs.hip, z]) })));
+      leg: withOp(g.leg.clone(), H, cx, [x, S.legs.hip, z]), hoof: g.hoof && withOp(g.hoof.clone(), H, cx, [x, S.legs.hip, z]),
+      bone: legendGeos[i]?.legbone && withOp(legendGeos[i].legbone.clone(), H, cx, [x, S.legs.hip, z]) })));
+    g.legend = Object.fromEntries(Object.entries(legendGeos[i] || {}).filter(([k]) => k !== 'legbone').map(([k, geo]) => [k, withOp(geo, H, cx)]));
     // a bird's wings: their own parts, pivot at the shoulder (so a short flight can flap them); the -z one mirrors the +z one
     const at = k => [S.wing[0], S.wing[1], S.wing[2] * k];
     g.wings = !S.wing ? [] : [1, -1].map(k => ({ k, geo: withOp(g.wing.clone(), H, cx, at(k), k), spot: g.wingSpot && withOp(g.wingSpot.clone(), H, cx, at(k), k) })); // spot: the accent on it (the snowy owl's)
@@ -229,9 +232,10 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
   if (G.horn) body.add(mesh(G.horn, m.horn || m.body)); // a cow's horns (colors.horn)
   if (G.nostril) body.add(mesh(G.nostril, m.nostril || m.hoof)); // a cow's nostrils (in its nose mesh); the penguin's dark upper beak (colors.nostril)
   for (const k of M.paints || []) if (G[k]) body.add(mesh(G[k], m[k] || m.body)); // colors.paint[k]
+  for (const [k, geo] of Object.entries(G.legend)) if (m[k]) body.add(mesh(geo, m[k])); // 71-2 MODELS legend, on the look that has a material for it (bone, gem)
   const wings = G.wings.map(({ k, geo, spot }) => { const w = new THREE.Group(); w.position.set(S.wing[0], S.wing[1], S.wing[2] * k); w.scale.z = k; w.add(mesh(geo, m.wing || m.body)); if (spot) w.add(mesh(spot, m.accent)); body.add(w); return w; });
-  const legs = G.legs.map(({ x, z, leg, hoof }) => {
-    const g = new THREE.Group(); g.position.set(x, S.legs.hip, z); g.add(mesh(leg, m[M.legMat] || m.body)); if (hoof) g.add(mesh(hoof, m.hoof));
+  const legs = G.legs.map(({ x, z, leg, hoof, bone }) => {
+    const g = new THREE.Group(); g.position.set(x, S.legs.hip, z); g.add(mesh(leg, m[M.legMat] || m.body)); if (hoof) g.add(mesh(hoof, m.hoof)); if (bone && m.bone) g.add(mesh(bone, m.bone));
     g.userData = { front: x > 0, pair: (x > 0) === (z > 0) }; // diagonal pairs move together at a walk
     body.add(g); return g;
   });

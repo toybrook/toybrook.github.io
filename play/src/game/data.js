@@ -407,38 +407,41 @@ export const MODELS = {
   triceratops: {
     move: 'walk', walk: { hop: 0, pace: 0.7, trot: 0.8, roam: 0.45, dig: 0.25 },
     files: { baby: 'assets/models/triceratops_baby.glb', adult: 'assets/models/triceratops_adult.glb' },
-    baby: sized('triceratops', 'baby', { h: 1.808, r: 0.625, seg: [-0.729, 1.083], legs: { hip: 0.42, x: [0.4, -0.44], z: 0.3 }, attach: { head: { p: [1.0, 1.44, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.7, 0.92, 0], r: [0, 0, -1.0], s: 1.3 }, back: { p: [-0.1, 1.42, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [1.06, 1.1, 0], r: [0, 0, 0], s: 1.25 } } }),
-    adult: sized('triceratops', 'adult', { h: 2.196, r: 0.686, seg: [-1.131, 1.239], legs: { hip: 0.64, x: [0.56, -0.6], z: 0.32 }, attach: { head: { p: [1.26, 1.66, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.92, 1.2, 0], r: [0, 0, -1.0], s: 1.45 }, back: { p: [-0.15, 1.86, 0], r: [0, 0, 0], s: 1.25 }, eye: { p: [1.3, 1.38, 0], r: [0, 0, 0], s: 1.1 } } }),
+    legend: { baby: 'assets/models/triceratops_gems_baby.glb', adult: 'assets/models/triceratops_gems_adult.glb' }, // 71-2: the legendary's crystals (figure.js)
+    baby: sized('triceratops', 'baby', { h: 2.026, r: 0.624, seg: [-0.826, 1.08], legs: { hip: 0.44, x: [0.4, -0.44], z: 0.29 }, attach: { head: { p: [0.98, 1.48, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.72, 0.98, 0], r: [0, 0, -1.0], s: 1.3 }, back: { p: [-0.1, 1.5, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [1.2, 1.18, 0], r: [0, 0, 0], s: 1.25 } } }), // 71-1
+    adult: sized('triceratops', 'adult', { h: 2.517, r: 0.829, seg: [-1.095, 1.184], legs: { hip: 0.7, x: [0.56, -0.58], z: 0.31 }, attach: { head: { p: [1.26, 1.66, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.92, 1.22, 0], r: [0, 0, -1.0], s: 1.45 }, back: { p: [-0.15, 1.94, 0], r: [0, 0, 0], s: 1.25 }, eye: { p: [1.44, 1.42, 0], r: [0, 0, 0], s: 1.1 } } }),
   },
   brachiosaurus: {
     move: 'walk', walk: { hop: 0, pace: 0.5, roam: 0.35, dig: 0.15 },
-    files: { baby: 'assets/models/brachiosaurus_baby.glb', adult: 'assets/models/brachiosaurus_adult.glb' },
-    baby: sized('brachiosaurus', 'baby', { h: 2.74, r: 0.591, seg: [-0.984, 0.948], legs: { hip: 0.56, x: [0.38, -0.42], z: 0.28 }, attach: { head: { p: [1.02, 2.68, 0], r: [0, 0, -0.1], s: 0.92 }, neck: { p: [0.72, 1.62, 0], r: [0, 0, -0.4], s: 1.05 }, back: { p: [-0.05, 1.44, 0], r: [0, 0, 0], s: 1.1 }, eye: { p: [1.12, 2.4, 0], r: [0, 0, 0], s: 1.02 } } }),
-    adult: sized('brachiosaurus', 'adult', { h: 3.69, r: 0.679, seg: [-1.393, 1.021], legs: { hip: 0.9, x: [0.5, -0.54], z: 0.32 }, attach: { head: { p: [1.26, 3.62, 0], r: [0, 0, -0.1], s: 0.72 }, neck: { p: [0.95, 2.4, 0], r: [0, 0, -0.35], s: 1.0 }, back: { p: [0, 1.96, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.34, 3.38, 0], r: [0, 0, 0], s: 0.8 } } }),
+    files: { baby: 'assets/models/brachiosaurus_baby.glb', adult: 'assets/models/brachiosaurus_adult.glb' }, paints: ['belly'], // 71-1
+    baby: sized('brachiosaurus', 'baby', { h: 2.742, r: 0.58, seg: [-1.267, 0.959], legs: { hip: 0.58, x: [0.38, -0.44], z: 0.29 }, attach: { head: { p: [1.04, 2.7, 0], r: [0, 0, -0.1], s: 0.92 }, neck: { p: [0.74, 1.7, 0], r: [0, 0, -0.4], s: 1.05 }, back: { p: [0, 1.52, 0], r: [0, 0, 0], s: 1.1 }, eye: { p: [1.2, 2.44, 0], r: [0, 0, 0], s: 1.02 } } }),
+    adult: sized('brachiosaurus', 'adult', { h: 3.708, r: 0.656, seg: [-1.822, 1.081], legs: { hip: 0.9, x: [0.5, -0.56], z: 0.32 }, attach: { head: { p: [1.3, 3.66, 0], r: [0, 0, -0.1], s: 0.72 }, neck: { p: [0.96, 2.5, 0], r: [0, 0, -0.35], s: 1.0 }, back: { p: [0, 2.06, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.44, 3.46, 0], r: [0, 0, 0], s: 0.8 } } }),
   },
   stegosaurus: {
     move: 'walk', walk: { hop: 0, pace: 0.6, roam: 0.4, dig: 0.2 },
-    files: { baby: 'assets/models/stegosaurus_baby.glb', adult: 'assets/models/stegosaurus_adult.glb' },
-    baby: sized('stegosaurus', 'baby', { h: 1.559, r: 0.589, seg: [-0.889, 0.989], legs: { hip: 0.44, x: [0.36, -0.4], z: 0.28 }, attach: { head: { p: [1.0, 1.26, 0], r: [0, 0, -0.1], s: 0.97 }, neck: { p: [0.74, 0.86, 0], r: [0, 0, -1.3], s: 1.05 }, back: { p: [-0.1, 1.44, 0], r: [0, 0, 0], s: 1.0 }, eye: { p: [1.08, 0.96, 0], r: [0, 0, 0], s: 1.08 } } }),
-    adult: sized('stegosaurus', 'adult', { h: 2.079, r: 0.641, seg: [-1.337, 1.182], legs: { hip: 0.68, x: [0.46, -0.5], z: 0.3 }, attach: { head: { p: [1.3, 1.3, 0], r: [0, 0, -0.1], s: 0.76 }, neck: { p: [0.98, 1.08, 0], r: [0, 0, -1.3], s: 1.1 }, back: { p: [-0.1, 1.96, 0], r: [0, 0, 0], s: 1.2 }, eye: { p: [1.38, 1.08, 0], r: [0, 0, 0], s: 0.84 } } }),
+    files: { baby: 'assets/models/stegosaurus_baby.glb', adult: 'assets/models/stegosaurus_adult.glb' }, paints: ['belly'], // 71-1
+    legend: { baby: 'assets/models/stegosaurus_gems_baby.glb', adult: 'assets/models/stegosaurus_gems_adult.glb' }, // 71-2: the legendary's crystals (figure.js)
+    baby: sized('stegosaurus', 'baby', { h: 1.619, r: 0.568, seg: [-0.951, 1.032], legs: { hip: 0.44, x: [0.38, -0.4], z: 0.28 }, attach: { head: { p: [1.0, 1.26, 0], r: [0, 0, -0.1], s: 0.97 }, neck: { p: [0.76, 0.87, 0], r: [0, 0, -1.3], s: 1.05 }, back: { p: [-0.1, 1.52, 0], r: [0, 0, 0], s: 1.0 }, eye: { p: [1.2, 1.02, 0], r: [0, 0, 0], s: 1.08 } } }),
+    adult: sized('stegosaurus', 'adult', { h: 2.14, r: 0.622, seg: [-1.436, 1.216], legs: { hip: 0.66, x: [0.5, -0.5], z: 0.3 }, attach: { head: { p: [1.3, 1.24, 0], r: [0, 0, -0.1], s: 0.76 }, neck: { p: [0.99, 1.07, 0], r: [0, 0, -1.3], s: 1.1 }, back: { p: [-0.1, 2.0, 0], r: [0, 0, 0], s: 1.2 }, eye: { p: [1.46, 1.08, 0], r: [0, 0, 0], s: 0.84 } } }),
   },
   ankylosaurus: {
     move: 'walk', walk: { hop: 0, pace: 0.5, roam: 0.35, dig: 0.3 },
     files: { baby: 'assets/models/ankylosaurus_baby.glb', adult: 'assets/models/ankylosaurus_adult.glb' },
-    baby: sized('ankylosaurus', 'baby', { h: 1.168, r: 0.588, seg: [-0.799, 0.731], legs: { hip: 0.32, x: [0.34, -0.38], z: 0.32 }, attach: { head: { p: [0.84, 1.12, 0], r: [0, 0, -0.1], s: 0.95 }, neck: { p: [0.6, 0.76, 0], r: [0, 0, -1.3], s: 1.15 }, back: { p: [-0.1, 1.16, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [0.92, 0.86, 0], r: [0, 0, 0], s: 1.05 } } }),
-    adult: sized('ankylosaurus', 'adult', { h: 1.378, r: 0.686, seg: [-1.104, 0.753], legs: { hip: 0.42, x: [0.46, -0.52], z: 0.38 }, attach: { head: { p: [1.0, 1.1, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.74, 0.86, 0], r: [0, 0, -1.3], s: 1.3 }, back: { p: [-0.1, 1.4, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.08, 0.9, 0], r: [0, 0, 0], s: 0.9 } } }),
+    baby: sized('ankylosaurus', 'baby', { h: 1.195, r: 0.611, seg: [-0.779, 0.709], legs: { hip: 0.34, x: [0.34, -0.38], z: 0.32 }, attach: { head: { p: [0.84, 1.14, 0], r: [0, 0, -0.1], s: 0.95 }, neck: { p: [0.6, 0.78, 0], r: [0, 0, -1.3], s: 1.15 }, back: { p: [-0.1, 1.18, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [0.92, 0.88, 0], r: [0, 0, 0], s: 1.05 } } }), // 71-1
+    adult: sized('ankylosaurus', 'adult', { h: 1.432, r: 0.725, seg: [-1.073, 0.713], legs: { hip: 0.46, x: [0.46, -0.52], z: 0.38 }, attach: { head: { p: [1.0, 1.14, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.74, 0.9, 0], r: [0, 0, -1.3], s: 1.3 }, back: { p: [-0.1, 1.44, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.08, 0.94, 0], r: [0, 0, 0], s: 0.9 } } }),
   },
   tRex: {
     move: 'walk', walk: { hop: 0, trot: 1.4, pace: 0.85, roam: 0.55, dig: 0.2 },
-    files: { baby: 'assets/models/tRex_baby.glb', adult: 'assets/models/tRex_adult.glb' },
-    baby: sized('tRex', 'baby', { h: 2.059, r: 0.486, seg: [-0.794, 0.813], legs: { hip: 0.32, x: [0], z: 0.25 }, attach: { head: { p: [0.64, 2.02, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.44, 1.28, 0], r: [0, 0, -0.5], s: 1.2 }, back: { p: [-0.2, 1.3, 0], r: [0, 0, 0.3], s: 0.95 }, eye: { p: [0.76, 1.68, 0], r: [0, 0, 0], s: 1.25 } } }),
-    adult: sized('tRex', 'adult', { h: 2.239, r: 0.486, seg: [-1.091, 0.953], legs: { hip: 0.44, x: [0], z: 0.26 }, attach: { head: { p: [0.78, 2.2, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.56, 1.54, 0], r: [0, 0, -0.5], s: 1.2 }, back: { p: [-0.2, 1.5, 0], r: [0, 0, 0.3], s: 1.0 }, eye: { p: [0.9, 1.92, 0], r: [0, 0, 0], s: 1.1 } } }),
+    files: { baby: 'assets/models/tRex_baby.glb', adult: 'assets/models/tRex_adult.glb' }, paints: ['belly'], // 71-1
+    legend: { baby: 'assets/models/tRex_bones_baby.glb', adult: 'assets/models/tRex_bones_adult.glb' }, // 71-2: the amber legendary's skeleton (figure.js)
+    baby: sized('tRex', 'baby', { h: 2.16, r: 0.527, seg: [-0.981, 0.759], legs: { hip: 0.44, x: [0], z: 0.27 }, attach: { head: { p: [0.68, 2.12, 0], r: [0, 0, -0.1], s: 1.2 }, neck: { p: [0.47, 1.34, 0], r: [0, 0, -0.6], s: 1.2 }, back: { p: [-0.2, 1.4, 0], r: [0, 0, 0.3], s: 1.0 }, eye: { p: [0.9, 1.88, 0], r: [0, 0, 0], s: 1.25 } } }),
+    adult: sized('tRex', 'adult', { h: 2.619, r: 0.575, seg: [-1.472, 0.902], legs: { hip: 0.74, x: [0], z: 0.3 }, attach: { head: { p: [0.82, 2.58, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.58, 1.83, 0], r: [0, 0, -0.6], s: 1.25 }, back: { p: [-0.2, 1.86, 0], r: [0, 0, 0.4], s: 1.05 }, eye: { p: [1.02, 2.36, 0], r: [0, 0, 0], s: 1.15 } } }),
   },
   pteranodon: {
     move: 'walk', walk: { hop: 0.6, trot: 1.5, pace: 0.8, roam: 0.45, rest: 'sit', perch: 0.4 }, legMat: 'hoof',
     files: { baby: 'assets/models/pteranodon_baby.glb', adult: 'assets/models/pteranodon_adult.glb' },
-    baby: sized('pteranodon', 'baby', { h: 1.405, r: 0.312, seg: [-0.225, 0.347], legs: { hip: 0.26, x: [-0.18], z: 0.2 }, wing: [0.2, 0.76, 0.26], attach: { head: { p: [0.4, 1.33, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.28, 0.88, 0], r: [0, 0, -0.6], s: 1.1 }, back: { p: [-0.08, 0.84, 0], r: [0, 0, 0.35], s: 0.9 }, eye: { p: [0.5, 1.2, 0], r: [0, 0, 0], s: 1.0 } } }), // inbox 70: on all fours
-    adult: sized('pteranodon', 'adult', { h: 1.605, r: 0.306, seg: [-0.305, 0.453], legs: { hip: 0.32, x: [-0.22], z: 0.2 }, wing: [0.26, 0.86, 0.26], attach: { head: { p: [0.52, 1.45, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.38, 1.0, 0], r: [0, 0, -0.6], s: 1.0 }, back: { p: [-0.1, 0.92, 0], r: [0, 0, 0.42], s: 0.9 }, eye: { p: [0.62, 1.33, 0], r: [0, 0, 0], s: 0.7 } } }),
+    baby: sized('pteranodon', 'baby', { h: 1.399, r: 0.322, seg: [-0.217, 0.338], legs: { hip: 0.26, x: [-0.18], z: 0.2 }, wing: [0.2, 0.76, 0.26], attach: { head: { p: [0.4, 1.33, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.28, 0.88, 0], r: [0, 0, -0.6], s: 1.1 }, back: { p: [-0.08, 0.84, 0], r: [0, 0, 0.35], s: 0.9 }, eye: { p: [0.5, 1.2, 0], r: [0, 0, 0], s: 1.0 } } }), // inbox 70: on all fours
+    adult: sized('pteranodon', 'adult', { h: 1.608, r: 0.33, seg: [-0.28, 0.428], legs: { hip: 0.32, x: [-0.22], z: 0.2 }, wing: [0.26, 0.86, 0.26], attach: { head: { p: [0.52, 1.45, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.38, 1.0, 0], r: [0, 0, -0.6], s: 1.0 }, back: { p: [-0.1, 0.92, 0], r: [0, 0, 0.42], s: 0.9 }, eye: { p: [0.62, 1.33, 0], r: [0, 0, 0], s: 0.7 } } }),
   },
 };
 
@@ -629,62 +632,65 @@ export const SPECIES = [
     },
     legendary: [{ id: 'snowspirit', name: '눈의 정령', mat: 'snowspirit', effect: 'snow' }] },
   // 14-3 dino. colors: accent = the triceratops' frill, the ankylosaur's back knobs, the pterosaur's crest; horn = the horns,
-  // the stegosaur's plates and tail spikes, the ankylosaur's tail club; hoof = the T. rex's toes and the pterosaur's feet;
-  // beak = the pterosaur's beak. The legendaries are 가칭 (temporary names)
-  { id: 'triceratops', name: '트리케라톱스', habitat: 'dino', model: 'triceratops', colors: { accent: '#f0a050', horn: '#f4e8cc' },
+  // the stegosaur's plates and tail spikes, the ankylosaur's tail club; hoof = the toenails and claws (71-1) and the
+  // pterosaur's feet; beak = the pterosaur's beak; paint.belly = the pale underside (71-1). 71-1: the first solid of each
+  // (the common one) in the concepts' colours (Lineup.jpg: olive T. rex and brachiosaurus, a brown triceratops with a pale
+  // frill, an olive-brown stegosaurus with dark plates; the ankylosaur and pterosaur in the same earthy colours).
+  // The legendaries are 가칭 (temporary names). 71-2: trike/brachio/stego/rex as the concepts; ankylo/ptera A of two proposals (채팅 확인 대기)
+  { id: 'triceratops', name: '트리케라톱스', habitat: 'dino', model: 'triceratops', colors: { accent: '#c49a6c', horn: '#e0cfa6', hoof: '#e0cfa6' },
     palette: {
-      solid: [{ id: 'green', name: '초록', body: '#86b86e' }, { id: 'sky', name: '하늘', body: '#8cc0e0', accent: '#f6c860' }, { id: 'pink', name: '분홍', body: '#f2a6be', accent: '#9a78e0', seldom: true }],
+      solid: [{ id: 'brown', name: '갈색', body: '#9c6e40' }, { id: 'sky', name: '하늘', body: '#8cc0e0', accent: '#f6c860' }, { id: 'pink', name: '분홍', body: '#f2a6be', accent: '#9a78e0', seldom: true }],
       twotone: [{ id: 'leaf', name: '잎새', body: '#86b86e', second: '#f4e6b8' }, { id: 'sand', name: '모래', body: '#d8b47c', second: '#fbf2dc' }, { id: 'violet', name: '보라', body: '#a890d8', second: '#f6f0ff', seldom: true }],
       spots: [{ id: 'moss', name: '이끼', body: '#9cc884', second: '#4e7a48' }, { id: 'sand', name: '모래', body: '#f0dcb0', second: '#b08050' }, { id: 'starry', name: '별밤', body: '#3e5a7a', second: '#f6f0c8', seldom: true }],
       stripes: [{ id: 'mint', name: '민트', body: '#a8e0c8', second: '#ffffff' }, { id: 'lemon', name: '레몬', body: '#fbe7a0', second: '#fffaf0' }, { id: 'tiger', name: '호랑', body: '#f0a848', second: '#3a2a22', seldom: true }],
       gradient: [{ id: 'jungle', name: '정글', body: '#d8f0a0', second: '#3e8a5a' }, { id: 'sunset', name: '노을', body: '#ffd08a', second: '#c25c3a' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'lava', name: '용암 바위', mat: 'lava', effect: 'sparks' }] },
-  { id: 'brachiosaurus', name: '브라키오사우루스', habitat: 'dino', model: 'brachiosaurus', colors: { accent: '#7aaebb' },
+    legendary: [{ id: 'amethyst', name: '자수정 볏', mat: 'amethyst', effect: 'twinkle' }] },
+  { id: 'brachiosaurus', name: '브라키오사우루스', habitat: 'dino', model: 'brachiosaurus', colors: { accent: '#c8bb84', hoof: '#d6c9a0', paint: { belly: '#c8bb84' } },
     palette: {
-      solid: [{ id: 'teal', name: '청록', body: '#8cc0cc' }, { id: 'sage', name: '연두', body: '#b4cc8a' }, { id: 'lilac', name: '라일락', body: '#c4b2ec', seldom: true }],
+      solid: [{ id: 'olive', name: '올리브', body: '#878a5e' }, { id: 'sage', name: '연두', body: '#b4cc8a' }, { id: 'lilac', name: '라일락', body: '#c4b2ec', seldom: true }],
       twotone: [{ id: 'sea', name: '바다', body: '#8cc0cc', second: '#eef8f4' }, { id: 'leaf', name: '잎새', body: '#9cc070', second: '#f4f0d0' }, { id: 'pink', name: '분홍', body: '#e8a0b8', second: '#fff4f6', seldom: true }],
       spots: [{ id: 'teal', name: '청록', body: '#a8d4dc', second: '#4e8a98' }, { id: 'giraffe', name: '기린', body: '#f6e2b0', second: '#c88a48' }, { id: 'starry', name: '별밤', body: '#3e5a7a', second: '#f6f0c8', seldom: true }],
       stripes: [{ id: 'sky', name: '하늘', body: '#a9cbe6', second: '#ffffff' }, { id: 'apricot', name: '살구', body: '#f6c7a2', second: '#fffaf2' }, { id: 'ink', name: '먹색', body: '#ffffff', second: '#3a3436', seldom: true }],
       gradient: [{ id: 'lagoon', name: '석호', body: '#e0f6ee', second: '#3e8a98' }, { id: 'dusk', name: '저녁', body: '#9fb4d8', second: '#3e4a66' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'moss', name: '이끼 숲', mat: 'moss', effect: 'fireflies' }] },
-  { id: 'stegosaurus', name: '스테고사우루스', habitat: 'dino', model: 'stegosaurus', colors: { horn: '#e06a50' },
+    legendary: [{ id: 'nebula', name: '은하', mat: 'nebula', effect: 'twinkle' }] },
+  { id: 'stegosaurus', name: '스테고사우루스', habitat: 'dino', model: 'stegosaurus', colors: { horn: '#a4692f', hoof: '#d8c28c', paint: { belly: '#b4a466' } },
     palette: {
-      solid: [{ id: 'mustard', name: '겨자', body: '#e0c068' }, { id: 'olive', name: '올리브', body: '#a8b46a', horn: '#f0a050' }, { id: 'sky', name: '하늘', body: '#9fc8ec', horn: '#f39ac0', seldom: true }],
+      solid: [{ id: 'khaki', name: '카키', body: '#9c8a4c' }, { id: 'olive', name: '올리브', body: '#a8b46a', horn: '#f0a050' }, { id: 'sky', name: '하늘', body: '#9fc8ec', horn: '#f39ac0', seldom: true }],
       twotone: [{ id: 'honey', name: '꿀', body: '#e0c068', second: '#fbf2d8' }, { id: 'leaf', name: '잎새', body: '#8cb870', second: '#f4f0d0' }, { id: 'mint', name: '민트', body: '#7fd6c0', second: '#f4fffa', seldom: true }],
       spots: [{ id: 'sand', name: '모래', body: '#f0dcb0', second: '#a87848' }, { id: 'moss', name: '이끼', body: '#c0d890', second: '#5a8a50' }, { id: 'pink', name: '분홍', body: '#fff0f4', second: '#ee86ae', seldom: true }],
       stripes: [{ id: 'lemon', name: '레몬', body: '#fbe7a0', second: '#fffaf0' }, { id: 'sea', name: '바다', body: '#7fb3e8', second: '#ffffff' }, { id: 'tiger', name: '호랑', body: '#f0a848', second: '#3a2a22', seldom: true }],
       gradient: [{ id: 'sunset', name: '노을', body: '#ffe066', second: '#ff7a59' }, { id: 'jungle', name: '정글', body: '#d8f0a0', second: '#3e8a5a' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'obsidian', name: '흑요석', mat: 'obsidian', effect: 'motes' }] },
-  { id: 'ankylosaurus', name: '안킬로사우루스', habitat: 'dino', model: 'ankylosaurus', colors: { accent: '#8a6a50', horn: '#d8c0a0' },
+    legendary: [{ id: 'lava', name: '용암 바위', mat: 'lava', effect: 'sparks' }] },
+  { id: 'ankylosaurus', name: '안킬로사우루스', habitat: 'dino', model: 'ankylosaurus', colors: { accent: '#6f5a3c', horn: '#cdb88a', hoof: '#d6c49a' },
     palette: {
-      solid: [{ id: 'clay', name: '흙빛', body: '#b89878' }, { id: 'slate', name: '돌빛', body: '#9ca4a8', accent: '#6a7276' }, { id: 'rose', name: '장미', body: '#e09a9a', accent: '#a85a6a', seldom: true }],
+      solid: [{ id: 'clay', name: '흙빛', body: '#8e7c56' }, { id: 'slate', name: '돌빛', body: '#9ca4a8', accent: '#6a7276' }, { id: 'rose', name: '장미', body: '#e09a9a', accent: '#a85a6a', seldom: true }],
       twotone: [{ id: 'sand', name: '모래', body: '#b89878', second: '#f6ead4' }, { id: 'moss', name: '이끼', body: '#8aa070', second: '#eef0d8' }, { id: 'sky', name: '하늘', body: '#7fa8d8', second: '#ffffff', seldom: true }],
       spots: [{ id: 'pebble', name: '조약돌', body: '#e6dccc', second: '#8a7a68' }, { id: 'honey', name: '꿀', body: '#fff6e6', second: '#e0a858' }, { id: 'violet', name: '보라', body: '#fbf6ff', second: '#a585f0', seldom: true }],
       stripes: [{ id: 'apricot', name: '살구', body: '#f6c7a2', second: '#fffaf2' }, { id: 'mint', name: '민트', body: '#a4dfca', second: '#ffffff' }, { id: 'ink', name: '먹색', body: '#ffffff', second: '#3a3436', seldom: true }],
       gradient: [{ id: 'choco', name: '초코우유', body: '#fff4e6', second: '#9a6444' }, { id: 'dusk', name: '저녁', body: '#d8dce4', second: '#5a6278' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'fossil', name: '화석 돌', mat: 'fossil', effect: 'puffs' }] },
-  { id: 'tRex', name: '티라노사우루스', habitat: 'dino', model: 'tRex', colors: { hoof: '#7a5a48' },
+    legendary: [{ id: 'malachite', name: '공작석 갑옷', mat: 'malachite', effect: 'motes' }] },
+  { id: 'tRex', name: '티라노사우루스', habitat: 'dino', model: 'tRex', colors: { hoof: '#e4d6b0', paint: { belly: '#cfc796' } },
     palette: {
-      solid: [{ id: 'orange', name: '주황', body: '#e89060' }, { id: 'green', name: '초록', body: '#7cb870' }, { id: 'purple', name: '보라', body: '#a585f0', seldom: true }],
+      solid: [{ id: 'olive', name: '올리브', body: '#747a48' }, { id: 'orange', name: '주황', body: '#e89060' }, { id: 'purple', name: '보라', body: '#a585f0', seldom: true }],
       twotone: [{ id: 'orange', name: '주황', body: '#e89060', second: '#fbeedc' }, { id: 'sky', name: '하늘', body: '#86a8cc', second: '#f2f8ff' }, { id: 'pink', name: '분홍', body: '#f4a6b8', second: '#fff4f6', seldom: true }],
       spots: [{ id: 'leopard', name: '얼룩', body: '#f6d8a8', second: '#a8683a' }, { id: 'mint', name: '민트', body: '#98e2c4', second: '#ffffff' }, { id: 'ladybug', name: '무당벌레', body: '#e8483c', second: '#2a2226', seldom: true }],
       stripes: [{ id: 'tiger', name: '호랑', body: '#ffb23e', second: '#3a2a22' }, { id: 'sea', name: '바다', body: '#7fb3e8', second: '#ffffff' }, { id: 'candy', name: '사탕', body: '#ffffff', second: '#e8483c', seldom: true }],
       gradient: [{ id: 'sunset', name: '노을', body: '#ffd08a', second: '#c25c3a' }, { id: 'lime', name: '라임', body: '#f0f8b0', second: '#5aa040' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'meteor', name: '별똥별', mat: 'meteor', effect: 'twinkle' }] },
-  { id: 'pteranodon', fit: { wings: { r: [0, 0, 0.15], p: [0.06, 0.1, 0] } }, name: '프테라노돈', habitat: 'dino', model: 'pteranodon', colors: { accent: '#e86a50', hoof: '#6a5a50', beak: '#f2d48a' },
+    legendary: [{ id: 'amberbone', name: '호박 속 골격', mat: 'amberbone', effect: 'motes' }] },
+  { id: 'pteranodon', fit: { wings: { r: [0, 0, 0.15], p: [0.06, 0.1, 0] } }, name: '프테라노돈', habitat: 'dino', model: 'pteranodon', colors: { accent: '#b5603c', hoof: '#7a6450', beak: '#dcc48e' },
     palette: {
-      solid: [{ id: 'periwinkle', name: '청보라', body: '#a8b8d8' }, { id: 'sand', name: '모래', body: '#e6cfa0', accent: '#c25c3a' }, { id: 'white', name: '흰색', body: '#f8f6f0', accent: '#f39ac0', seldom: true }],
+      solid: [{ id: 'brown', name: '갈색', body: '#8f7a62' }, { id: 'sand', name: '모래', body: '#e6cfa0', accent: '#c25c3a' }, { id: 'white', name: '흰색', body: '#f8f6f0', accent: '#f39ac0', seldom: true }],
       twotone: [{ id: 'sky', name: '하늘', body: '#8fa8d0', second: '#f4f8ff' }, { id: 'coral', name: '산호', body: '#e89080', second: '#fff4ee' }, { id: 'mint', name: '민트', body: '#7fd6c0', second: '#f4fffa', seldom: true }],
       spots: [{ id: 'grey', name: '잿빛', body: '#e4e6ec', second: '#6e737b' }, { id: 'sky', name: '하늘', body: '#f4f9ff', second: '#86b8e0' }, { id: 'starry', name: '별밤', body: '#3e5a7a', second: '#f6f0c8', seldom: true }],
       stripes: [{ id: 'lavender', name: '라벤더', body: '#d2c4f0', second: '#ffffff' }, { id: 'lemon', name: '레몬', body: '#fbe7a0', second: '#fffaf0' }, { id: 'ink', name: '먹색', body: '#ffffff', second: '#3a3436', seldom: true }],
       gradient: [{ id: 'dawn', name: '새벽', body: '#ffffff', second: '#f4a6b8' }, { id: 'sea', name: '바다', body: '#eaf6ff', second: '#477cc6' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'sunset', name: '열대 노을', mat: 'sunset', effect: 'petals' }] },
+    legendary: [{ id: 'sunstone', name: '선스톤', mat: 'sunstone', effect: 'twinkle' }] },
 ];
 
 // inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the
