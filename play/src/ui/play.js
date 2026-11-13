@@ -126,7 +126,7 @@ export function initPlay(nav) {
   function place() {
     if (!bubbleFor) return;
     const p = hab?.where(bubbleFor.id), r = stage.getBoundingClientRect();
-    if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil || overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
+    if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil || overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
     const cb = $('camBtns'), low = cb.hidden ? 0 : cb.getBoundingClientRect().bottom + bubble.offsetHeight + 16; // following up close: kept under 정면 / 전체 보기
     const half = bubble.offsetWidth / 2 + 6, x = Math.min(Math.max(p[0], r.left + half), r.right - half); // 13-1: kept on screen near the edges, the tail still at the friend
     bubble.style.left = x + 'px'; bubble.style.setProperty('--tx', p[0] - x + 'px'); bubble.style.top = Math.max(p[1], low) + 'px';
@@ -204,7 +204,7 @@ export function initPlay(nav) {
 
   // "○○가 다 자랐어요!": every grown animal whose card wasn't seen (several at once after time away), baby and adult side by side
   const card = $('grown'); let later = 0;
-  const covered = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo'); // 66-1: a guest lands once none is up
+  const covered = () => overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden]), .tip') || document.body.classList.contains('photo'); // 66-1: a guest lands once none is up
   const busy = () => covered() || resting(); // inbox 43
   function cards() {
     if (!hab || !card.hidden) return;
@@ -241,7 +241,7 @@ export function initPlay(nav) {
   let appT = 0, appQuiet = 0;
   function appBand() {
     if (!hab || !appHintDue(DEV, G.S.flags)) return void (appT = 0);
-    if (overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #attend:not([hidden]), #news:not([hidden]), .tip, #toast.on') || document.body.classList.contains('photo') || !home.hidden) appQuiet = Date.now(); // busy() but not the quiet rest: the save is at stake
+    if (overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden]), .tip, #toast.on') || document.body.classList.contains('photo') || !home.hidden) appQuiet = Date.now(); // busy() but not the quiet rest: the save is at stake
     if (Date.now() - appQuiet < 2000) { appT = setTimeout(appBand, 800); return; }
     G.flag('appHintSeen');
     const bar = Object.assign(document.createElement('div'), { className: 'rate appband', role: 'group' }); bar.setAttribute('aria-label', '다른 브라우저에서 이어서 하기');

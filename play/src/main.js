@@ -74,11 +74,13 @@ const idle = f => (window.requestIdleCallback || setTimeout)(f, { timeout: 2000 
 // and the map (0.37 MB, under the intro card) after that code, not sharing a slow line with it; the first screen doesn't wait for it.
 // 67-2: 시작 tapped by then: not until the board is up (enter) or the map is opened (back): nothing on screen shows it
 const fresh = firstEgg(G.S), mapUp = () => mapUp.p ??= (mapImg.src = ASSETS.worldmap, mapImg.decode().catch(() => {}));
+// 76: a player back (past the intro card) opens straight into the habitat they were in last (the map is fetched after it)
+const backTo = !fresh && (G.S.flags.betaIntro || PREFS.introAt === VERSION) && (h => HAB[h]?.ready && G.S.unlocked.includes(h) ? h : HABITATS[0].id)(G.S.flags.lastHab);
 if (fresh) code().catch(() => {}).then(() => cur || mapUp());
-(fresh ? Promise.resolve() : mapUp()).then(() => {
+(fresh || backTo ? Promise.resolve() : mapUp()).then(() => {
   const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400);
   idle(() => code().then(h => { // then the models of the habitat opened last (a new player: none, above)
-    if (!fresh) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.withGuests()).catch(() => {}));
+    if (!fresh && !backTo) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.withGuests()).catch(() => {}));
     if (OFFLINE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
   }).catch(() => {}));
 });
@@ -198,9 +200,10 @@ const intro = $('intro'), fb = $('feedback'), rating = $('rating');
 intro.hidden = !!G.S.flags.betaIntro || PREFS.introAt === VERSION;
 if (intro.hidden && !G.S.flags.betaIntro) { G.flag('betaIntro'); G.flag('news', VERSION); }
 // 26-8 새 소식: once after VERSION changes (flags.news = the version last shown); a new player gets the intro card instead. 설정 › 다시 보기
+// 76: a player back gets it as one line of 돌아왔어요 (the whole card on a tap), not a card of its own
 const news = $('news'); news.querySelector('[data-ver]').textContent = VERSION;
-news.hidden = !intro.hidden || G.S.flags.news === VERSION;
-const firstDone = () => { if (retWait && intro.hidden && news.hidden && $('attend').hidden) { retWait = false; showRet(); } }; // 자리 비운 사이 waits for these
+let newsDue = intro.hidden && G.S.flags.news !== VERSION;
+const firstDone = () => { if (retWait && intro.hidden && news.hidden) { retWait = false; showRet(); } }; // 자리 비운 사이 waits for these
 fb.hidden = FEEDBACK_URL === 'TODO';
 const fbUrl = () => { const n = cur ? outIn(G.S, cur).length : G.S.animals.length; // out in this habitat (not stored), or all
   return `${FEEDBACK_URL}?usp=pp_url&${FEEDBACK_FIELD}=${encodeURIComponent(`ver=${VERSION} habitat=${cur || 'map'} animals=${n}`)}`; };
@@ -220,8 +223,8 @@ const retAttend = () => G.attendDue() && G.S.attend.n > 0; // a new player's fir
 const retHome = () => cur || G.S.flags.lastHab || HABITATS[0].id;
 function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
   retEggs = eggs;
-  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !retSky()) return; // nothing new: no card
-  if (intro.hidden && news.hidden && $('attend').hidden) showRet(); else retWait = true; // 41 C: nor over 출석부
+  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !retSky() && !newsDue) return; // nothing new: no card
+  if (intro.hidden && news.hidden) showRet(); else retWait = true;
 }
 function showRet() {
   const eggs = retEggs, now = G.now(), ready = G.S.slots.filter(s => s && now >= s.end).length, grown = G.S.animals.filter(a => a.card), att = retAttend() && todayRow();
@@ -229,9 +232,10 @@ function showRet() {
   const back = G.S.cards.filter(c => c.new), names = [...new Set(back.map(c => c.nm))]; // 13-1: postcards not seen, at the top
   const myth = mythDue(); // 14-1: it came to the altar while away: the top row (its coming seen from there, 다시 보기)
   const sk = retSky(); // 16-2: last night's sky not seen (망원경으로 다시 보기)
-  if (!n && !grown.length && !att && !back.length && !myth && !sk) return;
+  if (!n && !grown.length && !att && !back.length && !myth && !sk && !newsDue) return;
+  const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
-  const rows = [myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
+  const rows = [top && ['📰', `새 소식 ${VERSION}`, top, 'news'], myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
     grown.length && ['🌱', `다 자란 친구 ${grown.length}`, '보러 가요', 'grown'], ready && ['✨', `부화 끝난 알 ${ready}`, '깨우러 가요', 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', '백업해 두면 기기를 바꿔도 이어서 할 수 있어요', '설정 › 내 저장 백업', 'backup']); G.flag('backupNag', today); }
@@ -241,16 +245,18 @@ function showRet() {
   ret.dataset.eggs = most || ''; ret.dataset.grown = grown[0] ? habitatOf(grown[0]) : ''; retGrown = grown.map(a => a.id);
   if (grown.length) code().then(() => import('./ui/thumbs.js')).then(({ figureThumb: f }) => ret.querySelectorAll('.minis > span').forEach((p, i) => { const a = grown[i], [b, c] = p.querySelectorAll('img');
     f(a.species, a.variant, a.color, a.acc, 'baby').then(u => { b.src = u; }); f(a.species, a.variant, a.color, a.acc, 'adult').then(u => { c.src = u; }); })).catch(() => {}); // offline: the row without them
-  ret.hidden = false; if (myth) G.mythShown(); if (sk) retShown(sk.n);
+  ret.hidden = false; if (myth) G.mythShown(); if (sk) retShown(sk.n); if (newsDue) { newsDue = false; G.flag('news', VERSION); }
 }
 ret.onclick = async e => {
   const b = e.target.closest('button'), d = b?.dataset; if (!d) return;
-  if (d.go === 'attend') { const t = takeToday(retHome()); b.disabled = true; b.querySelector('small').textContent = t ? `받았어요 · ${t}` : '받았어요'; return; }
+  if (d.go === 'attend') { const t = takeToday(retHome()), r = b.getBoundingClientRect(); b.disabled = true; b.querySelector('small').textContent = t ? `받았어요 · ${t}` : '받았어요';
+    for (let i = 0; i < 3; i++) setTimeout(() => heart(r.right - 30 + (i - 1) * 14, r.top + r.height / 2), i * 120); return; } // 76: no window; ♥ pops right there
   ret.hidden = true;
   if (retAttend()) { const t = takeToday(retHome()); if (t) toast(`오늘 출석 · ${t}`, 2600); }
   const first = retGrown[0]; if (retGrown.length) { G.grownSeen(retGrown); retGrown = []; }
   if (d.go == null) return;
   if (d.go === 'backup') return BK.open();
+  if (d.go === 'news') { news.hidden = false; return; }
   const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home, cards: home, myth: 'meadow', sky: 'meadow' }[d.go];
   // the 3D comes in under a cloud, at once: no map in between (it showed for seconds on a phone the first time); the loading bar says the rest
   const far = cur !== to; if (far) { veil.firstChild.textContent = ''; veil.hidden = false; veil.classList.add('on'); world.classList.add('now'); hab.classList.add('now'); }
@@ -273,10 +279,11 @@ addEventListener('visibilitychange', () => {
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone();
   if (!cur && firstEgg(G.S)) nav.go(HABITATS[0].id); }; // inbox 61 B: a new player, straight to the first egg (no map tap)
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
-initAttend(() => cur, firstDone);
+initAttend(() => cur);
 initEvent(() => cur, () => api);
 initMyth(() => cur, () => api);
 initVisit(nav);
+if (backTo) nav.go(backTo);
 { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
 
 // 21-1 설정: choices kept in this browser apart from the save (config.js PREFS); the habitat reads them every frame

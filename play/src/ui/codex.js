@@ -15,7 +15,7 @@ import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { makeFigure, loadModel } from '../animals/figure.js';
 import * as G from '../game/game.js';
 import { HABITATS, RARITIES, ACCESSORIES, SPECIES, SCENES, BALANCE, MYTHIC, HOLD } from '../game/data.js';
-import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, displayColor, unlockInfo, twoName, variantsOf } from '../game/rules.js';
+import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, EARNED, displayColor, unlockInfo, twoName, variantsOf } from '../game/rules.js';
 import { toast, tip, lockText, josa } from './hud.js';
 import { DEBUG, calm } from '../config.js';
 import { figureThumb, silhouetteThumb, propThumb, studio, nightLights, mythThumb } from './thumbs.js';
@@ -62,7 +62,7 @@ const foot = () => { const n = Object.keys(G.S.sky?.got ?? {}).length;
   return `<div class="cfoot"><button class="scards" data-cab>진열장으로 보기</button>${n ? `<button class="scards" data-sky>하늘 기록 <small>${n}/${SKY_N}</small></button>` : ''}</div>`; };
 // 14-1 신수: its own row in each habitat (the meadow's 불갈기 천리마; the others' only a rumour yet), not in the count
 const mythRow = () => { if (HOLD.myth) return ''; const m = MYTHIC.find(m => m.habitat === tab), met = !!(m && G.S.myth?.here);
-  return `<h3>신수 <small>${+met}/1</small></h3><div class="crow"><div class="cell myth${met ? '' : ' unk'}" role="button" data-m="${m?.id || ''}">${m ? `<img alt="${met ? m.name : '아직 못 만난 신수'}">` : ''}<span>${met ? m.name : '?'}</span>${m ? '' : '<small>소문만 있어요</small>'}</div></div><button class="scards" data-story="${tab}">이야기 카드 <b>${cardsIn(tab).length}</b>장<small>신수·전설 친구를 만난 날</small></button>`; }; // 14-2
+  return `<h3>${EARNED.myth.name} <small>${+met}/1</small></h3><div class="crow"><div class="cell myth${met ? '' : ' unk'}" role="button" data-m="${m?.id || ''}">${m ? `<img alt="${met ? m.name : '아직 못 만난 신수'}">` : ''}<span>${met ? m.name : '?'}</span>${m ? '' : '<small>소문만 있어요</small>'}</div></div><button class="scards" data-story="${tab}">이야기 카드 <b>${cardsIn(tab).length}</b>장<small>신수·전설 친구를 만난 날</small></button>`; }; // 14-2
 function mythBox(id) {
   const m = MYTHIC.find(m => m.id === id), met = !!(m && G.S.myth?.here), box = document.createElement('div'), n = [...Array(5)].filter((_, i) => G.S.myth?.read & 1 << i).length;
   box.className = 'cdet pop myth';

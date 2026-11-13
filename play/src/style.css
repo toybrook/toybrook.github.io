@@ -164,7 +164,6 @@ html.calm .lbar::before{animation:none}
 @keyframes bump{40%{transform:scale(1.18)}}
 .flyg{position:fixed;z-index:3000;pointer-events:none;filter:drop-shadow(0 0 8px rgba(255,200,60,1))}
 .shell{position:fixed;z-index:3000;width:16px;height:14px;pointer-events:none;clip-path:polygon(50% 0,100% 85%,8% 100%);background:#f6e2bd}
-.shell[data-r=rare]{background:#f2a7b4}.shell[data-r=heroic]{background:#cfdcff}.shell[data-r=legendary]{background:#f2c24f}
 .nslots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .nslots.n3{grid-template-columns:repeat(3,1fr);gap:6px}.nslots.n3 .nslot,.nslots.n3 .nslot.empty{flex-direction:column;justify-content:center;gap:2px;min-height:96px;padding:6px 4px;text-align:center}.nslots.n3 .nslot img{width:46px;height:46px}
 .nslot{display:flex;align-items:center;gap:8px;min-height:70px;padding:5px 10px 5px 5px;border-radius:16px;border:1px solid #d6bb93;background:#fbf1e1;color:#4a3626;font:inherit;text-align:left;cursor:pointer}
@@ -177,7 +176,6 @@ html.calm .lbar::before{animation:none}
 .nslot.fresh img{animation:egin .35s ease-out}
 @keyframes egin{from{transform:translateY(-26px) scale(.6);opacity:0}}
 .ncard{position:absolute;inset:0;background:#fffaf0;border:1px solid #e3cba6;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;box-shadow:0 4px 18px rgba(60,35,15,.18);animation:up .25s ease-out}
-.ncard[data-r=common]{--rc:#a08a6e}.ncard[data-r=rare]{--rc:#d9667f}.ncard[data-r=heroic]{--rc:#4a6fd0}.ncard[data-r=legendary]{--rc:#d39a12}
 .nchips{display:flex;gap:6px;align-items:center;justify-content:center}
 .ncard .rar{font-size:calc(12px*var(--fs));font-weight:700;color:#fff;border-radius:999px;padding:3px 10px;background:var(--rc)}
 .ncard .new{font-style:normal;font-size:calc(11px*var(--fs));font-weight:700;background:#ff6b7d;color:#fff;border-radius:6px;padding:3px 6px}
@@ -417,7 +415,7 @@ html.calm .rate{animation:none}
 .ret li button.take::after{content:'받기';font-size:calc(13px*var(--fs));font-weight:700;color:#fff;background:#e8805f;border-radius:10px;padding:5px 10px}
 .ret li button.take:disabled{opacity:1}.ret li button.take:disabled::after{content:'✓';background:none;color:#e5584a;font-size:calc(18px*var(--fs))}
 .ret .minis{display:flex;justify-content:center;gap:6px;margin:4px 0 0}.ret .minis span{display:flex;align-items:center;gap:1px}
-.ret .minis img{width:40px;height:40px;object-fit:contain}.ret .minis img[alt=새끼]{width:32px;height:32px}.ret .minis b{color:#b08a64;font-size:calc(11px*var(--fs))}
+.ret .minis{flex-wrap:wrap}.ret button[data-go=news] span{min-width:0}.ret button[data-go=news] small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ret .minis img{width:56px;height:56px;object-fit:contain}.ret .minis img[alt=새끼]{width:48px;height:48px}.ret .minis b{color:#b08a64;font-size:calc(11px*var(--fs))}
 /* inbox 58: no card shows through the start screen while it fades (they wait under it); the scenes swap at once under 돌아왔어요's cloud */
 body:has(#boot) .intro{visibility:hidden}
 .scene.now{transition:none}
@@ -447,16 +445,6 @@ body:has(.mythcut:not([hidden])) .scnote{display:none} /* its coming: no "저쪽
 .mythcut p{position:absolute;left:50%;top:calc(150px + var(--sa-t));transform:translateX(-50%);width:max-content;max-width:86%;margin:0;padding:10px 16px;border-radius:14px;background:rgba(20,14,10,.6);color:#ffe9c8;font-size:calc(15px*var(--fs));text-align:center;word-break:keep-all}
 .mythcut button{position:absolute;right:calc(16px + var(--sa-r));bottom:calc(24px + var(--sa-b));pointer-events:auto;min-height:44px;padding:0 16px;border:0;border-radius:22px;background:rgba(20,14,10,.55);color:#fff;font:inherit;font-size:calc(14px*var(--fs))}
 /* inbox 41 C 출석부: 4 + 3 slots (the 7th, its gift, two wide); a done one has a round stamp, today's an orange edge */
-.att{list-style:none;margin:0 0 12px;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.att li{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border:1px solid #e3cba6;border-radius:12px;background:#fff6e6}
-.att li.last{grid-column:span 2}
-.att b{font-size:calc(12px*var(--fs));color:#8a6a4c}
-.att i{font-style:normal;font-size:calc(20px*var(--fs));line-height:1.25}
-.att small{font-size:calc(11.5px*var(--fs));font-weight:700;color:#6b4a2b;line-height:1.25;text-align:center;word-break:keep-all}
-.att li.today{border:2px solid #e8805f;background:#fff;padding:5px 1px}
-.att li.done{background:#f1e2c8}.att li.done>*{opacity:.55}
-.att li.done::after{content:'✓';position:absolute;top:50%;left:50%;width:34px;height:34px;transform:translate(-50%,-50%) rotate(-12deg);box-sizing:border-box;border:2.5px solid #e5584a;border-radius:50%;display:grid;place-items:center;color:#e5584a;font-weight:800;font-size:19px}
-#attend p.note{margin:0 0 10px}#attend p.note.got{font-size:calc(15px*var(--fs));font-weight:700;color:#4a3626}
 .hmenu{align-items:flex-start;justify-content:flex-start;padding:calc(64px + var(--sa-t)) calc(12px + var(--sa-r)) calc(12px + var(--sa-b)) calc(12px + var(--sa-l));background:rgba(30,22,14,.25)}
 .hmenu>div{padding:8px;border-radius:18px;min-width:200px;max-width:280px;text-align:left}
 .hmenu button{display:flex;align-items:center;gap:8px;width:100%;min-width:0;min-height:48px;padding:0 12px;border-radius:12px;background:none;color:#4a3626;font-size:calc(15px*var(--fs));text-align:left}
@@ -482,7 +470,6 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .frow div{flex:1;min-width:0}.frow b{display:block;font-size:calc(14px*var(--fs));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .frow small{font-size:calc(12px*var(--fs));color:#8a6a4c}.frow small.hold{color:#5f7d93;font-weight:700}
 .frow em{font-style:normal;font-size:calc(11px*var(--fs));font-weight:700;color:#fff;border-radius:999px;padding:2px 8px;flex:none}
-.frow em[data-r=common]{background:#a08a6e}.frow em[data-r=rare]{background:#d9667f}.frow em[data-r=heroic]{background:#4a6fd0}.frow em[data-r=legendary]{background:#d39a12}
 .frow.card{border-color:#f0c35a;background:#fff6dc}
 .fnote{margin:6px 12px 0;font-size:calc(12px*var(--fs));color:#8a6a4c;text-align:center}
 .fmenu{z-index:1360}.fmenu>div{width:min(260px,100%);box-sizing:border-box}

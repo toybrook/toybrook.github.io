@@ -151,13 +151,21 @@ for (const [k, lv] of Object.entries(P.play.level)) (BALANCE.level.unlock[lv] ??
 // inbox 41 B 우편함·선물 코드: a gift egg that finds every open nest full comes as this many hearts instead
 export const GIFT = { eggHearts: 15 };
 
-// In order, rarest last. egg: what an egg of this rarity looks like (material + colours; none = the material's first colour).
-// 28-6c display: hue/sat the shard gauge's colour (nest.js, the rarities with a gauge); precious: 돌려보내기 asks once more (store.js)
+// 75 등급 표 (docs/tiers.md). Every screen reads a tier's name, order, colours from here: a new tier = a line here (+ its pictures).
+// 알 등급 (kind 'egg', rolled from an egg's odds), in order, rarest last. egg: what an egg of this rarity looks like (material +
+// colours; none = the material's first colour). color: its badge (hatch card, 친구들 list); shell: the shell piece that flies to
+// its gauge. 28-6c hue/sat: the shard gauge's colour (nest.js, the rarities with a gauge); precious: 돌려보내기 asks once more
+// (store.js); story: its first one gives an 이야기 카드 (story.js). Saves keep the id, so an id never changes.
 export const RARITIES = [
-  { id: 'common', name: '일반', egg: { mat: 'spots', colors: { body: '#fff1d6', second: '#e2ad7a', accent: '#fff1d6' } } },
-  { id: 'rare', name: '희귀', egg: { mat: 'glass' } },
-  { id: 'heroic', name: '영웅', egg: { mat: 'bluewhite' }, hue: 218, sat: 60 },
-  { id: 'legendary', name: '전설', egg: { mat: 'gold' }, hue: 42, sat: 85, precious: true },
+  { id: 'common', kind: 'egg', name: '일반', color: '#a08a6e', shell: '#f6e2bd', egg: { mat: 'spots', colors: { body: '#fff1d6', second: '#e2ad7a', accent: '#fff1d6' } } },
+  { id: 'rare', kind: 'egg', name: '희귀', color: '#d9667f', shell: '#f2a7b4', egg: { mat: 'glass' } },
+  { id: 'heroic', kind: 'egg', name: '영웅', color: '#4a6fd0', shell: '#cfdcff', egg: { mat: 'bluewhite' }, hue: 218, sat: 60 },
+  { id: 'legendary', kind: 'egg', name: '전설', color: '#d39a12', shell: '#f2c24f', egg: { mat: 'gold' }, hue: 42, sat: 85, precious: true, story: true },
+];
+// 75 해서 얻는 등급 (kind 'earned', no odds): got by playing, each with its own rules file. Add freely.
+export const EARNED_TIERS = [
+  { id: 'wanderer', kind: 'earned', name: '떠돌이', color: '#7a9a5a' }, // 66-1 떠돌이 손님 (game/guests.js)
+  { id: 'myth', kind: 'earned', name: '신수', color: '#c8452e' }, // 14-1 MYTHIC (rules.js mythTick)
 ];
 
 // Every species gets all of these (variant id = material id). Rarity is how showy the look is, not what it is made of.
@@ -1088,12 +1096,13 @@ export const BRUSHES = [{ id: 'grass', name: '풀', c: '#86bf45', hab: ['meadow'
 // 25-1 hab: the habitats a brush paints in (none: all). 자갈 everywhere; 풀·흙길·모래·꽃밭 not on the snow (14-3: on the dino jungle too); 눈·얼음 only there
 export const brushIn = (b, habId) => !!BRUSHES[b] && (!BRUSHES[b].hab || BRUSHES[b].hab.includes(habId));
 
-// Egg kinds. species: who can hatch from it, picked evenly. odds: rarity weights (%). hatchScale: x BALANCE.hatch.
+// Egg kinds. species: who can hatch from it, picked evenly. odds: rarity weights (%). pity: its shard gauges (75: each egg its own;
+// a new egg tier comes only with a new egg kind and its own odds + pity, never by changing these). hatchScale: x BALANCE.hatch.
 // sale: null = always, or { start, end } (ISO dates) for a limited egg. Parents (짝꿍 둥지) are stored on eggs, unused yet.
 const speciesOf = habitat => SPECIES.filter(s => s.habitat === habitat).map(s => s.id);
 export const EGG_TYPES = [
-  { id: 'meadow_nest', name: '초원 둥지 알', species: speciesOf('meadow'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, hatchScale: 1, sale: null },
-  { id: 'pond_nest', name: '연못 둥지 알', species: speciesOf('pond'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, hatchScale: 1, sale: null },
-  { id: 'snow_nest', name: '설원 둥지 알', species: speciesOf('snow'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, hatchScale: 1, sale: null },
-  { id: 'dino_nest', name: '공룡 정글 둥지 알', species: speciesOf('dino'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, hatchScale: 1, sale: null }, // 14-3
+  { id: 'meadow_nest', name: '초원 둥지 알', species: speciesOf('meadow'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, pity: BALANCE.pity, hatchScale: 1, sale: null },
+  { id: 'pond_nest', name: '연못 둥지 알', species: speciesOf('pond'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, pity: BALANCE.pity, hatchScale: 1, sale: null },
+  { id: 'snow_nest', name: '설원 둥지 알', species: speciesOf('snow'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, pity: BALANCE.pity, hatchScale: 1, sale: null },
+  { id: 'dino_nest', name: '공룡 정글 둥지 알', species: speciesOf('dino'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, pity: BALANCE.pity, hatchScale: 1, sale: null }, // 14-3
 ];

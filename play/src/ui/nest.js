@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import * as G from '../game/game.js';
 import { BALANCE as B, ACCESSORIES, HABITATS } from '../game/data.js';
-import { SP, RAR, HAB, EGG, RANK, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap, kindName } from '../game/rules.js';
+import { SP, RAR, HAB, EGG, RANK, pityOf, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap, kindName } from '../game/rules.js';
 import { toast, hideToast, heart, clock, span, josa, tip } from './hud.js';
 import { eggThumb, studio } from './thumbs.js';
 import { makeEgg, HATCH } from '../animals/growth.js';
@@ -17,7 +17,7 @@ import { calm } from '../config.js';
 const $ = id => document.getElementById(id);
 const nameOf = kindName;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const GAUGES = Object.keys(B.pity).sort((a, b) => RANK[a] - RANK[b]);
+const gaugesOf = type => Object.keys(pityOf(type)).sort((a, b) => RANK[a] - RANK[b]); // 75: each egg kind its own
 // the habitat an egg type comes from (the hatch slots are shared, so a pond egg can hatch in the meadow)
 const eggHome = type => HABITATS.find(h => h.nest === type);
 
@@ -95,8 +95,8 @@ export function initNest(nav) {
   function drawGauges() {
     const P = shown || shards(G.S, tab);
     once('gauges', JSON.stringify(P) + tab, () => {
-      gEl.innerHTML = GAUGES.map(k => {
-        const have = P[k], target = B.pity[k], full = have >= target, nm = RAR[k].name;
+      gEl.innerHTML = gaugesOf(tab).map(k => {
+        const have = P[k], target = pityOf(tab)[k], full = have >= target, nm = RAR[k].name;
         return `<div class="gauge${full ? ' full' : ''}" data-k="${k}">${gaugeSvg(k, have, target)}<div><b>${nm} 조각</b><span>${have}/${target}</span>
 <small>${full ? `다음 알 ${nm} 확정!` : `${nm}까지 <span style="white-space:nowrap">${target - have}알</span>`}</small></div></div>`;
       }).join('');
@@ -157,7 +157,7 @@ export function initNest(nav) {
   }
   function shellTo(k, rarity) { // one shell piece from the cracking egg to a gauge
     const g = gEl.querySelector(`[data-k="${k}"]`), [ax, ay] = centre(stageEl, 0.6), [bx, by] = centre(g.querySelector('svg'));
-    const p = Object.assign(document.createElement('div'), { className: 'shell' }); p.dataset.r = rarity;
+    const p = Object.assign(document.createElement('div'), { className: 'shell' }); p.style.background = RAR[rarity].shell; // 75: the tier table's colour
     Object.assign(p.style, { left: ax + 'px', top: ay + 'px' }); document.body.append(p);
     const dx = bx - ax, dy = by - ay;
     return p.animate([{ transform: 'translate(-50%,-50%) rotate(0deg)' }, { transform: `translate(calc(-50% + ${dx * 0.3}px),calc(-50% + ${dy * 0.3 - 60}px)) rotate(220deg) scale(1.2)`, offset: 0.35 },
@@ -183,7 +183,7 @@ export function initNest(nav) {
     cur.t0 = performance.now();
     await sleep(HATCH.crack * 1000); if (tok !== run) return;
     sfx('hatch'); cry(r.animal.species); await sleep(150); if (tok !== run) return; // 26-2: the small bell when the shell cracks
-    const up = GAUGES.filter(k => r.shards.after[k] > r.shards.before[k]);
+    const up = Object.keys(r.shards.after).filter(k => r.shards.after[k] > r.shards.before[k]);
     Promise.all(up.map(k => shellTo(k, r.egg.rarity))).then(() => { if (tok === run) { shown = null; drawGauges(); } });
     if (!up.length) { shown = null; drawGauges(); }
     await sleep((HATCH.end - HATCH.crack) * 1000 + 200); if (tok !== run) return;
@@ -194,7 +194,7 @@ export function initNest(nav) {
     const newCol = !fresh && a.newColor; // a variant already met, in a colour not seen before (rules.js hatch)
     const gift = B.codexHeart && !G.S.codex[key(a.species, a.variant)]; // inbox 38: its cell is filled when it is kept (out or storage)
     const H = HAB[habitatOf(a)], away = H.id !== habId, open = G.S.unlocked.includes(H.id), room = fits(G.S, a); // inbox 20: never gone without a word
-    cardEl.dataset.r = v.rarity;
+    cardEl.style.setProperty('--rc', RAR[v.rarity].color); // 75
     cardEl.innerHTML = `<div class="nchips"><span class="rar">${RAR[v.rarity].name}</span>${fresh ? '<i class="new">NEW</i>' : newCol ? '<i class="new">새 색!</i>' : ''}${gift ? `<i class="gift">♥+${B.codexHeart}</i>` : ''}${r?.sure ? '<span class="sure">조각으로 확정!</span>' : ''}${r?.newAcc ? '<i class="new">새 치장!</i>' : ''}</div>
 <b class="nname">${nameOf(a)}${col ? ` <small>${col.name}</small>` : ''}</b>
 ${a.acc ? `<div class="nsecret"><em>시크릿!</em> ${ACCESSORIES[a.acc].wear} 나왔어요${'<i>✦</i>'.repeat(6)}${r?.newAcc ? '<small>처음 만난 치장이에요 · 치장 앨범에 남았어요</small>' : ''}</div>` : ''}
@@ -209,7 +209,7 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     if (G.S.stats.hatch === 1 && !G.S.flags.next61) { G.flag('next61'); tip('next', '#nestBtn'); } // inbox 61 B: once, after the first (64-A: a tip, one at a time with the rest)
     const nm = nameOf(a), gift = go && B.codexHeart && !G.S.codex[key(a.species, a.variant)] ? ` · ♥+${B.codexHeart}` : ''; // inbox 38
     if (gift) heart(e.clientX, e.clientY);
-    const k = key(a.species, a.variant); if (go && !G.S.codex[k] && variantOf(a.species, a.variant)?.rarity === 'legendary') setTimeout(() => import('./story.js').then(m => m.giveStory('l', k)), 600); // 14-2: a legendary's first one, its card once it is kept
+    const k = key(a.species, a.variant); if (go && !G.S.codex[k] && RAR[variantOf(a.species, a.variant)?.rarity]?.story) setTimeout(() => import('./story.js').then(m => m.giveStory('l', k)), 600); // 14-2: a legendary's first one, its card once it is kept
     if (go === 'store') { // its habitat is full or not open yet (rules.fits): it waits in storage
       const H = HAB[habitatOf(a)], shut = !G.S.unlocked.includes(H.id);
       G.store(a.id); toast(`${shut ? `${H.name}${josa(H.name, '이', '가')} 열리면 데려갈 수 있어요` : `${H.name}에 자리가 모자라요`} · ${nm}${josa(nm, '은', '는')} 보관함에서 기다려요${gift}`, 3200);

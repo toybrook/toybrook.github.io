@@ -3,7 +3,7 @@
 // look), so an old save has its cards too. A card's code (TS1.<base64url>) holds only its kind, who, the day and the part of
 // the day (한국 시간) and the habitat: no names given, no device, no place, nothing else about the player.
 import { MYTHIC, HABITATS } from './data.js';
-import { SP, variantOf, twoName } from './rules.js';
+import { SP, RAR, variantOf, twoName } from './rules.js';
 const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? a : b; }; // as ui/hud.js (no DOM here)
 
 export const TAG = 'TS1.';
@@ -32,7 +32,7 @@ export function storyCards(S) {
   if (Number.isFinite(M.settled)) out.push(card('s', m.id, m.habitat, M.settled));
   for (const [k, e] of Object.entries(S.codex || {})) {
     const [sp, v] = k.split(':');
-    if (variantOf(sp, v)?.rarity === 'legendary' && Number.isFinite(e?.at)) out.push(card('l', k, HN[e.h] ? e.h : SP[sp].habitat, e.at));
+    if (RAR[variantOf(sp, v)?.rarity]?.story && Number.isFinite(e?.at)) out.push(card('l', k, HN[e.h] ? e.h : SP[sp].habitat, e.at));
   }
   return out.sort((a, b) => a.t - b.t);
 }
@@ -57,7 +57,7 @@ export function decodeCard(text) {
   let p; try { p = atob(s.slice(TAG.length).replace(/-/g, '+').replace(/_/g, '/')).split('.'); } catch { return bad; }
   if (p.length !== 5) return bad;
   const [k, id, day, tod, hab] = p, [sp, v] = id.split(':'), y = +day.slice(0, 4), mo = +day.slice(4, 6), dd = +day.slice(6);
-  const who = k === 'l' ? variantOf(sp, v)?.rarity === 'legendary' && !!HN[hab] : (k === 'm' || k === 's') && MY[id]?.habitat === hab;
+  const who = k === 'l' ? !!RAR[variantOf(sp, v)?.rarity]?.story && !!HN[hab] : (k === 'm' || k === 's') && MY[id]?.habitat === hab;
   const date = /^\d{8}$/.test(day) && y >= 2024 && mo >= 1 && mo <= 12 && dd >= 1 && dd <= new Date(Date.UTC(y, mo, 0)).getUTCDate();
   if (!who || !date || !/^[0-3]$/.test(tod)) return bad;
   return { k, id, hab, day, tod: +tod };

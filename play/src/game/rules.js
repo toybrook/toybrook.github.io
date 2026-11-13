@@ -32,7 +32,7 @@ import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
 import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
 import { blank as palBlank, tidyPals, palTick, peOf } from './pals.js'; // 17-1
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, BALANCE as B, RARITIES, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -40,7 +40,7 @@ import { BOARD0, rectAt, inRect, zoneSet } from '../habitat/zones.js';
 import { newlyDone } from './achieve.js';
 
 const byId = list => Object.fromEntries(list.map(x => [x.id, x]));
-export const SP = byId(SPECIES), HAB = byId(HABITATS), EGG = byId(EGG_TYPES), RAR = byId(RARITIES), PROP = byId(PROPS), NAT = byId(NATURE);
+export const SP = byId(SPECIES), HAB = byId(HABITATS), EGG = byId(EGG_TYPES), RAR = byId(RARITIES), EARNED = byId(EARNED_TIERS), PROP = byId(PROPS), NAT = byId(NATURE);
 export const RANK = Object.fromEntries(RARITIES.map((r, i) => [r.id, i]));
 
 export const variantsOf = sp => [...SHARED_VARIANTS, ...(sp.extra || []), ...sp.legendary.map(l => ({ ...l, rarity: 'legendary' }))];
@@ -265,10 +265,13 @@ export function eggTable(type, S) {
 }
 
 // Shard gauges (BALANCE.pity) of an egg type, and the rarity they guarantee for the next egg (the rarest full one) or null.
-export const shards = (S, type) => Object.fromEntries(Object.keys(B.pity).map(k => [k, S.pity[type]?.[k] || 0]));
+// 75: each egg kind has its own gauges (data.js EGG_TYPES pity; today all BALANCE.pity)
+export const pityOf = type => EGG[type]?.pity ?? B.pity;
+export const shards = (S, type) => Object.fromEntries(Object.keys(pityOf(type)).map(k => [k, S.pity[type]?.[k] || 0]));
 export function sureRarity(S, type) {
   const P = shards(S, type); let top = null;
-  for (const k in B.pity) if (P[k] >= B.pity[k] && (!top || RANK[k] > RANK[top])) top = k;
+  const T = pityOf(type);
+  for (const k in T) if (P[k] >= T[k] && (!top || RANK[k] > RANK[top])) top = k;
   return top;
 }
 
@@ -286,7 +289,7 @@ export function crack(S, e, now, rng = Math.random, forced = false) { // forced:
   if (!r) return null;
   r = { ...r, color: rollColor(r.species, r.variant, rng) };
   const before = shards(S, e.type), P = e.gift ? { ...before } : S.pity[e.type] = { ...before };
-  if (!e.gift) for (const k in B.pity) P[k] = RANK[rarity] >= RANK[k] ? 0 : P[k] + 1;
+  if (!e.gift) for (const k in pityOf(e.type)) P[k] = RANK[rarity] >= RANK[k] ? 0 : P[k] + 1;
   const accs = Object.keys(ACCESSORIES);
   const acc = (forced || rng() < B.secret.chance) ? accs[Math.floor(rng() * accs.length)] : null;
   const newAcc = !!acc && !S.album[acc]; // first time this accessory turns up: the reveal card says 새 치장!
@@ -298,7 +301,7 @@ export function crack(S, e, now, rng = Math.random, forced = false) { // forced:
 // segments: odds of the next egg in each gauge state. Under a full gauge, the rarities below it become that rarity and
 // the ones above keep their odds; a guaranteed rarity picks variants not owned yet first. Otherwise variants are even.
 export function oddsInfo(type, S) {
-  const base = eggTable(type, S), keys = Object.keys(B.pity).sort((a, b) => RANK[a] - RANK[b]);
+  const base = eggTable(type, S), PT = pityOf(type), keys = Object.keys(PT).sort((a, b) => RANK[a] - RANK[b]);
   const seg = k => base.map(r => {
     const i = RANK[r.rarity.id], p = !k || i > RANK[k] ? r.p : i < RANK[k] ? 0 : base.filter(b => RANK[b.rarity.id] <= i).reduce((s, b) => s + b.p, 0);
     return { rarity: r.rarity, p, missingFirst: !!k && i === RANK[k] };
@@ -306,8 +309,8 @@ export function oddsInfo(type, S) {
   const accs = Object.entries(ACCESSORIES);
   return {
     egg: EGG[type], base,
-    segments: [{ when: null, odds: seg(null) }, ...keys.map(k => ({ when: RAR[k], target: B.pity[k], odds: seg(k) }))],
-    gauges: keys.map(k => ({ rarity: RAR[k], target: B.pity[k], have: S ? shards(S, type)[k] : 0 })),
+    segments: [{ when: null, odds: seg(null) }, ...keys.map(k => ({ when: RAR[k], target: PT[k], odds: seg(k) }))],
+    gauges: keys.map(k => ({ rarity: RAR[k], target: PT[k], have: S ? shards(S, type)[k] : 0 })),
     secret: { chance: B.secret.chance, accessories: accs.map(([id, a]) => ({ id, name: a.name, p: B.secret.chance / accs.length })) },
   };
 }
