@@ -921,6 +921,25 @@ export const PROPS = [
 // 66-1 손님 선물 (guests-data.js GUEST_PROPS): only from a guest's 대만족; drawn with an existing prop's model (as), its size and light
 for (const g of GUEST_PROPS) { const A = PROPS.find(p => p.id === g.as);
   PROPS.push({ id: g.id, name: g.name, as: g.as, habitat: g.hab, price: 0, r: A.r, ...A.k && { k: A.k }, ...A.small && { small: true }, ...A.light && { light: true }, ...A.water && { water: true }, gift: '떠돌이 손님' }); }
+// 17-2 동물 작품 (game/art.js): 주운 것, a friend's find (기록만 남기고 치우기 gives its one to storage; 솔방울 is the 산책 선물's),
+// and the 작품 made of them (art: by a friend only; find: what it was made of). Never sold. Not in the 꾸미기 코드 (layout.js KINDS):
+// a friend's work stays in its own garden
+PROPS.push(
+  { id: 'find_pebble', name: '조약돌', price: 0, r: 0.25, small: true, gift: '주운 것' },
+  { id: 'find_twig', name: '나뭇가지', price: 0, r: 0.35, small: true, gift: '주운 것' },
+  { id: 'find_shell', name: '조개껍데기', price: 0, r: 0.25, small: true, gift: '주운 것' },
+  { id: 'find_ice', name: '얼음 조각', price: 0, r: 0.25, small: true, gift: '주운 것' },
+  { id: 'find_flower', name: '들꽃 한 송이', price: 0, r: 0.25, small: true, gift: '주운 것' },
+  { id: 'art_ring', name: '조약돌 동그라미', price: 0, r: 0.75, art: true, find: 'find_pebble', gift: '동물 작품' },
+  { id: 'art_bunch', name: '꽃 무더기', price: 0, r: 0.55, art: true, find: 'find_flower', gift: '동물 작품' },
+  { id: 'art_row', name: '일렬로 선 솔방울', price: 0, r: 0.7, art: true, find: 'walk_pinecone', gift: '동물 작품' },
+  { id: 'art_tower', name: '기우뚱 탑', price: 0, r: 0.45, art: true, find: 'find_pebble', gift: '동물 작품' },
+  { id: 'art_hut', name: '나뭇가지 오두막', price: 0, r: 0.6, art: true, find: 'find_twig', gift: '동물 작품' },
+  { id: 'art_heart', name: '조개 하트', price: 0, r: 0.65, art: true, find: 'find_shell', gift: '동물 작품' },
+  { id: 'art_shellrow', name: '줄 맞춘 조개', price: 0, r: 0.7, art: true, find: 'find_shell', gift: '동물 작품' },
+  { id: 'art_icering', name: '얼음 동그라미', price: 0, r: 0.75, art: true, find: 'find_ice', gift: '동물 작품' },
+  { id: 'art_icerow', name: '줄 맞춘 얼음', price: 0, r: 0.7, art: true, find: 'find_ice', gift: '동물 작품' },
+  { id: 'art_icetower', name: '기우뚱 얼음 탑', price: 0, r: 0.45, art: true, find: 'find_ice', gift: '동물 작품' });
 // 14-3 화석 발굴: an animal digging at the dino jungle's fossil site (zones.js / dino/layout.js spots act 'dig', walk.js) turns up
 // the next of these (rules.js dig) with odds a dig, gap ms at least after the last find; each one once, a gift prop in the dino
 // habitat. Not part of BALANCE (no eggs, no hearts: decorations only)

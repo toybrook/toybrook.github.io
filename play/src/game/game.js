@@ -4,6 +4,7 @@ import * as V from './visit.js'; // 16-1
 import * as K from './sky.js'; // 16-2
 import * as R from './rules.js';
 import * as GU from './guests.js'; // 66-1
+import * as A from './art.js'; // 17-2
 import { PROPS } from './data.js';
 import { EDITION } from '../config.js';
 import { now as clock } from './clock.js';
@@ -176,6 +177,12 @@ export const skySeen = (n, slots) => act(now => K.seenNight(S, n, slots, now));
 export const skyBit = () => act(() => K.skyBit(S));
 export const skyMark = (k, v) => act(() => { S.sky[k] = v; });
 export const palSeen = () => act(() => { for (const p of S.pals.list) delete p.new; }); // 17-1 단짝 card seen
+// 17-2 동물 작품 (art.js, ui/art.js)
+export const artHere = () => { if (S && !view) S.art.here = clock(); }; // a tap or a key: the player is here (kept with the next save)
+export const artAt = (uid, x, z) => act(() => A.artAt(S, uid, x, z));
+export const artPick = (uid, what) => act(() => A.artPick(S, uid, what));
+export const artClear = hab => act(() => A.artClear(S, hab));
+export const artTold = uids => act(() => A.artTold(S, uids));
 export const skyScope = at => act(() => { if (S.sky.scope) return null; S.sky.scope = 1; return R.putGift(S, 'sky_scope', at, { cost: 0 }); });
 export const attendDue = () => R.attendDue(S, clock());
 export const attend = at => act(now => R.attend(S, now, Math.random, at));

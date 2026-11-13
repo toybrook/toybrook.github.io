@@ -2,7 +2,7 @@
 // once (S.ach[id] = when), it gives BALANCE.level.xp.achieve XP and its 칭호 (title: S.title shows one). Never hearts or eggs.
 // rules.js advance checks them; ui/level.js lists them. (rules.js imports this file too: its helpers are only called later)
 import { HABITATS, SETS, HOLD } from './data.js';
-import { SP, variantOf, placedIn, decorCap, levelOf, outIn } from './rules.js';
+import { SP, PROP, variantOf, placedIn, decorCap, levelOf, outIn } from './rules.js';
 
 const cells = S => Object.keys(S.codex);
 const rarity = r => S => cells(S).filter(k => variantOf(...k.split(':'))?.rarity === r).length;
@@ -10,7 +10,7 @@ const kinds = hab => S => new Set(cells(S).map(k => k.split(':')[0]).filter(sp =
 const habs = S => HABITATS.filter(h => S.unlocked.includes(h.id)).map(h => h.id);
 const most = f => S => Math.max(0, ...habs(S).map(h => f(S, h)));
 const st = k => S => S.stats?.[k] || 0;
-const placed = S => S.props.filter(p => p.placed && !p.nat);
+const placed = S => S.props.filter(p => p.placed && !p.nat && !PROP[p.prop]?.art); // 17-2: a friend's 작품 is not one the player put down
 export const BIG = ['barn', 'windmill', 'greenhouse', 'treehouse', 'well', 'arch', 'picnic', 'falls', 'lighthouse', 'waterpav']; // 22-2 큰 소품
 // the sets whole in one habitat: every prop of the set placed there
 export const setsIn = (S, hab) => SETS.filter(s => s.props.every(id => S.props.some(p => p.placed && p.hab === hab && p.prop === id)));

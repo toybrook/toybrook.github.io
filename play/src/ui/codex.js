@@ -19,7 +19,7 @@ import { GUEST } from '../game/guests-data.js';
 import { codexCells, habitatOf, known, colorsOf, variantOf, SP, HAB, RAR, EARNED, displayColor, unlockInfo, twoName, variantsOf, wholeOf, wanderersOf, PROP, levelOf } from '../game/rules.js';
 import { toast, tip, lockText, josa } from './hud.js';
 import { DEBUG, calm } from '../config.js';
-import { figureThumb, silhouetteThumb, propThumb, studio, nightLights, mythThumb } from './thumbs.js';
+import { figureThumb, silhouetteThumb, propThumb, artThumb, studio, nightLights, mythThumb } from './thumbs.js';
 import { mythCard, mythHint } from './myth.js';
 import { openStories, cardsIn } from './story.js';
 import { SLOTS } from '../game/sky.js';
@@ -143,6 +143,14 @@ const scenesHtml = () => `<details class="cscenes"${sceneOpen ? ' open' : ''}><s
     return `<div class="cell scene${e ? '' : ' unk'}"><img alt="${e ? s.name : '아직 못 본 장면'}">${e?.sp && s.prop ? '<img class="who" alt="">' : ''}<span>${e ? s.name : '?'}</span><small>${e ? new Date(e.at).toLocaleDateString('ko-KR') : s.hint}</small></div>`; }).join('')}</div>
 <p class="cnote">친구가 놀이 소품에서 놀거나 친구끼리 노는 모습을 보면 담겨요 · 처음 볼 때 ♥${BALANCE.scene.hearts} · 도감 수에는 들어가지 않아요</p></details>`;
 let sceneOpen = false; // 66-3: the fold stays as the player left it while the codex is redrawn
+// 17-2 작품집: the 동물 작품 of this habitat kept (그대로 두기, 기록만 남기고 치우기), newest first: the 작품 itself (its model, as the
+// 놀이 장면 cells), who made it, the day. In the codex as the 놀이 장면 are (a fold: no screen of its own); not part of the count
+let artOpen = false;
+const artBook = () => G.S.art.book.filter(b => b.hab === tab).reverse();
+const artHtml = () => { const L = artBook();
+  return `<details class="cscenes cart"${artOpen ? ' open' : ''}><summary>작품집 <small>${L.length}</small></summary>${L.length ? `<div class="crow ab">${L.map(b => `<div class="cell art"><img alt="${PROP[b.prop]?.name}"><span>${PROP[b.prop]?.name}</span><small>${b.who}<br>${new Date(b.at).toLocaleDateString('ko-KR')}</small></div>`).join('')}</div>` : ''}
+<p class="cnote">친구가 만든 작품을 「그대로 두기」나 「기록만 남기고 치우기」로 고르면 담겨요 · 도감 수에는 들어가지 않아요</p></details>`; };
+const fillArt = () => { const L = artBook(); el.querySelectorAll('.cell.art img').forEach((img, i) => { if (hab?.decor) artThumb(L[i].prop, hab.decor.model, night).then(u => { img.src = u; }, () => {}); }); };
 function fillScenes() {
   const fig = sp => figureThumb(sp, variantsOf(SP[sp])[0].id, null, null, 'adult', night);
   el.querySelectorAll('.cell.scene').forEach((d, i) => { const s = SCENES[i], e = G.S.scenes[s.id], [img, who] = d.querySelectorAll('img'), set = el => u => { el.src = u; };
@@ -186,8 +194,9 @@ function draw() {
   const egg = groups && `<h2 class="ctier">알 친구 <small>${cells.filter(got).length}/${cells.length}</small></h2>`;
   el.innerHTML = `<div class="chead"><b>도감</b><span>${cells.filter(got).length}/${cells.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>
 ${tabs()}${cells.length ? bar(tab, cells, cells.filter(got).length) : ''}
-<div class="cbody">${groups ? egg + groups : '<p class="cnote">준비 중이에요</p>'}${groups ? guestRow() + mythRow() + scenesHtml() : ''}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}${foot()}</div>`;
-  if (groups) fillScenes(); el.querySelector('.cscenes')?.addEventListener('toggle', e => { sceneOpen = e.target.open; });
+<div class="cbody">${groups ? egg + groups : '<p class="cnote">준비 중이에요</p>'}${groups ? guestRow() + mythRow() + scenesHtml() + artHtml() : ''}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}${foot()}</div>`;
+  if (groups) fillScenes(), fillArt(); el.querySelector('.cscenes:not(.cart)')?.addEventListener('toggle', e => { sceneOpen = e.target.open; });
+  el.querySelector('.cart')?.addEventListener('toggle', e => { artOpen = e.target.open; }); // 17-2
   for (const d of el.querySelectorAll('.cell[data-g]')) { const R = wanderersOf(tab).find(R => R.k === d.dataset.g), acc = R.mark === 'hat' ? 'strawhat' : 'bandana';
     (d.classList.contains('unk') ? silhouetteThumb(R.sp, acc, night) : figureThumb(R.sp, 'solid', colorsOf(R.sp, 'solid')[0]?.id ?? null, acc, 'adult', night)).then(u => { d.firstChild.src = u; }, () => {}); }
   const mi = el.querySelector('.cell.myth img'); if (mi) mythThumb(!G.S.myth?.here, night).then(u => { mi.src = u; }, () => {});

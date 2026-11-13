@@ -25,7 +25,8 @@ export const KINDS = ('hay trough lily duckhouse flowers bench fence path tulips
   + 'myth_altar '  // 14-1 신수의 부름
   + 'sky_scope '  // 16-2 특별한 하늘
   + 'cycad dinonest lavalamp ribs treefern fos_ammonite fos_bone fos_egg fos_skull '  // 14-3 공룡 정글, 화석 발굴
-  + 'gst_kite gst_basket gst_milkcan gst_parasol gst_reedpipe gst_scarfpost gst_sleighbell gst_teapot gst_bottle gst_picnicbox gst_beachdoll gst_tealamp').split(' '); // 66-1 손님 선물
+  + 'gst_kite gst_basket gst_milkcan gst_parasol gst_reedpipe gst_scarfpost gst_sleighbell gst_teapot gst_bottle gst_picnicbox gst_beachdoll gst_tealamp '  // 66-1 손님 선물
+  + 'find_pebble find_twig find_shell find_ice find_flower').split(' '); // 17-2 주운 것 (the 작품 themselves: not in codes)
 
 export const b64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 export const unb64 = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));

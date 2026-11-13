@@ -443,6 +443,42 @@ export function part(g, geo, color, x = 0, y = 0, z = 0, o = {}) {
   if (o.rx) m.rotation.x = o.rx; if (o.ry) m.rotation.y = o.ry; if (o.rz) m.rotation.z = o.rz;
   m.castShadow = m.receiveShadow = true; g.add(m); return m;
 }
+// 17-2 주운 것 and the 동물 작품 made of them: smooth round pieces on the ground, the shapes a friend lays them out in
+const PEB = ['#a9a49b', '#c9c3b8', '#8f8b84', '#d9d3c8'], SHELL = ['#f7d6c8', '#fde9dc', '#f2bfae'], ICE = ['#cfe9f5', '#b8dcef', '#e2f3fa'], BLOOM = ['#ff8fb3', '#ffd54a', '#fff7ee', '#c9a6f2'];
+function artModel(g, id) {
+  const ball = new THREE.SphereGeometry(1, 16, 11), dome = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  const peb = (o, x, z, k, i, y = 0) => { const m = part(o, ball, PEB[i % 4], x, y + 0.055 * k, z, { mat: { roughness: 0.55 } }); m.scale.set(0.11 * k, 0.06 * k, 0.095 * k); return m; };
+  const cone = (o, x, z, k, y = 0, lie = 0) => { const c = new THREE.Group(); c.position.set(x, y + lie * 0.155 * k, z); c.rotation.z = -lie * Math.PI / 2; c.scale.setScalar(k); o.add(c); // lie: on its side, the tip toward +x
+    [[0.08, 0.16, 0.1], [0.19, 0.14, 0.09], [0.29, 0.11, 0.08], [0.37, 0.07, 0.06]].forEach(([y, r, h], i) => part(c, ball, i % 2 ? '#8a5733' : '#a06a3e', 0, y, 0).scale.set(r, h, r)); return c; };
+  const shell = (o, x, z, k, ry, i) => { const s = new THREE.Group(); s.position.set(x, 0, z); s.rotation.y = ry; o.add(s);
+    part(s, dome, SHELL[i % 3], 0, 0.005, 0, { mat: { roughness: 0.5 } }).scale.set(0.12 * k, 0.06 * k, 0.1 * k);
+    part(s, ball, SHELL[(i + 1) % 3], 0, 0.02 * k, -0.1 * k).scale.set(0.035 * k, 0.025 * k, 0.03 * k); return s; };
+  const ice = (o, x, z, k, ry, i, y = 0) => { const m = part(o, roundedBox(0.17, 0.14, 0.15, 0.05), ICE[i % 3], x, y + 0.07 * k, z, { ry, mat: { roughness: 0.35 } }); m.scale.setScalar(k); return m; };
+  const twig = (o, len, x, y, z, rx, rz, ry = 0, i = 0) => part(o, new THREE.CapsuleGeometry(0.032, len, 3, 8), i % 2 ? '#8a5733' : '#a8703f', x, y, z, { rx, rz, ry });
+  const bloom = (o, x, z, h, i, lean = 0) => { const f = new THREE.Group(); f.position.set(x, 0, z); f.rotation.z = lean; o.add(f);
+    part(f, new THREE.CylinderGeometry(0.022, 0.022, h, 6), '#5fa04a', 0, h / 2, 0);
+    part(f, ball, BLOOM[i % 4], 0, h + 0.05, 0).scale.set(0.085, 0.06, 0.085); part(f, ball, '#ffd54a', 0, h + 0.09, 0).scale.setScalar(i % 4 === 1 ? 0 : 0.032);
+    part(f, ball, '#6fb04f', 0.05, h * 0.4, 0, { rz: -0.6 }).scale.set(0.06, 0.02, 0.03); return f; };
+  const around = (n, r, f) => { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; f(Math.cos(a) * r, Math.sin(a) * r, i, a); } };
+  if (id === 'find_pebble') peb(g, 0, 0, 1.6, 1);
+  else if (id === 'find_shell') shell(g, 0, 0, 1.7, 0.4, 0);
+  else if (id === 'find_ice') ice(g, 0, 0, 1.5, 0.3, 0);
+  else if (id === 'find_flower') bloom(g, 0, 0, 0.3, 0);
+  else if (id === 'find_twig') { twig(g, 0.5, 0, 0.035, 0, 0, Math.PI / 2, 0.3); twig(g, 0.16, 0.08, 0.05, 0.07, 0, Math.PI / 2, -0.6, 1); part(g, ball, '#6fb04f', 0.2, 0.04, 0.12, { ry: 0.5 }).scale.set(0.07, 0.025, 0.04); }
+  else if (id === 'art_ring') around(10, 0.55, (x, z, i) => peb(g, x, z, 1 + (i % 3) * 0.15, i)); // 수집가: a ring of pebbles, every other one a little bigger
+  else if (id === 'art_icering') around(8, 0.55, (x, z, i, a) => ice(g, x, z, 0.85 + (i % 2) * 0.2, -a, i));
+  else if (id === 'art_heart') for (let i = 0; i < 14; i++) { const t = i / 14 * Math.PI * 2, x = Math.pow(Math.sin(t), 3) * 0.5, z = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 32; shell(g, x, z + 0.05, 0.9, t, i); }
+  else if (id === 'art_bunch') { part(g, ball, '#6fb04f', 0, 0.02, 0).scale.set(0.38, 0.06, 0.32); // 수집가: picked flowers in a heap, leaning every way
+    for (let i = 0; i < 11; i++) { const a = i * 2.4, d = i ? 0.1 + (i % 3) * 0.08 : 0; bloom(g, Math.cos(a) * d, Math.sin(a) * d, 0.16 + (i % 4) * 0.05, i, (i % 2 ? 1 : -1) * d * 1.6).rotation.y = a; } }
+  else if (id === 'art_row') for (let i = 0; i < 5; i++) cone(g, -0.7 + i * 0.29, 0, 0.62, 0, 1); // 깔끔이: in a line, the same gap, all lying the same way (standing up five in a row read as something else)
+  else if (id === 'art_shellrow') for (let i = 0; i < 5; i++) shell(g, -0.52 + i * 0.26, 0, 0.7 + i * 0.12, 0, i); // small to big
+  else if (id === 'art_icerow') for (let i = 0; i < 5; i++) ice(g, -0.52 + i * 0.26, 0, 0.9, 0, i);
+  else if (id === 'art_tower') { peb(g, 0, 0, 2, 0); peb(g, 0.04, 0.02, 1.5, 1, 0.21).rotation.z = 0.25; cone(g, 0.02, 0, 0.7, 0.35).rotation.z = -0.35; bloom(g, -0.06, 0, 0.12, 0, 0.5).position.y = 0.58; } // 장난꾸러기: anything on anything, leaning
+  else if (id === 'art_icetower') { ice(g, 0, 0, 1.5, 0, 0); ice(g, 0.03, 0, 1.2, 0.6, 1, 0.21).rotation.z = 0.2; ice(g, -0.02, 0.01, 0.95, 1.1, 2, 0.38).rotation.z = -0.25; ice(g, 0.02, 0, 0.7, 0.2, 0, 0.52).rotation.z = 0.35; }
+  else if (id === 'art_hut') { around(6, 0.26, (x, z, i, a) => twig(g, 0.62, x, 0.27, z, -Math.sin(a) * 0.6, Math.cos(a) * 0.6, 0, i)); // 장난꾸러기: twigs leant into a little hut, a flower at the door
+    bloom(g, 0.38, 0.12, 0.14, 0, -0.3); }
+  if (id.startsWith('art_')) { const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.45, 10)); hit.position.y = 0.22; hit.visible = false; g.add(hit); g.userData.tap = () => true; } // small: an unseen tap target round it
+}
 export function decorModel(id) {
   id = PROPS.find(p => p.id === id)?.as ?? id; // 15-1: an event prop drawn as another
   const g = new THREE.Group();
@@ -628,6 +664,7 @@ export function decorModel(id) {
   } else if (id === 'walk_pinecone') { // 13-1 산책 선물: a pinecone standing up: four rounded tiers, wide to narrow
     [[0.08, 0.16, 0.1], [0.19, 0.14, 0.09], [0.29, 0.11, 0.08], [0.37, 0.07, 0.06]].forEach(([y, r, h], i) =>
       part(g, new THREE.SphereGeometry(1, 16, 10), i % 2 ? '#8a5733' : '#a06a3e', 0, y, 0).scale.set(r, h, r));
+  } else if (id.startsWith('find_') || id.startsWith('art_')) { artModel(g, id); // 17-2 주운 것, 동물 작품
   } else if (id === 'swing') { // 28-2: an A-frame swing a rabbit, a piglet or a fox can ride (play.js G.swing); the seat sways, more with someone on
     const { pivot: H, rope: R, half: X } = PLAY.swing, k = 0.24, leg = roundedBox(0.16, H / Math.cos(k) + 0.06, 0.16, 0.06);
     for (const x of [-X, X]) { for (const s of [-1, 1]) part(g, leg, '#b07a48', x, H / 2, s * H / 2 * Math.tan(k), { rx: -s * k }); part(g, new THREE.SphereGeometry(0.15, 12, 9), '#ffd54a', x, H, 0); }

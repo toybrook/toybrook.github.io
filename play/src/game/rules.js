@@ -32,6 +32,7 @@
 import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
 import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
 import { blank as palBlank, tidyPals, palTick, peOf } from './pals.js'; // 17-1
+import { blank as artBlank, tidyArt, artTick } from './art.js'; // 17-2
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
 import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's name
 import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
@@ -68,7 +69,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   S.guests = guestsBlank(S); // 66-1
@@ -108,7 +109,7 @@ export function fromSave(raw, now) {
         pile: typeof R.pile === 'string' ? R.pile : '', pileAt: n(R.pileAt), built: n(R.built), luck: n(R.luck) }]));
       const own = evOwned(S); // 15-2: worn event wear, known ones, no more of each than bought
       for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
-    tidyVisit(S); tidySky(S); tidyPals(S); tidyGuests(S); // 16-1, 16-2, 17-1, 66-1
+    tidyVisit(S); tidySky(S); tidyPals(S); tidyGuests(S); tidyArt(S); // 16-1, 16-2, 17-1, 66-1, 17-2
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -376,6 +377,7 @@ export function advance(S, now, rng = Math.random) {
   mythTick(S, now, ev); // 14-1
   visitTick(S, now, ev); // 16-1
   palTick(S, now, ev); // 17-1
+  artTick(S, now, ev); // 17-2
   const L = gardenLevel(S.xp); if (L > S.lv) { ev.push({ type: 'level', from: S.lv, level: L, unlocks: unlocksBetween(S.lv, L) }); S.lv = L; }
   return ev;
 }
@@ -638,11 +640,11 @@ function wholeTick(S, ev) {
       if (r === 'expand') S.freeExp = { ...S.freeExp, [h.id]: (S.freeExp?.[h.id] || 0) + 1 }; else S.props.push({ uid: S.nextId++, prop: r, hab: h.id, placed: false, x: 0, z: 0, rot: 0 });
       ev.push({ type: 'whole', habitat: h.id, step: i + 1, reward: r }); } }
 }
-export const placedIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && !p.nat && !PROP[p.prop]?.rail); // what counts toward decorCap (natives and rails never)
+export const placedIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && !p.nat && !PROP[p.prop]?.rail && !PROP[p.prop]?.art); // what counts toward decorCap (natives, rails and 17-2 동물 작품 never)
 // 28-4: rail pieces placed in a habitat (PROPS rail: a bridge counts 2), toward B.decor.rails
 export const railsIn = (S, habId) => S.props.reduce((n, p) => n + (p.placed && p.hab === habId && PROP[p.prop]?.rail || 0), 0);
 // one more of this kind (n more not placed yet before it) would go over: decorCap, or for a rail piece B.decor.rails
-export const capped = (S, habId, prop, n = 0) => { const r = PROP[prop]?.rail; return r ? railsIn(S, habId) + r * (n + 1) > B.decor.rails : placedIn(S, habId).length + n >= decorCap(S, habId); };
+export const capped = (S, habId, prop, n = 0) => { const r = PROP[prop]?.rail; if (PROP[prop]?.art) return false; return r ? railsIn(S, habId) + r * (n + 1) > B.decor.rails : placedIn(S, habId).length + n >= decorCap(S, habId); };
 // 22-1: the habitat's own nature (NATURE) handed over by its build: list [{ prop, x, z, s, v, ring }] (first-board units), rings:
 // how many rings the build planted (the meadow: its first board + one per 땅 넓히기 step; the pond: 1). Only rings not done yet.
 export function addNatives(S, habId, list, rings) {
@@ -1000,7 +1002,7 @@ export const evMail = (S, now) => { const L = liveRun(S, now); if (!L) return []
   return [{ id: 'ev-' + L.key, ...L.e.mail, end: new Date(L.R.end + 9 * 3600e3 - 1).toISOString().slice(0, 10) }]; };
 // inbox 41 D 첫날 할 일 (data.js FIRST): on while today (dayOf) is one of the game's first FIRST.days days and not all are done.
 // advance gives each task's hearts once (S.first[id] = when); all of them: FIRST.prop (into the habitat last entered) + FIRST.candy
-const FIRST_V = { hatch: S => S.stats?.hatch || 0, pet: S => S.stats?.pet || 0, prop: S => S.props.filter(p => p.placed && !p.nat).length, photo: S => S.stats?.photo || 0, codex: S => S.stats?.codex || 0 };
+const FIRST_V = { hatch: S => S.stats?.hatch || 0, pet: S => S.stats?.pet || 0, prop: S => S.props.filter(p => p.placed && !p.nat && !PROP[p.prop]?.art).length, photo: S => S.stats?.photo || 0, codex: S => S.stats?.codex || 0 };
 export const firstGot = (S, t) => Math.min(t.n, FIRST_V[t.id](S));
 export const firstOn = (S, now) => !S.first?.all && Array.from({ length: FIRST.days }, (_, i) => dayOf(new Date(S.since).setHours(12, 0, 0, 0) + i * DAY_MS)).includes(dayOf(now));
 function firstCheck(S, now, ev, rng) {
@@ -1017,6 +1019,7 @@ export function skip(S, ms, now, rng = Math.random) {
   for (const k of MYTH_T) if (k !== 'bond' && k !== 'read' && Number.isFinite(S.myth[k])) S.myth[k] -= ms; // 14-1
   for (const g of S.visit.guests) { g.at -= ms; g.until -= ms; } // 16-1
   if (S.pals.at) S.pals.at -= ms; for (const p of S.pals.list) p.at -= ms; // 17-1
+  if (S.art.here) S.art.here -= ms; // 17-2: skipped time is time away
   skipGuests(S, ms); // 66-1
   return advance(S, now, rng);
 }

@@ -53,7 +53,7 @@ export function ask(text, ok = '확인', no = '취소') {
 }
 
 // the windows, top first; each closes with its own close button (so its own code runs)
-const TOPS = ['#desk', '#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#story', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#visit', '#skySheet', '#event', '#prefs', '#help', '#habMenu', '#ret', '#myth', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
+const TOPS = ['#desk', '#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#artCard', '#story', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#visit', '#skySheet', '#event', '#prefs', '#help', '#habMenu', '#ret', '#myth', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
 const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden') && !el.closest('[data-lock]'); // 64-A: ui/first.js locks
 export const topWindow = () => { for (const q of TOPS) { const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };
@@ -72,7 +72,7 @@ import { TIPS } from './tips.js';
 const waiting = []; let tipEl = null, calm = 0;
 // inbox 43: a game's first 10 minutes show one card or tip at a time, the next 40 s after the last one went (the start card
 // is the way in, not counted). resting(): wait. Tips, 출석부, level, grown and home cards all ask it.
-const CARDS = '#news,#event,#ret,#lvup,#zoneCard,#grown,#homeHint,.tip'; let upAt = 0;
+const CARDS = '#news,#event,#ret,#lvup,#zoneCard,#artCard,#grown,#homeHint,.tip'; let upAt = 0;
 export const resting = () => { if ([...document.querySelectorAll(CARDS)].some(shown)) upAt = Date.now(); return !!G.S && G.now() - G.S.since < 600e3 && Date.now() - upAt < 40e3; };
 setInterval(() => { if (tipEl && !shown(tipFor)) { waiting.unshift({ k: tipEl.dataset.k, anchor: tipFor }); tipEl.remove(); tipEl = null; } if (tipEl) dodge(); else if (!resting()) nextTip(); }, 250); // 74: its anchor went away (a window closed without a tap): the tip waits for it again (66-1 r04)
 export function tip(k, anchor) { // anchor: an element or a selector; shown once it is on screen and no other tip is up

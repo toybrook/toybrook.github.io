@@ -20,6 +20,7 @@ import { initEvent } from './ui/event.js'; // 15-1 계절 이벤트
 import { initMyth, onMyth, mythCut, mythDue } from './ui/myth.js'; // 14-1 신수의 부름
 import { initVisit, seeHash, seeBar } from './ui/visit.js'; // 16-1 놀러 보내기; 69-4 서식지 구경 링크
 import { initSky, skyNow, onStar, retSky, retShown, retGo } from './ui/sky.js'; // 16-2 특별한 하늘
+import { initArt, place as artPlace, retRow as artRow, open as artOpen, tapped as artTapped, due as artDue } from './ui/art.js'; // 17-2 동물 작품
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
 // 26-7 한 번에 한 탭: a tab opened second, or one another tab took over, is covered (nothing saved there) till 「여기서 하기」
@@ -98,6 +99,7 @@ const ui = {
   hello: (x, y) => heart(x, y), // inbox 64-A: the first friend's hop
   skyNow, onStar, // 16-2 특별한 하늘 (ui/sky.js)
   onMyth, // 14-1 the meadow's fire prints, hoofprints, altar and 신수 tapped (ui/myth.js)
+  onArt: uid => artTapped(uid), // 17-2 a 동물 작품 tapped: its choice, or who made it
   say: t => toast(t, 1800, true), // 28-3: a short note from the habitat (the music box's tune, the fireworks by day)
   zzz(xy) { if (!hab.classList.contains('hidden') && !overlayOpen() && !document.querySelector('body > section.pop:not([hidden])')) zzz(xy); }, // not over a sheet (28-5: nor 설정·꾸미기 코드·도움말, outside #habitat)
   onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; $('overview').textContent = s === 'w' ? '친구들 보기' : '전체 보기'; }, // following: 정면 + 전체 보기; away from the start view: 전체 보기; at the whole board (inbox 63): 친구들 보기
@@ -143,6 +145,7 @@ async function enter(id) {
   // 27-2: the animals and props come out in attach; their shaders are made behind the curtain (the first frame after it froze 2.6 s in Chrome, 3.3 s in WebKit)
   api.setActive(true); play.attach(api, id);
   if (G.S.refit?.includes(id)) G.refit(id, api.decor.refit(G.S.props)); // inbox 42 A: the board grew (rules.js to11): what no longer fits moves
+  if (!SEE) artPlace(id); // 17-2: the 작품 made while away, on this board's empty ground
   await api.warm(); loadBar(false); idle(mapUp); return true;
 }
 const mapUi = initWorldMap(world, { enter });
@@ -187,7 +190,7 @@ $('back').onclick = () => { mapUp(); snap.leave(); hab.classList.add('hidden'); 
 $('habName').onclick = () => $('back').click();
 if (SEE) { // 69-4: only the sender's habitat; back (‹, Esc, the phone's back) is 「내 정원으로」. Taps follow a friend, nothing more
   $('back').onclick = () => location.replace(location.pathname + location.search); seeBar(SEE);
-  Object.assign(ui, { onTap() {}, onCarry() {}, scene() {}, note() {}, cramped() {}, onDig: () => null, onPile: () => 0, onHome() {}, onGuestMove() {} });
+  Object.assign(ui, { onTap() {}, onCarry() {}, scene() {}, note() {}, cramped() {}, onDig: () => null, onPile: () => 0, onHome() {}, onGuestMove() {}, onArt() {} });
 }
 
 // inbox 20 C9: Esc (PC) and the phone's back button close the window on top first, then leave the habitat for the map.
@@ -234,7 +237,7 @@ const retAttend = () => G.attendDue() && G.S.attend.n > 0; // a new player's fir
 const retHome = () => cur || G.S.flags.lastHab || HABITATS[0].id;
 function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
   retEggs = eggs;
-  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !retSky() && !newsDue) return; // nothing new: no card
+  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !retSky() && !newsDue && !artDue(retHome()).length) return; // nothing new: no card
   if (intro.hidden && news.hidden) showRet(); else retWait = true;
 }
 function showRet() {
@@ -243,10 +246,11 @@ function showRet() {
   const back = G.S.cards.filter(c => c.new), names = [...new Set(back.map(c => c.nm))]; // 13-1: postcards not seen, at the top
   const myth = mythDue(); // 14-1: it came to the altar while away: the top row (its coming seen from there, 다시 보기)
   const sk = retSky(); // 16-2: last night's sky not seen (망원경으로 다시 보기)
-  if (!n && !grown.length && !att && !back.length && !myth && !sk && !newsDue) return;
+  const ar = artRow(retHome()); // 17-2 「밤사이 먹보 양 몽실이가 작품을 만들었어요」 (after the 출석, before the rest)
+  if (!n && !grown.length && !att && !back.length && !myth && !sk && !newsDue && !ar) return;
   const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
-  const rows = [top && ['📰', `새 소식 ${VERSION}`, top, 'news'], myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
+  const rows = [top && ['📰', `새 소식 ${VERSION}`, top, 'news'], myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], ar, n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
     grown.length && ['🌱', `다 자란 친구 ${grown.length}`, '보러 가요', 'grown'], ready && ['✨', `부화 끝난 알 ${ready}`, '깨우러 가요', 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', '백업해 두면 기기를 바꿔도 이어서 할 수 있어요', '설정 › 내 저장 백업', 'backup']); G.flag('backupNag', today); }
@@ -268,13 +272,14 @@ ret.onclick = async e => {
   if (d.go == null) return;
   if (d.go === 'backup') return BK.open();
   if (d.go === 'news') { news.hidden = false; return; }
-  const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home, cards: home, myth: 'meadow', sky: 'meadow' }[d.go];
+  const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home, cards: home, myth: 'meadow', sky: 'meadow', art: home }[d.go];
   // the 3D comes in under a cloud, at once: no map in between (it showed for seconds on a phone the first time); the loading bar says the rest
   const far = cur !== to; if (far) { veil.firstChild.textContent = ''; veil.hidden = false; veil.classList.add('on'); world.classList.add('now'); hab.classList.add('now'); }
   const ok = await nav.go(to, d.go === 'grown' ? first : undefined) !== false;
   if (ok && d.go === 'cards') (await import('./ui/stroll.js')).openCards();
   else if (ok && d.go === 'myth') mythCut();
   else if (ok && d.go === 'sky') retGo();
+  else if (ok && d.go === 'art') artOpen(to); // 17-2: the camera to each, its choice
   else if (ok && d.go !== 'grown') play.openNest();
   if (far) { world.classList.remove('now'); hab.classList.remove('now'); fade(false); }
 };
@@ -290,7 +295,7 @@ addEventListener('visibilitychange', () => {
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone();
   if (!cur && firstEgg(G.S)) nav.go(HABITATS[0].id); }; // inbox 61 B: a new player, straight to the first egg (no map tap)
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
-if (!SEE) { initAttend(() => cur); initEvent(() => cur, () => api); initMyth(() => cur, () => api); initVisit(nav); }
+if (!SEE) { initAttend(() => cur); initEvent(() => cur, () => api); initMyth(() => cur, () => api); initVisit(nav); initArt({ api: () => api, cur: () => cur, back: () => { if (ret.hidden) away({}); } }); }
 if (backTo) nav.go(backTo);
 if (!SEE) { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
 
@@ -305,8 +310,9 @@ const LOOK_ROWS = [['gfx', '그래픽 품질', [['low', '낮음'], ['mid', '보�
   ['font', '글자 크기', [['s', '작게'], ['m', '보통'], ['l', '크게']]], ['calm', '움직임 줄이기', [[false, '끄기'], [true, '켜기']]], ['signs', '구역 팻말 보이기', [[true, '켜기'], [false, '끄기']]],
   // 74: 성격·단짝 and 단짝 하트 끈 rows hidden (they stay on; flags.palOff and PREFS.palLine as saved)
   ...navigator.vibrate && matchMedia('(pointer:coarse)').matches ? [['buzz', '진동', [[false, '끄기'], [true, '켜기']]]] : [],
+  ['art', '동물 작품 만들기', [[true, '켜기'], [false, '끄기']]], // 17-2 (flags.artOff: kept in the save)
   ['stats', '이용 통계 보내기', [[true, '켜기'], [false, '끄기']]]]; // inbox 41 A (src/ui/stats.js)
-const segRow = ([k, name, opts]) => { const now = k === 'calm' ? calm() : k === 'pal' ? !G.S.flags.palOff : PREFS[k];
+const segRow = ([k, name, opts]) => { const now = k === 'calm' ? calm() : k === 'pal' ? !G.S.flags.palOff : k === 'art' ? !G.S.flags.artOff : PREFS[k];
   return `<div class="row"><b>${name}</b><div class="seg">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}"${now === v ? ' class="on"' : ''}>${t}</button>`).join('')}</div></div>`; };
 const prefs = $('prefs'), rows = $('prefRows'), help = $('help');
 const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
@@ -339,6 +345,7 @@ rows.onclick = e => {
     $('ask').querySelector('[data-ok]').addEventListener('click', () => open(fbUrl(), '_blank', 'noopener')); return; } // opened in the tap itself, not after a promise (popup blockers)
   if (!d.k) return;
   if (d.k === 'pal') { G.flag('palOff', d.v !== 'true'); return drawPrefs(); } // 17-1
+  if (d.k === 'art') { G.flag('artOff', d.v !== 'true'); return drawPrefs(); } // 17-2
   const opt = [...PREF_ROWS, ...LOOK_ROWS].find(r => r[0] === d.k)[2].find(o => String(o[0]) === d.v), was = PREFS[d.k];
   PREFS[d.k] = opt[0]; savePrefs(); applyLook(); drawPrefs(); applySound();
   if (d.k === 'gfx' && was !== opt[0]) regfx(); // 26-3: the habitat is built again at the new quality

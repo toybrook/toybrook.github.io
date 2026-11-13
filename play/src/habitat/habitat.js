@@ -431,6 +431,17 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     } finally { D.list.splice(0, D.list.length, ...keep); }
     return out;
   }
+  // 17-2 동물 작품: bare ground for one of radius r, the nearest the view's middle: nothing placed, no paint (paths, fences, sand),
+  // none of the board's own things (wildflower patches too), not on rails, walkable all round it (the animals' ways stay);
+  // also: [x, z, r] taken just now (saved units). [x, z] in saved units, or null (no room)
+  function artSpot(r, also = []) {
+    const painted = (x, z, d) => { for (let i = Math.floor((x - d) / U); i <= Math.floor((x + d) / U); i++) for (let j = Math.floor((z - d) / U); j <= Math.floor((z + d) / U); j++) if (paintAt(`${i},${j}`)) return true; return false; };
+    const ok = (x, z) => D.placeable(x, z, r + 0.5) && free(habitat.ctx.crowd, { x, z, yaw: 0, r: r + 0.3, seg: [0, 0] }, x, z) && !painted(x, z, r + 0.6)
+      && natSpots.every(o => Math.hypot(o.x - x, o.z - z) > o.r + r + 0.3) && also.every(([ax, az, ar]) => Math.hypot(ax * U - x, az * U - z) > ar + r + 1)
+      && [...Array(12).keys()].every(k => habitat.ctx.walkable(x + Math.cos(k * Math.PI / 6) * (r + 1.1), z + Math.sin(k * Math.PI / 6) * (r + 1.1)));
+    const [x, z] = nearest(ok, [controls.target.x, controls.target.z], 30);
+    return ok(x, z) ? [+(x / U).toFixed(4), +(z / U).toFixed(4)] : null;
+  }
   function syncProps(list = propList, paint = paintNow, ghost = ghostNow, grow = growNow) {
     // 28-7: a board put aside (the map, or 땅 넓히기 building the next board on the same shared layout lists) does not sync;
     // play.attach -> draw syncs it again when it is back. Before, the old board pushed its nature spots into the new board's list (unseen blockers)
@@ -914,6 +925,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // for the bell the animals near (up to six, not busy, with a way there) running over to stand by it. The fireworks by day: false, a note says why
   function tapProp(p, shown) {
     const { x, z } = p.spot, near = (a, r) => Math.hypot(a.position.x - x, a.position.z - z) < r;
+    if (PR[p.prop].art) { sfx('place'); ui.onArt?.(p.spot.uid); return; } // 17-2: who made it, or its choice (ui/art.js)
     if (p.prop === 'sky_scope') { p.obj.userData.tap(); sfx('place'); return; } // 16-2 하늘 망원경 (74: a prop that nods; ui/sky.js no longer opens it)
     if (p.obj.userData.tap() === false) { sfx('undo'); ui.say?.('작은 폭죽은 밤에만 쏠 수 있어요'); return; }
     sfx(p.prop);
@@ -1124,7 +1136,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     ramp = Math.min(1, ramp + dt / 0.35);
     const k = calm() ? 1 : (1 - Math.exp(-dt * 3.2)) * (key ? smooth(ramp) : 1); // frame-rate independent ease (26-3 움직임 줄이기: a cut)
     if (focus) want.set(focus.position.x, focus.position.y + lift, focus.position.z); else want.copy(aim ? aim.at : HOME.target);
-    const goal = focus ? glide : aim ? { radius: aim.radius, phi: aim.phi ?? 0.5 } : decorOn ? { radius: HOME.wide * 0.85, phi: 0.5, theta: 0 } : HOME; // decorating: closer, more from above
+    const goal = focus ? glide : aim ? { radius: aim.radius, phi: aim.phi ?? 0.5, theta: aim.theta } : decorOn ? { radius: HOME.wide * 0.85, phi: 0.5, theta: 0 } : HOME; // decorating: closer, more from above
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off);
     const face = focus && faceOf(focus);
     if (facing) goal.theta = face;
@@ -1142,7 +1154,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       controls.target.lerp(want, k);
     }
     camera.position.copy(controls.target).add(off.setFromSpherical(sph));
-    if (aim && Math.abs(sph.radius - goal.radius) < 0.2 && controls.target.distanceTo(aim.at) < 0.1) aim = null;
+    if (aim && Math.abs(sph.radius - goal.radius) < 0.2 && controls.target.distanceTo(aim.at) < 0.1 && (aim.theta == null || Math.abs(wrap(sph.theta - aim.theta)) < 0.01)) aim = null;
     if (goingHome && Math.abs(sph.radius - goal.radius) < 0.2 && Math.abs(sph.phi - goal.phi) < 0.01 && Math.abs(wrap(sph.theta - (goal.theta ?? 0))) < 0.01 && controls.target.distanceTo(HOME.target) < 0.1) goingHome = false;
   }
 
@@ -1265,10 +1277,25 @@ GPU ${gpu}`; }
     was.width = w; was.height = h; c.drawImage(now, X(B[0]), Y(B[2]), X(B[1]) - X(B[0]), Y(B[3]) - Y(B[2]), X(B[0]), Y(B[2]), X(B[1]) - X(B[0]), Y(B[3]) - Y(B[2]));
     return { was, now };
   }
+  // 17-2 the 작품 card's view: turned to a side where the camera stands clear (the guard would pull it in close by a rock or a
+  // tree at the board's edge), and aimed a little in front of it so the 작품 shows above the card (the lower 40% of the screen)
+  function artView(x, z) {
+    setFocus(null); goingHome = homeOn = false; // it stays on the 작품 (a drag does the same)
+    const R = 10, phi = 0.9, s = R * Math.sin(phi), h = R * Math.cos(phi), d = 0.2 * R, ax = x * U, az = z * U;
+    const clear = th => { const cx = ax + (s + d) * Math.sin(th), cz = az + (s + d) * Math.cos(th); if (habitat.floor(cx, cz) + 0.8 > h) return false;
+      for (const L of [habitat.solid, D.list]) for (const o of L) { const R0 = o.r + 0.5;
+        if (o.water || (o.nat && o.open) || (ax - o.x) ** 2 + (az - o.z) ** 2 < R0 * R0) continue;
+        if ((cx - o.x) ** 2 + (cz - o.z) ** 2 < R0 * R0 && h < floorOf(o) + (o.h ?? 1.2) + 0.3 + R0) return false; }
+      return true; };
+    const th0 = sph.setFromVector3(off.copy(camera.position).sub(controls.target)).theta; let theta = th0;
+    for (let i = 0; i < 24; i++) { const th = th0 + (i % 2 ? -1 : 1) * Math.ceil(i / 2) * Math.PI / 12; if (clear(th)) { theta = th; break; } }
+    aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(ax + d * Math.sin(theta), ...panX), 0, THREE.MathUtils.clamp(az + d * Math.cos(theta), ...panZ)), radius: R, phi, theta };
+  }
   tick();
   if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus, fx });
   return {
-    resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, showZone, topView, setPals: m => { habitat.ctx.bf = m; }, // 17-1
+    resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, artSpot, // 17-2
+    artView, showZone, topView, setPals: m => { habitat.ctx.bf = m; }, // 17-1
     myth, pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw

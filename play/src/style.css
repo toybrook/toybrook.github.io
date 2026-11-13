@@ -634,3 +634,11 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .seebar small{font-size:calc(12px*var(--fs));color:#8a6646}.seebar button{border:0;border-radius:999px;min-height:44px;padding:0 16px;background:#e8805f;color:#fff;font:inherit;font-weight:700;font-size:calc(14px*var(--fs));cursor:pointer;white-space:nowrap}
 .see .camb{top:calc(78px + var(--sa-t))}
 .visit .seecard{display:block;width:auto;max-width:100%;max-height:calc(52dvh - var(--sa-t) - var(--sa-b));margin:0 auto 10px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+/* 17-2 동물 작품: the choice under the board (the camera on the 작품 above it), the habitat chip's count, the codex's 작품집 */
+#artCard{align-items:flex-end;background:none;padding-bottom:calc(14px + var(--sa-b))}
+#artCard>div{width:min(340px,100%);padding:16px 16px 14px}#artCard h2{font-size:calc(18px*var(--fs));word-break:keep-all}#artCard p.sub{margin:2px 0 10px;word-break:keep-all}
+.abtns{display:flex;flex-direction:column;gap:6px;margin:0 0 10px}
+.intro .abtns button{min-width:0;width:100%;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:6px 12px;border-radius:14px;border:1px solid #e3cba6;background:#fff6e6;color:#4a3626;font-size:calc(15px*var(--fs))}
+.intro .abtns button[data-a=keep]{background:#e8805f;border-color:#e8805f;color:#fff}.abtns small{font-weight:400;font-size:calc(12px*var(--fs));opacity:.85;word-break:keep-all}
+#habName[data-art]::after{content:attr(data-art);position:absolute;right:-5px;top:-5px;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:9px;background:#e8805f;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;box-shadow:0 0 0 2px rgba(20,24,20,.6)}
+.crow.ab{grid-template-columns:repeat(3,1fr)}.cell.art small{word-break:keep-all}
