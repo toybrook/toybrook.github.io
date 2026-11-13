@@ -3,7 +3,11 @@
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
 import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf } from '../game/rules.js';
-import { PROPS } from '../game/data.js';
+import { PROPS, HABITATS } from '../game/data.js';
+import { when, TODS } from '../game/story.js';
+import { tonight, skyTime, AURORAS } from '../game/sky.js';
+import { weatherAt } from '../habitat/weather.js';
+import { gameHours } from '../habitat/daylight.js';
 import { toast, hideToast, heart, span, josa, overlayOpen, clock, tip, resting, redodge } from './hud.js';
 import { openCodex, hasNew } from './codex.js';
 import { initNest } from './nest.js';
@@ -27,9 +31,20 @@ const nameOf = callName; // 26-4: its name if it has one
 // a baby's growing, in words: "자라는 중 62% · 12분 남음" / "성장 멈춤 · 62%" (a 꼬마 사탕 holds it)
 const pct = (r, now) => Math.floor(gauge(r, now) * 100);
 const growText = (r, now) => r.hold ? `성장 멈춤 · ${pct(r, now)}%` : `자라는 중 ${pct(r, now)}% · ${span(Math.max(60000, growLeft(r, now) ?? 0))} 남음`;
+// 69-1 출생 기록 한 줄: the day (한국 시간, as the 이야기 카드), the habitat whose nest it came from, that hour's weather, and that
+// night's sky if it was a special one. Read off what the save keeps already (its born and egg: the codex's day and habitat for
+// a first one, so a legendary's line and its story card say the same); nothing new is saved
+const WX = { clear: '맑음', rain: '비', fog: '안개', snow: '눈' };
+function birthLine(r) {
+  if (!Number.isFinite(r.born)) return '';
+  const { day, tod } = when(r.born), h = HABITATS.find(x => x.nest === r.egg)?.id ?? SP[r.species]?.habitat, w = weatherAt(h, gameHours(r.born));
+  const T = G.S.sky && skyTime(new Date(r.born).getHours()) && tonight(G.S, r.born, h);
+  const sky = T && (T.aurora ? AURORAS.find(x => x.id === T.aurora).name : T.meteor ? T.meteor.name + ' 유성우' : T.comet ? '혜성' : T.full ? '보름달' : '');
+  return [`${+day.slice(4, 6)}월 ${+day.slice(6)}일 ${TODS[tod]} · ${HAB[h]?.name ?? ''} 둥지`, w.bow > 0.3 ? '무지개' : WX[w.kind], sky && sky.replace(/ /g, '\u00a0')].filter(Boolean).join(' · ');
+}
 
 export function initPlay(nav) {
-  let hab = null, habId = null, bubbleFor = null, bubbleUntil = 0, press = null, pats = 0;
+  let hab = null, habId = null, bubbleFor = null, bubbleUntil = 0, press = null, pats = 0, held = false; // held: 69-1, one carried shows its 출생 기록
   const hearts = $('hearts'), bubble = $('bubble'), codexBtn = $('codexBtn'), stage = $('stage'), nest = initNest(nav);
   const friendsBtn = $('friendsBtn'), decorBtn = $('decorBtn'), pill = $('nestPill');
   // the bubble stays with its animal until a tap somewhere else, the animal leaves the screen, or 10 s without a touch
@@ -126,7 +141,7 @@ export function initPlay(nav) {
   function place() {
     if (!bubbleFor) return;
     const p = hab?.where(bubbleFor.id), r = stage.getBoundingClientRect();
-    if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil || overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
+    if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil && !held || overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
     const cb = $('camBtns'), low = cb.hidden ? 0 : cb.getBoundingClientRect().bottom + bubble.offsetHeight + 16; // following up close: kept under 정면 / 전체 보기
     const half = bubble.offsetWidth / 2 + 6, x = Math.min(Math.max(p[0], r.left + half), r.right - half); // 13-1: kept on screen near the edges, the tail still at the friend
     bubble.style.left = x + 'px'; bubble.style.setProperty('--tx', p[0] - x + 'px'); bubble.style.top = Math.max(p[1], low) + 'px';
@@ -274,8 +289,17 @@ export function initPlay(nav) {
     note.onclick = () => { hideNote(); if (hab?.look(r.id)) got(list, r); };
   }
 
+  // 69-1: held up (habitat.js carry), its name and the 출생 기록 한 줄 over it (no buttons: the finger is busy); let go, it stays a moment
+  function onCarry(r) {
+    if (r.wg || r.guest) return; // a visitor: not born here
+    const line = birthLine(r); bubble.innerHTML = `${nameOf(r)}${line ? `<small>${line}</small>` : ''}`; bubble.hidden = false;
+    const go = !bubbleFor; bubbleFor = r; held = true; if (press) press.re = true;
+    if (go) requestAnimationFrame(place);
+  }
+  const onLetGo = r => { if (held && bubbleFor === r) bubbleUntil = Date.now() + 2500; held = false; };
+
   return {
-    onTap, events, scene, onPropTap, onEdit, onPaint, onSweep,
+    onTap, events, scene, onPropTap, onEdit, onPaint, onSweep, onCarry, onLetGo,
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
     attach(api, id) { hab = api; habId = id; nest.attach(api, id);
       G.guestWorld({ look: (h, x, z, r) => h === habId && hab ? hab.guestLook(x, z, r) : {}, entry: (h, from, rng, want, show) => covered() || !hab ? null : hab.guestEntry(from, rng, want, show), pos: id => hab?.guestPos(id) }, () => hab ? hab.guestEnv() : {}); // 66-1

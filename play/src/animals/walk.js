@@ -373,6 +373,7 @@ export function createActor(ctx, rec) {
     // inbox 42 E 꾹 눌러 옮기기: held up over x, z (habitat.js); whatever it was doing or going to is dropped
     carry(x, z) { if (h.state !== 'carry') { endPlay(); h.goal?.done?.(false); h.goal = h.after = h.soc = h.shel = null; h.stuck = false; h.fail = 0; if (h.then || ctx.onBridge === h) { h.then = null; if (ctx.onBridge === h) ctx.onBridge = null; } h.state = 'carry'; }
       h.x = h.tx = x; h.z = h.tz = z; h.t = 0; },
+    spin(d) { if (h.state === 'carry') h.yaw = h.face = h.yaw + d; }, // 69-1: held up, the finger's sideways push turns it round
     // inbox 42 E: put down on the play prop st: to its seat now (play.js choose, that prop only), if it fits and the seat is on its land
     use(st) { const q = choose({ play: [st], night: ctx.night }, api, me(), h.x, h.z, 99); if (!q) return null; if (ok(q.ax, q.az)) { h.x = h.tx = q.ax; h.z = h.tz = q.az; } // lands at its seat (kept for it): on at once
       h.goal = { x: q.ax, z: q.az, act: 'play', q, n: 6, done: ok => ok || leave(q) }; return [h.x, h.z]; },

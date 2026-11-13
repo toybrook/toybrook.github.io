@@ -50,6 +50,7 @@ export function createActor(ctx, rec) {
       const p = at(), t0 = dropFrom(from); land = { x, z, t: t0, dur: DROP.end + Math.max(0.6, Math.hypot(p.x - x, p.z - z) / 3.2) }; },
     water: 'swim',
     carry(x, z) { unplay(); land = null; held = { x, z }; },
+    spin(d) { if (held) root.rotation.y += d; }, // 69-1: held up, turned round by the finger
     use(st) { const q = land && choose({ play: [st], night: ctx.night }, api, { ...me(), T: now }, land.x, land.z, 99); if (q) land.q = q; return q ? [land.x, land.z] : null; },
     poke() { poke = 0.6; },
     // on the camera's line to the followed animal (habitat.js; n: the line's side normal, d: how far off it, signed): swim on

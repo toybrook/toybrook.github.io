@@ -6,7 +6,7 @@ body{font-size:calc(16px*var(--fs));word-break:keep-all;overflow-wrap:break-word
    ready glow stay still and soft. Short one-off entrances (a sheet sliding up, a heart rising) are kept. */
 html.calm .fog,html.calm .ring,html.calm .mark.lock,html.calm .nestbtn.ready,html.calm .nestbtn.ready::before,html.calm .nestbtn.ready::after,
 html.calm .nstage.secret::before,html.calm .nstage.secret::after,html.calm .gauge.full svg,html.calm .gauge.full::after,html.calm .nslot.ready,
-html.calm .nslot.ready img,html.calm .nsecret em,html.calm .nsecret i{animation:none}
+html.calm .nslot.ready img,html.calm .nslot.knock img,html.calm .nsecret em,html.calm .nsecret i{animation:none}
 html.calm .nestbtn.ready,html.calm .nslot.ready{box-shadow:0 0 10px 2px rgba(255,226,122,.55)}
 html.calm .nstage.flash::after{opacity:.3;animation-duration:.4s}
 html,body{margin:0;height:100%;background:#151916;font-family:system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;color:#f2ede3;overflow:hidden}
@@ -143,6 +143,8 @@ html.calm .lbar::before{animation:none}
 .ngrid:empty{display:none}.ngrid:empty+.nnote{margin:auto}
 .nnote{margin:4px 0 0;text-align:center;font-size:calc(12px*var(--fs));color:#8a6a4c;word-break:keep-all}
 .nstage{position:absolute;inset:0}.nstage canvas{display:block;width:100%;height:100%}
+/* 69-1 예고 빛: one light in the colour of the rarity that came out (nest.js --gc = RARITIES shell, opacity = growth.js glowAt) */
+.nglow{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 54%,transparent 0 13%,color-mix(in srgb,var(--gc,#fff) 50%,transparent) 20%,transparent 46%)}
 .nstage.flash::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 62%,#fff 0,rgba(255,236,170,.85) 30%,rgba(255,236,170,0) 70%);animation:fade .8s ease-out forwards;pointer-events:none}
 @keyframes fade{to{opacity:0}}
 .nstage.secret{box-shadow:inset 0 0 0 3px #ffd75e}
@@ -152,7 +154,7 @@ html.calm .lbar::before{animation:none}
 .nlow:has(>.ncard:not([hidden])){min-height:186px}
 .ngauges{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .gauge{position:relative;display:flex;align-items:center;gap:8px;background:#fbf1e1;border:1px solid #e3cba6;border-radius:14px;padding:6px 8px;line-height:1.3}
-.gauge svg{width:46px;height:58px;flex:none;overflow:visible}
+.gauge svg{width:46px;height:67px;flex:none;overflow:visible} /* 69-1: + the base with its 천장 눈금 */
 .gauge b{display:block;font-size:calc(13px*var(--fs))}.gauge span{font-size:calc(12px*var(--fs));color:#8a6a4c;font-variant-numeric:tabular-nums}
 .gauge small{display:block;font-size:calc(12px*var(--fs));font-weight:700;color:#4a6fd0}.gauge[data-k=legendary] small{color:#b07a10}
 .gauge.full{border-color:#f0c35a}
@@ -173,6 +175,8 @@ html.calm .lbar::before{animation:none}
 .nslot.empty{border-style:dashed;background:transparent;padding-left:12px}.nslot.empty img{display:none}.nslot.empty b{font-size:calc(14px*var(--fs));color:#8a6a4c}
 .nslot.ready{border-color:#f0c35a;background:#fff6dc;animation:glow 1.1s ease-in-out infinite alternate}
 .nslot.ready img{animation:wob .9s ease-in-out infinite}.nslot.ready b{color:#b0670f}
+.nslot.knock img{animation:knock .5s ease-out .25s} /* 69-1: a waiting egg tapped answers from inside */
+@keyframes knock{20%{transform:rotate(-8deg)}45%{transform:rotate(6deg)}70%{transform:rotate(-3deg)}}
 .nslot.fresh img{animation:egin .35s ease-out}
 @keyframes egin{from{transform:translateY(-26px) scale(.6);opacity:0}}
 .ncard{position:absolute;inset:0;background:#fffaf0;border:1px solid #e3cba6;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;box-shadow:0 4px 18px rgba(60,35,15,.18);animation:up .25s ease-out}

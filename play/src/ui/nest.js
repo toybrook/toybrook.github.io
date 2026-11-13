@@ -8,7 +8,7 @@ import { BALANCE as B, ACCESSORIES, HABITATS } from '../game/data.js';
 import { SP, RAR, HAB, EGG, RANK, pityOf, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap, kindName } from '../game/rules.js';
 import { toast, hideToast, heart, clock, span, josa, tip } from './hud.js';
 import { eggThumb, studio } from './thumbs.js';
-import { makeEgg, HATCH } from '../animals/growth.js';
+import { makeEgg, HATCH, glowAt } from '../animals/growth.js';
 import { dress, loadModel, loadAcc } from '../animals/figure.js';
 import { eggMat } from '../animals/materials.js';
 import { sfx, cry } from './sound.js';
@@ -36,10 +36,13 @@ const PIECES = (() => {
   }
   return out.sort((p, q) => q.y - p.y); // bottom first
 })();
+// 69-1 천장 눈금: the egg stands on a little base with TICKS marks, one lit per target / TICKS eggs (30: every 5, 180: every 30)
+const TICKS = 6;
 const gaugeSvg = (k, have, target) => {
-  const n = have >= target ? PIECES.length : Math.min(PIECES.length - 1, Math.ceil(have / target * PIECES.length));
-  return `<svg viewBox="0 0 60 76" aria-hidden="true"><defs><clipPath id="gc-${k}"><path d="${EGG_D}"/></clipPath></defs><g clip-path="url(#gc-${k})" stroke="#fbf1e1" stroke-width=".7">
-${PIECES.map((p, i) => `<polygon points="${p.pts}" ${i < n ? `fill="hsl(${RAR[k].hue} ${RAR[k].sat}% ${p.l}%)"` : 'fill="#efdfc4"'}/>`).join('')}</g><path d="${EGG_D}" fill="none" stroke="#b08a5e" stroke-width="1.8"/></svg>`;
+  const n = have >= target ? PIECES.length : Math.min(PIECES.length - 1, Math.ceil(have / target * PIECES.length)), on = Math.min(TICKS, Math.floor(have / target * TICKS));
+  return `<svg viewBox="0 0 60 88" aria-hidden="true"><defs><clipPath id="gc-${k}"><path d="${EGG_D}"/></clipPath></defs><g clip-path="url(#gc-${k})" stroke="#fbf1e1" stroke-width=".7">
+${PIECES.map((p, i) => `<polygon points="${p.pts}" ${i < n ? `fill="hsl(${RAR[k].hue} ${RAR[k].sat}% ${p.l}%)"` : 'fill="#efdfc4"'}/>`).join('')}</g><path d="${EGG_D}" fill="none" stroke="#b08a5e" stroke-width="1.8"/>
+<path class="gbase" d="M12 75.5H48L53 85.5H7Z" fill="#e8d2ad" stroke="#b08a5e" stroke-width="1.4" stroke-linejoin="round"/>${Array.from({ length: TICKS }, (_, i) => `<rect x="${10.6 + i * 6.8}" y="78.6" width="5" height="4" rx="1" fill="${i < on ? `hsl(${RAR[k].hue} ${RAR[k].sat}% 52%)` : '#fbf1e1'}"/>`).join('')}</svg>`;
 };
 
 export function initNest(nav) {
@@ -112,7 +115,7 @@ export function initNest(nav) {
       gr.addColorStop(0, 'rgba(120,80,40,.32)'); gr.addColorStop(1, 'rgba(120,80,40,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
       shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.005; scene.add(shadow);
-      st = { R, scene, cam, shadow }; stageEl.appendChild(R.domElement);
+      st = { R, scene, cam, shadow, glow: Object.assign(document.createElement('div'), { className: 'nglow' }) }; stageEl.append(R.domElement, st.glow); // 69-1 예고 빛
     }
     eggsEl.hidden = true; stageEl.hidden = false;
     const w = stageEl.clientWidth, h = stageEl.clientHeight;
@@ -121,13 +124,13 @@ export function initNest(nav) {
   }
   function stageOff() {
     if (cur) { st.scene.remove(cur.look.obj); if (cur.egg) st.scene.remove(cur.egg.group); cur = null; }
-    live = false; stageEl.hidden = true; eggsEl.hidden = false; stageEl.classList.remove('secret');
+    live = false; stageEl.hidden = true; eggsEl.hidden = false; stageEl.classList.remove('secret'); st.glow.style.opacity = 0;
   }
   function show(a, egg = null) { // the figure (hidden until it pops out of the egg), framed to its size
     const look = dress(a); look.obj.rotation.y = -Math.PI / 2 + 0.45; st.scene.add(look.obj);
     const hgt = Math.max(1.3, new THREE.Box3().setFromObject(look.obj).getSize(new THREE.Vector3()).y);
     st.cam.position.set(0, hgt * 0.75, hgt * 3.6); st.cam.lookAt(0, hgt * 0.42, 0);
-    if (egg) { look.obj.visible = false; st.scene.add(egg.group); }
+    if (egg) { look.obj.visible = false; st.scene.add(egg.group); try { st.R.compile(st.scene, st.cam); } catch { /* drawn when it shows, as before */ } } // 69-1: the hidden figure's shaders made now (in the background where the browser can), not in the frame it breaks out
     cur = { look, egg, t0: null };
   }
   function frame(now) {
@@ -138,7 +141,8 @@ export function initNest(nav) {
       if (egg && cur.t0 != null) {
         const k = (now - cur.t0) / 1000;
         if (k >= HATCH.pop && !look.obj.visible) { look.obj.visible = true; look.appear(); }
-        if (egg.hatch(k)) { st.scene.remove(egg.group); cur.egg = null; }
+        st.glow.style.opacity = glowAt(k); // 69-1: the rarity's light behind the egg, with the seams
+        if (egg.hatch(k)) { st.scene.remove(egg.group); cur.egg = null; st.glow.style.opacity = 0; }
       }
       look.update(dt); look.obj.rotation.y = -Math.PI / 2 + 0.45 + (calm() ? 0 : Math.sin(t * 0.7) * 0.35); // 27-7d 움직임 줄이기: no sway
       look.fig.pose({ sq: 1 + Math.sin(t * 2.2) * 0.015, rot: 0, gait: 'still', ph: 0 });
@@ -166,27 +170,33 @@ export function initNest(nav) {
     });
   }
 
-  // ---- hatch: crack (the save changes now), then play it: gauge in (if guaranteed), wobble, crack, a piece to the gauges, the card
+  // ---- hatch: crack (the save changes now), then play it: gauge in (if guaranteed), then 69-1's five beats: wobble, cracks,
+  // one light in the colour of the rarity that came out (r.rarity, after the gauges: never a fake one), break and a piece to
+  // the gauges, the friend (figure, then the card). As long as before (2.2 s from the wobble to the card), no skip as before
   async function hatchSlot(i) {
     const s = G.S.slots[i], tok = ++run; busy = true; tab = s.egg.type; shown = shards(G.S, tab);
     const r = G.hatch(i); if (!r) { busy = false; shown = null; return draw(); }
     await Promise.all([loadModel(SP[r.animal.species].model), loadAcc(r.animal.acc)]); if (tok !== run) return; // another habitat's species: its model isn't loaded here yet
-    stageOn(); show(r.animal, makeEgg(eggMat(r.egg.rarity))); draw();
+    const light = RAR[r.rarity].shell; // the seams light up in its shell colour, the halo round the egg in its tier colour (the card's)
+    stageOn(); st.glow.style.setProperty('--gc', RAR[r.rarity].color); show(r.animal, makeEgg(eggMat(r.egg.rarity), light)); draw();
     await sleep(400); if (tok !== run) return;
     if (r.sure) {
       await gaugeIn(r.rarity); if (tok !== run) return;
       shown = { ...shown, [r.rarity]: 0 }; drawGauges();
-      st.scene.remove(cur.egg.group); cur.egg = makeEgg(eggMat(r.rarity)); st.scene.add(cur.egg.group); // now it is the guaranteed egg
+      st.scene.remove(cur.egg.group); cur.egg = makeEgg(eggMat(r.rarity), light); st.scene.add(cur.egg.group); // now it is the guaranteed egg
       stageEl.classList.remove('flash'); void stageEl.offsetWidth; stageEl.classList.add('flash');
       await sleep(700); if (tok !== run) return;
     }
-    cur.t0 = performance.now();
-    await sleep(HATCH.crack * 1000); if (tok !== run) return;
-    sfx('hatch'); cry(r.animal.species); await sleep(150); if (tok !== run) return; // 26-2: the small bell when the shell cracks
+    // 69-1: each beat waits till its time on the egg's clock (t0), so a slow frame as it breaks doesn't make the whole longer
+    const t0 = cur.t0 = performance.now(), till = s => sleep(Math.max(0, t0 + s * 1000 - performance.now()));
+    await till(HATCH.crack); if (tok !== run) return;
+    sfx('tok'); sfx('tok', 0.14); // 69-1 금: two small ticks as the seams run
+    await till(HATCH.pop); if (tok !== run) return;
+    sfx('hatch'); cry(r.animal.species); await till(HATCH.pop + 0.15); if (tok !== run) return; // 26-2: the small bell (69-1: when it breaks)
     const up = Object.keys(r.shards.after).filter(k => r.shards.after[k] > r.shards.before[k]);
     Promise.all(up.map(k => shellTo(k, r.egg.rarity))).then(() => { if (tok === run) { shown = null; drawGauges(); } });
     if (!up.length) { shown = null; drawGauges(); }
-    await sleep((HATCH.end - HATCH.crack) * 1000 + 200); if (tok !== run) return;
+    await till(HATCH.end + 0.35); if (tok !== run) return; // the card at 2.2 s, as before
     card(r.animal, r);
   }
   function card(a, r = null) {
@@ -250,10 +260,12 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     else if (b.dataset.i != null) {
       const s = G.S.slots[+b.dataset.i], now = G.now();
       if (!s) toast('위의 알을 누르면 이 칸에 들어가요');
-      else if (now < s.end) toast(`${RAR[s.egg.rarity].name} 알 · ${span(s.end - now)} 뒤에 깨어나요`);
+      else if (now < s.end) { toast(`${RAR[s.egg.rarity].name} 알 · ${span(s.end - now)} 뒤에 깨어나요`); knock(b); }
       else hatchSlot(+b.dataset.i);
     }
   });
+  // 69-1: an egg still waiting, tapped (톡), answers from inside a moment later: two little rocks and 톡톡 (the same for every rarity)
+  function knock(b) { sfx('tap'); sfx('tok', 0.28); sfx('tok', 0.42); b.classList.remove('knock'); void b.offsetWidth; b.classList.add('knock'); }
   G.on(ev => { if (ev.some(e => e.type === 'reset')) close(); draw(); });
 
   return {

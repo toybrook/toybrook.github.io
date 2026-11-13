@@ -155,12 +155,13 @@ export const GIFT = { eggHearts: 15 };
 // 알 등급 (kind 'egg', rolled from an egg's odds), in order, rarest last. egg: what an egg of this rarity looks like (material +
 // colours; none = the material's first colour). color: its badge (hatch card, 친구들 list); shell: the shell piece that flies to
 // its gauge. 28-6c hue/sat: the shard gauge's colour (nest.js, the rarities with a gauge); precious: 돌려보내기 asks once more
-// (store.js); story: its first one gives an 이야기 카드 (story.js). Saves keep the id, so an id never changes.
+// (store.js); story: its first one gives an 이야기 카드 (story.js). 69-1 guard (전설 중복 보호): an egg of this rarity gives a look
+// nobody has yet while one is missing (rules.rollHatch; the rarity odds and gauges stay). Saves keep the id, so an id never changes.
 export const RARITIES = [
   { id: 'common', kind: 'egg', name: '일반', color: '#a08a6e', shell: '#f6e2bd', egg: { mat: 'spots', colors: { body: '#fff1d6', second: '#e2ad7a', accent: '#fff1d6' } } },
   { id: 'rare', kind: 'egg', name: '희귀', color: '#d9667f', shell: '#f2a7b4', egg: { mat: 'glass' } },
   { id: 'heroic', kind: 'egg', name: '영웅', color: '#4a6fd0', shell: '#cfdcff', egg: { mat: 'bluewhite' }, hue: 218, sat: 60 },
-  { id: 'legendary', kind: 'egg', name: '전설', color: '#d39a12', shell: '#f2c24f', egg: { mat: 'gold' }, hue: 42, sat: 85, precious: true, story: true },
+  { id: 'legendary', kind: 'egg', name: '전설', color: '#d39a12', shell: '#f2c24f', egg: { mat: 'gold' }, hue: 42, sat: 85, precious: true, story: true, guard: true },
 ];
 // 75 해서 얻는 등급 (kind 'earned', no odds): got by playing, each with its own rules file. Add freely.
 export const EARNED_TIERS = [

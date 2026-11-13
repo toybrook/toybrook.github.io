@@ -606,7 +606,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       drag.at = [e.clientX, e.clientY]; const p = groundAt(e); if (p) moveEdit(p.x + drag.dx, p.z + drag.dz); }
     if (stroke && e.pointerId === stroke.id) { stroke.at = [e.clientX, e.clientY]; paintTo(e); }
     if (box && e.pointerId === box.id) { box.at = [e.clientX, e.clientY]; sweepBox(); }
-    if (carry && e.pointerId === carry.id) { const p = groundHit(e); if (p) { carry.f = [p.x, p.z]; carry.a.carry(carry.x = p.x + carry.dx, carry.z = p.z + carry.dz); } }
+    if (carry && e.pointerId === carry.id) { const p = groundHit(e); if (p) { carry.f = [p.x, p.z]; carry.a.carry(carry.x = p.x + carry.dx, carry.z = p.z + carry.dz); }
+      carry.a.spin?.((e.clientX - carry.sx) * 0.025); carry.sx = e.clientX; } // 69-1: pushed sideways, it turns round (to look at it from all sides)
     if (press && e.pointerId === press.id && Math.hypot(e.clientX - press.at[0], e.clientY - press.at[1]) > 8) { clearTimeout(press.t); press = null; }
     if (pinch?.[e.pointerId]) { // two fingers: zoom by their spread, move the view with their middle
       const d0 = spread(); dragPlane.constant = 0; const a = groundAt(midOf()) && m0.copy(hitP); pinch[e.pointerId] = [e.clientX, e.clientY]; off.copy(camera.position).sub(controls.target);
@@ -658,8 +659,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     press = { id, at: [at.clientX, at.clientY], t: setTimeout(() => {
       press = null; if (pinch || carry || decorOn || snapOn || fingers !== 1) return;
       const { a } = actorAt(at), p = a?.carry && groundHit(at); if (!p) return;
-      carry = { a, id, x: a.position.x, z: a.position.z, from: { x: a.position.x, z: a.position.z }, f: [p.x, p.z], dx: a.position.x - p.x, dz: a.position.z - p.z }; a.carry(carry.x, carry.z);
-      controls.enabled = false; skipTap = true; aim = null; setFocus(null); ui.onCarry?.(); if (PREFS.buzz) navigator.vibrate?.(15);
+      carry = { a, id, x: a.position.x, z: a.position.z, from: { x: a.position.x, z: a.position.z }, f: [p.x, p.z], dx: a.position.x - p.x, dz: a.position.z - p.z, sx: at.clientX }; a.carry(carry.x, carry.z);
+      controls.enabled = false; skipTap = true; aim = null; setFocus(null); ui.onCarry?.(a.rec); if (PREFS.buzz) navigator.vibrate?.(15); // 69-1: its 출생 기록 shows while held
     }, 450) };
   }, { capture: true, ...sig });
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault(), sig); // a long press lifts (OrbitControls, off while carrying, no longer stops the phone's menu)
@@ -674,7 +675,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }
   let guestEnvAt = null; const GUEST_HIGH = 0.6, GUEST_BODY = { x: 0, z: 0, yaw: 0, r: 0.5, seg: [0, 0] }; // 66-1: 높은 곳, its middle this much (m) over the ring round it; a guest's room when it comes
   function letGo() {
-    const { a, x, z, f } = carry, carry0 = carry.from, c = habitat.ctx; carry = null; controls.enabled = true; if (actors.get(a.rec.id) !== a) return; // gone meanwhile (put away)
+    const { a, x, z, f } = carry, carry0 = carry.from, c = habitat.ctx; carry = null; controls.enabled = true; ui.onLetGo?.(a.rec); if (actors.get(a.rec.id) !== a) return; // gone meanwhile (put away)
     const L = c.land(a.water || ''), mine = (x, z, l) => l >= 0 && L.area(l) >= ROOM && free(c.crowd, a.body, x, z); // inbox 48: any land big enough to live on (inside a closed fence, an island): it lives there from then on
     const ok = (x, z) => (c.walkable(x, z) || !!a.water && !!c.wet?.(x, z, a.water)) && mine(x, z, L.id(x, z));
     const here = L.id(x, z), small = here >= 0 && L.area(here) < ROOM; // a pocket too small (a ring closed too tight; the finger in it or on its fence, land.js id: within 1 m): to the nearest spot from the finger, said every time

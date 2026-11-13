@@ -103,7 +103,8 @@ const ui = {
   onPropTap: uid => play.onPropTap(uid), onEdit: ok => play.onEdit(ok), onPaint: (c, b) => play.onPaint(c, b), onSweep: u => play.onSweep(u), // decorate mode (ui/decor.js)
   note: (k, n) => { if (!snap.on()) G.note(k, n); }, // 23-2 도전 과제 (not while 사진 모드 can hold the night or the rain)
   onHome: (id, home) => G.setHome(id, home), // inbox 53 울타리 안 자리
-  onCarry: () => { G.flag('tip_carry'); if (!G.S.flags.carried) G.flag('carried'); }, // inbox 42 E: found it alone: no tip for it; 66-1 first_drag
+  onCarry: rec => { G.flag('tip_carry'); if (!G.S.flags.carried) G.flag('carried'); play.onCarry(rec); }, // inbox 42 E: found it alone: no tip for it; 66-1 first_drag; 69-1 출생 기록
+  onLetGo: rec => play.onLetGo(rec),
   onGuestMove: (id, x, z) => G.moveGuest(id, x, z), // 66-1: a 떠돌이 손님 carried somewhere
   cramped(again) { if (again || !G.S.flags.cramped) { G.flag('cramped'); toast('울타리 안이 너무 좁아요', 2200, true); } }, // inbox 42 B: one put outside a fence closed too tight (once)
   train(hab, loop) { const k = 'train:' + hab; if (loop && !G.S.flags[k]) { G.flag(k); toast('고리가 닫혔어요! 태엽 기차가 달려요', 2600, true); } return !!G.S.flags[k]; }, // 28-4: once closed, it runs (a broken track: back and forth)

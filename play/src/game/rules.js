@@ -240,13 +240,22 @@ function hatchPool(type, rarity) {
   });
 }
 const owned = (S, k) => !!S.codex[k] || S.animals.some(a => key(a.species, a.variant) === k);
+// 69-1 전설 중복 보호 (RARITIES guard): while a look of that rarity is missing, only the missing ones, each at its usual share
+// (species weight x its tier share); all owned: the table as is. The rarity itself was rolled before (odds and gauges unchanged).
+const tw = vs => vs.reduce((s, v) => s + tierWeight(v), 0);
+function guarded(S, pool) {
+  const miss = pool.map(x => ({ ...x, all: x.vs, vs: x.vs.filter(v => !owned(S, key(x.sp.id, v.id))) })).filter(x => x.vs.length);
+  return miss.length ? miss : pool;
+}
 export function rollHatch(S, e, rng) {
-  const pool = hatchPool(e.type, e.rarity), w = attract(S, e.type); if (!pool.length) return null;
-  const { sp, vs } = pick(pool, x => spWeight(w, x.sp), rng);
+  let pool = hatchPool(e.type, e.rarity); const w = attract(S, e.type); if (!pool.length) return null;
+  if (RAR[e.rarity]?.guard) pool = guarded(S, pool);
+  const { sp, vs } = pick(pool, x => spWeight(w, x.sp) * (x.all ? tw(x.vs) / tw(x.all) : 1), rng);
   const pm = B.preferMissing, v = pick(vs, v => tierWeight(v) * (pm.on && !owned(S, key(sp.id, v.id)) ? pm.weight : 1), rng);
   return { species: sp.id, variant: v.id };
 }
-// Probability table of an egg type (for the ?debug screen; later the public odds page). Same pool as rollHatch, preferMissing off.
+// Probability table of an egg type (for the ?debug screen; later the public odds page). Same pool as rollHatch, preferMissing off,
+// nothing owned (69-1: a guard rarity then gives the missing looks first; oddsInfo.guard says how many this save still has to get).
 // colors: each colour's share inside its variant. S: count that save's placed props (attract); without it, no props.
 export function eggTable(type, S) {
   const aw = attract(S, type);
@@ -311,6 +320,8 @@ export function oddsInfo(type, S) {
     egg: EGG[type], base,
     segments: [{ when: null, odds: seg(null) }, ...keys.map(k => ({ when: RAR[k], target: PT[k], odds: seg(k) }))],
     gauges: keys.map(k => ({ rarity: RAR[k], target: PT[k], have: S ? shards(S, type)[k] : 0 })),
+    guard: RARITIES.filter(r => r.guard).map(r => { const pool = hatchPool(type, r.id), g = S ? guarded(S, pool) : pool;
+      return { rarity: r, all: pool.reduce((n, x) => n + x.vs.length, 0), missing: g === pool && S ? 0 : g.reduce((n, x) => n + x.vs.length, 0) }; }),
     secret: { chance: B.secret.chance, accessories: accs.map(([id, a]) => ({ id, name: a.name, p: B.secret.chance / accs.length })) },
   };
 }
