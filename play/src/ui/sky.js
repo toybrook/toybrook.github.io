@@ -37,7 +37,7 @@ function shown() {
 const names = T => [T.aurora && K.AURORAS.find(x => x.id === T.aurora).name, T.meteor && T.meteor.name + ' 유성우', T.comet && '혜성'].filter(Boolean);
 const slotName = k => K.SLOTS.find(s => s.id === k).name;
 function seen() {
-  const w = shown(); if (!w || !w.slots.length) return;
+  const w = shown(); if (!w || !w.slots.length || document.body.classList.contains('see')) return; // 69-4: 구경 중엔 기록·♥ 없음
   const r = G.skySeen(w.n, w.slots); if (!r?.fresh.length) return;
   sfx('grown'); toast(`하늘 기록 · ${r.fresh.map(slotName).join(', ')} ♥${r.hearts}`, 3000);
 }

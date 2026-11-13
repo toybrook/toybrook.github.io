@@ -627,3 +627,10 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .cell i.reg{background:#d88a3a}.cnote.ctip{margin:6px 0 0;font-size:calc(12px*var(--fs))}
 .cscenes{margin:22px 0 8px;border-top:2px dashed #e3cba6;padding-top:10px}.codex.night .cscenes{border-color:#3a4170}
 .cscenes summary{cursor:pointer;font-weight:700;font-size:calc(15px*var(--fs));padding:6px 2px;color:#6b4a2b;list-style-position:inside}.cscenes summary small{font-weight:400;color:#8a6a4c}.codex.night .cscenes summary{color:#e6e2f2}
+/* 69-4 서식지 구경 링크: someone's habitat, to look at only (the game's own buttons gone; 「내 정원으로」 on top) */
+.see :is(#habitat > .bar,.tools,.dock,.npill,.nestbtn,.decor,.skybar,.scnote,.beta,.fb,.rating,.rate,.tip,.side){display:none!important}
+.seebar{position:absolute;left:calc(12px + var(--sa-l));right:calc(12px + var(--sa-r));top:calc(12px + var(--sa-t));z-index:1000;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;border-radius:22px;background:rgba(255,250,240,.94);color:#4a3220;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.seebar span{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}.seebar b{font-size:calc(15px*var(--fs));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seebar small{font-size:calc(12px*var(--fs));color:#8a6646}.seebar button{border:0;border-radius:999px;min-height:44px;padding:0 16px;background:#e8805f;color:#fff;font:inherit;font-weight:700;font-size:calc(14px*var(--fs));cursor:pointer;white-space:nowrap}
+.see .camb{top:calc(78px + var(--sa-t))}
+.visit .seecard{display:block;width:auto;max-width:100%;max-height:calc(52dvh - var(--sa-t) - var(--sa-b));margin:0 auto 10px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.15)}

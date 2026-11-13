@@ -4,7 +4,7 @@
 // Links go out with the share sheet, else copied. Counts only to stats (visit_sent / visit_got).
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
-import { HAB, kindName, callName, firstEgg } from '../game/rules.js';
+import { HAB, kindName, callName, firstEgg, outIn } from '../game/rules.js';
 import * as V from '../game/visit.js';
 import { toast, josa, topWindow, overlayOpen, resting } from './hud.js';
 import { copyNow } from './report.js';
@@ -28,6 +28,7 @@ async function send(url, text) {
 }
 
 function readHash() {
+  if (/^#see=/.test(location.hash)) return location.reload(); // 69-4: a 구경 link opened in a tab already playing: the page opens it (seeHash)
   const m = /^#(visit|postcard)=([A-Za-z0-9._-]+)$/.exec(location.hash); if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);
   if (m[1] === 'visit') { wait = V.readVisit(m[2]); return; } // a cut or edited link: nothing, quietly
@@ -63,11 +64,11 @@ function pick(e) {
 <div class="nbtns"><button class="sb" data-skip="${e.lid}">괜찮아요</button><button class="go" data-card="${e.lid}" disabled>엽서 보내기</button></div></div>`;
   box.hidden = false;
 }
+const myGarden = () => G.S.visit.garden || G.setGarden([Math.floor(Math.random() * V.GARDEN[0].length), Math.floor(Math.random() * V.GARDEN[1].length)]);
 // 친구네 놀러 가기 (stroll.js, a branch of 산책 since 74): a grown friend of this save
 export function sendSheet(a) {
   if (a.stage === 'baby') return void toast('다 자란 친구만 놀러 갈 수 있어요', 2400);
-  if (!G.S.visit.garden) G.setGarden([Math.floor(Math.random() * V.GARDEN[0].length), Math.floor(Math.random() * V.GARDEN[1].length)]);
-  const nm = callName(a);
+  myGarden(); const nm = callName(a);
   box.innerHTML = `<div><h2>${esc(nm)} 친구네 놀러 가기</h2><figure class="vfig"><img alt=""></figure>
 <p class="sub">링크를 받은 사람의 서식지에 ${H}시간 손님으로 머물러요. 내 친구는 그대로 여기 있어요</p>
 <p class="vgarden">우리 정원 <b>${V.gardenName(G.S.visit.garden)}</b> <button class="sb" data-garden>바꾸기</button></p>
@@ -110,3 +111,51 @@ setInterval(() => {
   pick(G.S.visit.book.find(x => x.pick));
 }, 800);
 export function initVisit(n) { nav = n; readHash(); onIntro(); addEventListener('hashchange', () => { readHash(); quiet = 0; }); }
+
+// 69-4 서식지 구경 링크 (#see=, game/visit.js seeCode). The sender: the link (꾸미기 › 코드, share.js; 사진 모드's QR tile, photo.js)
+// and a 9:16 picture with its QR (사진 모드 › 구경 그림). The one who opens it: seeHash (main.js, before the game starts) gives the
+// save to show, and main.js keeps every storage write off for that page; 「내 정원으로」 opens the page again without it.
+export const seeLink = hab => { myGarden(); return link('see', V.seeCode(G.S, hab)); };
+export { send };
+export function seeHash() {
+  const m = /^#see=([A-Za-z0-9._-]+)$/.exec(location.hash); if (!m) return null;
+  history.replaceState(null, '', location.pathname + location.search);
+  const v = V.readSee(m[1]); return v && { ...v, S: V.seeSave(v, G.now()) }; // a cut or edited link: the game, quietly
+}
+export function seeBar(v) {
+  const el = document.createElement('div'); el.className = 'seebar'; el.setAttribute('role', 'group'); el.setAttribute('aria-label', '정원 구경');
+  el.innerHTML = `<span><b>${esc(V.gardenName(v.g))}</b><small>${HAB[v.hab].name} 구경 중 · 둘러보기만 해요</small></span><button class="go" data-home>내 정원으로</button>`;
+  el.querySelector('[data-home]').onclick = () => location.replace(location.pathname + location.search); $('habitat').append(el);
+}
+// the picture: the photo (filter already on it) on top, the garden's name and the QR under it. qrcode: vendor/qrcode.js
+export function seeCard(photo, hab, url, qrcode) {
+  const W = 1080, H = 1920, P = 40, c = Object.assign(document.createElement('canvas'), { width: W, height: H }), x = c.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
+  x.fillStyle = '#fffaf0'; x.fillRect(0, 0, W, H);
+  const ph = 1240, k = Math.max((W - 2 * P) / photo.width, ph / photo.height), sw = (W - 2 * P) / k, sh = ph / k; // cover
+  x.drawImage(photo, (photo.width - sw) / 2, (photo.height - sh) / 2, sw, sh, P, P, W - 2 * P, ph);
+  let q = null; try { q = qrcode(0, 'L'); q.addData(url); q.make(); } catch { q = null; } // too long for a QR (past ~2900 letters): the link alone
+  const top = P + ph + 40, n = q?.getModuleCount() || 0, cell = n && Math.floor(540 / (n + 8)), qs = cell * (n + 8), qx = W - P - qs;
+  if (q) { x.fillStyle = '#fff'; x.fillRect(qx, top, qs, qs); x.fillStyle = '#2b1d12';
+    for (let r = 0; r < n; r++) for (let k2 = 0; k2 < n; k2++) if (q.isDark(r, k2)) x.fillRect(qx + (4 + k2) * cell, top + (4 + r) * cell, cell, cell); }
+  const tw = (q ? qx : W - P) - P - 30, line = (t, size, w, color, y) => { x.font = `${w} ${size}px ${font}`; while (x.measureText(t).width > tw && size > 20) x.font = `${w} ${--size}px ${font}`; x.fillStyle = color; x.fillText(t, P, y); };
+  x.textBaseline = 'top'; const out = outIn(G.S, hab).length;
+  line(V.gardenName(G.S.visit.garden), 58, 800, '#4a3220', top + 10);
+  line(`${HAB[hab].name}${out ? ` · 친구 ${out}` : ''}`, 40, 600, '#8a6646', top + 92);
+  line(q ? '카메라로 QR을 비추면' : '링크를 열면', 34, 500, '#6b4a2b', top + 190); line('이 정원을 구경할 수 있어요', 34, 500, '#6b4a2b', top + 236);
+  line('토이브룩', 44, 800, '#c0704f', top + (q ? qs : 300) - 50);
+  return c;
+}
+// the picture's preview (#visit) and 보내기: the share sheet with the file where the browser can, else downloaded + the link copied
+export function seeSend(c, hab, url) {
+  const text = `${V.gardenName(G.S.visit.garden)} ${HAB[hab].name} 구경 오세요 · 토이브룩`;
+  box.innerHTML = `<div><h2>구경 그림</h2><img class="seecard" src="${c.toDataURL('image/jpeg', 0.85)}" alt="구경 그림 미리보기">
+<p class="sub">QR이나 링크를 연 사람은 이 서식지를 둘러보기만 해요 · 그 사람의 저장은 바뀌지 않아요</p>
+<div class="nbtns"><button class="sb" data-close>닫기</button><button class="go" data-cardsend>보내기</button></div></div>`;
+  box.hidden = false; track('see_sent', undefined, 'see_sent#');
+  box.querySelector('[data-cardsend]').onclick = async e => { e.stopPropagation();
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9)), file = new File([blob], `toybrook-${hab}.jpg`, { type: 'image/jpeg' });
+    if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], text: `${text}
+${url}` }); return; } catch (er) { if (er?.name === 'AbortError') return; } }
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: file.name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1e4);
+    toast(copyNow(url) !== false ? '그림을 저장하고 링크를 복사했어요 · 메신저에 같이 보내 주세요' : '그림을 저장했어요', 3200); };
+}

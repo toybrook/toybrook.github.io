@@ -27,8 +27,8 @@ export const KINDS = ('hay trough lily duckhouse flowers bench fence path tulips
   + 'cycad dinonest lavalamp ribs treefern fos_ammonite fos_bone fos_egg fos_skull '  // 14-3 공룡 정글, 화석 발굴
   + 'gst_kite gst_basket gst_milkcan gst_parasol gst_reedpipe gst_scarfpost gst_sleighbell gst_teapot gst_bottle gst_picnicbox gst_beachdoll gst_tealamp').split(' '); // 66-1 손님 선물
 
-const b64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const unb64 = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+export const b64 = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+export const unb64 = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 const q = v => Math.max(0, Math.min(511, Math.round(v * 4) + 256));
 
 // S: the save; habId; step: its 땅 넓히기 step

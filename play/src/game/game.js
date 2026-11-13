@@ -51,7 +51,10 @@ function claim(again) {
 export async function takeOver() { await navigator.locks.request(LOCK, { steal: true }, () => {}); location.reload(); }
 
 // Load (or start), catch up on the time the game was closed. Returns what happened meanwhile.
+// 69-4 h.view: a 서식지 구경 link's save (visit.js seeSave): shown only, never stored, nothing ticks
+let view = false;
 export function start(h = {}) {
+  if (h.view) { view = true; off = true; S = h.view; return []; }
   hooks = h; const now = clock(); S = load(now) || R.newGame(now); S.edition = EDITION;
   const ev = R.advance(S, now); save(); claim(false); // saved as soon as this tab holds the lock
   setInterval(() => { const ev = tick(clock()); if (ev.length) save(); emit(ev); }, 1000);
@@ -63,7 +66,7 @@ export function start(h = {}) {
 export function replace(s) { s.edition = EDITION; try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { return false; } S = s; return true; }
 const emit = ev => { for (const f of listeners) f(ev); };
 // an action, then catch up (a feed or pet that fills the gauge grows it at once), save, tell
-function act(fn) { const now = clock(), out = fn(now), ev = R.advance(S, now); save(); emit([...(out?.events || []), ...ev]); return out; }
+function act(fn) { const now = clock(), out = fn(now), ev = view ? [] : R.advance(S, now); save(); emit([...(out?.events || []), ...ev]); return out; }
 
 export const takeEgg = (hab, eggId) => act(now => R.takeEgg(S, hab, now, eggId));
 export const hatch = i => act(now => { // ?debug 「다음 알 시크릿」 (flags.forceSecret) is used up here; rules only take forced

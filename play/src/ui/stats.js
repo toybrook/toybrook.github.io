@@ -10,6 +10,7 @@
 // inbox 61 C: rate (love / ok / meh, the 「토이브룩 어때요?」 bar, a day at most).
 /// 66-1 (inbox 66·68): first_drag (a friend carried, the first day), hatch_2 (the second hatch, within 2 min of the first or not, the
 // first day), play_5m (with play_1m/3m: still here at 60/180/300 s), great_d1 (대만족 on the first day, sent the next day, in bands) and return_d7.
+// 69-4: see_sent (a 구경 링크 or 구경 그림 sent) and see_open (one opened, to look at).
 // No names, mail, device id or save. The service worker leaves other hosts alone (dist-web/sw.js), so the script is never stored.
 // report.js imports this before the game: nothing here may import the game.
 import { UMAMI_ID, STATS_HOST, PREFS } from '../config.js';

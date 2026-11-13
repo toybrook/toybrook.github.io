@@ -87,7 +87,7 @@ function step(from, to) { // 되돌리기 (from undo) / 다시 하기 (from redo
   if (held) { hab.decor.cancel(); held = fresh = null; }
   to.push(layoutOf(G.S, habId)); G.setLayout(habId, from.pop()); draw(); sfx('undo');
 }
-const tools = () => `<div class="dtools"><button class="sb${grid ? ' on' : ''}" data-grid>격자</button><button class="sb" data-undo${undo.length ? '' : ' disabled'} aria-label="되돌리기">↶</button><button class="sb" data-redo${redo.length ? '' : ' disabled'} aria-label="다시 하기">↷</button>${brush === undefined && !pick && !sweep ? '<button class="sb" data-pick>고르기</button><button class="sb" data-paint>땅 칠하기</button><button class="sb" data-share>코드</button><button class="sb" data-snap>사진</button>' : ''}</div>`; // 74: 사진 moved here from the top tools
+const tools = () => `<div class="dtools"><button class="sb${grid ? ' on' : ''}" data-grid>격자</button><button class="sb" data-undo${undo.length ? '' : ' disabled'} aria-label="되돌리기">↶</button><button class="sb" data-redo${redo.length ? '' : ' disabled'} aria-label="다시 하기">↷</button>${brush === undefined && !pick && !sweep ? '<button class="sb" data-pick>고르기</button><button class="sb" data-paint>땅 칠하기</button><button class="sb" data-share>링크</button><button class="sb" data-snap>사진</button>' : ''}</div>`; // 74: 사진 moved here from the top tools
 // inbox 25: the head (and the grip over it) folds the panel to one line and opens it again: a tap, or a drag down / up
 const GRIP = () => `<button class="dgrip" data-fold aria-label="꾸미기 판 접기·펴기" aria-expanded="${!min}"></button>`;
 function fold(v) { min = v; el.classList.toggle('min', v); el.querySelector('.dgrip')?.setAttribute('aria-expanded', !v); }
@@ -145,7 +145,7 @@ ${tools()}<div class="nbtns"><button class="go" data-endpaint>다 칠했어요</
 ${rl ? railLine(railNow(false), '', '<button class="sb" data-rhelp>놓는 법</button>') : ''}${tools()}${shelfRow(sh)}<div class="dtabs">${tabsHere().map(t => `<button class="${t.id === tab ? 'on' : ''}" data-tab="${t.id}">${t.name}</button>`).join('')}</div>
 <div class="dgrid">${ring}${exp}${L ? '<button class="dprop dcmp" data-compare><i></i><b>넓히기 전과 비교</b><small>처음 땅과 지금 땅을 위에서 봐요</small></button>' : ''}${tab === 'nature' ? '<button class="dprop dsweep" data-sweep><i></i><b>자연 정리</b><small>네모를 그려 그 안의 나무·바위·덤불을 한 번에 치워요</small></button>' : ''}${nats.map(N => `<button class="dprop dnat" data-n="${N.id}"><img alt=""><b>${N.name}</b><small>처음부터 있던 것 · 다시 심어요</small><em>넣어 둔 것 ${stowedNat(N.id).length}</em></button>`).join('')}${list.map(P => { const s = stowed(P.id).length, lk = !s && !can(G.S, 'prop:' + P.id);
     return `<button class="dprop${lk ? ' lock' : ''}" data-p="${P.id}"><img alt=""><b>${P.name}</b><small>${propNote(P)}${sceneNote(P)}</small><em>${s ? `넣어 둔 것 ${s}` : P.gift ? '놓았어요' : lk ? `Lv ${needFor('prop:' + P.id)}` : `<span class="hrt">♥</span>${P.price}`}</em></button>`; }).join('')}</div>
-<p class="dhint">${n >= cap ? full(rl && 'rail') : rl ? '레일 끝의 초록 점은 이어진 곳, 빨간 점은 열린 곳이에요 · 고리를 닫으면 태엽 기차가 달려요' : G.S.ghost?.[habId]?.length ? '반투명한 것은 꾸미기 코드의 미리보기예요 · 그 소품을 사거나 꺼내면 그 자리에서 시작해요' : '놓은 소품이나 나무를 누르면(길게 누르면 바로 끌어서) 옮기거나 넣을 수 있어요'}</p>`;
+<p class="dhint">${n >= cap ? full(rl && 'rail') : rl ? '레일 끝의 초록 점은 이어진 곳, 빨간 점은 열린 곳이에요 · 고리를 닫으면 태엽 기차가 달려요' : G.S.ghost?.[habId]?.length ? '반투명한 것은 불러온 배치의 미리보기예요 · 그 소품을 사거나 꺼내면 그 자리에서 시작해요' : '놓은 소품이나 나무를 누르면(길게 누르면 바로 끌어서) 옮기거나 넣을 수 있어요'}</p>`;
   el.querySelectorAll('.dnat img').forEach((img, i) => propThumb('n:' + nats[i].id, () => hab.decor.natModel({ prop: nats[i].id, s: 1, v: 12 })).then(u => { img.src = u; }));
   el.querySelectorAll('.dring img').forEach(img => propThumb('railring', hab.decor.model).then(u => { img.src = u; }));
   el.querySelectorAll('.dsh img').forEach((img, i) => propThumb(sh.items[i].id, hab.decor.model).then(u => { img.src = u; }));
@@ -259,7 +259,7 @@ el.addEventListener('click', e => {
     if (G.buyExpand(habId)) closeDecor(); // main.js rebuilds the habitat (the mist lifts), then says 「땅을 넓혔어요」
   }
   else if (d.compare != null) compare();
-  else if (d.share != null) openShare(habId, hab, keep); // 24-2 꾸미기 코드
+  else if (d.share != null) openShare(habId, hab, keep); // 24-2 꾸미기 코드; 69-4 구경 링크
   else if (d.snap != null) { closeDecor(); document.getElementById('snapBtn').click(); }
   else if (d.grid != null) { grid = !grid; hab.decor.grid(grid); draw(); }
   else if (d.undo != null) step(undo, redo);

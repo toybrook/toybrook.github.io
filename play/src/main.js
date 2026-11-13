@@ -18,7 +18,7 @@ import { initAttend, todayRow, takeToday } from './ui/attend.js'; // inbox 41 C 
 import './ui/first.js'; // inbox 41 D 첫날 할 일
 import { initEvent } from './ui/event.js'; // 15-1 계절 이벤트
 import { initMyth, onMyth, mythCut, mythDue } from './ui/myth.js'; // 14-1 신수의 부름
-import { initVisit } from './ui/visit.js'; // 16-1 놀러 보내기
+import { initVisit, seeHash, seeBar } from './ui/visit.js'; // 16-1 놀러 보내기; 69-4 서식지 구경 링크
 import { initSky, skyNow, onStar, retSky, retShown, retGo } from './ui/sky.js'; // 16-2 특별한 하늘
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
@@ -30,8 +30,12 @@ function tabOff(first) {
 }
 // 26-7: a save that failed (full storage etc.) is told once, with the way to a backup code (made from the game in memory)
 const saveFail = () => ask('저장하지 못했어요. 기기 저장 공간이 꽉 찼을 수 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.', '백업 코드 만들기', '닫기').then(ok => ok && BK.open());
-const offline = G.start({ busy: () => tabOff(true), lost: () => tabOff(false), fail: saveFail }); // eggs laid / babies grown while the game was closed
-watch(G); // inbox 41 A 이용 통계: start, first_hatch, return_d1
+// 69-4 서식지 구경 링크: someone's habitat to look at. This page stores nothing at all (the player's own save, prefs, counts
+// stay as they were): every storage write is a no-op till 「내 정원으로」 opens the page again without the link
+const SEE = seeHash();
+if (SEE) { for (const k of ['setItem', 'removeItem', 'clear']) Storage.prototype[k] = () => {}; document.body.classList.add('see'); track('see_open', undefined, 'see_open#'); }
+const offline = G.start(SEE ? { view: SEE.S } : { busy: () => tabOff(true), lost: () => tabOff(false), fail: saveFail }); // eggs laid / babies grown while the game was closed
+if (!SEE) watch(G); // inbox 41 A 이용 통계: start, first_hatch, return_d1
 
 const stage = $('stage'), map = $('map');
 const phone = matchMedia('(max-width:600px),(pointer:coarse) and (max-width:1000px)');
@@ -81,7 +85,7 @@ if (fresh) code().catch(() => {}).then(() => cur || mapUp());
   const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400);
   idle(() => code().then(h => { // then the models of the habitat opened last (a new player: none, above)
     if (!fresh && !backTo) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.withGuests()).catch(() => {}));
-    if (OFFLINE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
+    if (OFFLINE && !SEE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
   }).catch(() => {}));
 });
 const ui = {
@@ -114,7 +118,9 @@ placeFrom(() => cur ? HAB[cur].name : '지도'); // inbox 49: where the player w
 const built = {}, lv = {}; // each habitat's scene is built the first time it is entered (and its models fetched then); lv: the 땅 넓히기 step it was built at
 // 22-1: a build hands the board's own trees, bushes, rocks and flowers to the save the first time (and a 땅 넓히기 step's new ones)
 const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r => setTimeout(r, 60)).then(code).then(h => h.startHabitat($('gl'), ui, id, G.withGuests(), { level: lv[id], ...opt }))
-  .then(api => { if (api.natives) G.addNatives(id, api.natives.list, api.natives.rings); return api; }); };
+  .then(api => { if (api.natives) G.addNatives(id, api.natives.list, api.natives.rings);
+    if (SEE?.hab === id && !SEE.laid) { SEE.laid = true; G.importLayout(id, SEE.d, api.decor.fitAll, api.decor.cellOk); } // 69-4: the sender's layout on this board
+    return api; }); };
 // inbox 61 A·B: a new player's first egg is cracked on the loading screen as soon as the nest's code is here (seconds on a slow
 // phone). inbox 64-A: the board is built while the reveal card is read (built during the hatch, the hatch took 2.7 s longer);
 // while it is, a small line under the card says so (body.building), not the loading screen's over the nest
@@ -128,7 +134,7 @@ async function enter(id) {
   cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + ' 서식지 3D');
   $('habName').querySelector('b').textContent = HAB[id].short ?? HAB[id].name; // 14-3: the chip's room (375 wide) fits two letters
   loadBar(true, !!play); if (G.S.flags.lastHab !== id) G.flag('lastHab', id);
-  track('habitat_open', { habitat: HAB[id].name }, 'open:' + id); // inbox 41 A: a day each
+  if (!SEE) track('habitat_open', { habitat: HAB[id].name }, 'open:' + id); // inbox 41 A: a day each
   if (firstEgg(G.S) && !built[id]) await firstHere(id); // inbox 61 A·B
   try { api = await (built[id] ??= build(id)); }
   catch (e) { console.warn('enter', id, e); // 26-1: offline, and this habitat's files were never fetched (or the network dropped): back to the map, try again later
@@ -179,6 +185,10 @@ $('back').onclick = () => { mapUp(); snap.leave(); hab.classList.add('hidden'); 
 
 // 74: one button (the habitat's name, ‹) back to the world map; the map moves between habitats
 $('habName').onclick = () => $('back').click();
+if (SEE) { // 69-4: only the sender's habitat; back (‹, Esc, the phone's back) is 「내 정원으로」. Taps follow a friend, nothing more
+  $('back').onclick = () => location.replace(location.pathname + location.search); seeBar(SEE);
+  Object.assign(ui, { onTap() {}, onCarry() {}, scene() {}, note() {}, cramped() {}, onDig: () => null, onPile: () => 0, onHome() {}, onGuestMove() {} });
+}
 
 // inbox 20 C9: Esc (PC) and the phone's back button close the window on top first, then leave the habitat for the map.
 // One history entry stands for "there is something to close" (a window, or a habitat on screen); back uses it up.
@@ -209,7 +219,7 @@ fb.hidden = FEEDBACK_URL === 'TODO';
 const fbUrl = () => { const n = cur ? outIn(G.S, cur).length : G.S.animals.length; // out in this habitat (not stored), or all
   return `${FEEDBACK_URL}?usp=pp_url&${FEEDBACK_FIELD}=${encodeURIComponent(`ver=${VERSION} habitat=${cur || 'map'} animals=${n}`)}`; };
 fb.onclick = () => { fb.href = fbUrl(); }; // the href is set at the tap, before the link opens (inbox 20: on the world map; in a habitat a 설정 row)
-setTimeout(() => import('./ui/rate.js').then(m => m.initRate(FEEDBACK_URL === 'TODO' ? null : fbUrl)).catch(() => {}), 60e3); // inbox 61 C (3 minutes at the soonest)
+if (!SEE) setTimeout(() => import('./ui/rate.js').then(m => m.initRate(FEEDBACK_URL === 'TODO' ? null : fbUrl)).catch(() => {}), 60e3); // inbox 61 C (3 minutes at the soonest)
 if (RATING.mark || RATING.number) {
   const img = rating.querySelector('img'); img.hidden = !RATING.mark; if (RATING.mark) img.src = RATING.mark;
   rating.querySelector('span').textContent = RATING.number; rating.hidden = false;
@@ -280,12 +290,9 @@ addEventListener('visibilitychange', () => {
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone();
   if (!cur && firstEgg(G.S)) nav.go(HABITATS[0].id); }; // inbox 61 B: a new player, straight to the first egg (no map tap)
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
-initAttend(() => cur);
-initEvent(() => cur, () => api);
-initMyth(() => cur, () => api);
-initVisit(nav);
+if (!SEE) { initAttend(() => cur); initEvent(() => cur, () => api); initMyth(() => cur, () => api); initVisit(nav); }
 if (backTo) nav.go(backTo);
-{ const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
+if (!SEE) { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
 
 // 21-1 설정: choices kept in this browser apart from the save (config.js PREFS); the habitat reads them every frame
 const PREF_ROWS = [['time', '시간', [['real', '실제 시간'], ['day', '항상 낮']]], ['weather', '날씨 효과', [[true, '켜기'], [false, '끄기']]], // 21-2: 끄기 = always clear (for slow phones)

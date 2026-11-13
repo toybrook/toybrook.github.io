@@ -1,11 +1,12 @@
 // 24-1 사진 모드: one button hides the game's buttons and lets the camera go nearer, lower and higher (habitat snap). The hour
 // and the weather can be held for the look only (config.js VIEW: nothing is saved, counted or earned meanwhile, main.js),
-// a filter, a frame, the logo and the 꾸미기 코드 as a small QR in the corner (each can be off). 저장 downloads a JPEG.
+// a filter, a frame, the logo and the 구경 링크 (69-4) as a small QR in the corner (each can be off). 저장 downloads a JPEG;
+// 구경 그림 makes the 9:16 picture with the link's QR (ui/visit.js seeCard) to send.
 // The preview is the same drawing: the filter as CSS on the 3D canvas, the rest on a canvas over it (deco); the saved
 // picture is the frame drawn again at 2-3x, the filter worked out per pixel with the CSS matrices (tint), then deco.
 import { VIEW } from '../config.js';
 import * as G from '../game/game.js';
-import { encode } from '../game/layout.js';
+import { seeLink, seeCard, seeSend } from './visit.js'; // 69-4
 import { outIn, callName } from '../game/rules.js';
 import { sfx } from './sound.js';
 import { skyPhoto } from './sky.js'; // 16-2 하늘 기록 사진
@@ -15,7 +16,7 @@ const HOURS = [['지금', null], ['아침', 7], ['낮', 12], ['노을', 18.5], [
 const SKIES = [['지금', null], ['맑음', 'clear'], ['비', 'rain'], ['안개', 'fog'], ['무지개', 'rainbow']]; // 25-1 the snow: 비 shows as 눈 (weather.js weatherNow turns 'rain' into its snow)
 export const FILTERS = { none: ['없음', ''], warm: ['따뜻하게', 'sepia(0.25) saturate(1.15) brightness(1.03)'],
   film: ['필름', 'sepia(0.18) contrast(0.88) brightness(1.06) saturate(0.85)'], mono: ['흑백', 'grayscale(1) contrast(1.08)'] };
-const ADDS = [['frame', '테두리'], ['logo', '로고'], ['code', '꾸미기 코드']];
+const ADDS = [['frame', '테두리'], ['logo', '로고'], ['code', '구경 QR']];
 
 // the CSS filter functions as 3x3 matrices + offset (Filter Effects 1, in sRGB), clamped after each one like the browser
 const MAT = {
@@ -64,10 +65,10 @@ export function deco(x, w, h, o, code) {
     const n = code.getModuleCount(), q = 3, cell = Math.max(2, Math.floor(w * 0.17 / (n + 2 * q))), qs = cell * (n + 2 * q);
     // inbox 25: the words 2.3% of the width (27 px at 1170, was ~19), the tile as wide as they need; the QR as before
     const fs = Math.max(10, Math.round(w * 0.023)), th = qs + Math.round(fs * 1.25), x0 = side + m, y0 = h - foot - m - th;
-    x.font = `700 ${fs}px ${font}`; const tw = Math.max(qs, Math.ceil(x.measureText('꾸미기 코드').width + fs)), qx = x0 + Math.round((tw - qs) / 2);
+    x.font = `700 ${fs}px ${font}`; const tw = Math.max(qs, Math.ceil(x.measureText('구경 QR').width + fs)), qx = x0 + Math.round((tw - qs) / 2);
     x.save(); x.fillStyle = '#fffaf0'; x.shadowColor = 'rgba(40,25,10,.3)'; x.shadowBlur = cell * 3; x.fillRect(x0, y0, tw, th); x.restore();
     x.fillStyle = '#2b1d12'; for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (code.isDark(r, c)) x.fillRect(qx + (q + c) * cell, y0 + (q + r) * cell, cell, cell);
-    x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#6b4a2b'; x.fillText('꾸미기 코드', x0 + tw / 2, y0 + qs + fs * 0.55);
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#6b4a2b'; x.fillText('구경 QR', x0 + tw / 2, y0 + qs + fs * 0.55);
   }
 }
 
@@ -85,7 +86,7 @@ export function initPhoto(getApi, getHab) {
 <div class="row"><b>넣기</b><div class="seg">${ADDS.map(([k, t]) => `<button data-add="${k}"${o[k] ? ' class="on"' : ''} aria-pressed="${o[k]}">${t}</button>`).join('')}</div></div>
 <div class="row"><b class="w">따라가기</b><select data-follow aria-label="따라갈 친구"><option value="">안 함</option>${getApi()?.hasTrain?.() ? '<option value="train">🚂 장난감 기차</option>' : ''}${outIn(G.S, getHab()).map(a => `<option value="${a.id}">${a.fav ? '★ ' : ''}${callName(a)}</option>`).join('')}</select></div></div>
 <p class="smsg" role="status">${msg || '끌어서 돌리고, 두 손가락을 벌려 가까이 봐요 · 시간과 날씨는 보기만 바뀌어요'}</p>
-<div class="sbar"><button data-act="fold">${o.fold ? '펼치기' : '접기'}</button><button data-act="home">전체 보기</button><button class="go" data-act="save">저장</button><button data-close>나가기</button></div>`;
+<div class="sbar"><button data-act="fold">${o.fold ? '펼치기' : '접기'}</button><button data-act="home">전체 보기</button><button class="go" data-act="save">저장</button><button data-act="card">구경 그림</button><button data-close>나가기</button></div>`;
     paint();
   }
   function paint() { // the preview: the filter on the 3D canvas, deco over it at the screen's pixels
@@ -107,10 +108,10 @@ export function initPhoto(getApi, getHab) {
   function enter() {
     const api = getApi(); if (!api || on) return;
     if (qrcode === null) return void import('../../vendor/qrcode.js').then(m => m.default, () => false).then(q => { qrcode = q; enter(); qrcode ||= null; }); // offline and never fetched: no tile (asked again next time)
-    on = true; msg = ''; text = encode(G.S, getHab());
+    on = true; msg = ''; text = seeLink(getHab());
     try { const q = qrcode(0, 'L'); q.addData(text); q.make(); code = q; } catch { code = null; } // too long for a QR: no tile
     document.body.classList.add('photo'); api.snap(true); el.hidden = ov.hidden = false; draw();
-    if (!code) { msg = '꾸미기 코드가 길어서 사진에 넣지 못해요'; draw(); }
+    if (!code) { msg = '배치가 많아 구경 QR은 사진에 넣지 못해요'; draw(); }
   }
   function leave() {
     if (!on) return; on = false; VIEW.hour = VIEW.weather = null;
@@ -136,6 +137,14 @@ export function initPhoto(getApi, getHab) {
     } catch { msg = '저장하지 못했어요 · 다시 해 주세요'; }
     busy = false; draw();
   }
+  async function card() { // 69-4: the frame as it is (its filter, no frame or tile) in the 9:16 picture, then out of 사진 모드 to send it
+    const api = getApi(), hab = getHab(); if (!api || busy) return; busy = true;
+    try { await new Promise(r => requestAnimationFrame(() => r()));
+      const c = api.shot(2), x = c.getContext('2d', { willReadFrequently: true });
+      if (FILTERS[o.fx][1]) { const d = x.getImageData(0, 0, c.width, c.height); tint(d.data, FILTERS[o.fx][1]); x.putImageData(d, 0, 0); }
+      const pic = seeCard(c, hab, text, qrcode); busy = false; leave(); seeSend(pic, hab, text);
+    } catch { busy = false; msg = '그림을 만들지 못했어요 · 다시 해 주세요'; draw(); }
+  }
   btn.onclick = enter;
   el.onclick = e => {
     const d = e.target.closest('button')?.dataset; if (!d) return;
@@ -143,6 +152,7 @@ export function initPhoto(getApi, getHab) {
     if (d.act === 'fold') return set('fold', !o.fold);
     if (d.act === 'home') return getApi()?.overview();
     if (d.act === 'save') return save();
+    if (d.act === 'card') return card();
     if (d.add) return set(d.add, !o[d.add]);
     if (d.k === 'fx') return set('fx', d.v);
     if (d.k) return set(d.k, d.v === 'null' ? null : d.k === 'hour' ? +d.v : d.v);

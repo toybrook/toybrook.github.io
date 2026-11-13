@@ -2,11 +2,16 @@
 // QR photo where the browser can: BarcodeDetector), 「불러오기 전으로」 once, the 미리보기 cleared, and 정원 구경하기: the
 // operator's picks in gardens/gardens.json beside the game (same origin, a relative address: no other server is asked).
 // A code holds only where things stand; no animals, hearts, eggs, names or anything about the player.
+// 69-4: what goes out is the 구경 링크 (ui/visit.js: the layout + the friends out there, opened to look at only), its QR and
+// 사진 모드's 구경 그림; a link pasted or read from a QR loads like a code. TG1 codes still load (and the 배치 저장 칸 keep them).
 import * as G from '../game/game.js';
 import { HABITATS, PROPS } from '../game/data.js';
 import { levelOf, LAY_NAMES } from '../game/rules.js';
-import { encode, decode } from '../game/layout.js';
+import { decode } from '../game/layout.js';
 import { ask, toast } from './hud.js';
+import { seeLink, send } from './visit.js';
+import { readSee } from '../game/visit.js';
+import { track } from './stats.js';
 
 const $ = id => document.getElementById(id), el = $('share'), LIST = 'gardens/gardens.json';
 const habName = id => HABITATS.find(h => h.id === id)?.name ?? id;
@@ -32,14 +37,14 @@ function gardenList() {
 <button data-g="${i}"${g.hab === habId ? '' : ' disabled'}>${g.hab === habId ? '불러오기' : `${habName(g.hab)}에서 불러와요`}</button></div>`).join('')}</div>`;
 }
 function draw() {
-  const code = encode(G.S, habId), q = qr(code), ghosts = G.S.ghost?.[habId]?.length || 0, v = $('shText')?.value || '';
-  el.innerHTML = `<div><h2>꾸미기 코드 · ${habName(habId)}</h2>
-<p class="bkp">이 서식지의 소품 자리와 방향·색·크기, 쌓은 것, 칠한 땅, 넓히기 단계만 담겨요. 동물·하트·알·이름은 들어가지 않아요.</p>
+  const url = seeLink(habId), q = qr(url), ghosts = G.S.ghost?.[habId]?.length || 0, v = $('shText')?.value || '';
+  el.innerHTML = `<div><h2>구경 링크 · ${habName(habId)}</h2>
+<p class="bkp">소품 자리와 방향·색·크기, 쌓은 것, 칠한 땅, 넓히기 단계, 나와 있는 친구의 종류·색·장식이 담겨요. 이름·하트·알은 들어가지 않아요.</p>
 <div class="row"><b>배치 저장 칸</b>${LAY_NAMES.map((d, k) => { const L = G.S.lays?.[habId]?.[k]; // 28-5: 3 named layouts, saved as their codes
     return `<div class="lay"><input id="lay${k}" maxlength="8" value="${esc(L?.n ?? d)}" aria-label="${k + 1}번 칸 이름" autocomplete="off"><button data-save="${k}">${L ? '덮어쓰기' : '저장'}</button><button data-lay="${k}"${L ? '' : ' disabled'}>불러오기</button></div>`; }).join('')}</div>
-<div class="row"><b>내 꾸미기 코드</b>${q ? `<img class="shqr" src="${q}" alt="내 꾸미기 코드 QR">` : '<p class="bkp">코드가 길어서 QR은 못 만들어요 · 글자 코드를 보내 주세요</p>'}
-<textarea id="shMine" rows="2" readonly spellcheck="false">${code}</textarea><div class="seg"><button data-act="copy">코드 복사</button></div></div>
-<div class="row"><b>코드 불러오기</b><textarea id="shText" rows="3" placeholder="받은 꾸미기 코드(TG1.…)를 붙여 넣어요" spellcheck="false" autocomplete="off"></textarea>
+<div class="row"><b>구경 링크</b><p class="bkp">받은 사람은 이 서식지를 둘러보기만 해요 · 그 사람의 저장은 바뀌지 않아요</p>${q ? `<img class="shqr" src="${q}" alt="구경 링크 QR">` : '<p class="bkp">배치가 많아 QR은 못 만들어요 · 링크를 보내 주세요</p>'}
+<textarea id="shMine" rows="3" readonly spellcheck="false">${url}</textarea><div class="seg"><button data-act="send">링크 보내기</button><button data-act="copy">복사</button><button data-act="card">구경 그림</button></div></div>
+<div class="row"><b>불러오기</b><textarea id="shText" rows="3" placeholder="받은 구경 링크나 꾸미기 코드(TG1.…)를 붙여 넣어요" spellcheck="false" autocomplete="off"></textarea>
 <div class="seg"><button data-act="load">불러오기</button>${'BarcodeDetector' in window ? '<button data-act="pick">QR 사진 고르기</button>' : ''}</div></div>
 <p class="bkmsg" role="status"${msg ? '' : ' hidden'}>${msg}</p>
 ${G.S.layoutUndo?.hab === habId ? '<div class="row"><b>되돌리기</b><div class="seg"><button data-act="undo">불러오기 전으로 되돌리기</button></div></div>' : ''}
@@ -83,7 +88,7 @@ function summary(n, d) {
   return t.join(' · ');
 }
 async function load(text, title) {
-  const d = decode(text); if (d.error) return say(d.error);
+  const m = /#see=([\w.-]+)/.exec(text), d = m ? readSee(m[1])?.d ?? { error: '구경 링크가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요' } : decode(text); if (d.error) return say(d.error); // 69-4: a link loads its layout
   if (d.hab !== habId) return say(`${habName(d.hab)} 꾸미기 코드예요 · ${G.S.unlocked.includes(d.hab) ? `${habName(d.hab)}에서 불러와 주세요` : '그 서식지를 연 뒤에 불러올 수 있어요'}`);
   if (!await ask(`지금 ${habName(habId)} 배치를 ${title ? `「${title}」` : '이 코드'}로 바꿔요.\n가진 소품만 놓이고, 없는 소품은 반투명 미리보기로 보여요.\n지금 배치는 한 번 남겨 둘게요.`, '불러오기')) return;
   before?.(); const n = G.importLayout(habId, d, hab.decor.fitAll, hab.decor.cellOk); if (!n) return say('불러오지 못했어요');
@@ -93,7 +98,9 @@ async function load(text, title) {
 el.onclick = async e => {
   const b = e.target.closest('button'), d = b?.dataset; if (!d || b.disabled) return;
   if (d.close != null) { el.hidden = true; return; }
-  if (d.act === 'copy') return say(await copy($('shMine').value) ? '꾸미기 코드를 복사했어요 · 메시지나 의견 양식에 붙여 넣어 보내요' : '복사가 안 돼요 · 위 칸의 코드를 길게 눌러 복사해 주세요');
+  if (d.act === 'copy') return say(await copy($('shMine').value) ? '구경 링크를 복사했어요 · 메신저에 붙여 넣어 보내요' : '복사가 안 돼요 · 위 칸의 링크를 길게 눌러 복사해 주세요');
+  if (d.act === 'send') { track('see_sent', undefined, 'see_sent#'); return send($('shMine').value, `${habName(habId)} 구경 오세요 · 토이브룩`); } // 69-4
+  if (d.act === 'card') { el.hidden = true; (await import('./decor.js')).closeDecor(); $('snapBtn').click(); return; } // 69-4: framed in 사진 모드, then 구경 그림
   if (d.act === 'load') return load($('shText').value);
   if (d.act === 'pick') return $('shFile').click();
   if (d.act === 'gardens') return loadGardens();

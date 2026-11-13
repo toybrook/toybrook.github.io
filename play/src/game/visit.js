@@ -4,8 +4,9 @@
 // a line from the lists below); its link (#postcard=TP1.<code>) gives the sender a mail with ♥visit.card (cardDaily a day).
 // No free text anywhere: the garden name is two words from GARDEN. Codes: base64url of a JSON array + an FNV sum (a cut or
 // edited link is dropped quietly, not a cheat guard). Nothing is sent anywhere: the code sits after # (not to the server).
-import { BALANCE as B, ACCESSORIES, HABITATS } from './data.js';
-import { SP, variantOf, colorsOf, kindName } from './rules.js';
+import { BALANCE as B, ACCESSORIES, HABITATS, SPECIES, PROPS, FOSSIL, paletteOf } from './data.js';
+import { SP, HAB, NAT, variantOf, variantsOf, colorsOf, kindName, outIn, newGame, xpAt } from './rules.js';
+import { encode, decode, TAG, MAX, b64, unb64 } from './layout.js';
 import { dayOf } from './clock.js';
 import { when } from './story.js';
 
@@ -103,3 +104,44 @@ export function claimCard(S, lid, now) {
   c.got = now; S.hearts += hearts; return { title: `${gardenName(c.g)}에서 온 엽서 · ${kindName(c)}`, hearts, extra: 0 };
 }
 export const guestName = g => `${gardenName(g.g)}의 ${kindName(g)}`;
+
+// 69-4 서식지 구경 링크 (#see=TH1.<base64url>): one habitat as it stands, to look at only (ui/visit.js; nothing of it is kept).
+// Bytes: FNV sum 4 · 정원사 레벨 1 (its 명성 look) · garden name 2 · friends n 1 · n × (species 1, +128 a baby · variant 1 ·
+// colour 1 (+1, 0 none) · accessory 1 (+1, 0 none)) · then the 꾸미기 코드's bytes (layout.js). No names, hearts or anything else.
+// ponytail: indexes into SPECIES, variantsOf, colorsOf and ACCESSORIES (append only, as layout.js KINDS); a reorder there needs TH2
+const SEE = 'TH1.', ACC = Object.keys(ACCESSORIES), FR = 24;
+const sum4 = bytes => { let h = 0x811c9dc5; for (const b of bytes) h = Math.imul(h ^ b, 0x01000193); h >>>= 0; return [h >>> 24, h >>> 16 & 255, h >>> 8 & 255, h & 255]; };
+export function seeCode(S, habId) { // S.visit.garden set first (ui/visit.js)
+  const fr = outIn(S, habId).slice(0, FR).map(a => { const sp = SPECIES.findIndex(s => s.id === a.species);
+    return [sp | (a.stage === 'baby' ? 128 : 0), variantsOf(SP[a.species]).findIndex(v => v.id === a.variant), colorsOf(a.species, a.variant).findIndex(c => c.id === a.color) + 1, ACC.indexOf(a.acc) + 1]; });
+  const [ga, gb] = S.visit.garden ?? [0, 0], body = [Math.min(255, S.lv || 1), ga, gb, fr.length, ...fr.flat(), ...unb64(encode(S, habId).slice(TAG.length))];
+  return SEE + b64([...sum4(body), ...body]);
+}
+// -> { hab, lv, g, friends, d (a decoded 꾸미기 코드) } or null: cut, edited, too long, another version, or a habitat (or a friend's) not out here
+export function readSee(text) {
+  const s = String(text ?? '').trim(); if (!s.startsWith(SEE) || s.length > MAX || !/^[A-Za-z0-9_-]+$/.test(s.slice(SEE.length))) return null;
+  let b; try { b = [...unb64(s.slice(SEE.length))]; } catch { return null; }
+  const body = b.slice(4), [lv, ga, gb, n] = body; if (body.length < 4 || sum4(body).some((v, i) => v !== b[i])) return null;
+  if (!(lv >= 1) || !okG(ga, gb) || n > FR || body.length < 4 + 4 * n) return null;
+  const friends = [];
+  for (let i = 4; i < 4 + 4 * n; i += 4) {
+    const [s0, v, c, a] = body.slice(i, i + 4), sp = SPECIES[s0 & 127], vr = sp && variantsOf(sp)[v], cs = vr ? colorsOf(sp.id, vr.id) : [];
+    if (!vr || !HAB[sp.habitat]?.ready || c > cs.length || a > ACC.length) return null;
+    friends.push({ species: sp.id, variant: vr.id, color: c ? cs[c - 1].id : null, acc: a ? ACC[a - 1] : null, stage: s0 & 128 ? 'baby' : 'adult' });
+  }
+  const d = decode(TAG + b64(body.slice(4 + 4 * n))); if (d.error || !HAB[d.hab]?.ready) return null;
+  if (!HAB.dino?.ready) d.items = d.items.filter(it => !FOSSIL.props.includes(it.prop)); // the jungle held: its fossils too (check-hold)
+  return { hab: d.hab, lv, g: [ga, gb], friends, d };
+}
+// the save the view runs on (never stored): its friends out in that habitat, one of each prop the code places (importLayout
+// puts them there once the board is built), every colour, its 넓히기 step and level; quiet (no tips, cards or the first egg)
+export function seeSave(v, now) {
+  const S = newGame(now), ready = HABITATS.filter(h => h.ready).map(h => h.id);
+  Object.assign(S, { lv: v.lv, xp: xpAt(v.lv), unlocked: ready, nests: {}, expand: { ...S.expand, [v.hab]: v.d.step }, stats: { ...S.stats, hatch: 1 },
+    flags: { betaIntro: true, tipsOff: true, nestTapped: true, homeHintSeen: true, appHintSeen: true, lastHab: v.hab, ['train:' + v.hab]: true },
+    looks: Object.fromEntries(PROPS.filter(paletteOf).map(P => [P.id, paletteOf(P).map((_, i) => i)])),
+    animals: v.friends.map((f, i) => ({ ...f, id: i + 1, egg: null, parents: [null, null], born: now, g: f.stage === 'baby' ? 0.5 : 1, gAt: now, fed: 0, stored: false, pending: false, heartAt: 0, hab: v.hab })),
+    visit: { ...S.visit, garden: v.g } });
+  S.props = v.d.items.filter(it => !NAT[it.prop]).map(it => ({ uid: S.nextId++, prop: it.prop, hab: v.hab, placed: false, x: 0, z: 0, rot: 0 }));
+  return S;
+}
