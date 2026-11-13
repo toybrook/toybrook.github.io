@@ -6,12 +6,16 @@
 // A guest that goes unhelped only says 「다음에 또 올게」: nothing is taken away. Not a friend: never in S.animals, the
 // friend list, slots or storage. Pure rules (no DOM, no three.js), as rules.js: `now` and `rng` come in, events go out.
 // S.guests: { v, t: last tick, next: next arrival, warm: banked gauge share, day, eggs: guest eggs today, tut: tutorial
-//   step (-1 done), tt: when it may start, hello: 1 = an old save's first guest card is due, list: [guest], seen: { k: [만족, 대만족] } }
+//   step (-1 done), tt: when it may start, hello: 1 = an old save's first guest card is due, list: [guest], seen: { k: [만족, 대만족] },
+//   n: guests come today, end: 1 = today's 하루 마무리 told, tmr: tomorrow's first guest (k | null), big: { k: { s: 큰 소원 steps
+//   done, d: the day of the last } } (66-2: a 단골 is seen[k][1] >= GUEST.regular; s >= GUEST.big: settled, an animal with wd: k) }
 // guest: { id, k, hab, at, on: open-app ms left, off: shut-app ms left, w: [wish], b: 덤 | null, hit: wishes met once (bits),
-//   x, z (null till the world places it), from: 'stream' | 'path', pair?: shared id, tut?: step, ok?: when every wish held }
+//   x, z (null till the world places it), from: 'stream' | 'path', pair?: shared id, tut?: step, ok?: when every wish held,
+//   big?: the 큰 소원 step it came for }
 import { GUEST as G, GUESTS, WISH, CLASH, GROUND, TAGS, GROUNDS, GUEST_PROPS, PROP_TAGS, TUTORIAL } from './guests-data.js';
 import { BALANCE as B, GIFT, PROPS } from './data.js';
-import { HAB, EGG, PROP, layEgg, needFor, outIn } from './rules.js';
+import { HAB, EGG, PROP, layEgg, needFor, outIn, colorsOf, fits } from './rules.js';
+import { peOf } from './pals.js';
 import { nightNo } from './sky.js';
 import { dayOf } from './clock.js';
 
@@ -24,18 +28,22 @@ const cap = S => (S.lv || 1) >= G.max3 ? 3 : G.max;
 
 // a new save (nothing hatched yet) gets the tutorial; an old one a short card and its first guest at once
 export const blank = S => { const fresh = !S?.stats?.hatch && !S?.animals?.length;
-  return { v: G.v, t: 0, next: 0, warm: 0, day: '', eggs: 0, tut: fresh ? 0 : -1, tt: 0, hello: fresh ? 0 : 1, list: [], seen: {} }; };
+  return { v: G.v, t: 0, next: 0, warm: 0, day: '', eggs: 0, tut: fresh ? 0 : -1, tt: 0, hello: fresh ? 0 : 1, list: [], seen: {}, n: 0, end: 0, tmr: null, big: {} }; };
 export function tidyGuests(S) {
   const V = isObj(S.guests) ? S.guests : null; if (!V) { S.guests = blank(S); return; }
   const num = (v, d = 0) => Number.isFinite(v) ? v : d, pos = v => Number.isFinite(v) ? v : null;
   const guest = g => isObj(g) && BY[g.k] && Number.isInteger(g.id) && HAB[g.hab] && Array.isArray(g.w) && g.w.every(w => WISH[w]) && {
     id: g.id, k: g.k, hab: g.hab, at: num(g.at), on: num(g.on), off: num(g.off), w: [...g.w], b: WISH[g.b] ? g.b : null, hit: Number.isInteger(g.hit) ? g.hit : 0,
     x: pos(g.x), z: pos(g.z), from: g.from === 'path' ? 'path' : 'stream', ...(Number.isInteger(g.pair) && { pair: g.pair }),
-    ...(Number.isInteger(g.tut) && TUTORIAL[g.tut] && { tut: g.tut }), ...(Number.isFinite(g.ok) && { ok: g.ok }) };
+    ...(Number.isInteger(g.tut) && TUTORIAL[g.tut] && { tut: g.tut }), ...(Number.isFinite(g.ok) && { ok: g.ok }),
+    ...(Number.isInteger(g.big) && g.big >= 0 && g.big < G.big && { big: g.big }) };
+  const int = v => Number.isInteger(v) && v >= 0 ? v : 0, bigs = isObj(V.big) ? V.big : {};
   S.guests = { v: G.v, t: num(V.t), next: num(V.next), warm: Math.min(1, Math.max(0, num(V.warm))), day: typeof V.day === 'string' ? V.day : '',
     eggs: Math.max(0, Math.floor(num(V.eggs))), tut: Number.isInteger(V.tut) && V.tut >= -1 && V.tut < TUTORIAL.length ? V.tut : -1, tt: num(V.tt),
     hello: V.hello === 1 ? 1 : 0, list: (Array.isArray(V.list) ? V.list : []).map(guest).filter(Boolean),
-    seen: Object.fromEntries(Object.entries(isObj(V.seen) ? V.seen : {}).filter(([k, v]) => BY[k] && Array.isArray(v) && v.length === 2 && v.every(n => Number.isInteger(n) && n >= 0))) };
+    seen: Object.fromEntries(Object.entries(isObj(V.seen) ? V.seen : {}).filter(([k, v]) => BY[k] && Array.isArray(v) && v.length === 2 && v.every(n => Number.isInteger(n) && n >= 0))),
+    n: int(V.n), end: V.end === 1 ? 1 : 0, tmr: BY[V.tmr] ? V.tmr : null, // 69-3 (a 66-1 save has none: 0, 0, null)
+    big: Object.fromEntries(Object.entries(bigs).filter(([k, b]) => BY[k] && isObj(b)).map(([k, b]) => [k, { s: Math.min(G.big, int(b.s)), d: typeof b.d === 'string' ? b.d : '' }])) }; // 66-2
 }
 // debug skip (rules.js skip): every guest time moves back with the rest
 export const skipGuests = (S, ms) => { const Q = S.guests; if (!Q) return; Q.t -= ms; Q.next -= ms; Q.tt -= ms; for (const g of Q.list) { g.at -= ms; if (g.ok) g.ok -= ms; } };
@@ -57,6 +65,7 @@ function doable(S, hab, w) {
     case 'alone': return true;
     case 'sp': return out().some(a => a.species === W.v);
     case 'baby': return out().some(a => a.stage === 'baby');
+    case 'theme': return W.v.every(t => tagLv(hab, t) <= lv); // 69-3
     default: return false;
   }
 }
@@ -76,6 +85,7 @@ export function judge(g, world, env = {}) {
       case 'sp': return pals.some(p => p.species === W.v);
       case 'baby': return pals.some(p => p.baby);
       case 'env': return !!env[W.v];
+      case 'theme': return W.v.every(t => tags.has(t)); // 69-3: the whole scene at this spot
       default: return false;
     } };
   const met = g.w.map(has);
@@ -106,10 +116,25 @@ function leaveEgg(S, g, now, rng) {
 // 대만족's chance of a guest prop of the habitat not owned yet (all owned, or not in PROPS yet: hearts)
 function gift(S, g, rng) {
   if (rng() >= G.gift[BY[g.k].stay]) return null;
-  const own = new Set(S.props.map(p => p.prop)), P = GUEST_PROPS.filter(p => p.hab === g.hab && PROP[p.id] && !own.has(p.id));
+  const own = new Set(S.props.map(p => p.prop)), P = GUEST_PROPS.filter(p => p.hab === g.hab && !p.memo && PROP[p.id] && !own.has(p.id));
   if (!P.length) { S.hearts += G.giftHearts; return { hearts: G.giftHearts }; }
   const p = P[Math.floor(rng() * P.length)]; S.props.push({ uid: S.nextId++, prop: p.id, hab: g.hab, placed: false, x: 0, z: 0, rot: 0 });
   return { prop: p.id };
+}
+// 69-3 a 테마 소원 met: its 기념 소품, once (owned already: hearts, as a gift)
+function memo(S, g) {
+  const W = g.w.map(w => WISH[w]).find(W => W.k === 'theme'); if (!W) return null;
+  if (S.props.some(p => p.prop === W.memo) || !PROP[W.memo]) { S.hearts += G.giftHearts; return { hearts: G.giftHearts }; }
+  S.props.push({ uid: S.nextId++, prop: W.memo, hab: g.hab, placed: false, x: 0, z: 0, rot: 0 }); return { prop: W.memo };
+}
+// 66-2 정착: the guest stays, a friend as it came (its 보따리 or 모자; tier 떠돌이, called by its guest name), out if it fits, else
+// in storage. Not hatched: no codex cell, never sent back (rules.js canSendBack)
+export const isRegular = (S, k) => (S.guests?.seen[k]?.[1] ?? 0) >= G.regular;
+export const settled = (S, k) => (S.guests?.big[k]?.s ?? 0) >= G.big;
+function settle(S, g, now) {
+  const R = BY[g.k], id = S.nextId++, a = { id, species: R.sp, variant: 'solid', color: colorsOf(R.sp, 'solid')[0]?.id ?? null, acc: R.mark === 'hat' ? 'strawhat' : 'bandana',
+    egg: null, parents: null, stage: 'adult', born: now, g: 1, gAt: now, fed: 0, adultAt: now, stored: false, heartAt: 0, wd: R.k };
+  a.pe = peOf(id, now); a.stored = !fits(S, a); S.animals.push(a); return a;
 }
 // what the UI shows before (보상을 미리 보여 주고 고르게): hearts for 만족 and 대만족, whose egg, the gift chance
 export const preview = (S, g) => { const R = BY[g.k], h = G.hearts[R.stay];
@@ -133,8 +158,11 @@ export function satisfy(S, id, great, now, rng = Math.random) {
   S.hearts += hearts; S.xp += great ? G.xp.great : G.xp.ok;
   const egg = leaveEgg(S, g, now, rng), slot = warm(S, TUTORIAL[g.tut]?.cut ?? (great ? G.cut.great : G.cut.ok), now), got = great ? gift(S, g, rng) : null; // the egg first:
   useBank(S, now); // in a free slot it is usually the one with the most time left, so it starts with the cut (「게이지가 이미 30%」)
-  (Q.seen[g.k] ??= [0, 0])[great ? 1 : 0]++;
-  const ev = [{ type: 'guest', what: great ? 'great' : 'happy', id, k: g.k, hearts, slot, egg, gift: got }];
+  const was = isRegular(S, g.k); (Q.seen[g.k] ??= [0, 0])[great ? 1 : 0]++;
+  const ev = [{ type: 'guest', what: great ? 'great' : 'happy', id, k: g.k, hearts, slot, egg, gift: got, memo: memo(S, g) }];
+  if (!was && isRegular(S, g.k)) ev.push({ type: 'guest', what: 'regular', k: g.k }); // 66-2 단골
+  if (g.big != null) { const P = Q.big[g.k] = { s: g.big + 1, d: dayOf(now) }; ev.push({ type: 'guest', what: 'step', k: g.k, s: P.s, n: G.big });
+    if (P.s >= G.big) { const a = settle(S, g, now); ev.push({ type: 'guest', what: 'settle', k: g.k, id: a.id, stored: a.stored }); } }
   drop(S, g, ev, now); return ev;
 }
 
@@ -145,17 +173,32 @@ function draw(S, R, rng) {
   const b = shuffle(R.bonus.filter(x => ok(x) && !w.includes(x) && !w.some(y => clashOf(y).includes(x))), rng)[0] ?? null;
   return { w: R.when ? [R.when, ...w] : w, b };
 }
-function come(S, R, now, rng, o, ev) {
-  const g = { id: S.nextId++, k: R.k, hab: R.hab, at: now, on: o.tut != null ? G.tutStay : G.stay[R.stay].on, off: G.stay[R.stay].off,
-    w: o.w, b: o.b ?? null, hit: 0, x: null, z: null, from: o.from ?? (rng() < 0.5 ? 'stream' : 'path') };
-  if (o.pair != null) g.pair = o.pair; if (o.tut != null) g.tut = o.tut;
-  S.guests.list.push(g); ev.push({ type: 'guest', what: 'arrive', id: g.id, k: R.k, hab: R.hab, from: g.from, pair: g.pair ?? null }); return g;
+// 66-2 큰 소원, step s: 0 two of its wishes; 1 three of its wishes and 덤s that don't clash; 2 its habitat's 테마 소원 and one
+// more (the 테마 not open yet at this Lv: null, it comes as any guest). No 덤: the step met is a 대만족
+function bigDraw(S, R, s, rng) {
+  const ok = w => doable(S, R.hab, w), th = 'theme:' + R.hab, own = shuffle(R.wish.filter(w => ok(w) && WISH[w].k !== 'theme'), rng), w = [];
+  if (s === 2) { if (!ok(th)) return null; w.push(th, ...own.filter(x => !WISH[th].v.includes(WISH[x].v)).slice(0, 1)); }
+  else for (const x of s ? [...own, ...shuffle(R.bonus.filter(ok), rng)] : own) if (w.length < 2 + s && !w.includes(x) && !w.some(y => clashOf(y).includes(x))) w.push(x);
+  return w.length ? { w: R.when ? [R.when, ...w] : w, b: null, big: s } : null;
 }
-// the roster of a habitat now: open by Lv, `when` holding, not here already (a `when` one first: weight 4)
+const due = (S, R, day) => isRegular(S, R.k) && !settled(S, R.k) && S.guests.big[R.k]?.d !== day;
+const pick = (L, wt, rng) => { let sum = 0; for (const R of L) sum += wt(R); for (let r = rng() * sum, i = 0; i < L.length; i++) if ((r -= wt(L[i])) < 0) return L[i]; return null; };
+function come(S, R, now, rng, o, ev) {
+  const st = o.big != null ? 'long' : R.stay, g = { id: S.nextId++, k: R.k, hab: R.hab, at: now, on: o.tut != null ? G.tutStay : G.stay[st].on, off: G.stay[st].off,
+    w: o.w, b: o.b ?? null, hit: 0, x: null, z: null, from: o.from ?? (rng() < 0.5 ? 'stream' : 'path') };
+  if (o.pair != null) g.pair = o.pair; if (o.tut != null) g.tut = o.tut; if (o.big != null) g.big = o.big;
+  if (o.tut == null) S.guests.n++; // 69-3
+  S.guests.list.push(g); ev.push({ type: 'guest', what: 'arrive', id: g.id, k: R.k, hab: R.hab, from: g.from, pair: g.pair ?? null, big: g.big ?? null }); return g;
+}
+// the roster of a habitat now: open by Lv, `when` holding, not here already, not settled (66-2), and today's GUEST.day not all
+// come yet unless it is a `when` one (69-3). Yesterday's shadow (tmr) first; else by weight: `when` 4, a 단골 whose step is due bigW
 function arrive(S, hab, now, rng, env, ev) {
-  const Q = S.guests, lv = S.lv || 1, ready = R => R.hab === hab && R.lv <= lv && (!R.when || !!env[WISH[R.when].v]) && !Q.list.some(g => g.k === R.k);
+  const Q = S.guests, lv = S.lv || 1, day = dayOf(now), ready = R => R.hab === hab && R.lv <= lv && (!R.when || !!env[WISH[R.when].v]) && !Q.list.some(g => g.k === R.k)
+    && !settled(S, R.k) && (Q.n < G.day || !!R.when);
   const pool = GUESTS.filter(ready), room = cap(S) - Q.list.length;
-  if (room >= 2 && lv >= G.pairLv && pool.length >= 2 && rng() < G.pair) { // 부딪치는 소원: two at one spot, one side of a CLASH each
+  const one = R => { const d = (due(S, R, day) && bigDraw(S, R, Q.big[R.k]?.s ?? 0, rng)) || draw(S, R, rng); if (!d) return false; come(S, R, now, rng, d, ev); return true; };
+  const T = pool.find(R => R.k === Q.tmr); if (T) { Q.tmr = null; if (one(T)) return true; }
+  if (room >= 2 && Q.n + 2 <= G.day && lv >= G.pairLv && pool.length >= 2 && rng() < G.pair) { // 부딪치는 소원: two at one spot, one side of a CLASH each
     const c = shuffle(CLASH.filter(c => c.every(w => doable(S, hab, w))), rng)[0];
     if (c) {
       const [A, Bg] = shuffle(pool.filter(R => !R.when), rng), from = rng() < 0.5 ? 'stream' : 'path';
@@ -166,9 +209,12 @@ function arrive(S, hab, now, rng, env, ev) {
       }
     }
   }
-  let sum = 0; const wt = R => R.when ? 4 : 1; for (const R of pool) sum += wt(R);
-  for (let r = rng() * sum, i = 0; i < pool.length; i++) if ((r -= wt(pool[i])) < 0) { const d = draw(S, pool[i], rng); if (!d) return false; come(S, pool[i], now, rng, d, ev); return true; }
-  return false;
+  const R = pick(pool, R => R.when ? 4 : due(S, R, day) ? G.bigW : 1, rng); return !!R && one(R);
+}
+// 69-3 tomorrow's first guest (its shadow at 하루 마무리): a 단골 with a step left first, else any open now (no `when`: tomorrow's sky)
+function tomorrow(S, rng) {
+  const L = GUESTS.filter(R => !R.when && R.lv <= (S.lv || 1) && S.unlocked.includes(R.hab) && !settled(S, R.k)), reg = L.filter(R => isRegular(S, R.k));
+  return pick(reg.length ? reg : L, () => 1, rng)?.k ?? null;
 }
 function tutStep(S, now, ev) {
   const Q = S.guests, st = TUTORIAL[Q.tut];
@@ -180,11 +226,12 @@ function tutStep(S, now, ev) {
 // Each tick of the open app (game.js, with advance). env: { hab: the habitat on screen, night, rain, snow, sky };
 // world: the 3D adapter (null when no habitat is on screen: nothing is judged then). Returns events { type: 'guest', what }:
 // arrive, wish (n new wishes met: their hearts), happy / great (rewards), bye (「다음에 또 올게」), gone (left while shut),
-// free (the tutorial's prop), hello (an old save's card), tutDone (night: 「오늘 밤 손님」 k or null).
+// free (the tutorial's prop), hello (an old save's card), tutDone (night: 「오늘 밤 손님」 k or null); 66-2 regular (k is a 단골
+// now), step (s of n 큰 소원 steps done), settle (id: the new friend); 69-3 dayEnd (the day's last guest gone; k: tomorrow's).
 export function guestTick(S, now, rng = Math.random, env = {}, world = null) {
   const Q = S.guests ??= blank(S), ev = [], dt = Q.t ? Math.max(0, now - Q.t) : 0, shut = dt > G.gap, hab = env.hab ?? 'meadow';
   Q.t = now;
-  const day = dayOf(now); if (Q.day !== day) { Q.day = day; Q.eggs = 0; }
+  const day = dayOf(now); if (Q.day !== day) { Q.day = day; Q.eggs = 0; Q.n = 0; Q.end = 0; }
   for (const g of [...Q.list]) { if (shut) g.off -= dt; else g.on -= dt; if (Q.list.includes(g) && (g.on <= 0 || g.off <= 0)) leave(S, g, shut ? 'gone' : 'bye', ev, now); }
   useBank(S, now);
   if (Q.tut >= 0) { // 새 첫 5분: one step at a time, after the first hatch
@@ -194,6 +241,7 @@ export function guestTick(S, now, rng = Math.random, env = {}, world = null) {
     Q.next = Math.max(Q.next, now); // a long time shut banks one guest at most (the ones still in their off stay are there too)
     while (Q.list.length < cap(S) && now >= Q.next) { if (!arrive(S, hab, now, rng, env, ev)) { Q.next = now + G.arrive[0]; break; } Q.next += span(G.arrive, rng); }
     if (Q.list.length >= cap(S)) Q.next = Math.max(Q.next, now + G.arrive[0]); // full: the next one a while after someone goes
+    if (Q.n >= G.day && !Q.end && !Q.list.length) { Q.end = 1; Q.tmr = tomorrow(S, rng); ev.push({ type: 'guest', what: 'dayEnd', k: Q.tmr }); } // 69-3
   }
   if (!world) return ev;
   for (const g of [...Q.list]) {
@@ -206,7 +254,7 @@ export function guestTick(S, now, rng = Math.random, env = {}, world = null) {
     if (fresh) { const n = r.met.filter((ok, i) => fresh & 1 << i).length; g.hit |= fresh; S.hearts += n * G.wishHeart; ev.push({ type: 'guest', what: 'wish', id: g.id, n, hearts: n * G.wishHeart }); }
     if (!r.all) { delete g.ok; continue; }
     g.ok ??= now;
-    if (r.bonus || !g.b || now - g.ok >= G.grace) ev.push(...satisfy(S, g.id, r.bonus, now, rng));
+    if (r.bonus || !g.b || now - g.ok >= G.grace) ev.push(...satisfy(S, g.id, r.bonus || g.big != null, now, rng)); // 66-2: a 큰 소원 step met: 대만족
   }
   return ev;
 }

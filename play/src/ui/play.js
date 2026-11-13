@@ -2,7 +2,7 @@
 // game toasts. Eggs, hatching and the reveal card live in the nest menu (nest.js).
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
-import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf } from '../game/rules.js';
+import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage } from '../game/rules.js';
 import { PROPS, HABITATS } from '../game/data.js';
 import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
@@ -16,14 +16,14 @@ import { pickStroll } from './stroll.js';
 import { openFriends, leaveFriends } from './friends.js';
 import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep, tabName } from './decor.js';
 import { openCabinet } from './cabinet.js';
-import { figureThumb } from './thumbs.js';
+import { figureThumb, silhouetteThumb } from './thumbs.js';
 import { guestName } from '../game/visit.js';
 import { PE } from '../game/pals.js';
 import { sfx } from './sound.js';
 import { homeHintDue, appHintDue } from '../game/backup.js';
 import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
-import { rosterOf } from '../game/guests.js'; // 66-1 떠돌이 손님
-import { WISH } from '../game/guests-data.js';
+import { rosterOf, isRegular } from '../game/guests.js'; // 66-1 떠돌이 손님
+import { WISH, GUEST } from '../game/guests-data.js';
 import { PREFS, calm } from '../config.js';
 
 const $ = id => document.getElementById(id);
@@ -112,7 +112,7 @@ export function initPlay(nav) {
       if (out.length && !homeT && home.hidden && homeHintDue(DEV, G.S.flags)) { quiet = Date.now(); homeT = setTimeout(homeCard, 800); }
       if (out.length && !appT && appHintDue(DEV, G.S.flags)) { appQuiet = Date.now(); appT = setTimeout(appBand, 800); }
     }
-    hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId]); hab?.sync(G.withGuests()); // 16-1: and the guests; inbox 42 B: the props first, so no one comes out inside one
+    hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], growStage(G.S.lv)); hab?.sync(G.withGuests()); // 16-1: and the guests; inbox 42 B: the props first, so no one comes out inside one
     hab?.setPals(G.S.flags.palOff ? null : new Map(G.S.pals.list.flatMap(p => [[p.a, p.b], [p.b, p.a]]))); // 17-1 성격·단짝 (walk.js)
   }
 
@@ -150,11 +150,12 @@ export function initPlay(nav) {
 
   // what the game did (every tick, every action, and the catch-up at start)
   // 66-1 떠돌이 손님: its bubble (name, each wish with ✓ while it holds there, time left, what it leaves: shown before)
-  const wishText = w => { const W = WISH[w] || {}; return `${W.icon ?? ''} ${W.riddle ? `「${W.riddle}」` : W.k === 'pals' ? `친구 ${W.n}마리 곁` : w}`; };
+  const wishText = w => { const W = WISH[w] || {}; return `${W.icon ?? ''} ${W.riddle ? `「${W.riddle}」` : W.k === 'pals' ? `친구 ${W.n}마리 곁` : W.k === 'theme' ? `「${W.name}」 ${W.v.map(t => WISH[t].icon + t).join(' ')} 한자리에` : w}`; }; // 69-3 테마 소원
   function guestHtml(r, say = '') {
     const g = G.guestOf(r.wg); if (!g) return say || '';
     const R = rosterOf(g), J = G.guestMet(g), P = G.guestPreview(g), egg = P.egg && HAB[P.egg]?.name;
-    return `${say ? say + ' ' : ''}${R.name}<small>떠돌이 손님 · ${Math.max(1, Math.ceil(g.on / 60e3))}분 더 머물러요</small><ul class="gw">${
+    return `${say ? say + ' ' : ''}${R.name}<small>${isRegular(G.S, g.k) ? '단골 ' : '떠돌이 '}손님 · ${Math.max(1, Math.ceil(g.on / 60e3))}분 더 머물러요</small>${ // 66-2 단골, its 큰 소원 step
+      g.big != null ? `<small class="big">큰 소원 ${'●'.repeat(g.big)}<b>●</b>${'○'.repeat(GUEST.big - g.big - 1)} · 다 들어주면 여기 살아요</small>` : ''}<ul class="gw">${
       g.w.map((w, i) => `<li${J?.met[i] ? ' class="ok"' : ''}>${J?.met[i] ? '✓' : '·'} ${wishText(w)}</li>`).join('')}${
       g.b ? `<li class="bn${J?.bonus ? ' ok' : ''}">${J?.bonus ? '✓' : '+'} 덤 ${wishText(g.b)}</li>` : ''}</ul><small>만족 ♥${P.hearts}${P.great ? ` · 대만족 ♥${P.great}` : ''}${egg ? ` · ${egg} 알` : ''}${P.gift ? ` · 선물 ${Math.round(P.gift * 100)}%` : ''}</small>`;
   }
@@ -187,17 +188,33 @@ export function initPlay(nav) {
       if (e.egg?.slot != null) x.push('알을 부화 칸에 넣었어요'); else if (e.egg?.nest) x.push(`${HAB[e.egg.hab]?.name ?? ''} 둥지에 알을 두고 갔어요`); else if (e.egg?.hearts) x.push(`알 대신 ♥+${e.egg.hearts}`);
       if (e.slot != null && e.slot >= 0) x.push('부화가 빨라졌어요');
       if (e.gift?.prop) x.push(`선물 「${PROPS.find(P => P.id === e.gift.prop)?.name ?? ''}」 · 꾸미기 › ${tabName(e.gift.prop)}`); else if (e.gift?.hearts) x.push(`선물 ♥+${e.gift.hearts}`);
+      if (e.memo?.prop) x.push(`기념 소품 「${PROPS.find(P => P.id === e.memo.prop)?.name ?? ''}」 · 꾸미기 › ${tabName(e.memo.prop)}`); else if (e.memo?.hearts) x.push(`기념 ♥+${e.memo.hearts}`); // 69-3
       toast(`${e.what === 'great' ? '대만족! ' : ''}${nm}${josa(nm, '이', '가')} 기뻐해요 · ♥+${e.hearts}${x.length ? ' · ' + x.join(' · ') : ''}`, 3600, true);
-      fly(p, e.hearts + (e.egg?.hearts || 0) + (e.gift?.hearts || 0)); if (e.what === 'great') sfx('grown');
+      fly(p, e.hearts + (e.egg?.hearts || 0) + (e.gift?.hearts || 0) + (e.memo?.hearts || 0)); if (e.what === 'great') sfx('grown');
       if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; }
     }
     if (e.what === 'bye' && hab) { toast(`${nm}: 「다음에 또 올게」`, 2400, true); if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; } }
     if (e.what === 'free') { const P = PROPS.find(p => p.id === e.prop); G.flag('ui:decorBtn'); decorBtn.classList.add('newly'); setTimeout(() => decorBtn.classList.remove('newly'), 4200);
       toast(`「${P?.name ?? ''}」${josa(P?.name ?? '', '을', '를')} 받았어요 · 꾸미기 › ${tabName(e.prop)}에서 꺼내 손님 곁에 놓아 주세요`, 4200, true); }
+    // 66-2 단골 · 큰 소원 · 정착 (after the 기뻐해요 toast: the next one waits for it)
+    const later = (ms, f) => setTimeout(f, ms);
+    if (e.what === 'arrive' && here && e.big != null) later(3300, () => toast(`${nm}${josa(nm, '이', '가')} 큰 소원을 들고 왔어요 (${e.big + 1}/${GUEST.big}) · 눌러서 보세요`, 3600, true));
+    if (e.what === 'regular') later(3700, () => toast(`${nm}${josa(nm, '이', '가')} 단골이 됐어요 · 다음에 오면 큰 소원을 말해 줄 거예요`, 4200, true));
+    if (e.what === 'step' && e.s < e.n) later(3700, () => toast(`큰 소원 ${e.s}/${e.n} · ${nm}: 「내일 또 올게」`, 3600, true));
+    if (e.what === 'settle') later(3700, () => { toast(`${nm}${josa(nm, '이', '가')} 여기 살기로 했어요 · 떠돌이 친구${e.stored ? ' · 자리가 없어 보관함에 있어요' : ''}`, 4800, true); sfx('level'); });
+    if (e.what === 'dayEnd' && hab) dusk(e.k); // 69-3 하루 마무리
     if (e.what === 'hello') toast('떠돌이 손님이 찾아오기 시작했어요 · 소원을 들어주면 하트와 알을 두고 가요', 4200, true);
     if (e.what === 'tutDone') { const R = e.night && rosterOf({ k: e.night }); toast(R ? `오늘 밤 손님 · 「${R.name}」${josa(R.name, '이', '가')} 올지도 몰라요` : '손님맞이를 다 익혔어요 · 이제 손님이 가끔 찾아와요', 4200, true); }
   }
 
+  // 69-3 하루 마무리: the day's guests are done. A short sunset over the habitat (no button: it fades by itself, taps go through)
+  // and tomorrow's first guest as a shadow (its 보따리 or 모자 shows who)
+  function dusk(k) {
+    const R = k && rosterOf({ k }), el = document.createElement('div'); el.className = 'dusk';
+    el.innerHTML = `<p>오늘 손님은 여기까지예요</p>${R ? '<img alt=""><small>내일은 누가 올까요?</small>' : ''}`;
+    stage.append(el); if (R) silhouetteThumb(R.sp, R.mark === 'hat' ? 'strawhat' : 'bandana', false, 0).then(u => { const i = el.querySelector('img'); if (i) i.src = u; });
+    setTimeout(() => el.remove(), calm() ? 5000 : 7000);
+  }
   function events(ev) {
     for (const e of ev) if (e.type === 'guest') guestEv(e); // before draw: a guest just gone is still there to fly from
     draw();

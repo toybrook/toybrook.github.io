@@ -23,6 +23,13 @@ export const GUEST = {
   grace: 10 * SEC,               // every wish met: the bonus may still come this long, then 만족
   pair: 0.15, pairLv: 2,         // an arrival is two guests whose wishes clash (from Lv pairLv)
   tutStay: 2 * MIN,              // a tutorial guest's on stay (an idle player: it leaves, the next step comes)
+  // 66-2 단골·정착 (the guest keeps its 보따리 or 모자 and lives here, tier 떠돌이: never sold, nothing paid)
+  regular: 3,                    // 대만족 of one guest: it is a 단골
+  big: 3,                        // 큰 소원: its steps (one a day; the first may be the day it became a 단골: 2~3 days), then 정착
+  bigW: 6,                       // a 단골 whose step is due: its weight when a guest is picked (the rest 1, a `when` one 4)
+  // 69-3 하루 마무리: guests a day (not the tutorial's; a `when` one may still come after); the last gone: the sunset and
+  // tomorrow's first guest as a shadow
+  day: 6,
 };
 
 // Wishes. k: tag (a prop tag or the ground there), not (no such tag near), pals (n friends near), alone (none near),
@@ -48,6 +55,10 @@ export const WISH = {
   'sp:seal': { k: 'sp', v: 'seal', riddle: '얼음 위에서 뒹구는 친구가 보고 싶어' },
   밤: { k: 'env', v: 'night', icon: '🌙' }, 비: { k: 'env', v: 'rain', icon: '🌧️' },
   눈: { k: 'env', v: 'snow', icon: '❄️' }, 하늘: { k: 'env', v: 'sky', icon: '🌠' },
+  // 69-3 테마 소원: a little scene, all its tags at one spot (one wish); met, the guest leaves the habitat's 기념 소품 (memo, once)
+  'theme:meadow': { k: 'theme', v: ['꽃', '먹을 것', '쉼터'], name: '꽃길 소풍', icon: '🧺', memo: 'gst_picnicbox' },
+  'theme:pond': { k: 'theme', v: ['물가', '놀이', '그늘'], name: '바닷가 놀이터', icon: '🏖️', memo: 'gst_beachdoll' },
+  'theme:snow': { k: 'theme', v: ['쉼터', '먹을 것', '빛'], name: '겨울 찻집', icon: '🍵', memo: 'gst_tealamp' },
 };
 // wishes that cannot both hold at one spot: a pair of guests comes with one of each (보상을 미리 보여 주고 고르게)
 export const CLASH = [['소리', 'quiet'], ['pals1', 'alone']];
@@ -62,28 +73,31 @@ export const GUESTS = [
   { k: 'm_sheep', hab: 'meadow', sp: 'sheep', name: '보따리 양 몽실', mark: 'bundle', stay: 'normal', egg: 'meadow', lv: 1, wish: ['꽃', '풀밭', '쉼터', 'pals2'], bonus: ['baby', '먹을 것'] },
   { k: 'm_rabbit', hab: 'meadow', sp: 'rabbit', name: '모자 쓴 토끼 깡충', mark: 'hat', stay: 'short', egg: 'meadow', lv: 1, wish: ['꽃', '그늘', 'pals1'], bonus: ['sp:sheep', '쉼터'] },
   { k: 'm_chicken', hab: 'meadow', sp: 'chicken', name: '보따리 닭 꼬순이', mark: 'bundle', stay: 'normal', egg: 'meadow', lv: 2, wish: ['먹을 것', '꽃', '풀밭'], bonus: ['baby', '놀이'] },
-  { k: 'm_pig', hab: 'meadow', sp: 'pig', name: '모자 쓴 돼지 통통', mark: 'hat', stay: 'long', egg: 'meadow', lv: 2, wish: ['먹을 것', '물가', 'pals2', '놀이'], bonus: ['소리', 'pals3'] },
+  { k: 'm_pig', hab: 'meadow', sp: 'pig', name: '모자 쓴 돼지 통통', mark: 'hat', stay: 'long', egg: 'meadow', lv: 2, wish: ['먹을 것', '물가', 'pals2', '놀이', 'theme:meadow'], bonus: ['소리', 'pals3'] },
   { k: 'm_horse', hab: 'meadow', sp: 'horse', name: '보따리 말 바람', mark: 'bundle', stay: 'short', egg: 'meadow', lv: 3, wish: ['풀밭', '높은 곳', 'pals3'], bonus: ['sp:horse', '물가'] },
-  { k: 'm_cow', hab: 'meadow', sp: 'cow', name: '모자 쓴 소 느림보', mark: 'hat', stay: 'long', egg: 'meadow', lv: 4, wish: ['그늘', '먹을 것', 'quiet', '쉼터'], bonus: ['꽃'] },
+  { k: 'm_cow', hab: 'meadow', sp: 'cow', name: '모자 쓴 소 느림보', mark: 'hat', stay: 'long', egg: 'meadow', lv: 4, wish: ['그늘', '먹을 것', 'quiet', '쉼터', 'theme:meadow'], bonus: ['꽃'] },
   { k: 'm_moon', hab: 'meadow', sp: 'rabbit', name: '달밤 토끼', mark: 'hat', stay: 'short', egg: 'meadow', lv: 1, when: '밤', wish: ['쉼터', '꽃', 'quiet'], bonus: ['빛', 'pals1'] },
   { k: 'm_raindk', hab: 'meadow', sp: 'duck', name: '비 마중 오리', mark: 'bundle', stay: 'short', egg: 'pond', lv: 4, when: '비', wish: ['물가', '꽃', 'pals1'], bonus: ['그늘'] },
+  { k: 'm_lamb', hab: 'meadow', sp: 'sheep', name: '모자 쓴 양 솜솜', mark: 'hat', stay: 'normal', egg: 'meadow', lv: 8, wish: ['놀이', '꽃', 'pals2', 'theme:meadow'], bonus: ['빛', 'baby'] }, // 66-2 명성: a new guest at a 땅 넓히기 Lv
 
   { k: 'p_duck', hab: 'pond', sp: 'duck', name: '보따리 오리 퐁당', mark: 'bundle', stay: 'short', egg: 'pond', lv: 1, wish: ['물가', '꽃', 'pals1'], bonus: ['sp:duck', '쉼터'] },
-  { k: 'p_turtle', hab: 'pond', sp: 'turtle', name: '모자 쓴 거북 느긋', mark: 'hat', stay: 'long', egg: 'pond', lv: 1, wish: ['물가', '쉼터', 'quiet', '그늘'], bonus: ['baby'] },
+  { k: 'p_turtle', hab: 'pond', sp: 'turtle', name: '모자 쓴 거북 느긋', mark: 'hat', stay: 'long', egg: 'pond', lv: 1, wish: ['물가', '쉼터', 'quiet', '그늘', 'theme:pond'], bonus: ['baby'] },
   { k: 'p_otter', hab: 'pond', sp: 'otter', name: '보따리 수달 첨벙', mark: 'bundle', stay: 'short', egg: 'pond', lv: 2, wish: ['놀이', '물가', '먹을 것'], bonus: ['pals2', '소리'] },
   { k: 'p_swan', hab: 'pond', sp: 'swan', name: '모자 쓴 백조 사뿐', mark: 'hat', stay: 'normal', egg: 'pond', lv: 2, wish: ['꽃', '물가', 'quiet'], bonus: ['빛', 'sp:turtle'] },
   { k: 'p_flamingo', hab: 'pond', sp: 'flamingo', name: '보따리 플라밍고 분홍', mark: 'bundle', stay: 'normal', egg: 'pond', lv: 3, wish: ['꽃', 'pals2', '놀이'], bonus: ['물가', '소리'] },
-  { k: 'p_capy', hab: 'pond', sp: 'capybara', name: '모자 쓴 카피바라 뭉근', mark: 'hat', stay: 'long', egg: 'pond', lv: 3, wish: ['그늘', '쉼터', 'pals2', 'baby'], bonus: ['먹을 것'] },
+  { k: 'p_capy', hab: 'pond', sp: 'capybara', name: '모자 쓴 카피바라 뭉근', mark: 'hat', stay: 'long', egg: 'pond', lv: 3, wish: ['그늘', '쉼터', 'pals2', 'baby', 'theme:pond'], bonus: ['먹을 것'] },
   { k: 'p_star', hab: 'pond', sp: 'swan', name: '별 보는 백조', mark: 'bundle', stay: 'short', egg: 'pond', lv: 3, when: '하늘', wish: ['물가', 'quiet'], bonus: ['빛'] },
   { k: 'p_peng', hab: 'pond', sp: 'penguin', name: '마실 온 펭귄', mark: 'hat', stay: 'normal', egg: 'snow', lv: 6, wish: ['물가', '그늘', 'pals1'], bonus: ['sp:duck'] },
+  { k: 'p_pup', hab: 'pond', sp: 'otter', name: '모자 쓴 수달 퐁퐁', mark: 'hat', stay: 'short', egg: 'pond', lv: 11, wish: ['물가', '놀이', '소리', 'theme:pond'], bonus: ['pals3', '빛'] }, // 66-2
 
   { k: 's_penguin', hab: 'snow', sp: 'penguin', name: '보따리 펭귄 뒤뚱', mark: 'bundle', stay: 'short', egg: 'snow', lv: 1, wish: ['놀이', 'pals2', '높은 곳'], bonus: ['sp:penguin', '소리'] },
-  { k: 's_bear', hab: 'snow', sp: 'polarBear', name: '모자 쓴 북극곰 푸근', mark: 'hat', stay: 'long', egg: 'snow', lv: 1, wish: ['쉼터', '먹을 것', 'quiet', '그늘'], bonus: ['baby'] },
+  { k: 's_bear', hab: 'snow', sp: 'polarBear', name: '모자 쓴 북극곰 푸근', mark: 'hat', stay: 'long', egg: 'snow', lv: 1, wish: ['쉼터', '먹을 것', 'quiet', '그늘', 'theme:snow'], bonus: ['baby'] },
   { k: 's_seal', hab: 'snow', sp: 'seal', name: '보따리 물범 몽글', mark: 'bundle', stay: 'normal', egg: 'snow', lv: 1, wish: ['놀이', 'pals1', '그늘'], bonus: ['sp:seal', '빛'] },
   { k: 's_fox', hab: 'snow', sp: 'arcticFox', name: '모자 쓴 북극여우 살금', mark: 'hat', stay: 'short', egg: 'snow', lv: 2, wish: ['그늘', 'alone', '높은 곳'], bonus: ['빛'] },
   { k: 's_deer', hab: 'snow', sp: 'reindeer', name: '보따리 순록 방울', mark: 'bundle', stay: 'normal', egg: 'snow', lv: 3, wish: ['높은 곳', 'pals2', '빛'], bonus: ['소리', 'pals3'] },
   { k: 's_owl', hab: 'snow', sp: 'snowyOwl', name: '오로라 기다리는 흰올빼미', mark: 'hat', stay: 'short', egg: 'snow', lv: 2, when: '하늘', wish: ['높은 곳', 'quiet'], bonus: ['빛'] },
   { k: 's_snow', hab: 'snow', sp: 'arcticFox', name: '첫눈 마중 여우', mark: 'bundle', stay: 'normal', egg: 'snow', lv: 2, when: '눈', wish: ['놀이', 'pals1', '쉼터'], bonus: ['baby'] },
+  { k: 's_cub', hab: 'snow', sp: 'polarBear', name: '보따리 북극곰 꼬미', mark: 'bundle', stay: 'normal', egg: 'snow', lv: 14, wish: ['놀이', '먹을 것', '빛', 'theme:snow'], bonus: ['pals2', '소리'] }, // 66-2
 ];
 
 // 손님 선물 (소품): 3 a habitat, only from a guest's 대만족. New ids; the main session adds them to PROPS (gift: '떠돌이 손님',
@@ -98,6 +112,10 @@ export const GUEST_PROPS = [
   { id: 'gst_teapot', name: '따뜻한 주전자', hab: 'snow', tags: ['먹을 것'], as: 'icelamp' },
   { id: 'gst_sleighbell', name: '썰매 방울', hab: 'snow', tags: ['소리'], as: 'bell' },
   { id: 'gst_scarfpost', name: '목도리 걸이', hab: 'snow', tags: ['쉼터'], as: 'vane' },
+  // 69-3 기념 소품: a 테마 소원's (memo: never a 대만족 gift)
+  { id: 'gst_picnicbox', name: '소풍 오르골', hab: 'meadow', tags: ['소리'], as: 'musicbox', memo: true },
+  { id: 'gst_beachdoll', name: '물놀이 오뚝이', hab: 'pond', tags: ['놀이'], as: 'doll', memo: true },
+  { id: 'gst_tealamp', name: '찻집 등불', hab: 'snow', tags: ['빛'], as: 'lantern', memo: true },
 ];
 
 // Prop tags (every PROPS and NATURE id; a prop may have none): what judge() reads off the props near a guest.

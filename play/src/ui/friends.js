@@ -5,7 +5,7 @@
 // 보관함으로 / 다른 서식지로.
 import * as G from '../game/game.js';
 import { BALANCE as B, RARITIES } from '../game/data.js';
-import { SP, HAB, RAR, variantOf, outIn, capOf, gauge, growing, habitatOf, callName, kindName } from '../game/rules.js';
+import { SP, HAB, RAR, variantOf, outIn, capOf, gauge, growing, habitatOf, callName, kindName, tierOf } from '../game/rules.js'; // 66-2 tierOf: a settled guest is 떠돌이
 import { figureThumb } from './thumbs.js';
 import { toast, heart, josa } from './hud.js';
 import { SORTS } from './store.js';
@@ -42,7 +42,7 @@ function draw() {
 <select data-fsp aria-label="종">${opt('', '모든 종', !fsp)}${Object.keys(count).map(s => opt(s, SP[s].name, s === fsp)).join('')}</select>
 <select data-rar aria-label="등급">${opt('', '모든 등급', !rar)}${RARITIES.map(r => opt(r.id, r.name, r.id === rar)).join('')}</select>
 <select data-sort aria-label="정렬">${Object.entries(SORTS).map(([k, [t]]) => opt(k, t + '순', k === sort)).join('')}</select></div>
-<div class="flist">${rows.map(a => `<div class="frow${a.card ? ' card' : ''}" data-id="${a.id}"><button class="fgo" data-go="${a.id}"><img alt=""><div><b>${star(a)}${callName(a)}</b><small${a.hold ? ' class="hold"' : ''}>${subText(a)}</small></div><em data-r="${rarOf(a)}" style="background:${RAR[rarOf(a)].color}">${RAR[rarOf(a)].name}</em></button><button class="fmore" data-more="${a.id}" aria-label="${callName(a)} 더 보기">⋯</button></div>`).join('')}</div>
+<div class="flist">${rows.map(a => `<div class="frow${a.card ? ' card' : ''}" data-id="${a.id}"><button class="fgo" data-go="${a.id}"><img alt=""><div><b>${star(a)}${callName(a)}</b><small${a.hold ? ' class="hold"' : ''}>${subText(a)}</small></div><em data-r="${a.wd ? 'wanderer' : rarOf(a)}" style="background:${tierOf(a).color}">${tierOf(a).name}</em></button><button class="fmore" data-more="${a.id}" aria-label="${callName(a)} 더 보기">⋯</button></div>`).join('')}</div>
 <p class="fnote">${rows.length ? '누르면 보러 가요 · ⋯에서 별 표시·이름 짓기' : out.length ? '고른 조건에 맞는 친구가 없어요' : ''}</p></div>`;
   el.querySelectorAll('.frow img').forEach((img, i) => { const a = rows[i]; figureThumb(a.species, a.variant, a.color, a.acc, a.stage).then(u => { img.src = u; }); });
 }

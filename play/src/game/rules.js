@@ -32,6 +32,7 @@ import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
 import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
 import { blank as palBlank, tidyPals, palTick, peOf } from './pals.js'; // 17-1
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
+import { GUESTS } from './guests-data.js'; // 66-2: a settled guest's name
 import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
@@ -86,7 +87,7 @@ export function fromSave(raw, now) {
     for (const [h, n] of Object.entries(S.nests)) if (!isObj(n) || !Array.isArray(n.eggs)) delete S.nests[h]; else n.eggs = n.eggs.filter(isObj); // advance lays it again
     S.slots = Array.from({ length: Math.max(B.slots, S.slots.length) }, (_, i) => isObj(S.slots[i]?.egg) ? S.slots[i] : null);
     for (let v = raw.schemaVersion + 1; v <= SCHEMA_VERSION; v++) MIGRATIONS[v]?.(S, now); // each step in order, oldest first
-    for (const a of S.animals) { const n = cleanName(a.nm); if (n) a.nm = n; else delete a.nm; if (a.fav !== true) delete a.fav; if (!(Array.isArray(a.home) && a.home.length === 2 && a.home.every(v => Number.isFinite(v) && Math.abs(v) < 1e3))) delete a.home; } // 26-4: a backup code is text from outside; 53 home
+    for (const a of S.animals) { const n = cleanName(a.nm); if (n) a.nm = n; else delete a.nm; if (a.fav !== true) delete a.fav; if (!(Array.isArray(a.home) && a.home.length === 2 && a.home.every(v => Number.isFinite(v) && Math.abs(v) < 1e3))) delete a.home; if (a.wd != null && !GUESTS.some(R => R.k === a.wd)) delete a.wd; } // 26-4: a backup code is text from outside; 53 home; 66-2 wd
     tidy(S); // 28-5
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
     if (!Number.isFinite(raw.since)) S.since = Math.min(now, ...Object.values(S.codex).map(e => e?.at), ...S.animals.map(a => a.born)) || now; // 41: before 0.71, the first animal
@@ -456,8 +457,9 @@ export function hatch(S, i, now, rng = Math.random, forced = false) {
   return { animal: a, ...c, egg: s.egg };
 }
 // reveal card: NEW = nobody like it yet; already in the codex = it may go back for hearts (from the card or storage)
-export const isNew = (S, a) => !S.codex[key(a.species, a.variant)] && !S.animals.some(b => b !== a && b.species === a.species && b.variant === a.variant);
-export const canSendBack = (S, a) => !!(a?.pending || a?.stored) && !a.stroll && !!S.codex[key(a.species, a.variant)];
+export const isNew = (S, a) => !S.codex[key(a.species, a.variant)] && !S.animals.some(b => b !== a && !b.wd && b.species === a.species && b.variant === a.variant);
+// 66-2: a settled guest (wd) is a friend, never sent back for hearts
+export const canSendBack = (S, a) => !!(a?.pending || a?.stored) && !a.stroll && !a.wd && !!S.codex[key(a.species, a.variant)];
 export const sendBackHearts = a => (B.sendBack[variantOf(a.species, a.variant)?.rarity] || 0) * (a.acc ? B.secret.sendBackX : 1);
 // out into its habitat (growing starts now) if it fits, or into storage, or back for hearts (never shards)
 // (both register its codex cell: it is the player's now)
@@ -779,7 +781,9 @@ export function saveLay(S, habId, k, name, now) {
 export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'` -]/g, '').trim()].slice(0, 8).join('').trim() : '';
 // inbox 58: a variant whose name has the species in it already (황금 복돼지) is not called 황금 복돼지 돼지
 export const twoName = (v = '', s = '') => (!v ? s : !s || v.includes(s) ? v : `${v} ${s}`);
-export const kindName = a => twoName(variantOf(a.species, a.variant)?.name, SP[a.species]?.name);
+export const kindName = a => (a.wd && GUESTS.find(R => R.k === a.wd)?.name) || twoName(variantOf(a.species, a.variant)?.name, SP[a.species]?.name); // 66-2: a settled guest keeps its name
+export const tierOf = a => a.wd ? EARNED.wanderer : RAR[variantOf(a.species, a.variant)?.rarity]; // 66-2: 떠돌이 tier, never sold
+export const growStage = lv => [2, 3, 4, 5, 6].filter(n => lv >= needFor('expand:' + n)).length; // 68-3: 명성 steps = the 땅 넓히기 levels (3/8/11/14/18)
 export const callName = a => a.nm || kindName(a); // what the windows call it
 export function setFav(S, id, on) { const a = S.animals.find(a => a.id === id && !a.pending); if (!a) return null; if (on) a.fav = true; else delete a.fav; return a; }
 export function setName(S, id, text) { const a = S.animals.find(a => a.id === id && !a.pending), n = cleanName(text); if (!a) return null; if (n) a.nm = n; else delete a.nm; return a; }

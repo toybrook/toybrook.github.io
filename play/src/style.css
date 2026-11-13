@@ -615,3 +615,9 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 /* 66-1 떠돌이 손님: the wishes in its bubble (✓ while one holds there), the hearts counter's 톡 as a flown heart lands */
 .bubble .gw{list-style:none;margin:5px 0 3px;padding:0;text-align:left;max-width:15em}.bubble .gw li{color:#7a5a3e;word-break:keep-all}.bubble .gw li.ok{color:#3f8a4a;font-weight:600}.bubble .gw li.bn{opacity:.85}
 .hearts.pop{animation:hpop .18s ease-out}@keyframes hpop{50%{transform:scale(1.14)}}html.calm .hearts.pop{animation:none}
+/* 66-2 a 단골's 큰 소원 step in its bubble; 69-3 하루 마무리: a short sunset over the habitat and tomorrow's first guest as a shadow (play.js dusk, no button, taps go through) */
+.bubble small.big{display:block;color:#b0642e;font-weight:600;letter-spacing:.5px}.bubble small.big b{color:#e8913c}
+.dusk{position:absolute;inset:0;z-index:1200;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#fff;text-align:center;text-shadow:0 1px 8px rgba(90,30,40,.6);background:linear-gradient(180deg,rgba(255,176,112,.12),rgba(255,140,92,.42) 45%,rgba(132,66,104,.58));animation:dusk 7s ease forwards}
+.dusk p{margin:0;font-size:calc(18px*var(--fs));font-weight:700}.dusk small{font-size:calc(13px*var(--fs))}
+.dusk img{width:128px;height:128px;object-fit:contain;opacity:.8;margin-top:10px}.dusk img:not([src]){visibility:hidden}
+@keyframes dusk{0%{opacity:0}14%{opacity:1}82%{opacity:1}100%{opacity:0}}html.calm .dusk{animation:none}

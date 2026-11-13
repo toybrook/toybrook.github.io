@@ -30,5 +30,5 @@ export function buildMeadow(scene, ui, sunDir, level = 0, top = level) {
   const paintable = (x, z) => inRect(layout.O, x, z, 0.5) && z > layout.CLIFF_Z + 0.6 && layout.Z.wd(x, z, true) > 0.2
     && layout.dist2D(layout.sPts, x, z) > layout.SW + 0.2 && Math.hypot(x - layout.pond.x, z - layout.pond.z) > layout.pond.r + 0.2;
   return { ctx, decor, floor, solid: layout.occupied, update(dt, t) { updWater(t); updZone(t); P.zone.update(t, ctx); }, built: layout.R, unit: layout.S,
-    natives: { list: P.natives, rings: level + 1 }, grass: P.grass, ground, paintable };
+    natives: { list: P.natives, rings: level + 1 }, grass: P.grass, ground, paintable, ways: layout.pPts }; // ways: the board's own path (66-2 오솔길 joins it)
 }

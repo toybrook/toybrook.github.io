@@ -283,7 +283,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // (S.paint) on the ground; the grass clumps under both hidden (a native's footprint, a path, sand or gravel)
   const NAT = Object.fromEntries(NATURE.map(n => [n.id, n])), nature = natureLayer(scene, habitat.ctx.heightAt, U), mask = grassMask(habitat.grass || []);
   let propsIn = false, natSig = null, natSpots = [], natRoofs = [], paintNow = {}, paintSig = '{}', grassDirty = true, gridOn = false, brush, stroke = null, press = null, skipTap = false, sweepOn = false, box = null; // box: inbox 42 F-6 자연 정리, the rectangle being drawn
-  const hideGrass = (x, z) => { const b = paintNow[`${Math.floor(x / U)},${Math.floor(z / U)}`]; if ((b >= 1 && b <= 3) || b >= 5) return true; // 25-1: snow and ice too
+  let growNow = 0, growPaint = {}, growSig = ''; const paintAt = k => paintNow[k] ?? growPaint[k]; // 66-2 명성: the path grown (syncGrow), under the player's paint
+  const hideGrass = (x, z) => { const b = paintAt(`${Math.floor(x / U)},${Math.floor(z / U)}`); if ((b >= 1 && b <= 3) || b >= 5) return true; // 25-1: snow and ice too
     for (const o of natSpots) if (!o.open && Math.abs(o.x - x) < o.r && Math.abs(o.z - z) < o.r && Math.hypot(o.x - x, o.z - z) < o.r) return true;
     const y = bump(x, z); return y < -0.1 ? true : Math.abs(y) > 0.005 ? y : false; }; // 28-6: on a stamp, raised (or lowered) with it; in a puddle, gone
   // 28-6 울타리·돌담: the standing brushes' cells (lines.js), a spot each in the decor list: animals go round, props keep off
@@ -292,7 +293,46 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     for (const o of lineSpots) { const i = D.list.indexOf(o); if (i >= 0) D.list.splice(i, 1); }
     lineSpots = lines.set(p).map(([x, z]) => ({ x, z, r: 0.5 * U, h: 0.85, line: 1, fade: null })); D.list.push(...lineSpots); renderer.shadowMap.needsUpdate = true;
   }
-  const showPaint = p => { habitat.ground.setPaint(p); syncLines(p); }; // a stroke as it goes (or dropped)
+  const showPaint = p => { habitat.ground.setPaint({ ...growPaint, ...p }); syncLines(p); }; // a stroke as it goes (or dropped)
+  // 66-2 명성 (68-3): each 땅 넓히기 Lv (rules.js growStage, 0..5) grows the board a step the 67-3 way: one more 들꽃 무더기 (a
+  // drift of patches in the sun, a colour each with a few of the next; on snow the purple ones) on 꽃밭 ground, and a worn 오솔길
+  // to it (모래 cells: soft-edged, so it winds as a worn trail does, not the grid of 흙길; on snow 자갈). A drift is in the first
+  // board, off the water and the board's own path, out of the trees' shade. Drawn only, not saved, the same places every time
+  // (seeded by the board); the player's paint goes over it, a patch under a prop is left out
+  const grown = natureLayer(scene, habitat.ctx.heightAt, U), GROW_PAL = habId === 'snow' ? [2, 5] : [3, 4, 2, 5], WAY = habId === 'snow' ? 3 : 2, base = rectAt(habId, 0);
+  const rnd = s => () => (s = s * 16807 % 2147483647) / 2147483647;
+  function syncGrow(stage, list) {
+    if (habId === 'dino' || !habitat.paintable) stage = 0; // the held jungle stays as it is
+    const props = list.filter(p => p.placed && p.hab === habId && !p.nat && PR[p.prop] && !PR[p.prop].water && p.on == null);
+    const sg = `${stage}|${natSig}|${props.map(p => `${p.x},${p.z},${p.sz || 0}`).join(';')}`; if (sg === growSig) return; growSig = sg;
+    const ok = (x, z) => habitat.paintable(x, z), key = (x, z) => `${Math.floor(x / U)},${Math.floor(z / U)}`, path = {}, recs = [], at = [];
+    const ways = habitat.ways ?? [], wayP = (x, z) => ways.reduce((b, p) => (p.x - x) ** 2 + (p.z - z) ** 2 < (b.x - x) ** 2 + (b.z - z) ** 2 ? p : b, ways[0]);
+    const wayD = (x, z) => { const p = wayP(x, z); return p ? Math.hypot(p.x - x, p.z - z) : 99; }; // the board's own path (meadow)
+    const shade = (x, z, m) => natSpots.some(o => !o.open && Math.hypot(o.x - x, o.z - z) < o.r + m); // by a tree, bush or rock
+    const room = (x, z) => ok(x, z) && !shade(x, z, 3) && [0, 1, 2, 3, 4, 5, 6, 7].every(i => ok(x + 3.5 * Math.cos(i * 0.785), z + 3.5 * Math.sin(i * 0.785)));
+    const dry = (ax, az, bx, bz) => { const n = Math.ceil(Math.hypot(bx - ax, bz - az) / 0.6); for (let i = 0; i <= n; i++) if (!ok(ax + (bx - ax) * i / n, az + (bz - az) * i / n)) return false; return true; };
+    const [x0, x1, z0, z1] = base, mx = (x0 + x1) / 2;
+    for (let d = 0; d < stage; d++) {
+      const r = rnd(1009 + d * 7919 + habId.length * 31), from = at[d - 1] ?? [mx, z1 - 4]; let c = null; // the first: near the front middle
+      for (let t = 0; t < 160 && !c; t++) { const a = r() * 6.283, m = 10 + r() * 8, x = t < 100 ? from[0] + Math.cos(a) * m : x0 + 6 + r() * (x1 - x0 - 12), z = t < 100 ? from[1] + Math.sin(a) * m : z0 + 6 + r() * (z1 - z0 - 12);
+        if (x > x0 + 5 && x < x1 - 5 && z > z0 + 5 && z < z1 - 5 && room(x, z) && wayD(x, z) > 5 && at.every(([px, pz]) => Math.hypot(px - x, pz - z) > 9) && (t >= 50 || dry(from[0], from[1], x, z))) c = [x, z]; }
+      if (!c) continue; at[d] = c;
+      // the trail: from this drift's edge to the last one's or the board's own path, whichever is nearer (the first: the path, or
+      // towards the front), bowed to one side, a cell at a time (side by side, so it joins up); stops at water or the path
+      const wp = ways.length && wayP(...c), toWay = wp && (!at[d - 1] || Math.hypot(wp.x - c[0], wp.z - c[1]) < Math.hypot(from[0] - c[0], from[1] - c[1]));
+      const [ax, az] = toWay ? [wp.x, wp.z] : from, [bx, bz] = c, L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L, bow = (r() < 0.5 ? -1 : 1) * (1.5 + r() * 2);
+      let last = null;
+      for (let s = L - 2.5; s >= (toWay || !at[d - 1] ? 0 : 3); s -= 0.3) { const k = s / L, w = bow * Math.sin(k * Math.PI), x = ax + ux * s - uz * w, z = az + uz * s + ux * w; if (!ok(x, z) || wayD(x, z) < 1.4) break;
+        const cx = Math.floor(x / U), cz = Math.floor(z / U); if (last && last[0] !== cx && last[1] !== cz && ok((cx + 0.5) * U, (last[1] + 0.5) * U)) path[`${cx},${last[1]}`] ??= WAY; path[`${cx},${cz}`] = WAY; last = [cx, cz]; }
+      if (WAY === 2) for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const x = bx + i * U, z = bz + j * U; if (i * i + j * j <= 5 && ok(x, z) && wayD(x, z) > 1.6) path[key(x, z)] ??= 4; } // 꽃밭 under it
+      const pal = GROW_PAL[d % GROW_PAL.length], pal2 = GROW_PAL[(d + 1) % GROW_PAL.length], q = r() * 3.14, cq = Math.cos(q), sq = Math.sin(q);
+      for (let k = 0; k < 28; k++) { const a = r() * 6.283, m = 3.4 * Math.sqrt(r()), ex = Math.cos(a) * m * 1.35, ez = Math.sin(a) * m * 0.8, x = bx + ex * cq - ez * sq, z = bz + ex * sq + ez * cq;
+        const v = 6 * Math.floor(r() * 999) + (k % 4 === 3 ? pal2 : pal), rot = r() * 6.283;
+        if (ok(x, z) && path[key(x, z)] !== WAY && wayD(x, z) > 1.6 && !shade(x, z, 0.9) && props.every(p => Math.hypot(p.x * U - x, p.z * U - z) > PR[p.prop].r * SZ(p) + 0.6)) recs.push({ uid: `grow${d}_${k}`, prop: 'wildflowers', x: x / U, z: z / U, rot, s: 1, v }); }
+    }
+    grown.set(recs); const ps = JSON.stringify(path);
+    if (ps !== JSON.stringify(growPaint)) { growPaint = path; habitat.ground?.setPaint({ ...growPaint, ...paintNow }); grassDirty = true; }
+  }
   // may a fence or wall go in the cell at x, z: nothing standing there (props, the board's own, animals), so none is walled in
   const standOk = (x, z) => D.list.every(o => o.line || o.water || Math.hypot(o.x - x, o.z - z) > (o.open && !o.rail ? 0.4 : o.r) + 0.2)
     && habitat.solid.every(o => Math.hypot(o.x - x, o.z - z) > (o.r || 0) + 0.2) && free(habitat.ctx.crowd, { x, z, yaw: 0, r: 1.1, seg: [0, 0] }, x, z);
@@ -391,12 +431,12 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     } finally { D.list.splice(0, D.list.length, ...keep); }
     return out;
   }
-  function syncProps(list = propList, paint = paintNow, ghost = ghostNow) {
+  function syncProps(list = propList, paint = paintNow, ghost = ghostNow, grow = growNow) {
     // 28-7: a board put aside (the map, or 땅 넓히기 building the next board on the same shared layout lists) does not sync;
     // play.attach -> draw syncs it again when it is back. Before, the old board pushed its nature spots into the new board's list (unseen blockers)
     if (!active) return;
-    propList = list; syncStamps(); syncNat(list); syncGhosts(ghost || []);
-    const ps = JSON.stringify(paint || {}); if (ps !== paintSig) { paintSig = ps; paintNow = paint || {}; habitat.ground?.setPaint(paintNow); syncLines(); grassDirty = true; }
+    propList = list; syncStamps(); syncNat(list); syncGhosts(ghost || []); growNow = grow; syncGrow(grow, list); // 66-2
+    const ps = JSON.stringify(paint || {}); if (ps !== paintSig) { paintSig = ps; paintNow = paint || {}; habitat.ground?.setPaint({ ...growPaint, ...paintNow }); syncLines(); grassDirty = true; }
     const want = new Map(list.filter(p => p.placed && p.hab === habId && !p.nat && PR[p.prop] && p.uid !== ed?.uid && (p.on == null || p.on !== ed?.uid)).map(p => [p.uid, p])); // 28-5: what stands on the held one goes with it
     const sigOf = r => `${r.x},${r.z},${r.rot},${r.c || 0},${r.sz || 0},${r.on ?? ''},${r.sl ?? ''}`;
     let changed = false;
@@ -689,7 +729,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }
   // 13-0: what is underfoot at x, y, z (sound.js steps): a deck, shallow water (deeper: swimming, none), the paint, else the habitat's own
   const underfoot = (x, y, z) => { const c = habitat.ctx; if (c.deckAt(x, z) > y - 0.3) return 'wood'; const d = c.water - c.heightAt(x, z);
-    if (d > 0.25) return null; if (d > 0.02) return 'water'; const b = paintNow[`${Math.floor(x / U)},${Math.floor(z / U)}`];
+    if (d > 0.25) return null; if (d > 0.02) return 'water'; const b = paintAt(`${Math.floor(x / U)},${Math.floor(z / U)}`);
     return b === 8 ? 'wood' : b === 5 || b === 6 ? 'snow' : [1, 2, 3, 7].includes(b) ? 'dirt' : habId === 'snow' ? 'snow' : 'grass'; };
   // 22-1 땅 칠하기: one finger paints the cells it passes over (paintable ones; the eraser: any), shown at once, saved when it lifts
   container.addEventListener('pointerdown', e => {
