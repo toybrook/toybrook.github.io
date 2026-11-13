@@ -167,7 +167,13 @@ export const RARITIES = [
 export const EARNED_TIERS = [
   { id: 'wanderer', kind: 'earned', name: '떠돌이', color: '#7a9a5a' }, // 66-1 떠돌이 손님 (game/guests.js)
   { id: 'myth', kind: 'earned', name: '신수', color: '#c8452e' }, // 14-1 MYTHIC (rules.js mythTick)
+  // 66-3: rows to come, the same frame (a GUESTS entry with tier: 'season' / 'sky' fills one). soon: no cells yet, the codex shows no row
+  { id: 'season', kind: 'earned', name: '계절 손님', color: '#d88a3a', soon: true },
+  { id: 'sky', kind: 'earned', name: '하늘 손님', color: '#5a6ec8', soon: true },
 ];
+// 66-3 모으기 판: a habitat's whole (its egg cells, its 떠돌이 settled, its 신수: rules.js wholeOf). At each share of it, once:
+// a big prop (to storage), 'expand' (the next 땅 넓히기 free: 새 구역; still opened by Lv), the other big prop
+export const COMPLETE = { at: [1 / 3, 2 / 3, 1], meadow: ['windmill', 'expand', 'barn'], pond: ['lighthouse', 'expand', 'waterpav'], snow: ['igloo', 'expand', 'snowslide'], dino: ['ribs', 'expand', 'dinonest'] };
 
 // Every species gets all of these (variant id = material id). Rarity is how showy the look is, not what it is made of.
 // tier: often / normal / seldom (BALANCE.tierWeight). colors: [{ id, name, ...the material's colour values, seldom? }]

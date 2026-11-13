@@ -621,3 +621,9 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .dusk p{margin:0;font-size:calc(18px*var(--fs));font-weight:700}.dusk small{font-size:calc(13px*var(--fs))}
 .dusk img{width:128px;height:128px;object-fit:contain;opacity:.8;margin-top:10px}.dusk img:not([src]){visibility:hidden}
 @keyframes dusk{0%{opacity:0}14%{opacity:1}82%{opacity:1}100%{opacity:0}}html.calm .dusk{animation:none}
+/* 66-3 모으기 판: three rows per habitat (알 친구 / 떠돌이 / 신수), 놀이 장면 folded at the foot */
+.cbody h2.ctier{font-size:calc(15px*var(--fs));margin:18px 2px 2px;padding-top:10px;border-top:2px dashed #e3cba6;color:#6b4a2b}.cbody h2.ctier:first-child{border-top:0;padding-top:0;margin-top:6px}
+.cbody h2.ctier small{font-weight:400;color:#8a6a4c}.codex.night .cbody h2.ctier{color:#e6e2f2;border-color:#3a4170}.codex.night .cbody h2.ctier small{color:#a9a6c6}
+.cell i.reg{background:#d88a3a}.cnote.ctip{margin:6px 0 0;font-size:calc(12px*var(--fs))}
+.cscenes{margin:22px 0 8px;border-top:2px dashed #e3cba6;padding-top:10px}.codex.night .cscenes{border-color:#3a4170}
+.cscenes summary{cursor:pointer;font-weight:700;font-size:calc(15px*var(--fs));padding:6px 2px;color:#6b4a2b;list-style-position:inside}.cscenes summary small{font-weight:400;color:#8a6a4c}.codex.night .cscenes summary{color:#e6e2f2}

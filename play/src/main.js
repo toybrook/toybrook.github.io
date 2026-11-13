@@ -153,14 +153,14 @@ const rebuild = (id, ex) => { // ex: the 땅 넓히기 that asks for it (the mis
     const next = await build(id, { pose, reveal }); old.dispose();
     if (cur === id) { api = next; next.setActive(true); play.attach(next, id); if (ex) next.showZone(ex.level); } else next.setActive(false); // 28-1: the camera to the new zone, animals run there
     if (shown) fade(false);
-    if (ex) next.revealed.then(() => zoneCard(id, ex.level)); // inbox 17: once the mist is gone
+    if (ex) next.revealed.then(() => zoneCard(id, ex.level, ex.free)); // inbox 17: once the mist is gone
     return next;
   })();
 };
 // 28-1: 「새 구역: 과수원」 and what one can see there, in a line (ZONES)
-function zoneCard(id, L) {
+function zoneCard(id, L, free) {
   const z = ZONES[id]?.[L - 1], el = document.createElement('section'); el.id = 'zoneCard'; el.className = 'intro pop lvup'; el.setAttribute('aria-label', '새 구역');
-  el.innerHTML = `<div><h2>새 구역: ${z.name}</h2><p class="sub">${z.line}</p><p class="sub">땅 넓히기 ${L}단계 · ♥-${BALANCE.expand.price[L - 1]}</p><button data-close>좋아요</button></div>`;
+  el.innerHTML = `<div><h2>새 구역: ${z.name}</h2><p class="sub">${z.line}</p><p class="sub">땅 넓히기 ${L}단계 · ${free ? '모으기 선물로 무료' : `♥-${BALANCE.expand.price[L - 1]}`}</p><button data-close>좋아요</button></div>`;
   el.querySelector('[data-close]').onclick = () => el.remove(); $('habitat').append(el); sfx('level');
 }
 G.on(ev => {

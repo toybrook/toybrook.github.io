@@ -18,6 +18,7 @@
 //            22-1 also the habitat's own nature: { ..., prop (NATURE id), nat: 1, s, v }; natives: { habId: rings handed over }, paint: { habId: { 'i,j': brush } },
 //   pet:     { day (local date string), n (petting hearts that day, BALANCE.heart.daily) },
 //   expand:  { [habitat]: 땅 넓히기 step 0..6 },
+//   whole?:  { [habitat]: 모으기 판 steps given 0..3 }, freeExp?: { [habitat]: free 땅 넓히기 steps left } (66-3, absent = 0)
 //   xp (정원사 레벨 XP, 23-1), lv (the level last shown on a level-up card), xpDay (the day the first-visit XP was given),
 //   ach: { [도전 과제 id]: when done } (achieve.js), title (the 칭호 shown: a done one's id | null), stats: { hatch, grown, pet, feed, plant,
 //            days, lights, roof } (counts for 도전 과제; lights, roof: the most the habitat on screen has seen, noteLive),
@@ -32,8 +33,8 @@ import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
 import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
 import { blank as palBlank, tidyPals, palTick, peOf } from './pals.js'; // 17-1
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
-import { GUESTS } from './guests-data.js'; // 66-2: a settled guest's name
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
+import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's name
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -369,6 +370,7 @@ export function advance(S, now, rng = Math.random) {
     ev.push({ type: 'unlock', habitat: h.id }); } });
   const day = dayOf(now); if (S.xpDay !== day) { S.xpDay = day; S.xp += B.level.xp.login; bump(S, 'days'); } // the day's first visit (or the game left open past midnight)
   for (const a of newlyDone(S)) { S.ach = { ...S.ach, [a.id]: now }; S.xp += B.level.xp.achieve; ev.push({ type: 'achieve', id: a.id }); } // 23-2
+  wholeTick(S, ev); // 66-3
   firstCheck(S, now, ev, rng); // 41 D
   evTick(S, now, rng); // 15-1
   mythTick(S, now, ev); // 14-1
@@ -615,11 +617,26 @@ export function buyShelf(S, habId, i, now) {
   S.props.push(p); return p;
 }
 // 땅 넓히기: the next step of an open habitat, for hearts
+export const expPrice = (S, habId) => { const p = B.expand.price[levelOf(S, habId)]; return p != null && S.freeExp?.[habId] ? 0 : p; }; // 66-3: a free step (모으기 판)
 export function buyExpand(S, habId) {
-  const L = levelOf(S, habId), price = B.expand.price[L];
+  const L = levelOf(S, habId), price = expPrice(S, habId), free = price === 0;
   if (!HAB[habId] || !S.unlocked.includes(habId) || price == null || S.hearts < price || !can(S, 'expand:' + (L + 1))) return null;
-  S.hearts -= price; S.expand = { ...S.expand, [habId]: L + 1 };
-  return { level: L + 1, events: [{ type: 'expand', habitat: habId, level: L + 1 }] };
+  S.hearts -= price; S.expand = { ...S.expand, [habId]: L + 1 }; if (free) S.freeExp = { ...S.freeExp, [habId]: S.freeExp[habId] - 1 };
+  return { level: L + 1, events: [{ type: 'expand', habitat: habId, level: L + 1, free }] };
+}
+// 66-3 모으기 판: a habitat's whole, got / all: its egg cells, its 떠돌이 (GUESTS of the wanderer tier: settled), its 신수 (met)
+export const wanderersOf = habId => GUESTS.filter(R => R.hab === habId && (R.tier ?? 'wanderer') === 'wanderer');
+export function wholeOf(S, habId) {
+  const cells = codexCells(habId), gs = wanderersOf(habId), m = !HOLD.myth && MYTHIC.find(m => m.habitat === habId);
+  return { got: cells.filter(c => S.codex[c.key]).length + gs.filter(R => (S.guests?.big?.[R.k]?.s ?? 0) >= GUEST.big).length + (m && S.myth?.here ? 1 : 0), all: cells.length + gs.length + (m ? 1 : 0) };
+}
+// each COMPLETE step reached in an open habitat, once (S.whole[hab]: steps given): the prop to storage, or a free 땅 넓히기
+function wholeTick(S, ev) {
+  for (const h of HABITATS) { const R = COMPLETE[h.id]; if (!R || !S.unlocked.includes(h.id)) continue;
+    const { got, all } = wholeOf(S, h.id), step = all ? COMPLETE.at.filter(a => got >= Math.ceil(a * all - 1e-9)).length : 0;
+    for (let i = S.whole?.[h.id] || 0; i < step; i++) { const r = R[i]; S.whole = { ...S.whole, [h.id]: i + 1 };
+      if (r === 'expand') S.freeExp = { ...S.freeExp, [h.id]: (S.freeExp?.[h.id] || 0) + 1 }; else S.props.push({ uid: S.nextId++, prop: r, hab: h.id, placed: false, x: 0, z: 0, rot: 0 });
+      ev.push({ type: 'whole', habitat: h.id, step: i + 1, reward: r }); } }
 }
 export const placedIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && !p.nat && !PROP[p.prop]?.rail); // what counts toward decorCap (natives and rails never)
 // 28-4: rail pieces placed in a habitat (PROPS rail: a bridge counts 2), toward B.decor.rails

@@ -11,7 +11,7 @@
 // habitat.js room; 27-7b: any prop held on a red spot), the first rail's tip.
 import * as G from '../game/game.js';
 import { BALANCE as B, BIGS, PROPS, SCENES, NATURE, BRUSHES, SETS, ZONES, brushIn, paletteOf, SIZES, sizeF, sizable } from '../game/data.js';
-import { SP, PROP, placedIn, railsIn, capped, levelOf, decorCap, layoutOf, can as canLv, needFor } from '../game/rules.js';
+import { SP, PROP, placedIn, railsIn, capped, levelOf, expPrice, decorCap, layoutOf, can as canLv, needFor } from '../game/rules.js';
 const can = (S, k) => canLv(S, k) || k === 'prop:' + G.tutShop(); // 66-1: the tutorial's 등불 is sold before its Lv
 import { propThumb } from './thumbs.js';
 import { toast, josa, tip, ask } from './hud.js';
@@ -135,9 +135,9 @@ ${tools()}<div class="nbtns"><button class="go" data-endpaint>다 칠했어요</
 <p class="dhint">두 손가락으로 화면을 옮기고 키워요${habId === 'pond' ? ' · 연못은 물가 풀밭만 칠해요' : habId === 'snow' ? ' · 설원은 얼음 연못 밖 눈밭만 칠해요' : habId === 'dino' ? ' · 공룡 정글은 석호 밖 땅만 칠해요' : ''}</p>`;
     return;
   }
-  const rl = tab === 'train', n = rl ? railsIn(G.S, habId) : placedIn(G.S, habId).length, cap = rl ? B.decor.rails : decorCap(G.S, habId), L = levelOf(G.S, habId), price = B.expand.price[L], xk = 'expand:' + (L + 1), xl = price != null && !can(G.S, xk);
+  const rl = tab === 'train', n = rl ? railsIn(G.S, habId) : placedIn(G.S, habId).length, cap = rl ? B.decor.rails : decorCap(G.S, habId), L = levelOf(G.S, habId), price = expPrice(G.S, habId), xk = 'expand:' + (L + 1), xl = price != null && !can(G.S, xk);
   // 땅 넓히기 (21-3b): the first cell; one band of the board at a time, under the mist till then
-  const exp = `<button class="dprop dexp${xl ? ' lock' : ''}" data-expand${price == null ? ' disabled' : ''}><i></i><b>땅 넓히기 ${L}/${B.expand.price.length}</b><small>${price == null ? '다 넓혔어요' : `다음: ${ZONES[habId][L].name} · ${B.expand.visible[L]}마리 · 소품 ${B.expand.decor[L]}개까지`}</small><em>${price == null ? '완료' : xl ? `Lv ${needFor(xk)}` : `<span class="hrt">♥</span>${price}`}</em></button>`;
+  const exp = `<button class="dprop dexp${xl ? ' lock' : ''}" data-expand${price == null ? ' disabled' : ''}><i></i><b>땅 넓히기 ${L}/${B.expand.price.length}</b><small>${price == null ? '다 넓혔어요' : `다음: ${ZONES[habId][L].name} · ${B.expand.visible[L]}마리 · 소품 ${B.expand.decor[L]}개까지`}</small><em>${price == null ? '완료' : xl ? `Lv ${needFor(xk)}` : price === 0 ? '무료' : `<span class="hrt">♥</span>${price}`}</em></button>`;
   const [rk, rn] = ringCost(), rlk = rk && !can(G.S, 'prop:railcurve'), ring = rl ? `<button class="dprop dring${rlk ? ' lock' : ''}" data-ring><img alt=""><b>예시 고리 한 번에 놓기</b><small>곡선 4개로 된 작은 고리 · 놓으면 바로 기차가 달려요</small><em>${rlk ? `Lv ${needFor('prop:railcurve')}` : rk ? `<span class="hrt">♥</span>${rk}` : '넣어 둔 곡선'}${rn && rk && !rlk ? ` · 곡선 ${rn}개 써요` : ''}</em></button>` : '';
   const lvOf = P => stowed(P.id).length || can(G.S, 'prop:' + P.id) ? 0 : needFor('prop:' + P.id), // 42 F-5: the ones open first, then by the level they open at
     list = mine().filter(P => tabOf(P) === tab).sort((a, b) => lvOf(a) - lvOf(b)), nats = tab === 'nature' ? NATURE.filter(N => stowedNat(N.id).length) : [], sh = G.shelf(habId);
@@ -253,7 +253,7 @@ el.addEventListener('click', e => {
     if (n) toast(`구매를 취소했어요 · ♥+${n}`); draw();
   }
   else if (d.expand != null) {
-    const L = levelOf(G.S, habId), price = B.expand.price[L];
+    const L = levelOf(G.S, habId), price = expPrice(G.S, habId);
     if (!can(G.S, 'expand:' + (L + 1))) return locked('expand:' + (L + 1));
     if (G.S.hearts < price) return toast(`하트 ${price}개가 필요해요 · 지금 ♥${G.S.hearts}`);
     if (G.buyExpand(habId)) closeDecor(); // main.js rebuilds the habitat (the mist lifts), then says 「땅을 넓혔어요」

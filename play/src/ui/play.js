@@ -2,7 +2,7 @@
 // game toasts. Eggs, hatching and the reveal card live in the nest menu (nest.js).
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
-import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage } from '../game/rules.js';
+import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage, PROP } from '../game/rules.js';
 import { PROPS, HABITATS, PART_NAME, GROW_ACTS } from '../game/data.js';
 import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
@@ -233,6 +233,7 @@ export function initPlay(nav) {
       if (e.type === 'stored') toast(`서식지 자리가 모자라 오래된 친구가 보관함으로 갔어요 (최대 ${capOf(G.S, habitatOf(e.animal))}마리)`, 3200);
       if (e.type === 'unlock') { toast(`${HAB[e.habitat].name}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 월드맵에서 가 보세요`, 3200); tip('unlock', '#habName'); }
       if (e.type === 'strollBack' && hab) { const a = e.animal, nm = nameOf(a); if (!a.stored && habitatOf(a) === habId) hab.drop(a); toast(`${nm}${josa(nm, '이', '가')} 산책에서 돌아왔어요 · ♥+${e.card.hearts}${a.stored ? ' · 자리가 없어 보관함에 있어요' : ''}`, 3000); } // 13-1
+      if (e.type === 'whole') { const r = e.reward; toast(`${HAB[e.habitat].name} 모으기 ${e.step}/3 선물: ${r === 'expand' ? '다음 땅 넓히기가 무료예요' : `큰 소품 「${PROP[r]?.name}」${josa(PROP[r]?.name ?? '', '이', '가')} 보관함에 왔어요`}`, 3600); } // 66-3
       if (e.type === 'reset' && hab) { bubble.hidden = true; bubbleFor = null; hint(); }
     }
   }
