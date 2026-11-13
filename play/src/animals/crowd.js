@@ -10,6 +10,11 @@ function gap(A, B) { // between two lines; 0 if they cross
   if (side(...A, B[0], B[1]) * side(...A, B[2], B[3]) < 0 && side(...B, A[0], A[1]) * side(...B, A[2], A[3]) < 0) return 0;
   return Math.min(toSeg(A[0], A[1], B), toSeg(A[2], A[3], B), toSeg(B[0], B[1], A), toSeg(B[2], B[3], A));
 }
+// 69-2 쓰다듬기: which third of the capsule (along its facing) the world point x, z is over: 'head' front, 'rump' back, else 'back'.
+// hd [u, y]: where its head is (MODELS attach.head, world units: along its facing, over its feet). A head that is not out in front
+// (an upright penguin, owl, a baby duck) is told by height instead: y, the point's height over its feet, up near the head's
+export function partAt(b, x, z, y = 0, hd = null) { const u = (x - b.x) * Math.cos(b.yaw) - (z - b.z) * Math.sin(b.yaw), k = (b.seg[1] - b.seg[0] + 2 * b.r) / 3, f = b.seg[1] + b.r - k;
+  return (hd && hd[0] <= f ? y > hd[1] * 0.85 : u > f) ? 'head' : u < b.seg[0] - b.r + k ? 'rump' : 'back'; }
 export const gapTo = (b, ax, az, bx, bz) => gap(line(b), [ax, az, bx, bz]); // from b's capsule line to the line a-b
 // inbox 36: too far apart to touch (centre to centre past both reaches): no need to look closer
 const reach = b => Math.max(-b.seg[0], b.seg[1]) + b.r, far = (o, me, x, z) => (x - o.x) ** 2 + (z - o.z) ** 2 >= (reach(o) + reach(me)) ** 2;

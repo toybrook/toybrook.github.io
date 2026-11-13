@@ -3,7 +3,7 @@
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
 import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage } from '../game/rules.js';
-import { PROPS, HABITATS } from '../game/data.js';
+import { PROPS, HABITATS, PART_NAME, GROW_ACTS } from '../game/data.js';
 import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
 import { weatherAt } from '../habitat/weather.js';
@@ -116,12 +116,16 @@ export function initPlay(nav) {
     hab?.setPals(G.S.flags.palOff ? null : new Map(G.S.pals.list.flatMap(p => [[p.a, p.b], [p.b, p.a]]))); // 17-1 성격·단짝 (walk.js)
   }
 
-  function onTap(kind, rec, x, y) {
+  function onTap(kind, rec, x, y, pt) {
     if (rec.wg) return showBubble(rec); // 66-1: a 떠돌이 손님 shows its wishes (no pat hearts)
     if (G.tapHeart(rec.id)) { // temporary heart rule (game/hearts.js); the tap that reaches the day's cap says so, once
       heart(x, y); if (G.S.pet.n >= B.heart.daily) toast('오늘 쓰다듬기 하트는 다 모았어요', 2200, true);
     }
     showBubble(rec); if (++pats >= 2) tip('carry', bubble); // inbox 42 E: from the second tap on a friend, once
+    // 69-2: pt { z, part } from habitat.js: its 좋아하는 곳 / 싫어하는 곳 (hearts the same either way); a baby: what it has learned so far
+    const w = pt && PART_NAME[pt.part], g = rec.stage === 'baby' && growing(rec) ? GROW_ACTS.filter(a => gauge(rec, G.now()) >= a.at).pop() : null;
+    const say = [w && (pt.z === 'like' ? `${w}${josa(w, '을', '를')} 쓰다듬어 주니 좋아해요` : `${w}${josa(w, '은', '는')} 싫은가 봐요`), g && `${g.name}을 배웠어요`].filter(Boolean);
+    if (say.length) bubble.querySelector('.row')?.insertAdjacentHTML('beforebegin', say.map(s => `<small class="pat">${s}</small>`).join(''));
   }
 
   // the small card over an animal: its name; a baby also how far it has grown, 먹이 주기 (3 a day) and the 꼬마 사탕

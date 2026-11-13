@@ -57,6 +57,15 @@ export const DROP = { fall: 0.45, end: 0.95, h: 6, carry: 1.2 }; // inbox 42 E: 
 export const dropFrom = lift => lift > 0 ? DROP.fall * Math.sqrt(Math.max(0, 1 - lift / DROP.h)) : 0;
 // inbox 42 E: held up, a little dangle (rot: nose up +, roll: about its length)
 export const dangle = (t, ph = 0) => ({ rot: -0.05 + Math.sin(t * 2.1 + ph) * 0.05, roll: Math.sin(t * 3.2 + ph) * 0.13 });
+// 69-2 들어 올리면: 버둥 first (legs paddling, a quick wriggle), then 안심 (the slow dangle, smaller). ct: seconds held. How long
+// it wriggles goes by its 성격 (17-1, pe; null with 성격·단짝 off): 겁쟁이 long, 장난꾸러기 never quite stops, 느긋이·잠꾸러기·먹보
+// settle at once (느긋이·잠꾸러기 shut their eyes)
+const CALM = { shy: 2.2, prank: 1.4, easy: 0.3, sleepy: 0.3, glutton: 0.5 };
+export function held(t, ct, pe, ph = 0) {
+  const c = CALM[pe] ?? 1, e = THREE.MathUtils.smoothstep(ct, c, c + 0.6), w = 1 - e + (pe === 'prank' ? 0.3 * e : 0), d = dangle(t, ph);
+  return { rot: d.rot * (1 - w) + Math.sin(t * 11 + ph) * 0.08 * w, roll: d.roll * (1 - 0.4 * e) * (1 - w) + Math.sin(t * 15 + ph) * 0.2 * w,
+    gait: w > 0.25 ? 'walk' : 'still', ph: t * 2.6, shut: e > 0.9 && (pe === 'easy' || pe === 'sleepy') };
+}
 export function dropPose(t) {
   if (t < DROP.fall) { const k = t / DROP.fall; return { lift: DROP.h * (1 - k * k), sq: 1.06 }; }
   const k = Math.min(1, (t - DROP.fall) / (DROP.end - DROP.fall));

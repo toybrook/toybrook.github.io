@@ -14,12 +14,12 @@ import { butterflies } from './butterflies.js';
 import { weather, weatherNow } from './weather.js';
 import { glassLite, RIM } from '../animals/materials.js';
 import { natureLayer, grassMask } from './nature.js';
-import { free, gapTo } from '../animals/crowd.js';
+import { free, gapTo, partAt } from '../animals/crowd.js';
 import { stamps, bump } from './stamps.js';
 import { linesLayer } from './lines.js';
 import { loadModel, loadAcc } from '../animals/figure.js';
 import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
-import { SPECIES, MODELS, PROPS, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable } from '../game/data.js';
+import { SPECIES, MODELS, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable } from '../game/data.js';
 import { SP, variantOf, habitatOf, known, topAt } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
 import { ambience, sfx, music, playing, hear, pet } from '../ui/sound.js';
@@ -894,7 +894,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     lastTap = dbl ? null : { t, x: e.clientX, y: e.clientY };
     if (dbl && a) { setFocus(a); front(); return; }
     if (dbl) { if (ray.ray.intersectPlane(flat, mid)) centre(mid); return; }
-    if (a) { a.poke(); pet(a); setFocus(a); ui.onTap('actor', a.rec, e.clientX, e.clientY); }
+    if (a) { // 69-2 쓰다듬기: the spot under the finger (a near miss: no spot) is its 좋아하는 곳, 싫어하는 곳 or neither
+      const m = MODELS[SP[a.rec.species]?.model]?.[a.look?.stage], hd = m?.attach?.head && [m.attach.head.p[0] * m.s, m.attach.head.p[1] * m.s];
+      const part = hit && a.body?.seg && !a.rec.wg ? partAt(a.body, hit.point.x, hit.point.z, hit.point.y - a.obj.position.y, hd) : null, l = PAT[a.rec.species], z = part && l ? (part === l[0] ? 'like' : part === l[1] ? 'dislike' : null) : null;
+      if (a.pat) a.pat(z); else a.poke(); pet(a); setFocus(a); ui.onTap('actor', a.rec, e.clientX, e.clientY, z && { z, part }); }
   }, sig);
   // the animal under a screen point (hit: the ray's own hit; a: that one, or on a phone's small moving targets a near miss within ~32 px)
   function actorAt(e) {

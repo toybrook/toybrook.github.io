@@ -458,6 +458,19 @@ export const bodyArea = m => Math.PI * m.r ** 2 + 2 * m.r * (m.seg[1] - m.seg[0]
 // mat = the look in materials.js, effect = what plays round it (figure.js FX; a list plays several), item = LEGEND_ITEMS, model = its own body later (none = the
 // species' model; not read yet). Any number of each (0 legendaries is fine: its legendary eggs then hatch another species).
 // fit: optional per-accessory nudge on top of the model's attach slot, { [accessory]: { p: [dx,dy,dz], s, r (instead of the slot's), baby / adult: the same for one stage } }.
+// 69-2 쓰다듬기: each species' [좋아하는 곳, 싫어하는 곳] of head / back / rump (habitat.js: where along its length the tap
+// lands). Liked: a happy twirl jump and 「…를 좋아해요!」; disliked: it turns its head away, 「…는 싫대요」. Hearts the same either way.
+export const PAT = {
+  duck: ['back', 'head'], horse: ['head', 'rump'], sheep: ['back', 'head'], rabbit: ['head', 'rump'], pig: ['rump', 'head'],
+  cow: ['head', 'rump'], chicken: ['back', 'head'], turtle: ['head', 'back'], otter: ['head', 'rump'], swan: ['back', 'head'],
+  flamingo: ['back', 'rump'], capybara: ['head', 'rump'], penguin: ['head', 'back'], polarBear: ['back', 'head'], seal: ['head', 'rump'],
+  arcticFox: ['head', 'rump'], reindeer: ['back', 'head'], snowyOwl: ['head', 'back'], triceratops: ['head', 'rump'],
+  brachiosaurus: ['back', 'head'], stegosaurus: ['head', 'back'], ankylosaurus: ['head', 'rump'], tRex: ['back', 'head'], pteranodon: ['back', 'head'],
+};
+export const PART_NAME = { head: '머리', back: '등', rump: '엉덩이' };
+// 69-2 자라며 배우는 몸짓: a baby on land (walk.js) picks these up as its growth gauge passes `at` (shown once: play.js)
+export const GROW_ACTS = [{ at: 1 / 3, id: 'twirl', name: '제자리에서 빙글 도는 법' }, { at: 2 / 3, id: 'bounce', name: '통통 뛰는 법' }];
+
 export const SPECIES = [
   { id: 'duck', fit: { cape: { adult: { s: 1.5 } } }, name: '오리', habitat: 'pond', model: 'duck', colors: { accent: '#ff8a1e' },
     palette: {

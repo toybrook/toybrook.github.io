@@ -4,7 +4,7 @@
 // by (play.js) to paddle round in it a while, then hops back.
 import * as THREE from 'three';
 import { dress } from './figure.js';
-import { DROP, dropPose, dropFrom, dangle } from './growth.js';
+import { DROP, dropPose, dropFrom, held as heldPose } from './growth.js';
 import { free, blocked } from './crowd.js';
 import { MODELS } from '../game/data.js';
 import { SP } from '../game/rules.js';
@@ -15,7 +15,7 @@ const ripGeo = new THREE.RingGeometry(0.55, 0.65, 40); ripGeo.rotateX(-Math.PI /
 export function createActor(ctx, rec) {
   const { scene, pond, water } = ctx, look = dress(rec), root = new THREE.Group();
   root.add(look.obj); scene.add(root);
-  let a = 0, rr = 0, poke = 0, rush = 0, rT = Math.random() * 0.8;
+  let a = 0, rr = 0, poke = 0, rush = 0, rT = Math.random() * 0.8, snub = 0, side = 1; // snub: 69-2 turning its head away
   const sp = (Math.random() < 0.5 ? -1 : 1) * (0.08 + Math.random() * 0.06), ripples = [], [L0, L1] = pond.lanes ?? [0.15, 0.6]; // lanes: the circles' range (x pond.r)
   const spot = (A, R) => { const r = pond.r * R + 1.2; return [pond.x + Math.cos(A) * r, pond.z + Math.sin(A) * r * (pond.k ?? 0.9)]; };
   const at = (v = new THREE.Vector3()) => { const [x, z] = spot(a, rr); return v.set(x, water, z); };
@@ -49,10 +49,11 @@ export function createActor(ctx, rec) {
       if (from) for (let j = 0; j < 21; j++) { const B = A + (j % 2 ? 1 : -1) * Math.ceil(j / 2) * 0.1; if (free(ctx.crowd, body, ...spot(B, R), yawAt(B))) { a = B; rr = lane = R; break; } } // or a little round
       const p = at(), t0 = dropFrom(from); land = { x, z, t: t0, dur: DROP.end + Math.max(0.6, Math.hypot(p.x - x, p.z - z) / 3.2) }; },
     water: 'swim',
-    carry(x, z) { unplay(); land = null; held = { x, z }; },
+    carry(x, z) { unplay(); land = null; held = { x, z, t: now }; }, // t: 69-2 moved last at (it wriggles while moved, then settles)
     spin(d) { if (held) root.rotation.y += d; }, // 69-1: held up, turned round by the finger
     use(st) { const q = land && choose({ play: [st], night: ctx.night }, api, { ...me(), T: now }, land.x, land.z, 99); if (q) land.q = q; return q ? [land.x, land.z] : null; },
     poke() { poke = 0.6; },
+    pat(z) { if (z === 'dislike' && !held) { snub = 1.1; side = Math.random() < 0.5 ? 1 : -1; } else poke = 0.6; }, // 69-2 쓰다듬기: 싫은 곳은 고개 돌림
     // on the camera's line to the followed animal (habitat.js; n: the line's side normal, d: how far off it, signed): swim on
     // faster for a while and slide to the lane that takes it further off that side
     shoo(nx, nz, d) {
@@ -62,8 +63,8 @@ export function createActor(ctx, rec) {
     },
     update(dt, t) {
       look.update(dt); fade(dt); now = t;
-      if (held) { const d = dangle(t, a); root.position.set(held.x, Math.max(ctx.heightAt(held.x, held.z), water) + DROP.carry, held.z); root.rotation.x = d.roll; root.rotation.z = d.rot;
-        look.fig.pose({ sq: 1, rot: 0, gait: 'still', ph: 0 }); Object.assign(body, { x: held.x, z: held.z }); fit(); return; }
+      if (held) { const d = heldPose(t, now - held.t, ctx.bf ? rec.pe : null, a); root.position.set(held.x, Math.max(ctx.heightAt(held.x, held.z), water) + DROP.carry, held.z); root.rotation.x = d.roll; root.rotation.z = d.rot;
+        look.fig.pose({ sq: 1, rot: 0, gait: d.gait, ph: d.ph, shut: d.shut }); Object.assign(body, { x: held.x, z: held.z }); fit(); return; }
       if (play) { // 28-2: over to the fountain in hops, paddle round in it (play.js poses it), then back
         const { q } = play; play.t += dt; let o;
         if (!q.A) { const k = Math.min(1, play.t / play.dur), hops = Math.max(2, Math.round(play.dur / 0.32)), x = play.x + (q.ax - play.x) * k, z = play.z + (q.az - play.z) * k;
@@ -101,7 +102,7 @@ export function createActor(ctx, rec) {
       let lift = Math.sin(t * 2.2 + a * 3) * 0.04;
       if (poke > 0) { poke -= dt; lift += Math.sin((0.6 - poke) / 0.6 * Math.PI) * (look.stage === 'adult' ? 0.6 : 0.4); }
       root.position.y += lift;
-      root.rotation.y = yawAt(a);
+      root.rotation.y = yawAt(a); if (snub > 0) { snub -= dt; root.rotation.y += side * 0.8 * Math.sin(Math.max(0, snub) / 1.1 * Math.PI); }
       root.rotation.z = Math.sin(t * 1.7 + a) * 0.06; root.rotation.x = Math.cos(t * 1.3 + a) * 0.05;
       rT += dt;
       if (rT > 0.8 && root.visible) {
