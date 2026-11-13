@@ -101,7 +101,6 @@ html.calm .lbar::before{animation:none}
 .lvup li span{flex:1 1 100%;display:flex;flex-direction:column}.lvup li img+span,.lvup li .sw+span{flex:1 1 0;min-width:120px}
 .lvup li b{font-size:calc(14.5px*var(--fs))}.lvup li small{font-size:calc(12px*var(--fs));color:#8a6a4c;line-height:1.4}
 /* 23-2 도전 과제 (ui/level.js): the title under the level, the list */
-.lvs p.ttl{margin:-2px 0 8px;text-align:center;font-weight:700;color:#c0662f;font-size:calc(14px*var(--fs))}
 .lvs .achBtn{display:block;width:100%;margin:8px 0 0;background:#fff3d6;border:1px solid #e3cba6;color:#7a4a26;font-weight:700}
 .ach ul.achl{list-style:none;margin:0 0 10px;padding:0;max-height:calc(52dvh - var(--sa-t) - var(--sa-b));overflow-y:auto;text-align:left;border-top:1px solid #e3cba6}
 .ach ul.achl li{display:grid;grid-template-columns:1fr auto;column-gap:8px;padding:7px 4px;border-bottom:1px solid #efe0c6;word-break:keep-all}
@@ -342,7 +341,7 @@ html.calm .lbar::before{animation:none}
 .cchips button{display:flex;align-items:center;gap:6px;min-height:44px;padding:0 12px 0 6px;border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b;border-radius:999px;font:inherit;font-size:calc(13px*var(--fs));cursor:pointer}
 .cchips button.on{border-color:#6b4a2b;box-shadow:inset 0 0 0 1px #6b4a2b;font-weight:700}
 .cchips u{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
-.photo :is(.bar,.fday,.tools,.dock,.npill,.tip,.ask,.nestbtn,.camb,.tag,.loading,#perf,#dbg,.toast,.label,.fx,.bubble,.side,.beta,.fb,.intro,.rating,.rate){display:none!important}
+.photo :is(.bar,.tools,.dock,.npill,.tip,.ask,.nestbtn,.camb,.tag,.loading,#perf,#dbg,.toast,.label,.fx,.bubble,.side,.beta,.fb,.intro,.rating,.rate){display:none!important}
 /* 20-1 open beta: BETA in the top left under the bar, the feedback link on the world map (bottom right), the intro card once, the rating slot */
 .beta{position:absolute;left:calc(12px + var(--sa-l));top:calc(66px + var(--sa-t));z-index:1000;pointer-events:none;font-size:calc(11px*var(--fs));font-weight:800;letter-spacing:.12em;color:#fff7e8;background:rgba(20,24,20,.45);border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:3px 7px}
 .fb{position:absolute;right:calc(12px + var(--sa-r));bottom:calc(24px + var(--sa-b));z-index:1000;font-size:calc(13px*var(--fs));text-decoration:none;padding:0 12px}
@@ -437,13 +436,10 @@ body:has(#boot) .intro{visibility:hidden}
 .cdet.myth .mcard{margin:6px 0}
 /* 14-2 이야기 카드 (ui/story.js): the card on its stand, its code, 2 x 2 buttons; the list; the codex's 이야기 카드 button */
 .story .scard figcaption b{font-size:calc(15px*var(--fs));line-height:1.45;word-break:keep-all;margin-top:8px}
-.story .scode{width:100%;box-sizing:border-box;margin:8px 0 0;padding:6px 8px;border:1px solid #e3cba6;border-radius:10px;background:#fff6e6;color:#6b4a2b;font:12px/1.3 ui-monospace,monospace;resize:none;text-align:center}
 .story .nbtns{flex-wrap:wrap}.story .nbtns button{min-width:0;flex:1 1 40%}
 .story .slist img{width:44px;height:44px;object-fit:contain;flex:none}.story .slist span{display:flex;flex-direction:column;font-size:calc(13px*var(--fs));word-break:keep-all}.story .slist small{color:#a07a52;font-weight:500;font-size:calc(11.5px*var(--fs))}
-.story .row{margin:0 0 12px;text-align:left}.story .row b{display:block;font-size:calc(13px*var(--fs));color:#6b4a2b;margin-bottom:4px}
-.story .row textarea{width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #e3cba6;border-radius:10px;font:12px/1.3 ui-monospace,monospace;resize:none}
-.story .row p.sub{margin:4px 0;color:#c4523a}.story .row button{width:100%;min-height:40px;border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b;font-size:calc(14px*var(--fs))}
 .scards{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%;margin:8px 0 4px;min-height:44px;padding:6px 14px;border:1px solid #e3b97a;border-radius:14px;background:#fff0d8;color:#7a3a1c;font:inherit;font-size:calc(14px*var(--fs));font-weight:700;cursor:pointer}
+.cfoot{margin:12px 0 4px} /* 74: 진열장으로 보기 · 하늘 기록 at the codex foot */
 .scards small{margin-left:auto;font-weight:500;color:#a07a52;font-size:calc(12px*var(--fs))}
 .codex.night .scards{background:#2c3358;border-color:#4a5384;color:#f0e2c4}
 .mythcut{position:absolute;inset:0;z-index:1450;pointer-events:none}
@@ -460,15 +456,6 @@ body:has(.mythcut:not([hidden])) .scnote{display:none} /* its coming: no "저쪽
 .att li.today{border:2px solid #e8805f;background:#fff;padding:5px 1px}
 .att li.done{background:#f1e2c8}.att li.done>*{opacity:.55}
 .att li.done::after{content:'✓';position:absolute;top:50%;left:50%;width:34px;height:34px;transform:translate(-50%,-50%) rotate(-12deg);box-sizing:border-box;border:2.5px solid #e5584a;border-radius:50%;display:grid;place-items:center;color:#e5584a;font-weight:800;font-size:19px}
-/* inbox 41 D 첫날 할 일: small, on the left under BETA; folds to its title */
-.fday{position:absolute;left:calc(12px + var(--sa-l));top:calc(96px + var(--sa-t));z-index:999;width:max-content;max-width:min(210px,calc(100vw - 124px));background:rgba(20,24,20,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.18);border-radius:14px;color:#f2ede3;font-size:calc(12px*var(--fs))}.fday[hidden]{display:none}
-.fday .fh{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:6px;width:100%;min-height:36px;padding:0 11px;cursor:pointer;font-weight:700}.fday .fh:focus-visible{outline:2px solid #ffd36b;border-radius:14px}
-.fday .fh b{color:#ffd36b;font-variant-numeric:tabular-nums}.fday .fh i{font-style:normal;margin-left:auto;padding-left:4px;opacity:.8}
-.fday ol{list-style:none;margin:0;padding:0 11px 2px}.fday li{display:flex;align-items:baseline;gap:6px;padding:2px 0;line-height:1.3}
-.fday li span{min-width:26px;color:#ffd36b;font-variant-numeric:tabular-nums}.fday li small{margin-left:auto;padding-left:8px;white-space:nowrap;opacity:.85}
-/* inbox 43: hidden while 꾸미기 or a window (둥지·도감·보관함·진열장) is open */
-#habitat:is(.decorating,:has(:is(#nest,#codex,#store,#cab):not([hidden]))) .fday{display:none}.fday li.nx{padding:0 0 3px}.fday li.nx button{all:unset;box-sizing:border-box;display:flex;align-items:baseline;gap:6px;flex:1;min-height:30px;padding:5px 8px;border-radius:10px;background:rgba(255,211,107,.2);color:#ffe7a8;font-weight:700;line-height:1.3;cursor:pointer}.fday li.nx small{margin-left:auto;padding-left:8px;white-space:nowrap;font-weight:400;opacity:1}.fday li.nx button:focus-visible{outline:2px solid #ffd36b}
-.fday li.done{opacity:.6}.fday li.done span{color:#a6e3a1}.fday p{margin:0;padding:3px 11px 8px;font-size:calc(11px*var(--fs));opacity:.85}
 #attend p.note{margin:0 0 10px}#attend p.note.got{font-size:calc(15px*var(--fs));font-weight:700;color:#4a3626}
 .hmenu{align-items:flex-start;justify-content:flex-start;padding:calc(64px + var(--sa-t)) calc(12px + var(--sa-r)) calc(12px + var(--sa-b)) calc(12px + var(--sa-l));background:rgba(30,22,14,.25)}
 .hmenu>div{padding:8px;border-radius:18px;min-width:200px;max-width:280px;text-align:left}
@@ -599,7 +586,7 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .visit .vhd{display:block;text-align:left;margin:4px 0 6px;font-size:calc(13px*var(--fs));color:#8a6a4c}.visit li img.vth{width:44px;height:44px;object-fit:contain;flex-shrink:0}
 /* 16-2 특별한 하늘: the pill, 하늘 보기 (the HUD away, a bar on top), the 하늘 기록 */
 .tools .skypill{background:#2b3550;color:#fff3c9}
-.skyview #habitat :is(.bar,.beta,.tools,.dock,.npill,.nestbtn,.camb,.tag,.scnote,.fday){display:none!important}
+.skyview #habitat :is(.bar,.beta,.tools,.dock,.npill,.nestbtn,.camb,.tag,.scnote){display:none!important}
 .skybar{position:absolute;left:50%;top:calc(12px + var(--sa-t));transform:translateX(-50%);z-index:1001;width:min(92vw,420px);display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center;color:#fff;text-shadow:0 1px 3px #0009}
 .skybar[hidden]{display:none}.skybar .sktx{display:flex;flex-direction:column;gap:2px;font-size:calc(13px*var(--fs));word-break:keep-all}
 .skybar .sktx b{font-size:calc(15px*var(--fs))}.skybar .sktx small{color:#ffe7a8}

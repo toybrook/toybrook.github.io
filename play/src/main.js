@@ -19,7 +19,7 @@ import './ui/first.js'; // inbox 41 D 첫날 할 일
 import { initEvent } from './ui/event.js'; // 15-1 계절 이벤트
 import { initMyth, onMyth, mythCut, mythDue } from './ui/myth.js'; // 14-1 신수의 부름
 import { initVisit } from './ui/visit.js'; // 16-1 놀러 보내기
-import { initSky, skyNow, onScope, onStar, retSky, retShown, retGo } from './ui/sky.js'; // 16-2 특별한 하늘
+import { initSky, skyNow, onStar, retSky, retShown, retGo } from './ui/sky.js'; // 16-2 특별한 하늘
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
 // 26-7 한 번에 한 탭: a tab opened second, or one another tab took over, is covered (nothing saved there) till 「여기서 하기」
@@ -90,7 +90,7 @@ const ui = {
   onDig: () => { const id = G.dig(); if (id) toast(`화석을 발견했어요! ${PROPS.find(p => p.id === id).name} · 꾸미기 › 선물에 넣어 두었어요`, 2800, true); return id; }, // 14-3 화석 발굴
   onPile: () => { const n = G.tapPile(), L = n && G.event(); if (n) toast(`눈더미에서 ${L.e.coin.icon} ${L.e.coin.name} ${n}개!`, 2200, true); return n; }, // 15-2 첫눈
   hello: (x, y) => heart(x, y), // inbox 64-A: the first friend's hop
-  skyNow, onScope, onStar, // 16-2 특별한 하늘 (ui/sky.js)
+  skyNow, onStar, // 16-2 특별한 하늘 (ui/sky.js)
   onMyth, // 14-1 the meadow's fire prints, hoofprints, altar and 신수 tapped (ui/myth.js)
   say: t => toast(t, 1800, true), // 28-3: a short note from the habitat (the music box's tune, the fireworks by day)
   zzz(xy) { if (!hab.classList.contains('hidden') && !overlayOpen() && !document.querySelector('body > section.pop:not([hidden])')) zzz(xy); }, // not over a sheet (28-5: nor 설정·꾸미기 코드·도움말, outside #habitat)
@@ -172,25 +172,10 @@ const glFail = e => { console.warn('rebuild', e); if ($('glFail')) return; const
 const level = initLevel(() => api); level.events(offline); // 23-1 정원사 레벨
 const snap = initPhoto(() => api, () => cur); // 24-1 사진 모드
 initSky(() => api, () => cur);
-const habMenu = $('habMenu');
-$('back').onclick = () => { mapUp(); snap.leave(); hab.classList.add('hidden'); world.classList.remove('hidden'); api?.setActive(false); api = cur = null; play?.leave(); habMenu.hidden = true; };
+$('back').onclick = () => { mapUp(); snap.leave(); hab.classList.add('hidden'); world.classList.remove('hidden'); api?.setActive(false); api = cur = null; play?.leave(); };
 
-// inbox 20 C8: the habitat's name at the top lists the habitats (moving without the world map)
-$('habName').onclick = () => {
-  habMenu.innerHTML = `<div><h2>서식지</h2><div class="col">${HABITATS.map(h => { const open = unlockInfo(G.S, h.id).open, now = h.id === cur;
-    return `<button data-h="${h.id}" class="${now ? 'on' : open && h.ready ? '' : 'lock'}">${h.name}<small>${now ? '지금 여기' : !h.ready ? '준비 중' : !open ? '잠김' : ''}</small></button>`; }).join('')}
-<button class="sb" data-map>월드맵으로</button><button class="sb" data-close>닫기</button></div></div>`;
-  habMenu.hidden = false;
-};
-habMenu.onclick = e => {
-  const d = e.target.closest('button')?.dataset; if (!d) return;
-  if (d.close != null) return void (habMenu.hidden = true);
-  if (d.map != null) return $('back').click();
-  const h = HAB[d.h]; if (!h || h.id === cur) return void (habMenu.hidden = true);
-  if (!h.ready) return toast(`${h.name}${josa(h.name, '은', '는')} 아직 준비 중이에요`);
-  if (!unlockInfo(G.S, h.id).open) return toast(`${h.name}: ${lockText(h.id)}`, 3200);
-  habMenu.hidden = true; nav.go(h.id);
-};
+// 74: one button (the habitat's name, ‹) back to the world map; the map moves between habitats
+$('habName').onclick = () => $('back').click();
 
 // inbox 20 C9: Esc (PC) and the phone's back button close the window on top first, then leave the habitat for the map.
 // One history entry stands for "there is something to close" (a window, or a habitat on screen); back uses it up.
@@ -246,7 +231,7 @@ function showRet() {
   const sk = retSky(); // 16-2: last night's sky not seen (망원경으로 다시 보기)
   if (!n && !grown.length && !att && !back.length && !myth && !sk) return;
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
-  const rows = [myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '망원경으로 다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
+  const rows = [myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
     grown.length && ['🌱', `다 자란 친구 ${grown.length}`, '보러 가요', 'grown'], ready && ['✨', `부화 끝난 알 ${ready}`, '깨우러 가요', 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', '백업해 두면 기기를 바꿔도 이어서 할 수 있어요', '설정 › 내 저장 백업', 'backup']); G.flag('backupNag', today); }
@@ -299,10 +284,11 @@ const PREF_ROWS = [['time', '시간', [['real', '실제 시간'], ['day', '항�
   ['mute', '소리', [[false, '켜기'], [true, '모두 끄기']]]]; // 26-2
 const VOLS = [['vAll', '전체'], ['vAmb', '배경 소리'], ['vFx', '효과음'], ['vAnimal', '동물 소리']];
 // 26-3: after the sound. 움직임 줄이기 shows the device's choice until one is picked; 진동 only where the browser can (Android)
+const PC = matchMedia('(pointer:fine)').matches; // 74: 책상 모드 is for a desk
 const LOOK_ROWS = [['gfx', '그래픽 품질', [['low', '낮음'], ['mid', '보통'], ['high', '높음']]], ['saver', '배터리 절약', [[false, '끄기'], [true, '켜기']]],
-  ['deskSound', '책상 모드 소리', [[false, '끄기'], [true, '배경 소리만']]], ...navigator.wakeLock ? [['deskWake', '책상 모드 화면 켜 두기', [[true, '켜기'], [false, '끄기']]]] : [], // 16-3
+  ...PC ? [['deskSound', '책상 모드 소리', [[false, '끄기'], [true, '배경 소리만']]], ...navigator.wakeLock ? [['deskWake', '책상 모드 화면 켜 두기', [[true, '켜기'], [false, '끄기']]]] : []] : [], // 16-3; 74: PC only
   ['font', '글자 크기', [['s', '작게'], ['m', '보통'], ['l', '크게']]], ['calm', '움직임 줄이기', [[false, '끄기'], [true, '켜기']]], ['signs', '구역 팻말 보이기', [[true, '켜기'], [false, '끄기']]],
-  ['pal', '성격·단짝', [[true, '켜기'], [false, '끄기']]], ['palLine', '단짝 하트 끈', [[true, '켜기'], [false, '끄기']]], // 17-1: pal is the save's flags.palOff (game/pals.js)
+  // 74: 성격·단짝 and 단짝 하트 끈 rows hidden (they stay on; flags.palOff and PREFS.palLine as saved)
   ...navigator.vibrate && matchMedia('(pointer:coarse)').matches ? [['buzz', '진동', [[false, '끄기'], [true, '켜기']]]] : [],
   ['stats', '이용 통계 보내기', [[true, '켜기'], [false, '끄기']]]]; // inbox 41 A (src/ui/stats.js)
 const segRow = ([k, name, opts]) => { const now = k === 'calm' ? calm() : k === 'pal' ? !G.S.flags.palOff : PREFS[k];
@@ -311,9 +297,9 @@ const prefs = $('prefs'), rows = $('prefRows'), help = $('help');
 const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
   + VOLS.map(([k, name]) => `<label class="row vol"><b>${name}</b><input type="range" min="0" max="100" step="5" data-vol="${k}" value="${Math.round(PREFS[k] * 100)}"${PREFS.mute ? ' disabled' : ''}><output>${Math.round(PREFS[k] * 100)}%</output></label>`).join('')
   + LOOK_ROWS.map(segRow).join('')
-  + (cur ? `<div class="row"><b>책상 모드</b><div class="seg"><button data-act="desk">켜기</button>${window.documentPictureInPicture ? '<button data-act="pip">항상 위 작은 창</button>' : ''}</div></div>` : '') // 16-3 (작은 창: PC Chrome only)
+  + (cur && PC ? `<div class="row"><b>책상 모드</b><div class="seg"><button data-act="desk">켜기</button>${window.documentPictureInPicture ? '<button data-act="pip">항상 위 작은 창</button>' : ''}</div></div>` : '') // 16-3 (작은 창: PC Chrome only)
   + `<div class="row"><b>내 저장 백업</b><div class="seg"><button data-act="backup"${BK.due() ? ' class="new"' : ''}>백업 · 불러오기</button></div></div>`
-  + `<div class="row"><b>처음 안내</b><div class="seg"><button data-act="tips">안내 다시 보기</button></div></div>`
+  + `<div class="row"><b>처음 안내</b><div class="seg"><button data-act="help">도움말</button><button data-act="tips">안내 다시 보기</button></div></div>`
   + (iosSafariTab(BK.DEV) ? `<div class="row"><b>홈 화면 안내</b><div class="seg"><button data-act="home">홈 화면 안내 다시 보기</button></div></div>` : '') // inbox 39
   + `<div class="row"><b>정보</b><div class="seg"><button data-act="intro">베타 안내</button><button data-act="news">새 소식 다시 보기</button></div></div>` // inbox 43
   + `<div class="row"><b>선물 코드</b><div class="seg"><button data-act="code">선물 코드 넣기</button></div></div>` // inbox 41 B
@@ -325,6 +311,7 @@ const tipsAgain = () => { resetTips(); G.flag('nestTapped', false); prefs.hidden
 rows.onclick = e => {
   const d = e.target.closest('button')?.dataset; if (!d) return;
   if (d.act === 'tips') return tipsAgain();
+  if (d.act === 'help') { prefs.hidden = true; return openHelp(); } // 74: was the 「?」 button
   if (d.act === 'home') { G.flag('homeHintSeen', false); prefs.hidden = true; return toast(cur ? '홈 화면 안내를 다시 보여 줄게요' : '서식지에 들어가면 홈 화면 안내를 다시 보여 줄게요', 2200, true); } // play.js shows it
   if (d.act === 'backup') return BK.open();
   if (d.act === 'news') { prefs.hidden = true; news.hidden = false; return; }
@@ -343,8 +330,8 @@ rows.onclick = e => {
 };
 rows.oninput = e => { const k = e.target.dataset.vol; if (!k) return; PREFS[k] = e.target.value / 100; e.target.nextElementSibling.value = e.target.value + '%'; applySound(); };
 rows.onchange = e => { if (e.target.dataset.vol) { savePrefs(); sfx('tap'); } }; // let go of the slider: keep it, and a tap to hear how loud
-// inbox 20 C3: 「?」 every first-time tip in one place
-$('helpBtn').onclick = () => {
+// inbox 20 C3: every first-time tip in one place (74: from 설정 › 처음 안내)
+const openHelp = () => {
   help.innerHTML = `<div><h2>도움말</h2><dl>${Object.values(TIPS).map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl>
 <div class="nbtns"><button class="sb" data-act="tips">안내 다시 보기</button><button class="go" data-close>닫기</button></div></div>`;
   help.hidden = false;

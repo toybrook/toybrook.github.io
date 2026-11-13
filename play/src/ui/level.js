@@ -1,6 +1,6 @@
 // 23-1 정원사 레벨: the Lv pill in the habitat bar (tap: the level sheet), and the small card when the level goes up
 // ("레벨 6! 새로 풀린 것: 풍차"). The XP and what each level opens are BALANCE.level; rules.js keeps S.xp / S.lv.
-// 23-2: 도전 과제 (game/achieve.js) from the level sheet: the list with each one's progress; a done one's 칭호 is put on by a tap
+// 23-2: 도전 과제 (game/achieve.js) from the level sheet: the list with each one's progress; (74: 칭호 hidden)
 // (shown under the level). A toast when one is done.
 import * as G from '../game/game.js';
 import { BALANCE as B, SETS, BRUSHES } from '../game/data.js';
@@ -37,10 +37,10 @@ export function initLevel(getApi) {
 
   const done = () => ACH.filter(a => G.S.ach?.[a.id]).length;
   pill.onclick = () => {
-    const L = G.S.lv, [x, n] = part(L), X = B.level.xp, road = Object.entries(B.level.unlock), T = ACH_BY[G.S.title];
-    sheet.innerHTML = `<div><h2>정원사 레벨 ${L}</h2>${T ? `<p class="ttl">「${T.title}」</p>` : ''}<p class="bar"><i style="width:${Math.min(100, x / n * 100)}%"></i></p><p class="sub">다음 레벨까지 ${n - x} XP · 모은 XP ${G.S.xp}</p>
+    const L = G.S.lv, [x, n] = part(L), X = B.level.xp, road = Object.entries(B.level.unlock);
+    sheet.innerHTML = `<div><h2>정원사 레벨 ${L}</h2><p class="bar"><i style="width:${Math.min(100, x / n * 100)}%"></i></p><p class="sub">다음 레벨까지 ${n - x} XP · 모은 XP ${G.S.xp}</p>
 <h3>XP를 받는 것</h3><ul class="src"><li>도감에 새 칸<b>+${X.codex}</b></li><li>새끼가 다 자라면<b>+${X.grown}</b></li><li>쓰다듬기 (하루 ${X.petDaily}번까지)<b>+${X.pet}</b></li><li>하루 첫 방문<b>+${X.login}</b></li><li>도전 과제 하나<b>+${X.achieve}</b></li></ul>
-<button class="achBtn" data-ach>도전 과제 ${done()}/${ACH.length} · 칭호 고르기</button>
+<button class="achBtn" data-ach>도전 과제 ${done()}/${ACH.length}</button>
 <h3>레벨마다 풀리는 것</h3><ol class="road">${road.map(([l, list]) => `<li class="${+l <= L ? 'done' : +l === L + 1 ? 'next' : ''}"><em>Lv ${l}</em><span>${list.map(k => unlockText(k)[0]).join(', ')}</span></li>`).join('')}
 <li class="${L > road.length ? 'done' : ''}"><em>그 뒤</em><span>${B.level.after} XP마다 레벨이 올라요</span></li></ol>
 <p class="sub">하트로 사는 가격은 그대로예요. 레벨은 살 수 있는 자격이에요. 서식지는 도감으로 열려요.</p><button data-close>닫기</button></div>`;
@@ -54,13 +54,12 @@ export function initLevel(getApi) {
 
   function list() {
     const S = G.S;
-    achs.innerHTML = `<div><h2>도전 과제</h2><p class="sub">${done()}/${ACH.length} 이룸 · 하나마다 XP +${B.level.xp.achieve}와 칭호 · 이룬 것을 누르면 그 칭호를 달아요</p><ul class="achl">${ACH.map(a => {
-      const ok = S.ach?.[a.id], v = Math.min(a.n, a.v(S)), on = S.title === a.id;
-      return `<li class="${ok ? 'done' : ''}${on ? ' on' : ''}"${ok ? ` data-t="${a.id}"` : ''}><b>「${a.title}」</b><em>${on ? '달고 있음' : ok ? '✓' : `${v}/${a.n}`}</em><small>${a.text}</small>${ok ? '' : `<i><s style="width:${v / a.n * 100}%"></s></i>`}</li>`; }).join('')}</ul>
+    achs.innerHTML = `<div><h2>도전 과제</h2><p class="sub">${done()}/${ACH.length} 이룸 · 하나마다 XP +${B.level.xp.achieve}</p><ul class="achl">${ACH.map(a => {
+      const ok = S.ach?.[a.id], v = Math.min(a.n, a.v(S)); // 74: 칭호 hidden (S.title stays in saves, shown nowhere)
+      return `<li class="${ok ? 'done' : ''}"><b>「${a.title}」</b><em>${ok ? '✓' : `${v}/${a.n}`}</em><small>${a.text}</small>${ok ? '' : `<i><s style="width:${v / a.n * 100}%"></s></i>`}</li>`; }).join('')}</ul>
 <p class="btns"><button data-back>정원사 레벨</button><button data-close>닫기</button></p></div>`;
     achs.querySelector('[data-close]').onclick = () => { achs.hidden = true; };
     achs.querySelector('[data-back]').onclick = () => { achs.hidden = true; pill.onclick(); };
-    achs.querySelectorAll('[data-t]').forEach(li => { li.onclick = () => { const y = achs.querySelector('ul').scrollTop; G.setTitle(S.title === li.dataset.t ? null : li.dataset.t); list(); achs.querySelector('ul').scrollTop = y; }; });
     achs.hidden = false;
   }
 

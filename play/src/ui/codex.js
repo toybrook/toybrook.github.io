@@ -21,6 +21,8 @@ import { DEBUG, calm } from '../config.js';
 import { figureThumb, silhouetteThumb, propThumb, studio, nightLights, mythThumb } from './thumbs.js';
 import { mythCard, mythHint } from './myth.js';
 import { openStories, cardsIn } from './story.js';
+import { SLOTS } from '../game/sky.js';
+const SKY_N = SLOTS.length;
 
 const el = document.getElementById('codex');
 let tab = HABITATS[0].id, night = false, hab = null; // night: 21-1 밤에 보기 (this screen only, off each time it opens)
@@ -42,6 +44,8 @@ el.addEventListener('click', e => {
   else if (b.dataset.night != null) { const y = el.querySelector('.cbody')?.scrollTop || 0; night = !night; draw(); el.querySelector('.cbody').scrollTop = y; }
   else if (b.dataset.shut != null) b.closest('.cdet').remove();
   else if (b.dataset.story) openStories(b.dataset.story); // 14-2 이야기 카드
+  else if (b.dataset.cab != null) { el.hidden = true; document.getElementById('cabBtn').click(); } // 74: 진열장 from here
+  else if (b.dataset.sky != null) import('./sky.js').then(m => m.skyRecord()); // 74: 하늘 기록 from here
 });
 // a cell, tapped. Found: the 3D view (below). Not found: the silhouette. Both: where it comes from and where it lives.
 el.addEventListener('click', e => {
@@ -53,6 +57,9 @@ el.addEventListener('click', e => {
   silhouetteThumb(c.species.id, null, night).then(u => { box.querySelector('img').src = u; });
   el.append(box);
 });
+// 74: the codex's foot: the 진열장 (was its own button) and the 하늘 기록 (once a sky was seen)
+const foot = () => { const n = Object.keys(G.S.sky?.got ?? {}).length;
+  return `<div class="cfoot"><button class="scards" data-cab>진열장으로 보기</button>${n ? `<button class="scards" data-sky>하늘 기록 <small>${n}/${SKY_N}</small></button>` : ''}</div>`; };
 // 14-1 신수: its own row in each habitat (the meadow's 불갈기 천리마; the others' only a rumour yet), not in the count
 const mythRow = () => { if (HOLD.myth) return ''; const m = MYTHIC.find(m => m.habitat === tab), met = !!(m && G.S.myth?.here);
   return `<h3>신수 <small>${+met}/1</small></h3><div class="crow"><div class="cell myth${met ? '' : ' unk'}" role="button" data-m="${m?.id || ''}">${m ? `<img alt="${met ? m.name : '아직 못 만난 신수'}">` : ''}<span>${met ? m.name : '?'}</span>${m ? '' : '<small>소문만 있어요</small>'}</div></div><button class="scards" data-story="${tab}">이야기 카드 <b>${cardsIn(tab).length}</b>장<small>신수·전설 친구를 만난 날</small></button>`; }; // 14-2
@@ -164,7 +171,7 @@ function draw() {
   }).join('');
   el.innerHTML = `<div class="chead"><b>도감</b><span>${cells.filter(got).length}/${cells.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>
 ${tabs()}${cells.length ? bar(tab, cells, cells.filter(got).length) : ''}
-<div class="cbody">${groups || '<p class="cnote">준비 중이에요</p>'}${groups ? mythRow() : ''}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}</div>`;
+<div class="cbody">${groups || '<p class="cnote">준비 중이에요</p>'}${groups ? mythRow() : ''}${stored ? `<p class="cnote">보관함에 ${stored}마리 있어요</p>` : ''}${foot()}</div>`;
   const mi = el.querySelector('.cell.myth img'); if (mi) mythThumb(!G.S.myth?.here, night).then(u => { mi.src = u; }, () => {});
   for (const d of el.querySelectorAll('.cell[data-k]')) {
     const c = cells.find(c => c.key === d.dataset.k), img = d.firstChild;

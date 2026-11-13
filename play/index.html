@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.78.0-3b2f41e4">
+<meta name="build" content="toybrook-0.78.1-9a848095">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -27,7 +27,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="994194" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="987214" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -53,18 +53,17 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <div id="gl"></div>
     <div class="veil" id="veil" hidden><span></span></div>
     <div class="bar">
-      <button class="back" id="back" aria-label="월드맵으로 돌아가기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <button class="back" id="habName" aria-label="서식지 고르기"><b>초원</b><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <button class="back" id="back" hidden aria-label="월드맵으로 돌아가기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="back" id="habName" aria-label="월드맵으로 돌아가기"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><b>초원</b></button>
       <div class="pill hearts" id="hearts"><span aria-hidden="true">♥</span><b>0</b></div>
-      <button class="back sq" id="mailBtn" style="margin-left:auto" aria-label="우편함"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.8 7l8.2 6.2L20.2 7"/></svg></button>
+      <button class="back sq" id="mailBtn" hidden style="margin-left:auto" aria-label="우편함"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.8 7l8.2 6.2L20.2 7"/></svg></button>
       <button class="back sq" id="prefsBtn" aria-label="설정"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
     </div>
     <div class="pill tag" id="tag" hidden></div>
     <button class="back scnote" id="sceneNote" hidden></button>
-    <div class="fday" id="fday" hidden></div>
     <div class="skybar" id="skyBar" hidden></div>
     <div class="camb" id="camBtns" hidden><button class="back" id="frontBtn">정면</button><button class="back" id="overview">전체 보기</button></div>
-    <div class="tools"><button class="back evpill skypill" id="skyBtn" hidden>✨ 하늘 보기</button><button class="back evpill" id="evBtn" hidden></button><button class="back sq" id="helpBtn" aria-label="도움말">?</button><button class="back" id="cabBtn">진열장</button><button class="back" id="snapBtn">사진</button></div>
+    <div class="tools"><button class="back evpill" id="evBtn" hidden></button><button class="back" id="cabBtn" hidden>진열장</button><button class="back" id="snapBtn" hidden>사진</button></div>
     <!-- inbox 20: the buttons used most, low on the screen where a thumb reaches -->
     <div class="dock l"><button class="back" id="storeBtn">보관함</button><button class="back" id="friendsBtn">친구들 <span>0/12</span></button></div>
     <div class="dock r"><button class="back" id="codexBtn">도감</button><button class="back" id="decorBtn">꾸미기</button></div>
@@ -81,7 +80,6 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
       <p>아이폰에서는 한동안 들어오지 않으면 기록이 지워질 수 있어요. 공유 버튼 → 「홈 화면에 추가」로 열면 안전해요.</p>
       <div class="nbtns"><button class="sb" data-act="backup">백업 코드 저장하기</button><button class="go" data-close>알겠어요</button></div></div></section>
     <section class="nest pop" id="friends" hidden aria-label="친구들"></section>
-    <section class="intro pop hmenu" id="habMenu" hidden aria-label="서식지 고르기"></section>
     <canvas class="snapov" id="snapOv" hidden aria-hidden="true"></canvas>
     <section class="snap" id="snap" hidden aria-label="사진 모드"></section>
   </section>
@@ -105,7 +103,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <ul>
       <li data-upd><i aria-hidden="true">🔄</i><span>새 판이 나오면 위에 「새로 고침」 띠가 떠요</span></li>
       <li><i aria-hidden="true">❄️</i><span>12월 5일부터 2주 동안 첫눈 이벤트: 눈 덮인 초원에서 눈더미를 모아 눈사람을 만들고, 친구에게 털모자를 씌워요</span></li>
-      <li><i aria-hidden="true">🔥</i><span>초원에 낯선 발자국이 보이면 따라가 보세요. 이야기 속 신수가 찾아와요</span></li>
+      <li><i aria-hidden="true">✨</i><span>화면이 더 깔끔해졌어요. 진열장·하늘 기록은 도감에, 사진은 꾸미기에, 도움말은 설정에 있어요</span></li>
       <li><i aria-hidden="true">🎒</i><span>초원에 떠돌이 손님이 찾아와요. 말풍선의 소원을 들어주면 하트와 알을 두고 가요</span></li>
     </ul>
     <p class="note">베타 기간의 데이터는 정식 출시 때 초기화돼요.</p>

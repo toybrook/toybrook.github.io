@@ -133,7 +133,7 @@ export const BALANCE = {
     after: 100,
     unlock: {
       2: ['set:ranch'], 3: ['expand:2', 'brush:sand'], 4: ['set:woods', 'prop:tunnel'], 5: ['set:water', 'prop:picnic'], 6: ['prop:windmill'], 7: ['set:night', 'prop:snowslide'],
-      8: ['expand:3', 'prop:well'], 9: ['set:play', 'brush:gravel', 'prop:carousel'], 10: ['prop:arch'], 11: ['expand:4', 'prop:gym'], 12: ['brush:bloom', 'prop:balloon'], 13: ['prop:falls'],
+      8: ['expand:3', 'prop:well'], 9: ['set:play', 'brush:gravel', 'prop:carousel'], 10: ['prop:arch'], 11: ['expand:4', 'prop:gym'], 12: ['prop:balloon'], 13: ['prop:falls'],
       14: ['expand:5', 'prop:tower'], 15: ['prop:lighthouse'], 16: ['prop:barn'], 17: ['prop:greenhouse'], 18: ['expand:6', 'prop:waterwheel'], 19: ['prop:waterpav'], 20: ['prop:treehouse'], // 42 F-2: the big props along the levels
     },
   },
@@ -910,11 +910,11 @@ export const EVENTS = [
     // 15-2 snow piles: one turns up at each of these hours (KST) and waits till the next; a tap: earn.pile coins, the friends near roll in it
     piles: [0, 6, 12, 18],
     // 15-2 a snowman: built in 3 taps (body, head, the scarf and nose) for price coins; it stays (prop), the friends gather round
-    build: { price: 15, prop: 'ev_snowman' },
+    build: { price: 30, prop: 'ev_snowman' }, // 74: prices in hearts (the old coin price × coin.hearts)
     // 15-2 shop: big / small / wear (wear: a knit hat or scarf put on a friend in 옷장; not a secret accessory, the odds never see it)
-    shop: [{ prop: 'ev_igloo', price: 90, kind: 'big' }, { prop: 'ev_slide', price: 80, kind: 'big' }, { prop: 'ev_flakelamp', price: 60, kind: 'big' },
-      { prop: 'ev_sled', price: 30, kind: 'small' }, { prop: 'ev_snowfam', price: 35, kind: 'small' }, { prop: 'ev_mitten', price: 30, kind: 'small' },
-      { wear: 'ev_beanie', price: 20, kind: 'wear' }, { wear: 'ev_scarf', price: 20, kind: 'wear' }],
+    shop: [{ prop: 'ev_igloo', price: 180, kind: 'big' }, { prop: 'ev_slide', price: 160, kind: 'big' }, { prop: 'ev_flakelamp', price: 120, kind: 'big' },
+      { prop: 'ev_sled', price: 60, kind: 'small' }, { prop: 'ev_snowfam', price: 70, kind: 'small' }, { prop: 'ev_mitten', price: 60, kind: 'small' },
+      { wear: 'ev_beanie', price: 40, kind: 'wear' }, { wear: 'ev_scarf', price: 40, kind: 'wear' }],
     track: [{ at: 15, hearts: 20 }, { at: 35, candy: 1 }, { at: 60, hearts: 30 }, { at: 90, prop: 'ev_icelamp' }, { at: 125, hearts: 40 },
       { at: 165, candy: 2 }, { at: 205, hearts: 50 }, { at: 245, prop: 'ev_sled' }, { at: 290, hearts: 60 }, { at: 330, prop: 'ev_bigsnowman' }],
     // need: hab, night, sky, prop (one of a list) placed in that habitat, ball (a snowball fight on screen, photo.js)

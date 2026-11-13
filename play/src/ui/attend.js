@@ -5,7 +5,7 @@
 import * as G from '../game/game.js';
 import { PROP, HAB, firstEgg } from '../game/rules.js';
 import { ATTEND, ATTEND_PROPS, GIFT } from '../game/data.js';
-import { topWindow, overlayOpen, resting } from './hud.js';
+import { topWindow, overlayOpen, resting, toast } from './hud.js';
 import { sfx } from './sound.js';
 import { track } from './stats.js';
 
@@ -41,9 +41,9 @@ box.onclick = e => {
 };
 const busy = () => firstEgg(G.S) || G.S.guests?.tut >= 0 || G.now() - G.S.since < 300e3 || topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden || !at() || resting(); // inbox 61 B: after the first egg; 66-1: after the guest tutorial; inbox 43: only inside a habitat, never on the map; one card at a time
 setInterval(() => {
-  if (!box.hidden || !G.attendDue() || busy()) { quiet = 0; return; }
+  if (!G.attendDue() || busy()) { quiet = 0; return; }
   if ((quiet += 800) < 1600) return;
-  quiet = 0; draw(); box.hidden = false;
+  quiet = 0; const t = takeToday(at()); if (t) toast(`${G.S.attend.n}일째 출석 · ${t}`, 2800); // 74: one line, no card (a day back: a row of 돌아왔어요)
 }, 800);
 // cur: the habitat on screen (a 7th-day prop goes there); after: called when the card closes (main.js firstDone)
 export function initAttend(cur, after) { at = cur; done = after; }

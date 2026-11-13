@@ -195,7 +195,7 @@ export function initPlay(nav) {
     if (eggs && hab) toast(eggs > 1 ? `둥지에 알이 ${eggs}개 생겼어요` : '둥지에 알이 생겼어요');
     for (const e of ev) { // later ones matter more: they win the toast
       if (e.type === 'stored') toast(`서식지 자리가 모자라 오래된 친구가 보관함으로 갔어요 (최대 ${capOf(G.S, habitatOf(e.animal))}마리)`, 3200);
-      if (e.type === 'unlock') { toast(`${HAB[e.habitat].name}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 가 보세요`, 3200); tip('unlock', '#habName'); }
+      if (e.type === 'unlock') { toast(`${HAB[e.habitat].name}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 월드맵에서 가 보세요`, 3200); tip('unlock', '#habName'); }
       if (e.type === 'strollBack' && hab) { const a = e.animal, nm = nameOf(a); if (!a.stored && habitatOf(a) === habId) hab.drop(a); toast(`${nm}${josa(nm, '이', '가')} 산책에서 돌아왔어요 · ♥+${e.card.hearts}${a.stored ? ' · 자리가 없어 보관함에 있어요' : ''}`, 3000); } // 13-1
       if (e.type === 'reset' && hab) { bubble.hidden = true; bubbleFor = null; hint(); }
     }

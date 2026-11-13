@@ -10,7 +10,7 @@ import { figureThumb } from './thumbs.js';
 import { toast, heart, josa } from './hud.js';
 import { SORTS } from './store.js';
 import { pickStroll } from './stroll.js';
-import { sendSheet, openBook } from './visit.js';
+import { openBook } from './visit.js';
 import { PE, mateOf } from '../game/pals.js';
 
 const el = document.getElementById('friends');
@@ -82,13 +82,12 @@ function more(id) {
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
   menu.innerHTML = `<div><h2>${star(a)}${nm}</h2>${a.nm ? `<p class="sub">${kindName(a)}</p>` : ''}${pe}<div class="col"><button data-do="go">보러 가기</button>
 <button data-do="fav" aria-pressed="${!!a.fav}">${a.fav ? '★ 별 떼기' : '☆ 아끼는 친구로'}</button><button data-do="name">${a.nm ? '이름 바꾸기' : '이름 짓기'}</button>
-<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button><button data-do="visit">놀러 보내기</button><button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>`;
+<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button><button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>`;
   menu.onclick = e => {
     const d = e.target.closest('button')?.dataset; if (!d) return;
     if (d.do === 'go') return go(a.id);
     if (d.do === 'name') return naming(a);
     if (d.do === 'walk') { menu.remove(); menu = null; return pickStroll(a); }
-    if (d.do === 'visit') { menu.remove(); menu = null; if (a.stage !== 'baby') el.hidden = true; return sendSheet(a); } // 16-1
     if (d.do === 'pet') { const n = G.tapHeart(a.id); const r = e.target.getBoundingClientRect(); if (n) heart(r.left + r.width / 2, r.top); toast(n ? `${nm}${josa(nm, '이', '가')} 좋아해요 ♥+${n}` : G.S.pet.n >= B.heart.daily ? '오늘 쓰다듬기 하트는 다 모았어요' : '방금 쓰다듬었어요 · 조금 뒤에 다시', 2200, true); return; }
     if (d.do === 'fav') toast(G.setFav(a.id, !a.fav)?.fav ? `${nm}${josa(nm, '은', '는')} 아끼는 친구예요 · 보관함의 여러 마리 돌려보내기에서 빠져요` : `${nm}의 별을 뗐어요`, 2600);
     if (d.do === 'store' && G.store(a.id)) toast(`${nm}${josa(nm, '을', '를')} 보관함에 넣었어요`);

@@ -896,7 +896,7 @@ function runAt(e, y) { // its run of year y (by the start): { start, end } or nu
 const evLive = (R, now) => !R.over && R.start <= now && now < R.end;
 export function liveRun(S, now) { for (const [key, R] of Object.entries(S.events)) if (evLive(R, now)) return { key, R, e: EV[R.id] }; return null; }
 function evEarn(S, R, n, now, rng = Math.random) {
-  const e = EV[R.id]; R.c += n; R.got += n;
+  const e = EV[R.id]; R.got += n; // 74: no coins to spend, only the 보상 길's count (R.c: an old save's, made hearts at the end)
   while (R.step < e.track.length && R.got >= e.track[R.step].at) give(S, e.track[R.step++], now, rng, S.flags.lastHab);
 }
 function evTick(S, now, rng) {
@@ -912,10 +912,10 @@ function evTick(S, now, rng) {
   }
 }
 export function buyEv(S, propId, hab, now) { // the event shop: its coins, into this habitat (put away: 꾸미기 › 선물); 15-2 wear: one more to put on
-  const L = liveRun(S, now), it = L?.e.shop.find(i => (i.prop ?? i.wear) === propId), P = PROP[propId]; if (!it || L.R.c < it.price) return null;
-  if (it.wear) { if (!EV_ACC[propId]) return null; L.R.c -= it.price; L.R.buy[propId] = (L.R.buy[propId] || 0) + 1; return { wear: propId }; }
+  const L = liveRun(S, now), it = L?.e.shop.find(i => (i.prop ?? i.wear) === propId), P = PROP[propId]; if (!it || S.hearts < it.price) return null; // 74: hearts
+  if (it.wear) { if (!EV_ACC[propId]) return null; S.hearts -= it.price; L.R.buy[propId] = (L.R.buy[propId] || 0) + 1; return { wear: propId }; }
   if (!P) return null;
-  L.R.c -= it.price; L.R.buy[propId] = (L.R.buy[propId] || 0) + 1;
+  S.hearts -= it.price; L.R.buy[propId] = (L.R.buy[propId] || 0) + 1;
   const p = { uid: S.nextId++, prop: P.id, hab: P.habitat ?? hab, placed: false, x: 0, z: 0, rot: 0 }; S.props.push(p); return p;
 }
 // a photo saved while an event runs: ctx { hab, night, sky } (photo.js); fills the first empty slot it meets, all = album.prop
@@ -946,8 +946,8 @@ export function dig(S, now, rng = Math.random) {
 export function tapPile(S, now) { const p = evPile(S, now); if (!p) return 0; p.R.pile = p.id; p.R.pileAt = now; evEarn(S, p.R, p.e.earn.pile, now); return p.e.earn.pile; }
 // a snowman built (3 taps, the habitat finds the spot: x, z as saved) for build.price coins: placed there at once, a prop to keep
 export function evBuild(S, hab, x, z, now) {
-  const L = liveRun(S, now), b = L?.e.build; if (!b || L.R.c < b.price || !HAB[hab] || !Number.isFinite(x) || !Number.isFinite(z)) return null;
-  L.R.c -= b.price; L.R.built++; const p = { uid: S.nextId++, prop: b.prop, hab, placed: true, x, z, rot: 0 }; S.props.push(p); return p;
+  const L = liveRun(S, now), b = L?.e.build; if (!b || S.hearts < b.price || !HAB[hab] || !Number.isFinite(x) || !Number.isFinite(z)) return null;
+  S.hearts -= b.price; L.R.built++; const p = { uid: S.nextId++, prop: b.prop, hab, placed: true, x, z, rot: 0 }; S.props.push(p); return p;
 }
 // event wear (data.js EV_ACC): how many of each were bought in all runs; on a friend (a.wear: ids) while fewer are worn than bought.
 // Toggled; kept after the event (only its window changes it)

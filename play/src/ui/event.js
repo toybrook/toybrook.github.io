@@ -40,16 +40,16 @@ ${here.length ? '<p class="note">입힌 치장은 이벤트가 끝나도 그대�
 function draw() {
   const L = G.event(); if (!L) { box.hidden = true; return; }
   const { R, e } = L, c = e.coin, nx = e.track.findIndex((s, i) => i >= R.step);
-  const row = i => { const id = i.prop ?? i.wear; return `<li>${i.wear ? `<i class="evi" aria-hidden="true">${wicon(id)}</i>` : `<img alt="" data-p="${id}">`}<span>${esc(i.wear ? EV_ACC[id].name : PROP[id].name)}${R.buy[id] ? `<small>${R.buy[id]}개 샀어요</small>` : ''}</span><button data-buy="${id}"${R.c < i.price ? ' disabled' : ''}>${c.icon} ${i.price}</button></li>`; };
-  const build = e.build ? `<ul><li class="evbuild"><i class="evi" aria-hidden="true">⛄</i><span>눈사람 만들기<small>서식지에서 눈을 세 번 눌러요 · 그대로 남아요</small></span><button data-build${R.c < e.build.price || !at() ? ' disabled' : ''}>${c.icon} ${e.build.price}</button></li></ul>` : '';
+  const row = i => { const id = i.prop ?? i.wear; return `<li>${i.wear ? `<i class="evi" aria-hidden="true">${wicon(id)}</i>` : `<img alt="" data-p="${id}">`}<span>${esc(i.wear ? EV_ACC[id].name : PROP[id].name)}${R.buy[id] ? `<small>${R.buy[id]}개 샀어요</small>` : ''}</span><button data-buy="${id}"${G.S.hearts < i.price ? ' disabled' : ''}>♥ ${i.price}</button></li>`; };
+  const build = e.build ? `<ul><li class="evbuild"><i class="evi" aria-hidden="true">⛄</i><span>눈사람 만들기<small>서식지에서 눈을 세 번 눌러요 · 그대로 남아요</small></span><button data-build${G.S.hearts < e.build.price || !at() ? ' disabled' : ''}>♥ ${e.build.price}</button></li></ul>` : '';
   const body = tab === 'shop' ? `<div class="evscroll">${build}${KINDS.map(([k, n]) => { const its = e.shop.filter(i => (i.kind ?? 'big') === k); return its.length ? `<h3>${n}</h3><ul>${its.map(row).join('')}</ul>` : ''; }).join('')}</div>
 <p class="note">산 소품은 꾸미기 › 선물에, 치장은 옷장에 들어가요</p>`
     : tab === 'wear' ? wardrobe(e)
     : tab === 'track' ? `<ol>${e.track.map((s, i) => `<li class="${i < R.step ? 'done' : i === nx ? 'next' : ''}"><b>${c.icon} ${s.at}</b><span>${rew(s)}</span>${i < R.step ? '<em>✓</em>' : ''}</li>`).join('')}</ol>
-<p class="note">모은 ${c.name} ${R.got}개 · 쓴 것도 세어요</p>`
+<p class="note">모은 ${c.name} ${R.got}개</p>`
     : `<ol>${e.album.slots.map(s => `<li class="${R.shots[s.id] ? 'done' : ''}"><i aria-hidden="true">${R.shots[s.id] ? '📷' : '❔'}</i><span>${s.name}<small>${hint(s.need)}</small></span>${R.shots[s.id] ? '<em>✓</em>' : ''}</li>`).join('')}</ol>
 <p class="note">사진 모드로 찍으면 한 칸씩 채워져요 · 다 채우면 「${PROP[e.album.prop].name}」${R.cover ? ' 받았어요' : ''}</p>`;
-  box.innerHTML = `<div><h2>${e.icon} ${e.name} 이벤트</h2><p class="note evc">${c.icon} ${c.name} <b>${R.c}</b>개 · ${left(R)}</p>
+  box.innerHTML = `<div><h2>${e.icon} ${e.name} 이벤트</h2><p class="note evc">${c.icon} 모은 ${c.name} <b>${R.got}</b>개 · ${left(R)}</p>
 <div class="evtabs" role="tablist">${TABS.filter(([k]) => k !== 'wear' || e.shop.some(i => i.wear)).map(([k, n]) => `<button role="tab" aria-selected="${tab === k}" data-tab="${k}"${tab === k ? ' class="on"' : ''}>${n}</button>`).join('')}</div>${body}
 <div class="nbtns"><button class="go" data-close>닫기</button></div></div>`;
   box.dataset.step = 'win';
@@ -58,14 +58,14 @@ function draw() {
 const flakes = () => calm() ? '' : `<p class="flakes" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i style="left:${(i * 37) % 100}%;animation-delay:${-(i * 0.61) % 4}s">❄</i>`).join('')}</p>`;
 function card(L) { // the start card
   box.innerHTML = `<div class="evcard">${flakes()}<h2>${L.e.icon} ${L.e.name} 이벤트가 시작됐어요</h2><p class="note">${md(L.R.start)} ~ ${md(L.R.end - 1)}</p>
-<p class="note">${esc(L.e.news)}</p><p class="note">${L.e.coin.icon} 매일 처음 오면 ${L.e.coin.name} ${L.e.earn.day}개, 친구를 쓰다듬어 하트 ${L.e.earn.pet}개마다 1개${L.e.earn.luck ? '(가끔 1개 더)' : ''}${L.e.piles ? `, 하루 ${L.e.piles.length}번 생기는 눈더미를 누르면 ${L.e.earn.pile}개` : ''}</p>
+<p class="note">${esc(L.e.news)}</p><p class="note">${L.e.coin.icon} 매일 처음 오면 ${L.e.coin.name} ${L.e.earn.day}개, 친구를 쓰다듬어 하트 ${L.e.earn.pet}개마다 1개${L.e.earn.luck ? '(가끔 1개 더)' : ''}${L.e.piles ? `, 하루 ${L.e.piles.length}번 생기는 눈더미를 누르면 ${L.e.earn.pile}개` : ''} · 모을수록 보상 길이 열려요</p>
 <div class="nbtns"><button class="sb" data-close>나중에</button><button class="go" data-open>보러 가기</button></div></div>`;
   box.dataset.step = 'start'; box.hidden = false; G.evSeen(L.key, 'seen'); sfx('bell');
 }
 function endCard(key, R) {
   const e = EV(R.id), c = e.coin;
   box.innerHTML = `<div class="evcard"><h2>${e.icon} ${e.name} 이벤트가 끝났어요</h2><p class="note">모은 ${c.name} ${R.got}개 · 보상 길 ${R.step}/${e.track.length}칸</p>
-<p class="note got">${R.left ? `남은 ${c.name} ${R.left}개 → ♥${R.paid} (1개 = ♥${c.hearts})` : `남은 ${c.name} 없이 다 썼어요`}</p>
+${R.left ? `<p class="note got">남은 ${c.name} ${R.left}개 → ♥${R.paid}</p>` : ''}
 <div class="nbtns"><button class="go" data-close>좋아요</button></div></div>`;
   box.dataset.step = 'end'; box.hidden = false; G.evSeen(key, 'told'); sfx('grown');
 }
@@ -93,10 +93,10 @@ function tick() { // after every game tick: the pill, the weather, the 새 소�
   const now = G.now(), gone = !L && G.S && Object.values(G.S.events).find(R => R.end <= now && now < R.end + DAY && EV(R.id)?.look.cover);
   WEATHER.cover = L ? (L.e.look.cover ? 1 : 0) : gone ? 1 - (now - gone.end) / DAY : 0; WEATHER.aur = L?.e.look.aurora ?? 1;
   hab()?.pile?.(!!(L && at() && G.pile()));
-  const k = L ? `${L.e.coin.icon}|${L.R.c}|${soon(L.R)}` : '';
+  const k = L ? `${L.e.icon}|${soon(L.R)}` : ''; // 74: no coin count on screen (♥ and Lv only)
   if (k !== pillWas) {
     pillWas = k; btn.hidden = !L;
-    if (L) { btn.innerHTML = `<span aria-hidden="true">${L.e.coin.icon}</span><b>${L.R.c}</b>${soon(L.R) ? '<small>곧 끝나요</small>' : ''}`; btn.setAttribute('aria-label', `${L.e.name} 이벤트 · ${L.e.coin.name} ${L.R.c}개`); }
+    if (L) { btn.innerHTML = `<span aria-hidden="true">${L.e.icon}</span>${soon(L.R) ? '<small>곧 끝나요</small>' : ''}`; btn.setAttribute('aria-label', `${L.e.name} 이벤트`); }
     const ul = document.querySelector('#news ul'), li = ul?.querySelector('[data-ev]');
     if (L && ul && !li) (ul.querySelector('[data-upd]') ?? ul).insertAdjacentHTML(ul.querySelector('[data-upd]') ? 'afterend' : 'afterbegin', `<li data-ev><i aria-hidden="true">${L.e.icon}</i><span>${esc(L.e.news)} (${md(L.R.end - 1)}까지)</span></li>`);
     if (!L) li?.remove();

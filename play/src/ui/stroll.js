@@ -16,9 +16,10 @@ export function pickStroll(a) {
   const nm = callName(a), n = strolling(G.S).length, cap = strollCap(G.S), R = B.stroll, full = n >= cap;
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
   menu.innerHTML = `<div><h2>산책 보내기</h2><p class="sub">${nm} · ${full ? `지금 ${n}마리가 산책 중이라 더 못 가요` : `산책 중 ${n}/${cap} · 돌아오면 엽서와 하트를 줘요`}</p><div class="col">${
-    R.hours.map(h => `<button data-h="${h}"${full ? ' disabled' : ''}>${h}시간 · ♥${R.hearts[h]}${R.candy[h] ? ` · 사탕 ${R.candy[h]}` : ''}</button>`).join('')}${mythHill(G.S) ? `<button data-h="${R.hours[0]}" data-pl="${FH.id}"${full ? ' disabled' : ''}>🔥 ${FH.name} · ${R.hours[0]}시간 · ${MYTHIC[0].hair}</button>` : ''}<button class="sb" data-shut>닫기</button></div></div>`;
+    R.hours.map(h => `<button data-h="${h}"${full ? ' disabled' : ''}>${h}시간 · ♥${R.hearts[h]}${R.candy[h] ? ` · 사탕 ${R.candy[h]}` : ''}</button>`).join('')}${mythHill(G.S) ? `<button data-h="${R.hours[0]}" data-pl="${FH.id}"${full ? ' disabled' : ''}>🔥 ${FH.name} · ${R.hours[0]}시간 · ${MYTHIC[0].hair}</button>` : ''}<button data-visit>친구네 놀러 가기</button><button class="sb" data-shut>닫기</button></div></div>`;
   menu.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.visit != null) { menu.remove(); menu = null; if (a.stage !== 'baby') document.getElementById('friends').hidden = true; return void import('./visit.js').then(m => m.sendSheet(a)); } // 74: 놀러 보내기 is a branch of 산책 (16-1)
     const h = +b.dataset.h; if (h && G.sendStroll(a.id, h, b.dataset.pl)) toast(`${nm}${josa(nm, '이', '가')} 산책을 나갔어요 · ${h}시간 뒤에 돌아와요`, 2600);
     menu.remove(); menu = null;
   };

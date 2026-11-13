@@ -18,7 +18,7 @@ const load = () => navigator.onLine ? fetch('mail.json', { cache: 'no-cache' }).
 const all = () => [...(Array.isArray(list?.mail) ? list.mail : []), ...G.evMail()]; // 15-1: an event's mail while it runs
 const waiting = () => all().filter(m => mailOpen(G.S, m, G.now()));
 const cards = () => G.S.visit.cards.filter(c => !c.got); // 16-1: postcards from where a friend went
-const dot = () => btn.classList.toggle('new', waiting().length > 0 || cards().length > 0 || (G.S.giftEggs > 0 && legendRoom(G.S)));
+const dot = () => { const on = waiting().length > 0 || cards().length > 0 || (G.S.giftEggs > 0 && legendRoom(G.S)); btn.classList.toggle('new', on); if (box.hidden) btn.hidden = !on; }; // 74: shown only with mail
 const day = s => { const m = /^\d{4}-(\d\d)-(\d\d)/.exec(String(s ?? '')); return m ? `${+m[1]}월 ${+m[2]}일까지` : ''; };
 const gifts = r => [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`, r?.candy > 0 && `꼬마 사탕 ${Math.floor(r.candy)}개`,
   r?.eggs > 0 && `둥지 알 ${Math.floor(r.eggs)}개`, PROP[r?.prop] && `소품 「${PROP[r.prop].name}」`, r?.legendEggs > 0 && `전설 알 ${Math.floor(r.legendEggs)}개`].filter(Boolean).join(' · ');
@@ -57,7 +57,7 @@ btn.onclick = () => { draw(); box.hidden = false; };
 let evm = 0; G.on(() => { const n = G.evMail().length; if (n !== evm) { evm = n; dot(); } }); // 15-1: the dot when an event starts or ends
 box.onclick = e => {
   const d = e.target.closest('button')?.dataset; if (!d) return;
-  if (d.close != null) { box.hidden = true; return; }
+  if (d.close != null) { box.hidden = true; dot(); return; }
   if (d.code != null) return void useCode();
   if (d.legend != null) { const out = G.claimLegend(); if (out) show(out.got); else draw(); return; }
   if (d.pc) { const out = G.claimCard(d.pc); if (out) show([out]); else draw(); return; }

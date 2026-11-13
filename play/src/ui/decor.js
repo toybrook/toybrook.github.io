@@ -87,7 +87,7 @@ function step(from, to) { // 되돌리기 (from undo) / 다시 하기 (from redo
   if (held) { hab.decor.cancel(); held = fresh = null; }
   to.push(layoutOf(G.S, habId)); G.setLayout(habId, from.pop()); draw(); sfx('undo');
 }
-const tools = () => `<div class="dtools"><button class="sb${grid ? ' on' : ''}" data-grid>격자</button><button class="sb" data-undo${undo.length ? '' : ' disabled'} aria-label="되돌리기">↶</button><button class="sb" data-redo${redo.length ? '' : ' disabled'} aria-label="다시 하기">↷</button>${brush === undefined && !pick && !sweep ? '<button class="sb" data-pick>고르기</button><button class="sb" data-paint>땅 칠하기</button><button class="sb" data-share>코드</button>' : ''}</div>`;
+const tools = () => `<div class="dtools"><button class="sb${grid ? ' on' : ''}" data-grid>격자</button><button class="sb" data-undo${undo.length ? '' : ' disabled'} aria-label="되돌리기">↶</button><button class="sb" data-redo${redo.length ? '' : ' disabled'} aria-label="다시 하기">↷</button>${brush === undefined && !pick && !sweep ? '<button class="sb" data-pick>고르기</button><button class="sb" data-paint>땅 칠하기</button><button class="sb" data-share>코드</button><button class="sb" data-snap>사진</button>' : ''}</div>`; // 74: 사진 moved here from the top tools
 // inbox 25: the head (and the grip over it) folds the panel to one line and opens it again: a tap, or a drag down / up
 const GRIP = () => `<button class="dgrip" data-fold aria-label="꾸미기 판 접기·펴기" aria-expanded="${!min}"></button>`;
 function fold(v) { min = v; el.classList.toggle('min', v); el.querySelector('.dgrip')?.setAttribute('aria-expanded', !v); }
@@ -130,7 +130,7 @@ ${tools()}<div class="nbtns"><button class="go" data-endsweep>다 했어요</but
   hab.decor.picked(null);
   if (brush !== undefined) { // 땅 칠하기: the brushes; a finger paints the cells it passes, two move the view
     el.innerHTML = GRIP() + `<div class="dhead"><b>땅 칠하기</b><span>칸을 손가락으로 칠해요 · 길은 옆 칸과 저절로 이어지고, 울타리·돌담은 동물이 돌아가요</span></div>
-<div class="dbrush">${BRUSHES.map((b, i) => { if (!brushIn(i, habId)) return ''; const k = 'brush:' + b.id, lk = !can(G.S, k); return `<button class="${brush === i ? 'on' : lk ? 'lock' : ''}" data-brush="${i}"><i style="background:${b.c}"></i>${b.name}${lk ? `<small>Lv ${needFor(k)}</small>` : ''}</button>`; }).join('')}<button class="${brush === null ? 'on' : ''}" data-brush="x"><i class="erase"></i>지우개</button></div>
+<div class="dbrush">${BRUSHES.map((b, i) => { if (!brushIn(i, habId) || b.id === 'bloom') return ''; /* 74: 꽃밭 merged into 풀 (67-3 made them alike; painted cells stay) */ const k = 'brush:' + b.id, lk = !can(G.S, k); return `<button class="${brush === i ? 'on' : lk ? 'lock' : ''}" data-brush="${i}"><i style="background:${b.c}"></i>${b.name}${lk ? `<small>Lv ${needFor(k)}</small>` : ''}</button>`; }).join('')}<button class="${brush === null ? 'on' : ''}" data-brush="x"><i class="erase"></i>지우개</button></div>
 ${tools()}<div class="nbtns"><button class="go" data-endpaint>다 칠했어요</button></div>
 <p class="dhint">두 손가락으로 화면을 옮기고 키워요${habId === 'pond' ? ' · 연못은 물가 풀밭만 칠해요' : habId === 'snow' ? ' · 설원은 얼음 연못 밖 눈밭만 칠해요' : habId === 'dino' ? ' · 공룡 정글은 석호 밖 땅만 칠해요' : ''}</p>`;
     return;
@@ -260,6 +260,7 @@ el.addEventListener('click', e => {
   }
   else if (d.compare != null) compare();
   else if (d.share != null) openShare(habId, hab, keep); // 24-2 꾸미기 코드
+  else if (d.snap != null) { closeDecor(); document.getElementById('snapBtn').click(); }
   else if (d.grid != null) { grid = !grid; hab.decor.grid(grid); draw(); }
   else if (d.undo != null) step(undo, redo);
   else if (d.redo != null) step(redo, undo);

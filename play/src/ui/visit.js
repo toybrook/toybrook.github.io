@@ -1,6 +1,6 @@
 // 16-1 우리 애 놀러 보내기 (the rules: game/visit.js). This file reads #visit= / #postcard= from the address (then wipes it),
 // shows the guest's arrival card when the screen is quiet (a new player: on the intro card first, the guest after the first
-// friend), the 놀러 보내기 sheet (friends.js ⋯), the postcard a host picks when a guest leaves, and the 방명록.
+// friend), the 친구네 놀러 가기 sheet (산책, stroll.js), the postcard a host picks when a guest leaves, and the 방명록.
 // Links go out with the share sheet, else copied. Counts only to stats (visit_sent / visit_got).
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
@@ -34,7 +34,7 @@ function readHash() {
   const c = V.readCard(m[2]); if (!c) return;
   const out = G.takeCard(c);
   setTimeout(() => toast(out?.err === 'got' ? '이미 받은 엽서예요' : out?.err ? '이 기기에서 보낸 친구의 엽서가 아니에요' : '엽서가 왔어요 · 우편함(✉)에서 받아요', 3000), 600);
-  if (!out?.err) $('mailBtn')?.classList.add('new');
+  if (!out?.err) { const b = $('mailBtn'); b?.classList.add('new'); if (b) b.hidden = false; }
 }
 // a new player: the guest on the intro card, and its button says why to start
 function onIntro() {
@@ -63,12 +63,12 @@ function pick(e) {
 <div class="nbtns"><button class="sb" data-skip="${e.lid}">괜찮아요</button><button class="go" data-card="${e.lid}" disabled>엽서 보내기</button></div></div>`;
   box.hidden = false;
 }
-// 놀러 보내기 (friends.js ⋯): a grown friend of this save
+// 친구네 놀러 가기 (stroll.js, a branch of 산책 since 74): a grown friend of this save
 export function sendSheet(a) {
   if (a.stage === 'baby') return void toast('다 자란 친구만 놀러 갈 수 있어요', 2400);
   if (!G.S.visit.garden) G.setGarden([Math.floor(Math.random() * V.GARDEN[0].length), Math.floor(Math.random() * V.GARDEN[1].length)]);
   const nm = callName(a);
-  box.innerHTML = `<div><h2>${esc(nm)} 놀러 보내기</h2><figure class="vfig"><img alt=""></figure>
+  box.innerHTML = `<div><h2>${esc(nm)} 친구네 놀러 가기</h2><figure class="vfig"><img alt=""></figure>
 <p class="sub">링크를 받은 사람의 서식지에 ${H}시간 손님으로 머물러요. 내 친구는 그대로 여기 있어요</p>
 <p class="vgarden">우리 정원 <b>${V.gardenName(G.S.visit.garden)}</b> <button class="sb" data-garden>바꾸기</button></p>
 <div class="nbtns"><button class="sb" data-close>닫기</button><button class="go" data-send="${a.id}">링크 보내기</button></div></div>`;
@@ -78,7 +78,7 @@ export function sendSheet(a) {
 export function openBook() {
   const { guests, book, cards } = G.S.visit, row = (a, t, s, b = '') => `<li><img class="vth" data-i="${a.i}" alt=""><span>${esc(t)}<small>${esc(s)}</small></span>${b}</li>`, all = [];
   const L = (list, f) => list.map(x => { x = { ...x, i: all.push(x) - 1 }; return f(x); }).join('');
-  box.innerHTML = `<div><h2>방명록</h2>${guests.length + book.length + cards.length ? '' : '<p class="note">아직 다녀간 손님이 없어요. 친구 ⋯에서 「놀러 보내기」로 링크를 보내 보세요</p>'}
+  box.innerHTML = `<div><h2>방명록</h2>${guests.length + book.length + cards.length ? '' : '<p class="note">아직 다녀간 손님이 없어요. 친구 ⋯ › 산책 › 「친구네 놀러 가기」로 링크를 보내 보세요</p>'}
 ${guests.length ? `<b class="vhd">지금 머무는 손님</b><ul>${L(guests, g => row(g, V.guestName(g), `${HAB[g.hab].name} · ${left(g)}`, `<button data-see="${g.id}" data-hab="${g.hab}">보기</button>`))}</ul>` : ''}
 ${book.length ? `<b class="vhd">다녀간 손님</b><ul>${L([...book].reverse(), e => row(e, V.guestName(e), `${md(e.at)}${e.pic != null ? ` · 엽서 ${V.PICS[e.pic]} ${V.LINES[e.line]}` : ''}`, e.pick ? `<button data-pickof="${e.lid}">엽서</button>` : ''))}</ul>` : ''}
 ${cards.length ? `<b class="vhd">받은 엽서</b><ul>${L([...cards].reverse(), c => row(c, `${V.PICS[c.pic]} ${V.LINES[c.line]}`, `${V.gardenName(c.g)} · ${kindName(c)}${c.got ? '' : ' · 우편함에서 받기'}`))}</ul>` : ''}

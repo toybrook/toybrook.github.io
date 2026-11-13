@@ -870,7 +870,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // for the bell the animals near (up to six, not busy, with a way there) running over to stand by it. The fireworks by day: false, a note says why
   function tapProp(p, shown) {
     const { x, z } = p.spot, near = (a, r) => Math.hypot(a.position.x - x, a.position.z - z) < r;
-    if (p.prop === 'sky_scope') { p.obj.userData.tap(); sfx('place'); ui.onScope?.(); return; } // 16-2 하늘 망원경 (ui/sky.js)
+    if (p.prop === 'sky_scope') { p.obj.userData.tap(); sfx('place'); return; } // 16-2 하늘 망원경 (74: a prop that nods; ui/sky.js no longer opens it)
     if (p.obj.userData.tap() === false) { sfx('undo'); ui.say?.('작은 폭죽은 밤에만 쏠 수 있어요'); return; }
     sfx(p.prop);
     if (p.prop === 'musicbox') { const n = music(); ui.say?.(n ? `오르골: ${n}${PREFS.mute || !PREFS.vAll || !PREFS.vAmb ? ' · 소리를 켜면 들려요' : ''}` : '오르골을 멈췄어요'); if (n) for (const a of shown) if (near(a, 14)) a.poke(); } // 27-7e: the sound off, it says why there is no tune

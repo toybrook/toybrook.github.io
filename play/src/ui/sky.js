@@ -1,16 +1,16 @@
 // 16-2 특별한 하늘 (the rules: game/sky.js; drawn: habitat/skyfx.js). This file: what the habitat draws tonight (skyNow), the
 // 「하늘 보기」 pill by night (or under a double rainbow) and the low camera it opens, what counts as seen (each first one fills a
-// 하늘 기록 slot, ♥), the falling stars caught (별 조각), the 하늘 망원경 (given once, the day after the first: tonight's sky ahead,
-// only what is sure; last night's again), the 하늘 기록 sheet with the odds, the line on the 돌아왔어요 card, and a confirmed
+// 하늘 기록 slot, ♥), the falling stars caught (별 조각), (74: no pill, no telescope; the sky counts as seen in the habitat
+// itself; last night's again from 돌아왔어요), the 하늘 기록 sheet (도감's bottom row) with the odds, the line on the 돌아왔어요 card, and a confirmed
 // night said once a day (a real peak or the 놓침 보장; a random sky is never said ahead). Nothing leaves the device.
 import * as G from '../game/game.js';
 import * as K from '../game/sky.js';
 import { BALANCE as B } from '../game/data.js';
 import { HOUR, VIEW, DEBUG } from '../config.js';
-import { toast, josa, topWindow, overlayOpen, resting, eat } from './hud.js';
+import { toast, josa, topWindow, overlayOpen, resting } from './hud.js';
 import { sfx } from './sound.js';
 
-const $ = id => document.getElementById(id), pill = $('skyBtn'), bar = $('skyBar'), box = $('skySheet');
+const $ = id => document.getElementById(id), bar = $('skyBar'), box = $('skySheet');
 const KEY = 'toyhabitat.sky'; // the photos of the 하늘 기록 (small JPEGs, kept out of the save)
 let A = () => null, cur = () => null, on = false, over = null, seenAt = 0, quiet = 0; // over: a replay / preview { T, n, until }
 const hour = () => HOUR != null ? ((HOUR % 24) + 24) % 24 : new Date(G.now()).getHours();
@@ -45,7 +45,7 @@ function barText() {
   const h = cur(), T = over ? over.T : G.skyTonight(h), ev = over ? over.v.ev : K.skyTime(hour()), s = A()?.skyState();
   if (!over && s && s.night < 0.5) return `<b>쌍무지개</b><span>비 갠 하늘에 무지개가 두 겹 떴어요</span>`;
   const ev2 = ev ? names(T) : [], what = [...ev2, K.moonName(T.n), `${T.star.season} 별자리 ${T.star.name}`];
-  return `<b>${over ? (over.n == null ? '오늘 밤 하늘 미리 보기' : '어젯밤 하늘 · 망원경') : '오늘 밤 하늘'}</b><span>${what.join(' · ')}</span>${ev && T.meteor ? '<small>별똥별을 눌러 별 조각을 모아요</small>' : ''}`;
+  return `<b>${over ? (over.n == null ? '오늘 밤 하늘 미리 보기' : '어젯밤 하늘') : '오늘 밤 하늘'}</b><span>${what.join(' · ')}</span>${ev && T.meteor ? '<small>별똥별을 눌러 봐요</small>' : ''}`;
 }
 // 하늘 보기: the camera low, the HUD away, the bar with what is up
 function enter(o = null) {
@@ -53,38 +53,21 @@ function enter(o = null) {
   over = o; if (o) { VIEW.hour = 22; VIEW.weather = 'clear'; }
   on = true; seenAt = performance.now() + 1800; a.skyView(true); document.body.classList.add('skyview');
   bar.innerHTML = `<div class="sktx">${barText()}</div><div class="skb"><button class="back" data-rec>하늘 기록</button><button class="back" data-shot>사진</button><button class="back" data-out>돌아가기</button></div>`;
-  pill.hidden = true; bar.hidden = false;
+  bar.hidden = false;
 }
 function exit() {
   if (!on) return; on = false; document.body.classList.remove('skyview'); bar.hidden = true;
   if (over) { over = null; VIEW.hour = VIEW.weather = null; }
   A()?.skyView(false);
 }
-// last night again (the telescope, the 돌아왔어요 card): its own roll for the meadow, events on
+// last night again (the 돌아왔어요 card): its own roll for the meadow, events on
 function replay(n = K.nightNo(G.now()) - 1) { const T = G.skyTonight('meadow', n); exit(); enter({ T, n, v: view(T, true), until: performance.now() + 25e3 }); }
-// tonight ahead, by day: only what is sure (a real peak's shower, the 보장's one), the moon and the season's stars; nothing counts
-function preview() {
-  const T = G.skyTonight(cur()), S = T.sure ? T : { ...T, meteor: T.peak ? T.meteor : null, aurora: null, comet: false };
-  exit(); enter({ T: S, n: null, v: view(S, true), until: performance.now() + 9e3 });
-}
-
-// the 하늘 망원경 tapped (habitat.js)
-export function onScope() {
-  eat();
-  const T = G.skyTonight(cur()), night = K.skyTime(hour()), last = K.nightNo(G.now()) - 1, L = G.skyTonight('meadow', last), was = names(L);
-  const ahead = T.peak ? `오늘 밤은 ${T.meteor.name} 유성우 극대일이에요` : T.kept ? '오늘 밤엔 유성우나 오로라가 꼭 와요' : '오늘 밤 무엇이 뜰지는 밤이 되어야 알아요';
-  box.innerHTML = `<div><h2>하늘 망원경</h2><p class="sub">${night ? '지금은 밤이에요 · 하늘을 올려다봐요' : `${ahead}<br>${K.moonName(T.n)} · ${T.star.season} 별자리 ${T.star.name}`}</p>
-<div class="nbtns col">${night ? '<button class="go" data-live>지금 하늘 보기</button>' : '<button class="go" data-pre>오늘 밤 하늘 미리 보기</button>'}
-${last >= K.nightNo(G.S.since) ? `<button class="sb" data-again>어젯밤 하늘 다시 보기${was.length ? ` · ${was.join('·')}` : ''}</button>` : ''}
-<button class="sb" data-rec>하늘 기록</button><button class="sb" data-close>닫기</button></div></div>`;
-  box.hidden = false;
-}
 // 하늘 기록: the 18 slots (a photo where one was taken), the 별 조각, the odds
-function record() {
+export function skyRecord() {
   const S = G.S.sky, P = B.sky, ph = photos(), md = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; };
   box.innerHTML = `<div><h2>하늘 기록 <small>${Object.keys(S.got).length}/${K.SLOTS.length}</small></h2>
 <ul class="skrec">${K.SLOTS.map(s => `<li class="${S.got[s.id] ? 'got' : ''}">${ph[s.id] ? `<img src="${ph[s.id]}" alt="">` : `<i aria-hidden="true">${S.got[s.id] ? s.icon : '?'}</i>`}<span>${s.name}${S.got[s.id] ? `<small>${md(S.got[s.id])}</small>` : ''}</span></li>`).join('')}</ul>
-<p class="sub">별 조각 ✦ ${S.bits} · 처음 본 하늘마다 ♥${P.first} · 하늘 보기에서 사진을 찍으면 그 칸에 들어가요</p>
+<p class="sub">처음 본 하늘마다 ♥${P.first} · 밤이면 서식지 위로 떠요</p>
 <b class="vhd">하늘 확률 (가안)</b><table class="skodds"><tr><td>유성우</td><td>밤마다 ${pct(P.meteor)} · 실제 극대일 밤엔 꼭</td></tr><tr><td>오로라</td><td>${pct(P.aurora)} · 설원 ${pct(P.auroraSnow)} · 그중 붉은 오로라 ${pct(P.red)}</td></tr>
 <tr><td>혜성</td><td>${pct(P.comet)}</td></tr><tr><td>쌍무지개</td><td>비 갠 낮 무지개의 ${pct(P.bow2)}</td></tr><tr><td>보름달</td><td>실제 보름</td></tr><tr><td>별자리</td><td>맑은 밤 늘 · 계절마다 하나</td></tr>
 <tr><td>놓침 보장</td><td>유성우·오로라를 ${P.miss}일 못 보면 다음 밤엔 꼭</td></tr></table>
@@ -93,7 +76,7 @@ function record() {
   box.hidden = false;
 }
 // a falling star caught (habitat.js)
-export function onStar() { const n = G.skyBit(); toast(`별 조각 ✦ ${n}`, 1200, true); }
+export function onStar() { G.skyBit(); toast('별똥별 ✦', 1200, true); } // 74: 별 조각 hidden (still counted in the save)
 // 사진 모드's save (photo.js): in 하늘 보기, the photo goes into the slots on screen -> how many
 export function skyPhoto(c) {
   const w = on && shown(); if (!w) return 0;
@@ -115,32 +98,26 @@ export const retGo = () => setTimeout(() => replay(), 600);
 bar.onclick = e => {
   const d = e.target.closest('button')?.dataset; if (!d) return;
   if (d.out != null) return exit();
-  if (d.rec != null) return record();
+  if (d.rec != null) return skyRecord();
   if (d.shot != null) $('snapBtn').click();
 };
 box.onclick = e => {
   const d = e.target.closest('button')?.dataset; if (!d) return;
   box.hidden = true;
-  if (d.live != null) enter(); else if (d.pre != null) preview(); else if (d.again != null) replay(); else if (d.rec != null) record();
 };
-pill.onclick = () => enter();
 
 setInterval(() => {
   const a = A(), h = cur(), S = G.S; if (!S) return;
   if (on && (!a || !h || !a.skyOn())) { exit(); return; }
   if (on) {
     if (over) { if (!document.body.classList.contains('photo')) VIEW.hour = 22; if (topWindow()) over.until += 1000; if (performance.now() > over.until && box.hidden && !document.body.classList.contains('photo')) exit(); }
-    if (performance.now() > seenAt) { seenAt = performance.now() + 5000; seen(); }
     const tx = bar.querySelector('.sktx'); if (tx && !over) tx.innerHTML = barText();
   }
-  const s = a && h && !on && a.skyState(), up = !!s && s.gray < 0.5 && (s.night > 0.5 || s.bow > 0.3 && K.bow2(G.skyTonight(h).n, h));
-  pill.hidden = !up || document.body.classList.contains('photo') || $('habitat').classList.contains('decorating');
+  if (h && (on || !busy()) && performance.now() > seenAt) { seenAt = performance.now() + 5000; seen(); } // 74: seen in the habitat too (no 하늘 보기 button)
   if (!h || on || busy()) { quiet = 0; return; }
   if ((quiet += 1000) < 2000) return;
   const n = K.nightNo(G.now());
-  // the telescope: once, in the meadow, from the second day
-  if (!S.sky.scope && h === 'meadow' && n > K.nightNo(S.since)) { quiet = 0; const r = G.skyScope(a.spot(0.6));
-    if (r) toast(!r.placed ? '하늘 망원경을 꾸미기 › 선물에 넣어 뒀어요' : '하늘 망원경이 들판에 놓였어요 · 눌러서 밤하늘을 미리 봐요', 3400); return; }
+  // 74: the 하늘 망원경 is no longer given (one placed in an old save stays, a prop)
   // a sure night, said once a day (from the morning; random ones never)
   const T = G.skyTonight(h); if (T.sure && S.sky.told !== n && hour() >= 5) { G.skyMark('told', n); toast(T.peak ? `오늘 밤은 ${T.meteor.name} 유성우 극대일이에요 · 밤에 하늘을 올려다봐요` : '오늘 밤엔 유성우나 오로라가 꼭 와요 · 밤에 하늘을 올려다봐요', 3600); }
 }, 1000);

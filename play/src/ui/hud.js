@@ -74,7 +74,7 @@ const waiting = []; let tipEl = null, calm = 0;
 // is the way in, not counted). resting(): wait. Tips, 출석부, level, grown and home cards all ask it.
 const CARDS = '#news,#attend,#event,#ret,#lvup,#zoneCard,#grown,#homeHint,.tip'; let upAt = 0;
 export const resting = () => { if ([...document.querySelectorAll(CARDS)].some(shown)) upAt = Date.now(); return !!G.S && G.now() - G.S.since < 600e3 && Date.now() - upAt < 40e3; };
-setInterval(() => { if (tipEl) dodge(); else if (!resting()) nextTip(); }, 250);
+setInterval(() => { if (tipEl && !shown(tipFor)) { waiting.unshift({ k: tipEl.dataset.k, anchor: tipFor }); tipEl.remove(); tipEl = null; } if (tipEl) dodge(); else if (!resting()) nextTip(); }, 250); // 74: its anchor went away (a window closed without a tap): the tip waits for it again (66-1 r04)
 export function tip(k, anchor) { // anchor: an element or a selector; shown once it is on screen and no other tip is up
   if (G.S.flags.tipsOff || G.S.flags['tip_' + k] || waiting.some(w => w.k === k) || tipEl?.dataset.k === k) return;
   waiting.push({ k, anchor }); nextTip();
