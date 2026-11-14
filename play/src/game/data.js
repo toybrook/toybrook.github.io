@@ -284,6 +284,10 @@ const FOALS = {
   new: { file: 'assets/models/horse_foal.glb', h: 2.341, r: 0.388, seg: [-0.831, 1.011], legs: { hip: 0.62, foot: 0.16, x: [0.32, -0.34], z: 0.19 }, attach: { head: { p: [0.78, 1.96, 0], r: [0, 0, -0.22], s: 0.92 }, neck: { p: [0.54, 1.42, 0], r: [0, 0, -0.54], s: 1.12 }, back: { p: [-0.05, 1.32, 0], r: [0, 0, 0], s: 1 }, eye: { p: [0.78, 1.78, 0], r: [0, 0, 0], s: 1 } } },
   old: { file: 'assets/models/horse_foal_old.glb', h: 1.784, r: 0.33, seg: [-0.367, 0.779], legs: { hip: 0.44, foot: 0.145, x: [0.27, -0.27], z: 0.14 }, attach: { head: { p: [0.56, 1.5, 0], r: [0, 0, -0.22], s: 0.95 }, neck: { p: [0.4, 1.0, 0], r: [0, 0, -0.5], s: 0.95 }, eye: { p: [0.56, 1.32, 0], r: [0, 0, 0], s: 1.03 } } },
 };
+// 82, public from 85: the arctic fox and T. rex are Meshy bodies (tools/meshy-import.mjs: our concept art turned 3D at the
+// baked adults' height). One body with no legs of its own (it glides when it walks); commons wear its texture, every other
+// look goes over it (figure.js). The baby is the same body, SIZE.baby of the adult, so growing up keeps the look.
+const meshyStages = (id, m) => ({ baby: sized(id, 'baby', m), adult: sized(id, 'adult', m) });
 // walk.stride: the walk's stride rate follows the leg length, so hooves stay put on the ground (walk.js)
 export const horseModel = k => {
   const a = HORSES[k], b = FOALS[k === 'old' ? 'old' : 'new'];
@@ -391,11 +395,10 @@ export const MODELS = {
     baby: sized('seal', 'baby', { h: 1.383, r: 0.797, seg: [-0.44, 0.243], attach: { head: { p: [0.55, 1.33, 0], r: [0, 0, -0.1], s: 1.02 }, neck: { p: [0.4, 0.8, 0], r: [0, 0, -0.6], s: 1.4 }, back: { p: [-0.3, 1.0, 0], r: [0, 0, 0.15], s: 1 }, eye: { p: [0.61, 1.08, 0], r: [0, 0, 0], s: 1.14 } } }),
     adult: sized('seal', 'adult', { h: 1.399, r: 0.594, seg: [-1.082, 0.541], attach: { head: { p: [0.7, 1.37, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.5, 0.9, 0], r: [0, 0, -0.6], s: 1.25 }, back: { p: [-0.4, 0.78, 0], r: [0, 0, 0.08], s: 1 }, eye: { p: [0.77, 1.17, 0], r: [0, 0, 0], s: 0.87 } } }),
   },
-  arcticFox: {
+  arcticFox: { // 85: a Meshy body, baby and adult (meshyStages above)
     move: 'walk', walk: { hop: 0.1, trot: 1.8, pace: 1.1, roam: 0.6 },
-    files: { baby: 'assets/models/arcticFox_baby.glb', adult: 'assets/models/arcticFox_adult.glb' },
-    baby: sized('arcticFox', 'baby', { h: 1.818, r: 0.44, seg: [-0.805, 0.542], legs: { hip: 0.36, x: [0.22, -0.34], z: 0.19 }, attach: { head: { p: [0.44, 1.54, 0], r: [0, 0, -0.1], s: 1.02 }, neck: { p: [0.28, 0.92, 0], r: [0, 0, -0.9], s: 1.2 }, back: { p: [-0.1, 1.02, 0], r: [0, 0, 0], s: 0.8 }, eye: { p: [0.53, 1.26, 0], r: [0, 0, 0], s: 1.14 } } }),
-    adult: sized('arcticFox', 'adult', { h: 1.951, r: 0.442, seg: [-0.926, 0.863], legs: { hip: 0.62, x: [0.32, -0.36], z: 0.19 }, attach: { head: { p: [0.76, 1.8, 0], r: [0, 0, -0.1], s: 0.75 }, neck: { p: [0.56, 1.32, 0], r: [0, 0, -0.8], s: 1.0 }, back: { p: [-0.15, 1.41, 0], r: [0, 0, 0], s: 1 }, eye: { p: [0.83, 1.6, 0], r: [0, 0, 0], s: 0.84 } } }),
+    files: { baby: 'assets/models/meshy_fox_arctic.glb', adult: 'assets/models/meshy_fox_arctic.glb' }, meshy: { starlight: 'lacquer' }, // 84: looks worn instead on this body (materials.js)
+    ...meshyStages('arcticFox', { h: 1.951, r: 0.49, seg: [-0.92, 0.55], attach: { head: { p: [0.4, 1.71, 0], r: [0, 0, -0.1], s: 0.75 }, neck: { p: [0.42, 1.08, 0], r: [0, 0, -0.6], s: 1.25 }, back: { p: [-0.06, 1.22, 0], r: [0, 0, 1.0], s: 1 }, eye: { p: [0.685, 1.321, 0], r: [0, 0, 0], s: 0.84 } } }),
   },
   reindeer: {
     move: 'walk', walk: { stride: true, hop: 0, pace: 0.8 }, // foot: the hoof's half length (as the cow's)
@@ -437,12 +440,11 @@ export const MODELS = {
     baby: sized('ankylosaurus', 'baby', { h: 1.195, r: 0.611, seg: [-0.779, 0.709], legs: { hip: 0.34, x: [0.34, -0.38], z: 0.32 }, attach: { head: { p: [0.84, 1.14, 0], r: [0, 0, -0.1], s: 0.95 }, neck: { p: [0.6, 0.78, 0], r: [0, 0, -1.3], s: 1.15 }, back: { p: [-0.1, 1.18, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [0.92, 0.88, 0], r: [0, 0, 0], s: 1.05 } } }), // 71-1
     adult: sized('ankylosaurus', 'adult', { h: 1.432, r: 0.725, seg: [-1.073, 0.713], legs: { hip: 0.46, x: [0.46, -0.52], z: 0.38 }, attach: { head: { p: [1.0, 1.14, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.74, 0.9, 0], r: [0, 0, -1.3], s: 1.3 }, back: { p: [-0.1, 1.44, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.08, 0.94, 0], r: [0, 0, 0], s: 0.9 } } }),
   },
-  tRex: {
+  tRex: { // 85: a Meshy body, baby and adult (meshyStages above)
     move: 'walk', walk: { hop: 0, trot: 1.4, pace: 0.85, roam: 0.55, dig: 0.2 },
-    files: { baby: 'assets/models/tRex_baby.glb', adult: 'assets/models/tRex_adult.glb' }, paints: ['belly'], // 71-1
-    legend: { baby: 'assets/models/tRex_bones_baby.glb', adult: 'assets/models/tRex_bones_adult.glb' }, // 71-2: the amber legendary's skeleton (figure.js)
-    baby: sized('tRex', 'baby', { h: 2.16, r: 0.527, seg: [-0.981, 0.759], legs: { hip: 0.44, x: [0], z: 0.27 }, attach: { head: { p: [0.68, 2.12, 0], r: [0, 0, -0.1], s: 1.2 }, neck: { p: [0.47, 1.34, 0], r: [0, 0, -0.6], s: 1.2 }, back: { p: [-0.2, 1.4, 0], r: [0, 0, 0.3], s: 1.0 }, eye: { p: [0.9, 1.88, 0], r: [0, 0, 0], s: 1.25 } } }),
-    adult: sized('tRex', 'adult', { h: 2.619, r: 0.575, seg: [-1.472, 0.902], legs: { hip: 0.74, x: [0], z: 0.3 }, attach: { head: { p: [0.82, 2.58, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.58, 1.83, 0], r: [0, 0, -0.6], s: 1.25 }, back: { p: [-0.2, 1.86, 0], r: [0, 0, 0.4], s: 1.05 }, eye: { p: [1.02, 2.36, 0], r: [0, 0, 0], s: 1.15 } } }),
+    files: { baby: 'assets/models/meshy_rex.glb', adult: 'assets/models/meshy_rex.glb' }, meshy: { glass: 'glass84rex', amberbone: 'amber84' }, // 84 (materials.js)
+    legend: { baby: 'assets/models/meshy_rex_bones.glb', adult: 'assets/models/meshy_rex_bones.glb' }, // 71-2: the amber legendary's skeleton (figure.js)
+    ...meshyStages('tRex', { h: 2.619, r: 0.6, seg: [-1.3, 1.07], attach: { head: { p: [0.8, 2.6, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.5, 1.85, 0], r: [0, 0, -0.6], s: 1.55 }, back: { p: [-0.2, 1.86, 0], r: [0, 0, 0.4], s: 1.05 }, eye: { p: [0.957, 2.34, 0], r: [0, 0, 0], s: 1.15 } } }),
   },
   pteranodon: {
     move: 'walk', walk: { hop: 0.6, trot: 1.5, pace: 0.8, roam: 0.45, rest: 'sit', perch: 0.4 }, legMat: 'hoof',
@@ -451,17 +453,6 @@ export const MODELS = {
     adult: sized('pteranodon', 'adult', { h: 1.608, r: 0.33, seg: [-0.28, 0.428], legs: { hip: 0.32, x: [-0.22], z: 0.2 }, wing: [0.26, 0.86, 0.26], attach: { head: { p: [0.52, 1.45, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.38, 1.0, 0], r: [0, 0, -0.6], s: 1.0 }, back: { p: [-0.1, 0.92, 0], r: [0, 0, 0.42], s: 0.9 }, eye: { p: [0.62, 1.33, 0], r: [0, 0, 0], s: 0.7 } } }),
   },
 };
-
-// 82 (a test behind ?m82, not public: tools/build-web.mjs turns M82 into false and leaves the meshy_ files out): the adult
-// arctic fox and T. rex from Meshy (tools/meshy-import.mjs: our concept art turned 3D, the baked adults' height). One body
-// with no legs of its own (it glides when it walks); commons wear its texture, every other look goes over it (figure.js).
-export const M82 = false; // release build (82 not approved: the meshy_ models are left out below)
-if (M82) {
-  Object.assign(MODELS.arcticFox.files, { adult: 'assets/models/meshy_fox_arctic.glb' });
-  MODELS.arcticFox.adult = sized('arcticFox', 'adult', { h: 1.951, r: 0.49, seg: [-0.92, 0.55], attach: { head: { p: [0.4, 1.71, 0], r: [0, 0, -0.1], s: 0.75 }, neck: { p: [0.42, 1.08, 0], r: [0, 0, -0.6], s: 1.25 }, back: { p: [-0.06, 1.22, 0], r: [0, 0, 1.0], s: 1 }, eye: { p: [0.685, 1.321, 0], r: [0, 0, 0], s: 0.84 } } });
-  Object.assign(MODELS.tRex.files, { adult: 'assets/models/meshy_rex.glb' }); Object.assign(MODELS.tRex.legend, { adult: 'assets/models/meshy_rex_bones.glb' });
-  MODELS.tRex.adult = sized('tRex', 'adult', { h: 2.619, r: 0.6, seg: [-1.3, 1.07], attach: { head: { p: [0.8, 2.6, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.5, 1.85, 0], r: [0, 0, -0.6], s: 1.55 }, back: { p: [-0.2, 1.86, 0], r: [0, 0, 0.4], s: 1.05 }, eye: { p: [0.957, 2.34, 0], r: [0, 0, 0], s: 1.15 } } });
-}
 
 // A body's capsule seen from above (crowd.js), in square world units: what one animal takes of its zone's room.
 export const bodyArea = m => Math.PI * m.r ** 2 + 2 * m.r * (m.seg[1] - m.seg[0]);

@@ -14,14 +14,30 @@ import { SP, RAR, variantOf, colorOf } from '../game/rules.js';
 export const eyeMat = new THREE.MeshPhysicalMaterial({ color: '#0b0b0d', roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.03 });
 
 // { body, accent, hoof } of a species' variant in colour cId (none or unknown = its first colour).
-// A legendary's look is its `mat`, any other variant's its id.
-export function variantMats(spId, vId, cId) {
-  const v = variantOf(spId, vId), c = colorOf(spId, vId, cId);
-  return looks(v?.mat || v?.id || 'solid', v?.rarity === 'common' ? { ...SP[spId].colors, ...c } : c ?? {});
+// A legendary's look is its `mat`, any other variant's its id. over: look id -> the look to wear instead (84: MODELS meshy, on a Meshy body)
+export function variantMats(spId, vId, cId, over) {
+  const v = variantOf(spId, vId), c = colorOf(spId, vId, cId), id = v?.mat || v?.id || 'solid';
+  return looks(over?.[id] ?? id, v?.rarity === 'common' ? { ...SP[spId].colors, ...c } : c ?? {});
 }
-// 82: a common on a body with its own texture (the Meshy figures, data.js M82): the texture as it is, the commons' plastic
+// 82: a common on a body with its own texture (the Meshy figures, data.js meshyStages): the texture as it is, the commons' plastic
 const painted = new WeakMap();
 export const texBody = map => { if (!painted.has(map)) { const m = toyMat('#ffffff', { map }); rim(m); painted.set(map, m); } return painted.get(map); };
+// 84: a non-common look on a Meshy body: its scanned normals turn past the silhouette in the creases, and the looks' edge
+// terms draw a dotted dark outline there: a clone that turns those normals back to face the eye a little (the SDF figures
+// sharing the look keep theirs)
+const meshied = new WeakMap();
+export function meshyMat(m) {
+  if (!meshied.has(m)) {
+    const c = m.clone(), prev = m.onBeforeCompile, k = m.customProgramCacheKey();
+    c.userData = m.userData; // onDraw / order (clone() would JSON-copy and drop the functions)
+    c.onBeforeCompile = (sh, r) => { prev.call(c, sh, r); sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
+{ vec3 vdF = normalize(vViewPosition); float dF = dot(normal, vdF); if (dF < 0.15) { normal = normalize(normal + vdF * (0.15 - dF)); nonPerturbedNormal = normal; } }`); };
+    c.customProgramCacheKey = () => k + '-meshy';
+    if (clearMats.includes(m)) clearMats.push(c); // glassLite drops its refraction too
+    meshied.set(m, c);
+  }
+  return meshied.get(m);
+}
 // the body material of an egg of this rarity (its own colours, else the first colour of that look)
 export const eggMat = rarity => { const e = RAR[rarity].egg; return looks(e.mat, e.colors ?? SHARED_VARIANTS.find(v => v.id === e.mat)?.colors?.[0]).body; };
 
@@ -180,11 +196,12 @@ const NIGHT_CLEAR = {
   bubble: 'gl_FragColor.rgb += uNight * (film * 0.18 + 0.08) * (0.3 + 0.7 * pow(1.0 - nv, 1.5));',
   glitter: 'gl_FragColor.rgb += uNight * 0.8 * gs * (1.0 - fr);',
   amber: AMBER_NIGHT, honey: AMBER_NIGHT, crystal: CRYSTAL_NIGHT, crystalwing: CRYSTAL_NIGHT,
-  amberbone: AMBER_NIGHT, nebula: 'gl_FragColor.rgb += uNight * vec3(0.25, 0.18, 0.7) * (0.2 + 0.4 * nv) * (1.0 - fr);', // 71-2
+  amberbone: AMBER_NIGHT, amber84: AMBER_NIGHT, nebula: 'gl_FragColor.rgb += uNight * vec3(0.25, 0.18, 0.7) * (0.2 + 0.4 * nv) * (1.0 - fr);', // 71-2
   amethyst: AMETHYST_NIGHT, amethystgem: AMETHYST_NIGHT, lavagem: 'gl_FragColor.rgb += uNight * vec3(1.0, 0.36, 0.05) * (0.15 + 0.3 * pow(nv, 2.0)) * (1.0 - fr);',
 };
 const clearMats = [];
-function clear({ key, tint, absorb = 1.6, inner = '#000000', dark = 0.62, color = '#000000', rough = 0.08, coat = 0, neutral = 0, pre = '', post = '', nrm = '', uniforms = {}, extra = {} }) {
+// bend: how far the view bends (x (1 + thickness)); rimK: the white outline's strength
+function clear({ key, tint, absorb = 1.6, inner = '#000000', dark = 0.62, color = '#000000', rough = 0.08, coat = 0, neutral = 0, pre = '', post = '', nrm = '', uniforms = {}, extra = {}, bend = 0.12, rimK = 0.75 }) {
   const T = new THREE.Color(tint), I = new THREE.Color(inner), C = new THREE.Color(color);
   const m = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: rough, metalness: 0, ior: 1.5, specularIntensity: 1, clearcoat: coat, clearcoatRoughness: 0.08, ...extra });
   const thick = sh => {
@@ -217,7 +234,7 @@ function clear({ key, tint, absorb = 1.6, inner = '#000000', dark = 0.62, color 
       float nv = clamp(dot(vn, normalize(vViewPosition)), 0.0, 1.0), s = sqrt(1.0 - nv * nv);
       float fr = 0.04 + 0.96 * pow(1.0 - nv, 5.0);
 ${pre}
-      vec2 suv = clamp(gl_FragCoord.xy * uInvRes - vn.xy * vRefr * (0.12 + 0.12 * vThick), 0.0, 1.0);
+      vec2 suv = clamp(gl_FragCoord.xy * uInvRes - vn.xy * vRefr * (${bend.toFixed(2)} + ${bend.toFixed(2)} * vThick), 0.0, 1.0);
       vec4 bg = texture2D(uScreen, suv);
       bg.rgb += (1.0 - bg.a) * ${SKY};
       bg.rgb = mix(bg.rgb, vec3(dot(bg.rgb, vec3(0.3, 0.59, 0.11))) * vec3(0.97, 1.0, 1.05), ${neutral.toFixed(2)}); // neutral: the scene behind loses its colour
@@ -226,7 +243,7 @@ ${pre}
       float dark = smoothstep(r0 - bandW, r0 - 0.15 * bandW, s), rim = smoothstep(r0, r0 + 0.7 * rimW, s);
       vec3 pass = pow(max(tint, vec3(0.001)), vec3(vThick * nv * ${absorb.toFixed(2)}));
       vec3 see = (bg.rgb * pass + inner * (1.0 - pass)) * (1.0 - ${dark.toFixed(2)} * dark) * (1.0 - fr);
-      gl_FragColor = vec4(gl_FragColor.rgb * (1.0 - 0.5 * dark * (1.0 - rim)) + see + vec3(1.0, 0.98, 0.94) * 0.75 * rim, 1.0);
+      gl_FragColor = vec4(gl_FragColor.rgb * (1.0 - 0.5 * dark * (1.0 - rim)) + see + vec3(1.0, 0.98, 0.94) * ${rimK.toFixed(2)} * rim, 1.0);
 ${post}
 ${NIGHT_CLEAR[key] ?? ''}
       }`);
@@ -539,6 +556,30 @@ const AMBERBONE = `gl_FragColor.rgb *= mix(vec3(1.0), vec3(0.8, 0.66, 0.4), 0.7 
 const BONE = () => Object.assign(phys('#fff0d4', { roughness: 0.5, emissive: '#ffb860', emissiveIntensity: 0.25, depthTest: false, depthWrite: false,
   blending: THREE.CustomBlending, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor, opacity: 0.88,
   stencilWrite: true, stencilRef: 1, stencilFunc: THREE.EqualStencilFunc }), { userData: { order: 3.5 } });
+// 84 (the Meshy rex): clear honey with the skeleton inside it. Drawn before the glass copies the screen: the body's far
+// wall (its back faces, wall), glowing orange, brightest in the middle, writes stencil 2; the bones (thickened along their
+// normals) only there, so a toe or a finger tip that sticks out of the body stays hidden; they write no depth, so the amber
+// still covers a rib that pokes out the front. The amber then shows that copy, so the bones are seen through it. Toes and the tail's tip deeper (AMBER_TIP: the Meshy rex's pattern space, the tail at -x).
+const AMBER_TIP = 'max(smoothstep(0.09, 0.0, p.y), smoothstep(0.22, 0.0, (p.x + 0.6857) / 1.3714))';
+const AMBER84 = `{ float tip = ${AMBER_TIP};
+      gl_FragColor.rgb *= mix(1.0, 0.42, tip);
+      gl_FragColor.rgb += vec3(1.0, 0.62, 0.16) * 0.3 * pow(s, 8.0) * (1.0 - 0.6 * tip) + vec3(1.0, 0.78, 0.4) * 0.7 * rim; }`;
+const amberWall = () => Object.assign(new THREE.ShaderMaterial({ side: THREE.BackSide, stencilWrite: true, stencilRef: 2, stencilZPass: THREE.ReplaceStencilOp,
+  vertexShader: 'attribute vec3 _op; varying vec3 vN, vV, vOp; void main() { vOp = _op; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalMatrix * normal; vV = -mv.xyz; gl_Position = projectionMatrix * mv; }',
+  fragmentShader: `varying vec3 vN, vV, vOp; void main() { vec3 p = vOp; float nv = abs(dot(normalize(vN), normalize(vV))), tip = ${AMBER_TIP};
+    gl_FragColor = vec4(mix(vec3(0.38, 0.12, 0.0), vec3(0.95, 0.5, 0.06), nv * nv) * mix(1.0, 0.3, tip), 1.0); }` }), { userData: { order: 2 } });
+const amberBone = () => { const m = phys('#f7e6bf', { roughness: 0.5, emissive: '#ffe2a8', emissiveIntensity: 0.55, depthWrite: false, stencilWrite: true, stencilRef: 2, stencilFunc: THREE.EqualStencilFunc });
+  m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += objectNormal * 0.018;'); };
+  m.customProgramCacheKey = () => 'amber84bone'; m.userData.order = 2.5; return m; };
+// 84 홍칠 (the Meshy fox's legendary): deep red lacquer under a mirror clearcoat, drawn on in thin gold lines (patternTex
+// lacq: the line work only, G and B), the flower and leaf faces (R) a shade deeper red. Triplanar in pattern space, sized and
+// placed as tools/pilot72.js lays it on the same body; the gold reflects the studio
+const LACQUER = `vec3 tw = pow(abs(on), vec3(4.0)); tw /= tw.x + tw.y + tw.z; vec3 tp = p * 1.467 + vec3(-0.040, 0.05, 0.3);
+  vec3 ink = texture2D(uPat, tp.zy * vec2(sign(on.x), 1.0) + vec2(0.37, 0.11)).rgb * tw.x + texture2D(uPat, tp.xz + vec2(0.61, 0.29)).rgb * tw.y + texture2D(uPat, tp.xy * vec2(sign(-on.z), 1.0)).rgb * tw.z;
+  float gv = max(ink.g, ink.b), gw = clamp(fwidth(gv), 0.03, 0.3), fw = clamp(fwidth(ink.r), 0.03, 0.3);
+  float gold = smoothstep(0.38 - gw, 0.38 + gw, gv), face = smoothstep(0.4 - fw, 0.4 + fw, ink.r) * (1.0 - gold);
+  diffuseColor.rgb = mix(diffuseColor.rgb * (1.0 - 0.3 * face), vec3(1.0, 0.7, 0.25), gold);
+  roughnessFactor = mix(roughnessFactor, 0.2, gold); metalnessFactor = mix(metalnessFactor, 1.0, gold); lookStudio = mix(lookStudio, 0.85, gold);`;
 // ---- 안킬로사우루스 두 안 (A 공작석, B 청동) ----
 // A 공작석 갑옷: polished malachite, bands of deep and pale green round nodules (cells), wavy; uK darker for the armour knobs; the club gold
 const MALACHITE = `float w = fbm3(p * 3.0 + 2.0); vec3 c = cells(p * 2.2 + 0.7 + 0.35 * w); float r = (c.x + 0.25 * w) * 7.0 + c.z * 3.0 + 0.3 * fbm3(p * 9.0);
@@ -633,6 +674,11 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
   nebula: () => same(clear({ key: 'nebula', tint: '#4a3ad0', absorb: 3.0, inner: '#2a1690', dark: 0.3, color: '#06041a', rough: 0.06, coat: 1, post: NEBULA })),
   amberbone: () => ({ ...same(clear({ key: 'amberbone', tint: '#ffcc66', absorb: 1.4, inner: '#8a5200', dark: 0.3, color: '#140600', rough: 0.1, coat: 1, post: AMBERBONE,
       extra: { stencilWrite: true, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp } })), bone: BONE() }),
+  // 84, worn instead on the Meshy bodies (data.js MODELS meshy): the rex's glass thicker with a stronger outline, the amber rex, the lacquer fox
+  glass84rex: c => same(clear({ key: 'glass84rex', tint: c.tint, neutral: 0.8, absorb: 2.1, dark: 0.7, rimK: 1.0, bend: 0.2 })),
+  amber84: () => ({ ...same(clear({ key: 'amber84', tint: '#ffd890', absorb: 0.6, inner: '#b06000', dark: 0.3, color: '#140600', rough: 0.05, coat: 1, post: AMBER84, bend: 0.03, rimK: 0 })),
+    wall: amberWall(), bone: amberBone(), noEye: true }), // the skull's socket instead of the bead
+  lacquer: () => same(look(phys('#9a1008', { roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.008 }), 'lacquer', LACQUER, { uPat: patternTex(1024, true) }, { studio: 0.6 })),
   malachite: () => { const m = k => look(phys('#2a8a5a', { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.02 }), 'malachite', MALACHITE, { uK: k });
     return { body: m(1), accent: m(0.6), hoof: m(0.5), horn: shine('#ffc75a') }; },
   bronze: () => { const b = shine('#c8864a', 0.25);
@@ -710,4 +756,64 @@ function motifTex(hex) {
   const tex = new THREE.CanvasTexture(o.filter === 'blur(0.8px)' ? out : c); // Safari < 18 has no ctx.filter
   tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 4;
   return tex;
+}
+
+// 79-1 / 84: the 청화 / 홍칠 drawing (tools/pilot72.js; the game's lacquer fox). Canvas only, no image files.
+// Three channels: R the wash (light fill of flowers and leaves), G the flowers' line work, B the vines and leaf outlines.
+// Porcelain: white -> cobalt by R, -> deep cobalt by G and B (linear colours: the shader runs before the output encoding). Lacquer: gold by R and B, G etched dark into the gold.
+const rand = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const texCache = {};
+// lacq (84, the fox's lacquer): the same drawing in lines two-thirds as wide and one leaf per bend instead of two: thin gold, more red between
+export function patternTex(S = 1024, lacq = false) {
+  const key = S + (lacq ? 'l' : ''); if (texCache[key]) return texCache[key];
+  const C = [0, 1, 2].map(() => { const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, S, S); g.lineCap = g.lineJoin = 'round'; return g; });
+  const [W, L, V] = C, R = rand(11), u = S / 1024, w = lacq ? u * 0.65 : u; // u: sizes, w: line widths
+  const each = f => { for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) { for (const g of C) { g.save(); g.translate(dx, dy); } f(); for (const g of C) g.restore(); } };
+  const lobes = (g, x, y, r, n, rr, a0, grow = 0) => { g.beginPath(); for (let i = 0; i < n; i++) { const a = a0 + i / n * Math.PI * 2; g.moveTo(x + Math.cos(a) * r + rr + grow, y + Math.sin(a) * r); g.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, rr + grow, 0, Math.PI * 2); } g.fill(); };
+  function peony(x, y, r, a0) {
+    for (const [k, n] of [[1, 8], [0.62, 7], [0.32, 6]]) { // three rings of petals, each outlined over the last
+      const pr = r * k * 0.42, pc = r * k * 0.62, lw = 5 * w;
+      L.fillStyle = '#fff'; lobes(L, x, y, pc, n, pr, a0 + k, lw); L.fillStyle = '#000'; lobes(L, x, y, pc, n, pr, a0 + k);
+      W.fillStyle = k === 1 ? '#c8c8c8' : '#ffffff'; lobes(W, x, y, pc, n, pr, a0 + k);
+      V.fillStyle = '#000'; lobes(V, x, y, pc, n, pr, a0 + k, lw);
+      L.strokeStyle = '#fff'; L.lineWidth = 2.6 * w; // petal veins, a brush stroke from the middle out
+      for (let i = 0; i < n; i++) for (const s of [-0.18, 0, 0.18]) { const a = a0 + k + i / n * Math.PI * 2 + s;
+        L.beginPath(); L.moveTo(x + Math.cos(a) * pc * 0.55, y + Math.sin(a) * pc * 0.55); L.lineTo(x + Math.cos(a) * (pc + pr * 0.55), y + Math.sin(a) * (pc + pr * 0.55)); L.stroke(); }
+    }
+    L.fillStyle = '#fff'; for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; L.beginPath(); L.arc(x + Math.cos(a) * r * 0.1, y + Math.sin(a) * r * 0.1, 3.4 * u, 0, 7); L.fill(); }
+  }
+  function leaf(x, y, len, a) {
+    const p = (s, t) => [x + Math.cos(a) * s - Math.sin(a) * t, y + Math.sin(a) * s + Math.cos(a) * t], shape = g => { g.beginPath(); g.moveTo(...p(0, 0)); g.quadraticCurveTo(...p(len * 0.45, len * 0.32), ...p(len, 0)); g.quadraticCurveTo(...p(len * 0.45, -len * 0.32), ...p(0, 0)); };
+    V.strokeStyle = '#fff'; V.lineWidth = 5 * w; shape(V); V.stroke(); V.fillStyle = '#000'; shape(V); V.fill();
+    W.fillStyle = '#c8c8c8'; shape(W); W.fill(); L.fillStyle = '#000'; shape(L); L.fill();
+    V.lineWidth = 2.4 * w; V.beginPath(); V.moveTo(...p(0, 0)); V.quadraticCurveTo(...p(len * 0.5, len * 0.06), ...p(len * 0.92, 0)); V.stroke();
+  }
+  function vine(pts) { // a brush line through the points with leaves and curls along it
+    V.strokeStyle = '#fff'; V.lineWidth = 10 * w; V.beginPath(); V.moveTo(...pts[0]);
+    for (let i = 1; i < pts.length - 1; i++) V.quadraticCurveTo(...pts[i], (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2);
+    V.lineTo(...pts.at(-1)); V.stroke();
+    for (let i = 1; i < pts.length - 1; i++) { const [x, y] = pts[i], a = Math.atan2(pts[i + 1][1] - y, pts[i + 1][0] - x);
+      leaf(x, y, (80 + R() * 40) * u, a + (i % 2 ? 1 : -1) * (0.6 + R() * 0.4));
+      const [mx, my] = [(x + pts[i + 1][0]) / 2, (y + pts[i + 1][1]) / 2], ll = (60 + R() * 30) * u; if (!lacq) leaf(mx, my, ll, a - (i % 2 ? 1 : -1) * (0.8 + R() * 0.3));
+      if (i % 2) { V.lineWidth = 4.5 * w; V.beginPath(); let px = x, py = y; V.moveTo(px, py); for (let t = 0; t < 20; t++) { const aa = a - (i % 4 ? 1 : -1) * (1.6 + t * 0.32), rr = (30 - t * 1.3) * u; px += Math.cos(aa) * rr * 0.32; py += Math.sin(aa) * rr * 0.32; V.lineTo(px, py); } V.stroke(); }
+    }
+  }
+  const F = [[0.22, 0.26, 0.2], [0.72, 0.66, 0.21], [0.74, 0.14, 0.11], [0.2, 0.8, 0.12], [0.48, 0.47, 0.08]].map(([x, y, r]) => [x * S, y * S, r * S]);
+  each(() => {
+    vine([[F[0][0], F[0][1]], [0.42 * S, 0.3 * S], [0.5 * S, 0.47 * S], [0.6 * S, 0.58 * S], [F[1][0], F[1][1]]]);
+    vine([[F[1][0], F[1][1]], [0.88 * S, 0.5 * S], [0.86 * S, 0.3 * S], [F[2][0], F[2][1]]]);
+    vine([[F[0][0], F[0][1]], [0.1 * S, 0.45 * S], [0.24 * S, 0.6 * S], [F[3][0], F[3][1]]]);
+    vine([[F[3][0], F[3][1]], [0.4 * S, 0.88 * S], [0.58 * S, 0.84 * S], [F[1][0], F[1][1]]]);
+    vine([[F[2][0], F[2][1]], [0.6 * S, 0.06 * S], [0.42 * S, 0.12 * S], [F[0][0], F[0][1]]]);
+    vine([[F[4][0], F[4][1]], [0.58 * S, 0.3 * S], [0.62 * S, 0.2 * S], [F[2][0], F[2][1]]]);
+    vine([[F[4][0], F[4][1]], [0.36 * S, 0.62 * S], [0.3 * S, 0.7 * S], [F[3][0], F[3][1]]]);
+    vine([[F[1][0], F[1][1]], [0.92 * S, 0.86 * S], [1.08 * S, 0.9 * S], [F[3][0] + S, F[3][1]]]);
+    vine([[F[3][0], F[3][1]], [0.12 * S, 0.98 * S], [0.1 * S, 1.12 * S], [F[0][0], F[0][1] + S]]);
+  });
+  each(() => F.forEach(([x, y, r], i) => peony(x, y, r, i * 0.7)));
+  const out = document.createElement('canvas'); out.width = out.height = S; const o = out.getContext('2d'), img = o.createImageData(S, S), d = [0, 1, 2].map(i => C[i].getImageData(0, 0, S, S).data);
+  for (let i = 0; i < S * S * 4; i += 4) { img.data[i] = d[0][i]; img.data[i + 1] = d[1][i]; img.data[i + 2] = d[2][i]; img.data[i + 3] = 255; }
+  o.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(out); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = THREE.NoColorSpace;
+  return texCache[key] = t;
 }

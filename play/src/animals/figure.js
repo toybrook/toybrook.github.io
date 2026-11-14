@@ -9,7 +9,7 @@ import { mergeGeometries } from '../../vendor/utils/BufferGeometryUtils.js';
 import { MODELS, ACCESSORIES, LEGEND_ITEMS, EV_ACC } from '../game/data.js';
 import { SP, variantOf } from '../game/rules.js';
 import { toyMat, windTime, nightGlow } from '../habitat/toyKit.js';
-import { variantMats, eyeMat, wear, texBody } from './materials.js';
+import { variantMats, eyeMat, wear, texBody, meshyMat } from './materials.js';
 import { calm } from '../config.js';
 import { fetched } from '../ui/loadbar.js'; // 26-1: how much of each model file has arrived (the loading bar)
 
@@ -220,14 +220,15 @@ function merge(body, joints) {
 // Needs loadModel(model) to have finished. stage: one of the model's `files` keys ('baby' | 'adult'). acc: a secret accessory id, or none.
 // color: one of the variant's colour ids (none = its first).
 export function makeFigure(spId, vId, stage, acc = null, color = null) {
-  const sp = SP[spId], M = MODELS[sp.model], S = M[stage], G = ready[sp.model][stage], m = variantMats(spId, vId, color);
+  const sp = SP[spId], M = MODELS[sp.model], S = M[stage], G = ready[sp.model][stage], map = G.body.userData.map, m = variantMats(spId, vId, color, map && M.meshy);
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   body.scale.setScalar(S.s); body.position.y = -(S.sink || 0);
+  const V = variantOf(spId, vId), skin = !map ? m.body : V?.rarity === 'common' ? texBody(map) : meshyMat(m.body); // 82: a common wears the body's own texture; 84: another look, a clone without the dotted edge
   const mesh = (geo, mat, ord) => { const o = wear(new THREE.Mesh(geo, mat), ord); o.receiveShadow = true; // tree and barn shade land on it
-    if (m.halo && mat === m.body) { const h = new THREE.Mesh(geo, haloMat(m.halo)); h.renderOrder = 5; o.add(h); }
+    if (m.halo && (mat === m.body || mat === skin)) { const h = new THREE.Mesh(geo, haloMat(m.halo)); h.renderOrder = 5; o.add(h); }
     return o; };
-  const V = variantOf(spId, vId), skin = G.body.userData.map && V?.rarity === 'common' ? texBody(G.body.userData.map) : m.body; // 82: a common wears the body's own texture
   const eyes = mesh(G.eye, eyeMat, 4); body.add(mesh(G.body, skin), eyes); // eyes after glass: not doubled in its screen copy (alone in their material: merge leaves them)
+  if (m.wall) body.add(mesh(G.body, m.wall)); if (m.noEye) eyes.visible = false; // 84 amber: its glowing far wall; no bead (the skull's socket)
   if (G.accent) body.add(mesh(G.accent, m.accent)); // none on an all-one-colour body (swan, flamingo)
   if (G.beak) body.add(mesh(G.beak, m.beak || m.hoof)); // a bird's beak (the hoof colour, like its feet), a pig's nostrils, a cow's nose (colors.beak)
   if (G.horn) body.add(mesh(G.horn, m.horn || m.body)); // a cow's horns (colors.horn)
@@ -328,10 +329,10 @@ const GLINT = 0.45, GROW = 1.5; // s: sparkles first, then the growing
 // its height goes smoothly from the baby's to the adult's; halfway the shape swaps to the adult under a small burst of light.
 export function dress(rec) {
   const obj = new THREE.Group(); let fig, stage, grow = -1, pop = -1, fx = null;
-  // 26-10: the adult arctic fox's tail curls round its right side only; every other one (odd id) is its mirror image, so in a
-  // habitat some show the tail on the left. The model is the confirmed one, unchanged (z is the figure's left-right)
+  // 26-10: the arctic fox's tail curls round one side only; every other one (odd id) is its mirror image, so in a habitat some
+  // show the tail on the left (z is the figure's left-right). 85: the baby too, the same Meshy body: it grows up facing the same way
   const accs = () => [...rec.wear || [], rec.acc].filter(Boolean), key = () => accs().map(k => k + (accGeo[gk(k)] ? '' : '?')).join();
-  const make = s => { const f = makeFigure(rec.species, rec.variant, s, accs(), rec.color); if (rec.species === 'arcticFox' && s === 'adult' && rec.id % 2) f.obj.scale.z = -1; return f; };
+  const make = s => { const f = makeFigure(rec.species, rec.variant, s, accs(), rec.color); if (rec.species === 'arcticFox' && rec.id % 2) f.obj.scale.z = -1; return f; };
   let worn; const set = s => { if (fig) { obj.remove(fig.obj); fig.skeleton?.dispose(); } stage = s; worn = key(); fig = make(s); obj.add(fig.obj); };
   set(rec.stage);
   function start() { // heights of both shapes; the sparkles round the baby, the burst at its middle
