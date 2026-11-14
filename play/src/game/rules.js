@@ -70,7 +70,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   S.guests = guestsBlank(S); // 66-1
@@ -110,6 +110,7 @@ export function fromSave(raw, now) {
         pile: typeof R.pile === 'string' ? R.pile : '', pileAt: n(R.pileAt), built: n(R.built), luck: n(R.luck) }]));
       const own = evOwned(S); // 15-2: worn event wear, known ones, no more of each than bought
       for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
+    S.accs = Object.fromEntries(Object.entries(S.accs).filter(([k, n]) => ACCESSORIES[k] && Number.isInteger(n) && n > 0)); // 95: kept secret accessories, by name
     tidyVisit(S); tidySky(S); tidyPals(S); tidyGuests(S); tidyArt(S); tidyWild(S); // 16-1, 16-2, 17-1, 66-1, 17-2, 17-3
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
@@ -119,7 +120,7 @@ export function fromSave(raw, now) {
 }
 // Save migrations: MIGRATIONS[v] turns a v-1 save into a v save. A new save shape = SCHEMA_VERSION + 1 in data.js and a
 // step here (fields that only need a default don't need one: newGame fills them). 1 and 2 had no steps.
-const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10, 11: to11 }; // 4: animals over the new room go to storage on the first advance
+const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10, 11: to11, 12: S => { for (const a of S.animals) if (a.acc) a.s = 1; } }; // 12 (95): a friend that hatched in a secret accessory keeps the x2 send-back (a.s), the one worn stays on it, none kept yet // 4: animals over the new room go to storage on the first advance
 // 2 -> 3 (16-2): 대리석 left the launch list (-> 유리), 황금 too (-> the species' remaining legendary); every animal gets
 // its variant's first colour, which also counts as seen. Codex entries move with them (the earliest date wins).
 function to3(S) {
@@ -457,6 +458,7 @@ export function hatch(S, i, now, rng = Math.random, forced = false) {
   const c = crack(S, s.egg, now, rng, forced); if (!c) return null;
   const a = { id: S.nextId++, species: c.species, variant: c.variant, color: c.color, acc: c.acc, egg: s.egg.type, parents: s.egg.parents, stage: 'baby', born: now,
     g: 0, gAt: now, fed: 0, adultAt: null, stored: false, heartAt: 0, pending: true };
+  if (c.acc) a.s = 1; // 95: hatched a secret (x2 on sending back, whatever it wears later)
   a.pe = peOf(a.id, now); // 17-1 성격
   const seen = a.color && (S.colors[key(a.species, a.variant)] ??= []);
   if (seen && !seen.includes(a.color)) { seen.push(a.color); a.newColor = true; }
@@ -467,7 +469,7 @@ export function hatch(S, i, now, rng = Math.random, forced = false) {
 export const isNew = (S, a) => !S.codex[key(a.species, a.variant)] && !S.animals.some(b => b !== a && !b.wd && b.species === a.species && b.variant === a.variant);
 // 66-2: a settled guest (wd) is a friend, never sent back for hearts
 export const canSendBack = (S, a) => !!(a?.pending || a?.stored) && !a.stroll && !a.wd && !!S.codex[key(a.species, a.variant)];
-export const sendBackHearts = a => (B.sendBack[variantOf(a.species, a.variant)?.rarity] || 0) * (a.acc ? B.secret.sendBackX : 1);
+export const sendBackHearts = a => (B.sendBack[variantOf(a.species, a.variant)?.rarity] || 0) * (a.s ? B.secret.sendBackX : 1);
 // out into its habitat (growing starts now) if it fits, or into storage, or back for hearts (never shards)
 // (both register its codex cell: it is the player's now)
 export function release(S, id, now) {
@@ -820,7 +822,22 @@ export function setName(S, id, text) { const a = S.animals.find(a => a.id === id
 export function sendBack(S, id) {
   const i = S.animals.findIndex(a => a.id === id && canSendBack(S, a));
   if (i < 0) return 0;
-  const n = sendBackHearts(S.animals[i]); S.animals.splice(i, 1); S.hearts += n; return n;
+  const a = S.animals[i], n = sendBackHearts(a); if (a.acc) S.accs[a.acc] = (S.accs[a.acc] || 0) + 1; // 95: what it wore is kept
+  S.animals.splice(i, 1); S.hearts += n; return n;
+}
+// 95: a secret accessory is a thing kept by count (S.accs): taken off a friend (+1) or put on any friend (-1, what it wore goes back).
+// One per friend; the event wear (a.wear) in the same place comes off (it is counted from what was bought, so nothing is lost)
+const accAt = k => { const A = ACCESSORIES[EV_ACC[k]?.base ?? k]; return A ? [A.slot, A.also].filter(Boolean) : []; };
+export function accOff(S, id) {
+  const a = S.animals.find(a => a.id === id); if (!a?.acc) return null;
+  const k = a.acc; S.accs[k] = (S.accs[k] || 0) + 1; a.acc = null; return k;
+}
+export function accOn(S, id, k) {
+  const a = S.animals.find(a => a.id === id); if (!a || !ACCESSORIES[k] || !(S.accs[k] > 0) || a.acc === k) return false;
+  if (a.acc) accOff(S, id);
+  if (!--S.accs[k]) delete S.accs[k]; a.acc = k;
+  if (a.wear) { const at = accAt(k); a.wear = a.wear.filter(w => !accAt(w).some(s => at.includes(s))); if (!a.wear.length) delete a.wear; }
+  return true;
 }
 // 23-2: what the habitat on screen saw (lights: light props placed there at night; roof: animals under one roof in the rain),
 // kept when more than before
@@ -1013,6 +1030,7 @@ export function evWear(S, id, k) {
   const a = S.animals.find(a => a.id === id); if (!a || !EV_ACC[k]) return false;
   if (a.wear?.includes(k)) { a.wear = a.wear.filter(x => x !== k); if (!a.wear.length) delete a.wear; return true; }
   if (evWorn(S, k) >= evOwned(S)[k]) return false;
+  if (a.acc && accAt(a.acc).some(s => accAt(k).includes(s))) accOff(S, id); // 95: one thing in a place; the secret one is kept
   a.wear = [...a.wear || [], k]; return true;
 }
 export function evSeen(S, key, k) { const R = S.events[key]; if (R && (k === 'seen' || k === 'told')) R[k] = 1; }

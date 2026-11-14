@@ -4,7 +4,8 @@
 // until the screen is touched. ⋯ or a long press (or right click): 보러 가기 / 아끼는 친구 (★) / 이름 짓기 / 쓰다듬기 /
 // 보관함으로 / 다른 서식지로.
 import * as G from '../game/game.js';
-import { BALANCE as B, RARITIES } from '../game/data.js';
+import { BALANCE as B, RARITIES, ACCESSORIES } from '../game/data.js';
+import { track } from './stats.js';
 import { SP, HAB, RAR, variantOf, outIn, capOf, gauge, growing, habitatOf, callName, kindName, tierOf } from '../game/rules.js'; // 66-2 tierOf: a settled guest is 떠돌이
 import { figureThumb } from './thumbs.js';
 import { toast, heart, josa } from './hud.js';
@@ -27,7 +28,7 @@ export function openFriends(id, api) {
 }
 export const leaveFriends = () => { el.hidden = true; menu?.remove(); hab = null; };
 const list = () => outIn(G.S, habId).filter(a => (stage === 'all' || (stage === 'baby') === (a.stage === 'baby')) && (!rar || rarOf(a) === rar) && (!fsp || a.species === fsp)).sort(SORTS[sort][1]);
-const sig = () => outIn(G.S, habId).map(a => a.id + a.stage + (a.fav ? '*' : '') + (a.nm || '')).join() + sort + stage + rar + fsp;
+const sig = () => outIn(G.S, habId).map(a => a.id + a.stage + (a.fav ? '*' : '') + (a.nm || '') + (a.acc || '')).join() + sort + stage + rar + fsp;
 G.on(() => { if (el.hidden) return; if (sig() !== shown) { const y = el.querySelector('.flist')?.scrollTop || 0; draw(); el.querySelector('.flist').scrollTop = y; } else tick(); });
 
 function draw() {
@@ -83,12 +84,14 @@ function more(id) {
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
   menu.innerHTML = `<div><h2>${star(a)}${nm}</h2>${a.nm ? `<p class="sub">${kindName(a)}</p>` : ''}${pe}<div class="col"><button data-do="go">보러 가기</button>
 <button data-do="fav" aria-pressed="${!!a.fav}">${a.fav ? '★ 별 떼기' : '☆ 아끼는 친구로'}</button><button data-do="name">${a.nm ? '이름 바꾸기' : '이름 짓기'}</button>
-<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button><button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>`;
+<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button>${a.acc ? `<button data-do="accoff">치장 떼기 · ${ACCESSORIES[a.acc]?.name}</button>` : Object.keys(G.S.accs).length ? '<button data-do="accon">치장 끼우기</button>' : ''}<button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>`;
   menu.onclick = e => {
     const d = e.target.closest('button')?.dataset; if (!d) return;
     if (d.do === 'go') return go(a.id);
     if (d.do === 'name') return naming(a);
     if (d.do === 'walk') { menu.remove(); menu = null; return pickStroll(a); }
+    if (d.do === 'accon') return dressUp(a); // 95
+    if (d.do === 'accoff') { const k = G.accOff(a.id); if (k) { track('acc_off', { v: ACCESSORIES[k].name }, 'acc_off:' + k); toast(`「${ACCESSORIES[k].name}」${josa(ACCESSORIES[k].name, '을', '를')} 떼어 보관함 › 치장에 넣었어요`, 2600); } }
     if (d.do === 'pet') { const n = G.tapHeart(a.id); const r = e.target.getBoundingClientRect(); if (n) heart(r.left + r.width / 2, r.top); toast(n ? `${nm}${josa(nm, '이', '가')} 좋아해요 ♥+${n}` : G.S.pet.n >= B.heart.daily ? '오늘 쓰다듬기 하트는 다 모았어요' : '방금 쓰다듬었어요 · 조금 뒤에 다시', 2200, true); return; }
     if (d.do === 'fav') toast(G.setFav(a.id, !a.fav)?.fav ? `${nm}${josa(nm, '은', '는')} 아끼는 친구예요 · 보관함의 여러 마리 돌려보내기에서 빠져요` : `${nm}의 별을 뗐어요`, 2600);
     if (d.do === 'store' && G.store(a.id)) toast(`${nm}${josa(nm, '을', '를')} 보관함에 넣었어요`);
@@ -97,6 +100,15 @@ function more(id) {
     menu.remove(); menu = null;
   };
   el.closest('#habitat').append(menu);
+}
+// 95 치장 끼우기: the kept secret accessories (S.accs, by count); one goes on this friend
+export function dressUp(a, done = () => { menu?.remove(); menu = null; }) {
+  if (!menu) { menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu'; (el.closest('#habitat') || document.body).append(menu); }
+  const nm = callName(a);
+  menu.innerHTML = `<div><h2>치장 끼우기</h2><p class="sub">${nm} · 하나 고르면 바로 끼워요</p><div class="col">${Object.entries(G.S.accs).map(([k, n]) => `<button data-k="${k}">${ACCESSORIES[k].name} ×${n}</button>`).join('')}<button class="sb" data-shut>닫기</button></div></div>`;
+  menu.onclick = e => { const k = e.target.closest('button')?.dataset.k;
+    if (k && G.accOn(a.id, k)) { track('acc_on', { v: ACCESSORIES[k].name }, 'acc_on:' + k); toast(`${nm}${josa(nm, '이', '가')} 「${ACCESSORIES[k].name}」${josa(ACCESSORIES[k].name, '을', '를')} 했어요`); }
+    if (e.target.closest('button')) done(); };
 }
 // 이름 짓기: up to 8 letters (rules.cleanName); empty takes the name off. Names stay in this save (not in 꾸미기 코드).
 function naming(a) {

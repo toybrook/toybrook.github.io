@@ -5,11 +5,13 @@
 // undone, so it always asks (twice for a legendary or a secret one). 자리 없음 says why. 26-4: ☆/★ on a cell marks an 아끼는 친구:
 // it is left out of sending several back, and sending it back on its own asks once more.
 import * as G from '../game/game.js';
-import { SPECIES, MODELS, RARITIES } from '../game/data.js';
+import { SPECIES, MODELS, RARITIES, ACCESSORIES } from '../game/data.js';
 import { SP, HAB, RAR, RANK, variantOf, variantsOf, habitatOf, known, fits, outIn, need, canSendBack, sendBackHearts, capOf, roomOf, callName } from '../game/rules.js';
 import { figureThumb } from './thumbs.js';
 import { toast, heart, josa, ask } from './hud.js';
 import { pickStroll, openCards, strollLeft } from './stroll.js';
+import { dressUp } from './friends.js';
+import { track } from './stats.js';
 
 const el = document.getElementById('store');
 const nameOf = callName;
@@ -29,7 +31,7 @@ const roomNote = h => Object.keys(h.room || {}).map(zone => {
 
 let habId = null, hab = null, tab = 'store', sort = 'kind', shown = '', fsp = '', frar = '', fstage = 'all', picking = false;
 const picked = new Set();
-const sig = () => G.S.animals.map(a => `${a.id}${a.stored ? 's' : a.pending ? 'p' : ''}${a.stage[0]}${a.hold ? 'h' : ''}${a.fav ? '*' : ''}${a.stroll ? strollLeft(a) : ''}`).join() + tab + sort + fsp + frar + fstage + picking + [...picked] + G.S.cards.length + G.S.cards.some(c => c.new);
+const sig = () => G.S.animals.map(a => `${a.id}${a.stored ? 's' : a.pending ? 'p' : ''}${a.stage[0]}${a.hold ? 'h' : ''}${a.fav ? '*' : ''}${a.stroll ? strollLeft(a) : ''}${a.acc || ''}`).join() + JSON.stringify(G.S.accs) + tab + sort + fsp + frar + fstage + picking + [...picked] + G.S.cards.length + G.S.cards.some(c => c.new);
 
 export function openStore(id, api) { habId = id; hab = api; el.hidden = false; picking = false; picked.clear(); draw(); }
 export const leaveStore = () => { el.hidden = true; hab = null; };
@@ -43,28 +45,28 @@ function whyNot(a) {
   return `${h.name}에 이 친구가 들어갈 자리가 모자라요 · 큰 친구를 넣거나 땅을 넓혀 보세요`;
 }
 const filt = a => (!fsp || a.species === fsp) && (!frar || variantOf(a.species, a.variant).rarity === frar) && (fstage === 'all' || (fstage === 'baby') === (a.stage === 'baby'));
-const rarOf = a => RAR[variantOf(a.species, a.variant).rarity], precious = a => !!rarOf(a).precious || !!a.acc;
+const rarOf = a => RAR[variantOf(a.species, a.variant).rarity], precious = a => !!rarOf(a).precious || !!a.s; // 95: a hatched secret (a.s), not whoever wears an accessory now
 const PRECIOUS = RARITIES.filter(r => r.precious).map(r => r.name).join('·'); // 전설
 
 function draw() {
   shown = sig();
   const h = HAB[habId], stored = G.S.animals.filter(a => a.stored && known(a)), out = outIn(G.S, habId);
-  const all = tab === 'store' ? stored : out, list = all.filter(filt).sort(SORTS[sort][1]);
+  const all = tab === 'store' ? stored : tab === 'acc' ? [...out, ...stored] : out, list = all.filter(filt).sort(SORTS[sort][1]);
   for (const id of picked) if (!list.some(a => a.id === id)) picked.delete(id);
   const walk = a => `<button class="sb wk" data-walk="${a.id}">산책</button>`;
-  const btns = a => a.stroll ? `<small class="onwalk">산책 중 · ${strollLeft(a)} 남음</small>` : tab === 'store'
+  const btns = a => tab === 'acc' ? (a.acc ? `<button class="sb" data-accoff="${a.id}">떼기</button>` : Object.keys(G.S.accs).length ? `<button class="go" data-accon="${a.id}">끼우기</button>` : '') : a.stroll ? `<small class="onwalk">산책 중 · ${strollLeft(a)} 남음</small>` : tab === 'store'
     ? `<button class="go${fits(G.S, a) ? '' : ' off'}" data-out="${a.id}">${fits(G.S, a) ? '꺼내기' : '자리 없음'}</button>${canSendBack(G.S, a) ? `<button class="sb" data-back="${a.id}">♥+${sendBackHearts(a)}</button>` : ''}${walk(a)}`
     : `<button class="sb" data-in="${a.id}">넣기</button>${walk(a)}`;
   const opt = (v, t, on) => `<option value="${v}"${on ? ' selected' : ''}>${t}</option>`, kinds = [...new Set(all.map(a => a.species))];
   const sel = list.filter(a => picked.has(a.id)), backs = sel.filter(a => canSendBack(G.S, a) && !a.fav), favs = sel.filter(a => a.fav).length;
   el.innerHTML = `<div class="chead"><b>보관함</b><span>${stored.length}마리</span><button class="back${G.S.cards.some(c => c.new) ? ' new' : ''}" data-cards>엽서 ${G.S.cards.length}</button><button class="back" data-close>닫기</button></div>
-<div class="ctabs"><button data-tab="store"${tab === 'store' ? ' class="on"' : ''}>보관함 ${stored.length}</button><button data-tab="out"${tab === 'out' ? ' class="on"' : ''}>${h.name} ${out.length}/${capOf(G.S, habId)}</button>
+<div class="ctabs"><button data-tab="store"${tab === 'store' ? ' class="on"' : ''}>보관함 ${stored.length}</button><button data-tab="out"${tab === 'out' ? ' class="on"' : ''}>${h.name} ${out.length}/${capOf(G.S, habId)}</button><button data-tab="acc"${tab === 'acc' ? ' class="on"' : ''}>치장 ${Object.values(G.S.accs).reduce((s, n) => s + n, 0)}</button>
 <span class="sorts">${Object.entries(SORTS).map(([k, [nm]]) => `<button data-sort="${k}"${k === sort ? ' class="on"' : ''}>${nm}</button>`).join('')}</span></div>
 <div class="sfilt"><span class="seg">${[['all', '전체'], ['baby', '새끼'], ['adult', '성체']].map(([k, t]) => `<button data-stage="${k}"${k === fstage ? ' class="on"' : ''}>${t}</button>`).join('')}</span>
 <select data-fsp aria-label="종">${opt('', '모든 종', !fsp)}${kinds.map(s => opt(s, SP[s].name, s === fsp)).join('')}</select>
 <select data-frar aria-label="등급">${opt('', '모든 등급', !frar)}${RARITIES.map(r => opt(r.id, r.name, r.id === frar)).join('')}</select>
 ${tab === 'store' && stored.length ? `<button class="pick${picking ? ' on' : ''}" data-pick>${picking ? '고르기 끝' : '고르기'}</button>` : ''}</div>
-<div class="cbody"><div class="srow">${list.map(a => `<div class="cell scell${picked.has(a.id) ? ' picked' : ''}${a.stroll ? ' away' : ''}" data-a="${a.id}" data-r="${variantOf(a.species, a.variant).rarity}"><img alt="${nameOf(a)}">${a.stage === 'baby' ? '<i class="baby">아기</i>' : ''}${picking ? `<b class="tick"></b>${a.fav ? '<i class="sfav">★</i>' : ''}` : `<button class="sfav${a.fav ? ' on' : ''}" data-star="${a.id}" aria-label="아끼는 친구" aria-pressed="${!!a.fav}">${a.fav ? '★' : '☆'}</button>`}<span>${nameOf(a)}</span>${a.hold ? '<small class="hold">성장 멈춤</small>' : ''}${picking ? '' : `<div class="sbtns">${btns(a)}</div>`}</div>`).join('')}</div>
+<div class="cbody">${tab === 'acc' ? `<p class="cnote accs">${Object.entries(G.S.accs).map(([k, n]) => `<span>${ACCESSORIES[k].name} ×${n}</span>`).join('') || '떼어 둔 치장이 없어요 · 친구를 눌러 떼면 여기 모여요'}</p>` : ''}<div class="srow">${list.map(a => `<div class="cell scell${picked.has(a.id) ? ' picked' : ''}${a.stroll ? ' away' : ''}" data-a="${a.id}" data-r="${variantOf(a.species, a.variant).rarity}"><img alt="${nameOf(a)}">${a.stage === 'baby' ? '<i class="baby">아기</i>' : ''}${picking ? `<b class="tick"></b>${a.fav ? '<i class="sfav">★</i>' : ''}` : `<button class="sfav${a.fav ? ' on' : ''}" data-star="${a.id}" aria-label="아끼는 친구" aria-pressed="${!!a.fav}">${a.fav ? '★' : '☆'}</button>`}<span>${nameOf(a)}</span>${a.hold ? '<small class="hold">성장 멈춤</small>' : ''}${picking ? '' : `<div class="sbtns">${btns(a)}</div>`}</div>`).join('')}</div>
 ${list.length ? '' : `<p class="cnote">${all.length ? '고른 조건에 맞는 친구가 없어요' : tab === 'store' ? '보관함이 비어 있어요' : '서식지에 나온 친구가 없어요'}</p>`}
 <p class="cnote">${h.name}엔 ${capOf(G.S, habId)}마리까지 나와요${roomNote(h) ? ` · ${roomNote(h)}` : ''}</p></div>
 ${picking && favs ? `<p class="cnote sfavnote">★ 아끼는 친구 ${favs}마리는 돌려보내지 않아요</p>` : ''}${picking ? `<div class="sact"><button data-many="out"${sel.length ? '' : ' disabled'}>서식지로 보내기 ${sel.length || ''}</button><button class="sb" data-many="back"${backs.length ? '' : ' disabled'}>돌려보내기 ${backs.length ? `♥+${backs.reduce((n, a) => n + sendBackHearts(a), 0)}` : ''}</button></div>` : ''}`;
@@ -78,7 +80,7 @@ async function sure(list) {
   const favs = list.filter(a => a.fav); // only ever one: several leave them out
   if (favs.length && !await ask(`${one}${josa(one, '은', '는')} 아끼는 친구(★)예요. 그래도 돌려보낼까요?`, '돌려보내기')) return false;
   const top = list.filter(precious);
-  if (top.length && !await ask(one ? `${one}${josa(one, '은', '는')} ${top[0].acc ? '시크릿 치장을 한' : rarOf(top[0]).name} 친구예요. 정말 돌려보낼까요?` : `${PRECIOUS}·시크릿 친구 ${top.length}마리가 들어 있어요. 정말 돌려보낼까요?`, '돌려보내기')) return false;
+  if (top.length && !await ask(one ? `${one}${josa(one, '은', '는')} ${top[0].s ? '시크릿 치장으로 태어난' : rarOf(top[0]).name} 친구예요. 정말 돌려보낼까요?` : `${PRECIOUS}·시크릿 친구 ${top.length}마리가 들어 있어요. 정말 돌려보낼까요?`, '돌려보내기')) return false;
   return true;
 }
 
@@ -86,10 +88,12 @@ el.addEventListener('change', e => { const d = e.target.dataset; if (d.fsp != nu
 el.addEventListener('click', async e => {
   if (picking) { const c = e.target.closest('.scell:not(.away)'); if (c && !e.target.closest('button')) { const id = +c.dataset.a; picked.has(id) ? picked.delete(id) : picked.add(id); return draw(); } }
   const b = e.target.closest('button'), d = b?.dataset; if (!b) return;
-  const a = G.S.animals.find(x => x.id === +(d.out || d.back || d.in || d.star || d.walk)), nm = a && nameOf(a);
+  const a = G.S.animals.find(x => x.id === +(d.out || d.back || d.in || d.star || d.walk || d.accon || d.accoff)), nm = a && nameOf(a);
   if (d.close != null) el.hidden = true;
   else if (d.cards != null) openCards();
   else if (d.walk) pickStroll(a);
+  else if (d.accon) dressUp(a); // 95
+  else if (d.accoff) { const k = G.accOff(a.id); if (k) { track('acc_off', { v: ACCESSORIES[k].name }, 'acc_off:' + k); toast(`${nm}의 「${ACCESSORIES[k].name}」${josa(ACCESSORIES[k].name, '을', '를')} 뗐어요`); } }
   else if (d.tab) { tab = d.tab; picking = false; picked.clear(); fsp = ''; draw(); }
   else if (d.sort) { sort = d.sort; draw(); }
   else if (d.stage) { fstage = d.stage; draw(); }

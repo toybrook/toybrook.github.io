@@ -140,6 +140,7 @@ export const tapPile = () => act(now => R.tapPile(S, now));
 export const dig = () => act(now => R.dig(S, now)); // 14-3 화석 발굴: an animal done digging at the fossil site (the PROPS id found, or null)
 export const evBuild = (hab, x, z) => act(now => R.evBuild(S, hab, x, z, now));
 export const evWear = (id, k) => act(() => R.evWear(S, id, k));
+export const accOff = id => act(() => R.accOff(S, id)), accOn = (id, k) => act(() => R.accOn(S, id, k)); // 95
 export const evOwned = () => S ? R.evOwned(S) : {};
 // 16-1 놀러 보내기 (visit.js): the guests come with the animals to the habitat (no seat, not in S.animals)
 export const withGuests = () => [...S.animals, ...S.visit.guests, ...wanderers()];

@@ -169,7 +169,7 @@ function fillScenes() {
 }
 function drawAlbum() {
   const ids = Object.keys(ACCESSORIES), got = ids.filter(id => G.S.album[id]);
-  el.innerHTML = `<div class="chead"><b>치장 앨범</b><span>${got.length}/${ids.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>${tabs()}
+  el.innerHTML = `<div class="chead"><b>치장 앨범</b><span>모은 치장 ${got.length}/${ids.length}</span>${nightBtn()}<button class="back" data-close>닫기</button></div>${tabs()}
 <div class="cbody"><div class="crow">${ids.map(id => { const e = G.S.album[id];
     return `<div class="cell${e ? '' : ' unk'}"><img alt="${e ? ACCESSORIES[id].name : '아직 못 본 치장'}"><span>${e ? ACCESSORIES[id].name : '?'}</span>${e ? `<small>${lookName(e.species, e.variant, e.color)}<br>${new Date(e.at).toLocaleDateString('ko-KR')}</small>` : ''}</div>`; }).join('')}</div>
 <p class="cnote">시크릿으로 처음 만난 동물이 남아요 · 도감 수에는 들어가지 않아요</p></div>`;
