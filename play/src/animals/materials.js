@@ -15,10 +15,9 @@ export const eyeMat = new THREE.MeshPhysicalMaterial({ color: '#0b0b0d', roughne
 
 // { body, accent, hoof } of a species' variant in colour cId (none or unknown = its first colour).
 // A legendary's look is its `mat`, any other variant's its id. over: look id -> the look to wear instead (84: MODELS meshy, on a Meshy body),
-// len: that body's length / height (85-3: the amber's tail tip; figure.js)
-export function variantMats(spId, vId, cId, over, len) {
+export function variantMats(spId, vId, cId, over) {
   const v = variantOf(spId, vId), c = colorOf(spId, vId, cId), id = v?.mat || v?.id || 'solid', o = over?.[id];
-  return looks(o ?? id, v?.rarity === 'common' ? { ...SP[spId].colors, ...c } : o ? { ...c, len } : c ?? {});
+  return looks(o ?? id, v?.rarity === 'common' ? { ...SP[spId].colors, ...c } : c ?? {});
 }
 // 82: a common on a body with its own texture (the Meshy figures, data.js meshyStages): the texture as it is, the commons' plastic
 const painted = new WeakMap();
@@ -205,7 +204,7 @@ const SKY = 'vec3(0.97, 0.88, 0.75)'; // the page gradient behind a transparent 
 // after its post, in screen colour (the scene seen through them is dark at night, so they would go dark with it)
 const NIGHT_LOOK = { glow: 1.2, najeon: 0.8, pearl: 0.8, galaxy: 0.8, jade: 1.0, fortune: 0.6, cotton: 0.8, opal: 1.0, cowopal: 1.0, palejade: 1.2, coral: 0.8,
   moonstone: 1.2, frost: 1.0, yuzu: 0.8, dawn: 1.0, aurora: 1.2, glacier: 0.8, moonpearl: 1.0, starlight: 1.0, lantern: 1.5, snowspirit: 1.0,
-  lava: 0.8, lavacrystal: 0.8, malachite: 1.0, sunstone: 1.0, storm: 1.0, // dino legendaries (71-2)
+  lava: 0.8, lavacrystal: 0.8, malachite: 1.0, sunstone: 1.0, storm: 1.0, amber86: 1.0, // dino legendaries (71-2, 86-2)
   // (GLSL instead of K: its own glow is too faint to scale; by night its silver ripples and rim light up)
   moonwater: 'totalEmissiveRadiance = totalEmissiveRadiance * (1.0 + uNight * 1.5) + uNight * (vec3(0.7, 0.78, 1.0) * rip * 0.45 + uBase * 0.9 * pow(1.0 - nv, 2.0));' };
 const AMBER_NIGHT = 'gl_FragColor.rgb += uNight * 0.7 * uTint * (0.3 + 0.7 * nv) * (1.0 - fr);', CRYSTAL_NIGHT = 'gl_FragColor.rgb += uNight * vec3(0.55, 0.75, 1.0) * (0.12 + 0.3 * pow(nv, 2.0)) * (1.0 - fr);';
@@ -215,7 +214,7 @@ const NIGHT_CLEAR = {
   bubble: 'gl_FragColor.rgb += uNight * (film * 0.18 + 0.08) * (0.3 + 0.7 * pow(1.0 - nv, 1.5));',
   glitter: 'gl_FragColor.rgb += uNight * 0.8 * gs * (1.0 - fr);',
   amber: AMBER_NIGHT, honey: AMBER_NIGHT, crystal: CRYSTAL_NIGHT, crystalwing: CRYSTAL_NIGHT,
-  amberbone: AMBER_NIGHT, amber84: AMBER_NIGHT, nebula: 'gl_FragColor.rgb += uNight * vec3(0.25, 0.18, 0.7) * (0.2 + 0.4 * nv) * (1.0 - fr);', // 71-2
+  amberbone: AMBER_NIGHT, nebula: 'gl_FragColor.rgb += uNight * vec3(0.25, 0.18, 0.7) * (0.2 + 0.4 * nv) * (1.0 - fr);', // 71-2
   amethyst: AMETHYST_NIGHT, amethystgem: AMETHYST_NIGHT, lavagem: 'gl_FragColor.rgb += uNight * vec3(1.0, 0.36, 0.05) * (0.15 + 0.3 * pow(nv, 2.0)) * (1.0 - fr);',
 };
 const clearMats = [];
@@ -575,20 +574,22 @@ const AMBERBONE = `gl_FragColor.rgb *= mix(vec3(1.0), vec3(0.8, 0.66, 0.4), 0.7 
 const BONE = () => Object.assign(phys('#fff0d4', { roughness: 0.5, emissive: '#ffb860', emissiveIntensity: 0.25, depthTest: false, depthWrite: false,
   blending: THREE.CustomBlending, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor, opacity: 0.88,
   stencilWrite: true, stencilRef: 1, stencilFunc: THREE.EqualStencilFunc }), { userData: { order: 3.5 } });
-// 84 (the Meshy rex): clear honey with the skeleton inside it. Drawn before the glass copies the screen: the body's far
-// wall (its back faces, wall), glowing orange, brightest in the middle, writes stencil 2; the bones (85-1: tools/meshy-bones.mjs,
-// every vertex inside the body) only there, with depth, so the near ribs hide the far ones and every bar keeps its edge. The
-// amber then shows that copy, so the bones are seen through it. Toes and the tail's tip deeper (AMBER_TIP, on any body: its lowest 9 %
-// and the last 22 % of its length, the tail at -x; uLen = the body's length / height, figure.js).
-const AMBER_TIP = 'max(smoothstep(0.09, 0.0, p.y), smoothstep(0.22, 0.0, p.x / uLen + 0.5))';
-const AMBER84 = `{ float tip = ${AMBER_TIP};
-      gl_FragColor.rgb *= mix(1.0, 0.42, tip);
-      gl_FragColor.rgb += vec3(1.0, 0.62, 0.16) * 0.3 * pow(s, 8.0) * (1.0 - 0.6 * tip) + vec3(1.0, 0.78, 0.4) * 0.7 * rim; }`;
-const amberWall = len => Object.assign(new THREE.ShaderMaterial({ uniforms: { uLen: { value: len } }, side: THREE.BackSide, stencilWrite: true, stencilRef: 2, stencilZPass: THREE.ReplaceStencilOp,
+// 84 → 86-2 (the Meshy rex): clear honey with the skeleton inside it, in plain transparency (no screen copy, no stencil; 85's copy
+// read brown and cloudy, the bones smudged). Drawn as the opaque things: the body's far wall (wall: its back faces), glowing orange,
+// brightest where we look straight in, and the bones (bone: tools/meshy-bones.mjs, every vertex inside the body) with depth, so the
+// near ribs hide the far ones and every bar keeps its edge. Then the honey front over them, front faces only, without depth: under
+// half solid in the middle, nearly solid and bright at the outline (fresnel). Only the toes' tips dark brown (their lowest 4.5 %)
+const TOE = 'smoothstep(0.045, 0.012, p.y)';
+const AMBER86 = `float toe = ${TOE}, fe = pow(1.0 - nv, 2.5);
+      diffuseColor.rgb = mix(vec3(0.24, 0.09, 0.0), vec3(0.04, 0.012, 0.002), toe);
+      diffuseColor.a = mix(mix(0.45, 0.97, fe), 0.95, toe);
+      totalEmissiveRadiance += (vec3(1.0, 0.46, 0.02) * (0.2 + 0.2 * nv * nv) + vec3(1.0, 0.78, 0.3) * 0.8 * fe) * (1.0 - toe);`;
+const amberWall86 = () => new THREE.ShaderMaterial({ side: THREE.BackSide,
   vertexShader: 'attribute vec3 _op; varying vec3 vN, vV, vOp; void main() { vOp = _op; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalMatrix * normal; vV = -mv.xyz; gl_Position = projectionMatrix * mv; }',
-  fragmentShader: `uniform float uLen; varying vec3 vN, vV, vOp; void main() { vec3 p = vOp; float nv = abs(dot(normalize(vN), normalize(vV))), tip = ${AMBER_TIP};
-    gl_FragColor = vec4(mix(vec3(0.3, 0.08, 0.0), vec3(0.88, 0.45, 0.03), nv * nv) * mix(1.0, 0.3, tip), 1.0); }` }), { userData: { order: 2 } });
-const amberBone = () => Object.assign(phys('#f8d89a', { roughness: 0.45, emissive: '#ffc070', emissiveIntensity: 0.12, stencilWrite: true, stencilRef: 2, stencilFunc: THREE.EqualStencilFunc }), { userData: { order: 2.5 } });
+  fragmentShader: `varying vec3 vN, vV, vOp; void main() { vec3 p = vOp; float nv = abs(dot(normalize(vN), normalize(vV))), toe = ${TOE};
+    gl_FragColor = vec4(mix(vec3(0.72, 0.3, 0.0), vec3(1.0, 0.6, 0.06), nv * nv) * mix(1.0, 0.2, toe), 1.0); }` });
+const amber86 = () => ({ ...same(look(phys('#ffc860', { roughness: 0.2, specularIntensity: 0.4, clearcoat: 1, clearcoatRoughness: 0.04, transparent: true, depthWrite: false }), 'amber86', AMBER86)),
+  wall: amberWall86(), bone: phys('#fbe2b0', { roughness: 0.45, emissive: '#ffd8a0', emissiveIntensity: 0.3 }), noEye: true });
 // 84 홍칠 (the Meshy fox's legendary): deep red lacquer under a mirror clearcoat, drawn on in thin gold lines (patternTex
 // lacq: the line work only, G and B), the flower and leaf faces (R) a shade deeper red. Triplanar in pattern space, sized and
 // placed as tools/pilot72.js lays it on the same body; the gold reflects the studio
@@ -694,8 +695,7 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
       extra: { stencilWrite: true, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp } })), bone: BONE() }),
   // 84, worn instead on the Meshy bodies (data.js MODELS meshy): the rex's glass thicker with a stronger outline, the amber rex, the lacquer fox
   glass84rex: c => same(clear({ key: 'glass84rex', tint: c.tint, neutral: 0.8, absorb: 2.1, dark: 0.7, rimK: 1.0, bend: 0.2 })),
-  amber84: c => ({ ...same(clear({ key: 'amber84', tint: '#ffd890', absorb: 0.9, inner: '#b06000', dark: 0.3, color: '#140600', rough: 0.05, coat: 1, post: AMBER84, bend: 0, rimK: 0, uniforms: { uLen: c.len ?? 1 } })),
-    wall: amberWall(c.len ?? 1), bone: amberBone(), noEye: true }), // the skull's socket instead of the bead
+  amber84: amber86, // noEye: the skull's socket instead of the bead
   lacquer: () => same(look(phys('#9a1008', { roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.008 }), 'lacquer', LACQUER, { uPat: patternTex(1024, true) }, { studio: 0.6 })),
   malachite: () => { const m = k => look(phys('#2a8a5a', { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.02 }), 'malachite', MALACHITE, { uK: k });
     return { body: m(1), accent: m(0.6), hoof: m(0.5), horn: shine('#ffc75a') }; },

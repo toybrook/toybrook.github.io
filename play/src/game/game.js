@@ -3,7 +3,7 @@
 import * as V from './visit.js'; // 16-1
 import * as K from './sky.js'; // 16-2
 import * as R from './rules.js';
-import * as GU from './guests.js'; // 66-1
+import * as GU from './guests.js'; import { guestWear } from './guests-data.js'; // 66-1, 86-3마
 import * as A from './art.js'; // 17-2
 import * as W from './wild.js'; // 17-3
 import { PROPS } from './data.js';
@@ -157,7 +157,7 @@ function wanderers() {
   const L = S.guests?.list || [], out = [];
   for (const id of wrec.keys()) if (!L.some(g => 'w' + g.id === id)) wrec.delete(id);
   for (const g of L) { if (g.x == null) continue; const id = 'w' + g.id, R0 = GU.rosterOf(g);
-    if (!wrec.has(id)) wrec.set(id, { id, wg: g.id, k: g.k, species: R0.sp, variant: 'solid', stage: 'adult', guest: true, tut: g.tut != null, hab: g.hab, acc: R0.mark === 'hat' ? 'strawhat' : 'bandana', at: [g.x, g.z] });
+    if (!wrec.has(id)) wrec.set(id, { id, wg: g.id, k: g.k, species: R0.sp, variant: 'solid', stage: 'adult', guest: true, tut: g.tut != null, hab: g.hab, acc: guestWear(R0), at: [g.x, g.z] });
     out.push(wrec.get(id)); }
   return out;
 }

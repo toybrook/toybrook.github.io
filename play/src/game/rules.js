@@ -802,7 +802,15 @@ export function saveLay(S, habId, k, name, now) {
 export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'` -]/g, '').trim()].slice(0, 8).join('').trim() : '';
 // inbox 58: a variant whose name has the species in it already (황금 복돼지) is not called 황금 복돼지 돼지
 export const twoName = (v = '', s = '') => (!v ? s : !s || v.includes(s) ? v : `${v} ${s}`);
-export const kindName = a => (a.wd && GUESTS.find(R => R.k === a.wd)?.name) || twoName(variantOf(a.species, a.variant)?.name, SP[a.species]?.name); // 66-2: a settled guest keeps its name
+// 86-3라: a common is called by its colour, 단색 left out: 「흰 닭」 (not 「단색 닭 흰색」), 「갈색 점박이 말」, 「깨점 닭」 (the colour names
+// the dots already). cId undefined: not known (a postcard keeps no colour): 「닭」, 「점박이 닭」. Names only: ids and saves as they were
+const ADJ = { 흰색: '흰', 노랑: '노란', 하늘: '하늘색', 흑고니: '검은' };
+export const lookName = (sp, v, cId) => { const V = variantOf(sp, v), s = SP[sp]?.name;
+  if (V?.rarity !== 'common') return twoName(V?.name, s);
+  const c = cId !== undefined && colorOf(sp, v, cId), dots = V.id === 'spots' && /점$|얼룩/.test(c?.name);
+  const n = c ? ADJ[c.name] ?? c.name : '', p = V.id === 'solid' || dots ? '' : V.name; // a colour that names the species (멧돼지): 「줄무늬 멧돼지」
+  return (n.includes(s) ? [p, n] : [s.startsWith(n) ? '' : n, p, s]).filter(Boolean).join(' '); }; // 흰 + 흰올빼미: 「흰올빼미」
+export const kindName = a => (a.wd && GUESTS.find(R => R.k === a.wd)?.name) || lookName(a.species, a.variant, a.color); // 66-2: a settled guest keeps its name
 export const tierOf = a => a.wd ? EARNED.wanderer : RAR[variantOf(a.species, a.variant)?.rarity]; // 66-2: 떠돌이 tier, never sold
 export const growStage = lv => [2, 3, 4, 5, 6].filter(n => lv >= needFor('expand:' + n)).length; // 68-3: 명성 steps = the 땅 넓히기 levels (3/8/11/14/18)
 export const callName = a => a.nm || kindName(a); // what the windows call it

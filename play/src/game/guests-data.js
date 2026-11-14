@@ -69,6 +69,9 @@ export const GROUND = { meadow: ['물가', '풀밭', '높은 곳', '그늘'], po
 // egg: the habitat whose egg it leaves (not open yet: the host's); lv: it comes from this Lv; wish: its pool (a visit draws
 // 1~2 short, 2 normal, 2~3 long, only ones the player can do at that Lv); bonus: the 덤 pool (대만족); when: an env wish it
 // only comes with (and always has).
+// 86-3마: what a visiting guest wears (game.js wanderers, the codex cell, play.js): its hat (data.js EV_ACC g_hat) or the bandana.
+// A settled one (guests.js settle) keeps the straw hat in its save, a secret accessory like any other
+export const guestWear = R => R.wear ?? (R.mark === 'hat' ? 'g_hat' : 'bandana'); // wear: a guest whose body hides the usual one
 export const GUESTS = [
   { k: 'm_sheep', hab: 'meadow', sp: 'sheep', name: '보따리 양 몽실', mark: 'bundle', stay: 'normal', egg: 'meadow', lv: 1, wish: ['꽃', '풀밭', '쉼터', 'pals2'], bonus: ['baby', '먹을 것'] },
   { k: 'm_rabbit', hab: 'meadow', sp: 'rabbit', name: '모자 쓴 토끼 깡충', mark: 'hat', stay: 'short', egg: 'meadow', lv: 1, wish: ['꽃', '그늘', 'pals1'], bonus: ['sp:sheep', '쉼터'] },
@@ -90,7 +93,7 @@ export const GUESTS = [
   { k: 'p_peng', hab: 'pond', sp: 'penguin', name: '마실 온 펭귄', mark: 'hat', stay: 'normal', egg: 'snow', lv: 6, wish: ['물가', '그늘', 'pals1'], bonus: ['sp:duck'] },
   { k: 'p_pup', hab: 'pond', sp: 'otter', name: '모자 쓴 수달 퐁퐁', mark: 'hat', stay: 'short', egg: 'pond', lv: 11, wish: ['물가', '놀이', '소리', 'theme:pond'], bonus: ['pals3', '빛'] }, // 66-2
 
-  { k: 's_penguin', hab: 'snow', sp: 'penguin', name: '보따리 펭귄 뒤뚱', mark: 'bundle', stay: 'short', egg: 'snow', lv: 1, wish: ['놀이', 'pals2', '높은 곳'], bonus: ['sp:penguin', '소리'] },
+  { k: 's_penguin', hab: 'snow', sp: 'penguin', name: '보따리 펭귄 뒤뚱', mark: 'bundle', wear: 'g_band', stay: 'short', egg: 'snow', lv: 1, wish: ['놀이', 'pals2', '높은 곳'], bonus: ['sp:penguin', '소리'] },
   { k: 's_bear', hab: 'snow', sp: 'polarBear', name: '모자 쓴 북극곰 푸근', mark: 'hat', stay: 'long', egg: 'snow', lv: 1, wish: ['쉼터', '먹을 것', 'quiet', '그늘', 'theme:snow'], bonus: ['baby'] },
   { k: 's_seal', hab: 'snow', sp: 'seal', name: '보따리 물범 몽글', mark: 'bundle', stay: 'normal', egg: 'snow', lv: 1, wish: ['놀이', 'pals1', '그늘'], bonus: ['sp:seal', '빛'] },
   { k: 's_fox', hab: 'snow', sp: 'arcticFox', name: '모자 쓴 북극여우 살금', mark: 'hat', stay: 'short', egg: 'snow', lv: 2, wish: ['그늘', 'alone', '높은 곳'], bonus: ['빛'] },

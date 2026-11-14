@@ -206,7 +206,7 @@ export function initNest(nav) {
     const H = HAB[habitatOf(a)], away = H.id !== habId, open = G.S.unlocked.includes(H.id), room = fits(G.S, a); // inbox 20: never gone without a word
     cardEl.style.setProperty('--rc', RAR[v.rarity].color); // 75
     cardEl.innerHTML = `<div class="nchips"><span class="rar">${RAR[v.rarity].name}</span>${fresh ? '<i class="new">NEW</i>' : newCol ? '<i class="new">새 색!</i>' : ''}${gift ? `<i class="gift">♥+${B.codexHeart}</i>` : ''}${r?.sure ? '<span class="sure">조각으로 확정!</span>' : ''}${r?.newAcc ? '<i class="new">새 치장!</i>' : ''}</div>
-<b class="nname">${nameOf(a)}${col ? ` <small>${col.name}</small>` : ''}</b>
+<b class="nname">${nameOf(a)}${col && v?.rarity !== 'common' ? ` <small>${col.name}</small>` : ''}</b>
 ${a.acc ? `<div class="nsecret"><em>시크릿!</em> ${ACCESSORIES[a.acc].wear} 나왔어요${'<i>✦</i>'.repeat(6)}${r?.newAcc ? '<small>처음 만난 치장이에요 · 치장 앨범에 남았어요</small>' : ''}</div>` : ''}
 <p class="nwhy">${SP[a.species].name} · ${H.name} 친구 · ${fresh ? '처음 만난 변종이에요' : newCol ? '처음 보는 색이에요' : back ? '이미 도감에 있는 변종이에요' : '이미 데려온 변종이에요'}</p>
 ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')} 열리면 데려갈 수 있어요. 그때까지 보관함에서 기다려요.` : room ? `${H.name}에서 사는 친구예요. ${H.name}으로 보낼게요.` : `${H.name}에서 사는 친구예요. ${H.name}에 자리가 모자라 보관함에서 기다려요.`}</p>` : ''}

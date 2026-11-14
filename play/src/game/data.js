@@ -995,6 +995,10 @@ export const EVENTS = [
 export const EV_ACC = {
   ev_beanie: { name: '첫눈 털모자', base: 'beanie', colors: { body: '#e0574c', accent: '#fbf7f0' } },
   ev_scarf: { name: '첫눈 목도리', base: 'scarf', colors: { body: '#5fb3a5', accent: '#fbf7f0' } },
+  // 86-3마: a visiting guest's hat (guests-data.js guestWear, never sold): the straw hat in tomato red, away from every hat guest's body (Lab ΔE >= 40,
+  // the straw was 21~40), and never smaller than `min` of the head slot (a rabbit's is 0.42, between its ears: it read as a bun)
+  g_hat: { name: '손님 모자', base: 'strawhat', colors: { body: '#e8553d', accent: '#fbf7f0' }, min: 0.9 },
+  g_band: { name: '손님 반다나', base: 'bandana', colors: { body: '#e8553d' } }, // 86-3마: the blue bandana on the grey penguin was ΔE 39.6
 };
 export const ATTEND = [{ hearts: 20 }, { candy: 2 }, { eggs: 1 }, { hearts: 30 }, { candy: 3 }, { eggs: 1 }, { hearts: 50 }];
 export const ATTEND_PROPS = ['att_sunflower', 'att_birdhouse', 'att_balloons', 'att_wcan', 'att_signpost', 'att_cart', 'att_rainbow'];

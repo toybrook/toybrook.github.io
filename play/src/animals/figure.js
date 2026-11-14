@@ -58,7 +58,7 @@ export const loadModel = id => loading[id] ??= (async () => {
     Promise.all(stages.map(st => M.legend?.[st] && meshes(M.legend[st])))]); // 71-2: one legendary's own parts (MODELS legend): the amber rex's bones, crystals
   for (const [i, stage] of stages.entries()) {
     const g = geos[i], S = M[stage];
-    g.body.computeBoundingBox(); const b = g.body.boundingBox, H = b.max.y, cx = (b.min.x + b.max.x) / 2; g.body.userData.len = (b.max.x - b.min.x) / H; // 85-3: the amber's tail (materials.js)
+    g.body.computeBoundingBox(); const b = g.body.boundingBox, H = b.max.y, cx = (b.min.x + b.max.x) / 2;
     withOp(g.body, H, cx); if (g.accent) withOp(g.accent, H, cx); if (g.beak) withOp(g.beak, H, cx); if (g.horn) withOp(g.horn, H, cx); if (g.nostril) withOp(g.nostril, H, cx);
     for (const k of M.paints || []) if (g[k]) withOp(g[k], H, cx); // more painted colour layers on the body (the penguin's face and ear patches)
     // one leg geometry per leg position (its _op differs)
@@ -220,7 +220,7 @@ function merge(body, joints) {
 // Needs loadModel(model) to have finished. stage: one of the model's `files` keys ('baby' | 'adult'). acc: a secret accessory id, or none.
 // color: one of the variant's colour ids (none = its first).
 export function makeFigure(spId, vId, stage, acc = null, color = null) {
-  const sp = SP[spId], M = MODELS[sp.model], S = M[stage], G = ready[sp.model][stage], map = G.body.userData.map, m = variantMats(spId, vId, color, map && M.meshy, G.body.userData.len);
+  const sp = SP[spId], M = MODELS[sp.model], S = M[stage], G = ready[sp.model][stage], map = G.body.userData.map, m = variantMats(spId, vId, color, map && M.meshy);
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   body.scale.setScalar(S.s); body.position.y = -(S.sink || 0);
   const V = variantOf(spId, vId), skin = !map ? m.body : V?.rarity === 'common' ? (M.patches ? patched(map, m) : texBody(map)) : meshyMat(m.body); // 82: a common wears the body's own texture (86-1: recoloured); 84: another look, a clone without the dotted edge
@@ -255,7 +255,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
     const f = sp.fit?.[gk(acc)] || {}, fit = { ...f, ...f[stage] }, a = new THREE.Group(); // data.js fit
     for (const [name, geo] of Object.entries(accGeo[gk(acc)])) a.add(mesh(geo, accMat(acc, name), 3));
     a.position.fromArray(at.p).add(new THREE.Vector3().fromArray(fit.p || [0, 0, 0]));
-    a.rotation.fromArray(fit.r || at.r); a.scale.setScalar(at.s * (fit.s || 1));
+    a.rotation.fromArray(fit.r || at.r); a.scale.setScalar(Math.max(at.s * (fit.s || 1), AC(acc).min || 0)); // min: 86-3마 the guest hat
     body.add(a);
   }
   const skeleton = merge(body, [...(M.walk?.oneLeg ? [] : legs), ...wings]);

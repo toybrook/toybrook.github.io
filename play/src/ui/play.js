@@ -23,7 +23,7 @@ import { sfx } from './sound.js';
 import { homeHintDue, appHintDue } from '../game/backup.js';
 import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
 import { rosterOf, isRegular } from '../game/guests.js'; // 66-1 떠돌이 손님
-import { WISH, GUEST } from '../game/guests-data.js';
+import { WISH, GUEST, guestWear } from '../game/guests-data.js';
 import { PREFS, calm } from '../config.js';
 
 const $ = id => document.getElementById(id);
@@ -217,7 +217,7 @@ export function initPlay(nav) {
   function dusk(k) {
     const R = k && rosterOf({ k }), el = document.createElement('div'); el.className = 'dusk';
     el.innerHTML = `<p>오늘 손님은 여기까지예요</p>${R ? '<img alt=""><small>내일은 누가 올까요?</small>' : ''}`;
-    stage.append(el); if (R) silhouetteThumb(R.sp, R.mark === 'hat' ? 'strawhat' : 'bandana', false, 0).then(u => { const i = el.querySelector('img'); if (i) i.src = u; });
+    stage.append(el); if (R) silhouetteThumb(R.sp, guestWear(R), false, 0).then(u => { const i = el.querySelector('img'); if (i) i.src = u; });
     setTimeout(() => el.remove(), calm() ? 5000 : 7000);
   }
   function events(ev) {

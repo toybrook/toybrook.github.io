@@ -263,6 +263,9 @@ html.calm .lbar::before{animation:none}
 /* 꾸미기 panel */
 .decor{position:absolute;left:0;right:0;bottom:0;z-index:1200;background:#f3e2c7;color:#4a3626;border-radius:22px 22px 0 0;padding:2px calc(12px + var(--sa-r)) calc(12px + var(--sa-b)) calc(12px + var(--sa-l));box-shadow:0 -6px 24px rgba(60,35,15,.25)}
 .decor[hidden]{display:none}
+/* 86-3다: the main view takes the bottom 40 % (the ground stays in sight), dragged up 85 %; only its list (진열대, tabs, props) scrolls, the tabs stay on top */
+.decor:has(>.dlist){box-sizing:border-box;display:flex;flex-direction:column;max-height:40%}.decor.tall:has(>.dlist){max-height:85%}.decor>*{flex:none}
+.dlist{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}.dlist .dgrid{max-height:none;overflow:visible}.dlist .dtabs{position:sticky;top:0;z-index:1;background:#f3e2c7;padding:0 0 8px;margin:0}
 .dhead{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 0 6px;cursor:pointer;touch-action:none}
 /* inbox 25: the grip and the head fold the panel to one line (.min); dragging a held prop folds it till the finger lifts (.pdrag, habitat.js) */
 .dgrip{display:block;width:100%;height:16px;margin:0;padding:6px 0 0;border:0;background:none;cursor:pointer;touch-action:none}

@@ -20,7 +20,7 @@ import { linesLayer } from './lines.js';
 import { loadModel, loadAcc } from '../animals/figure.js';
 import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
 import { SPECIES, MODELS, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable } from '../game/data.js';
-import { SP, variantOf, habitatOf, known, topAt } from '../game/rules.js';
+import { SP, habitatOf, known, topAt, kindName } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
 import { ambience, sfx, music, playing, hear, pet, lilies } from '../ui/sound.js';
 import { tracksOf, network, railEnds, joinTurn, newTrain, moveTo, stepTrain, boardAt, TILE, CARS } from './train.js';
@@ -946,7 +946,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // 14-1 신수의 부름 (myth.js): the meadow's fire prints, burnt hoofprints, the altar's flames and the 불갈기 천리마 (ui/myth.js drives it)
   const myth = habId === 'meadow' ? mythLayer({ scene, ctx: habitat.ctx, U, ui, open, nearest, gather, idle, placed, room: (r, x, z) => nearest((a, b) => fits({ r }, a, b), [x, z]),
     puff: (x, z, c) => puffs.push({ x, z, t: 0, c }), view: (x, z, radius, phi) => { setFocus(null); goingHome = false; aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(x, ...panX), 0, THREE.MathUtils.clamp(z, ...panZ)), radius, phi }; } }) : null;
-  const label = a => `${a.rec.nm ? a.rec.nm + ' · ' : ''}${SP[a.rec.species].name} · ${variantOf(a.rec.species, a.rec.variant).name} · ${STAGE_NAME[a.look.stage]}`;
+  const label = a => `${a.rec.nm ? a.rec.nm + ' · ' : ''}${kindName(a.rec)} · ${STAGE_NAME[a.look.stage]}`;
   const height = a => new THREE.Box3().setFromObject(a.look.obj).max.y - a.obj.position.y;
 
   // tap an animal: a pat, and the camera follows it. Twice quickly (inbox 14): 정면 on an animal, or the ground there to the middle.
