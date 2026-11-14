@@ -330,9 +330,9 @@ const GLINT = 0.45, GROW = 1.5; // s: sparkles first, then the growing
 export function dress(rec) {
   const obj = new THREE.Group(); let fig, stage, grow = -1, pop = -1, fx = null;
   // 26-10: the arctic fox's tail curls round one side only; every other one (odd id) is its mirror image, so in a habitat some
-  // show the tail on the left (z is the figure's left-right). 85: the baby too, the same Meshy body: it grows up facing the same way
+  // show the tail on the left (z is the figure's left-right). The SDF baby's tail is straight (adults only); the Meshy body (?body=meshy) flips both
   const accs = () => [...rec.wear || [], rec.acc].filter(Boolean), key = () => accs().map(k => k + (accGeo[gk(k)] ? '' : '?')).join();
-  const make = s => { const f = makeFigure(rec.species, rec.variant, s, accs(), rec.color); if (rec.species === 'arcticFox' && rec.id % 2) f.obj.scale.z = -1; return f; };
+  const make = s => { const f = makeFigure(rec.species, rec.variant, s, accs(), rec.color); if (rec.species === 'arcticFox' && (s === 'adult' || MODELS.arcticFox.meshy) && rec.id % 2) f.obj.scale.z = -1; return f; };
   let worn; const set = s => { if (fig) { obj.remove(fig.obj); fig.skeleton?.dispose(); } stage = s; worn = key(); fig = make(s); obj.add(fig.obj); };
   set(rec.stage);
   function start() { // heights of both shapes; the sparkles round the baby, the burst at its middle
