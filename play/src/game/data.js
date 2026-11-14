@@ -294,7 +294,9 @@ export const horseModel = k => {
   return { move: 'walk', walk: { stride: true }, files: { baby: b.file, adult: a.file }, baby: sized('horse', 'baby', b), adult: sized('horse', 'adult', a) };
 };
 
-export const MODELS = {
+// 85-3: the SDF duck and horse (tools/bake-duck.mjs, bake-horse.mjs), kept as they are when the game's own go Meshy: the habitats'
+// room is counted in these ducks (HABITATS), tools/lineup.html ?cmp shows them; MODELS.duck / horse point here until then
+export const SDF_REF = {
   duck: {
     move: 'swim',
     files: { baby: 'assets/models/duck_baby.glb', adult: 'assets/models/duck_adult.glb' },
@@ -302,6 +304,10 @@ export const MODELS = {
     adult: sized('duck', 'adult', { h: 1.398, sink: 0.1586, r: 0.6207, seg: [-0.3862, 0.5448], attach: { head: { p: [0.46, 1.33, 0], r: [0, 0, -0.12], s: 0.78 }, neck: { p: [0.44, 0.88, 0], r: [0, 0, -0.15], s: 1.12 }, back: { p: [-0.1, 0.8, 0], r: [0, 0, 0], s: 0.8 }, eye: { p: [0.47, 1.06, 0], r: [0, 0, 0], s: 1 } } }),
   },
   horse: horseModel('d'),
+};
+export const MODELS = {
+  duck: SDF_REF.duck,
+  horse: SDF_REF.horse,
   // tools/bake-meadow.mjs (17-1, matched to the duck and horse in 17-5). walk: how walk.js moves it: hop = share of trips
   // hopped (0 = walks only, 1 = always hops; the horse's default 0.4), trot = stride speed (x), rest = what replaces
   // grazing ('sit' up, 'peck' the ground), roam = share of choices that are a walk (the default 0.5; less = grazes more,
@@ -332,11 +338,10 @@ export const MODELS = {
     baby: sized('sheep', 'baby', { h: 1.919, r: 0.582, seg: [-0.244, 0.678], legs: { hip: 0.5, foot: 0.14, x: [0.3, -0.32], z: 0.22 }, attach: { head: { p: [0.74, 1.84, 0], r: [0, 0, -0.15], s: 0.9 }, neck: { p: [0.52, 1.2, 0], r: [0, 0, -0.6], s: 1.15 }, back: { p: [-0.05, 1.36, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [0.8, 1.48, 0], r: [0, 0, 0], s: 1.1 } } }),
     adult: sized('sheep', 'adult', { h: 2.039, r: 0.583, seg: [-0.336, 0.807], legs: { hip: 0.58, foot: 0.14, x: [0.42, -0.44], z: 0.24 }, attach: { head: { p: [0.88, 1.92, 0], r: [0, 0, -0.15], s: 0.8 }, neck: { p: [0.66, 1.36, 0], r: [0, 0, -0.68], s: 1.2 }, back: { p: [-0.05, 1.5, 0], r: [0, 0, 0], s: 1.15 }, eye: { p: [0.96, 1.62, 0], r: [0, 0, 0], s: 1 } } }),
   },
-  cow: {
-    move: 'walk', walk: { stride: true, hop: 0, pace: 0.7 },
-    files: { baby: 'assets/models/cow_baby.glb', adult: 'assets/models/cow_adult.glb' },
-    baby: sized('cow', 'baby', { h: 1.889, r: 0.695, seg: [-0.169, 0.674], legs: { hip: 0.62, foot: 0.15, x: [0.34, -0.36], z: 0.22 }, attach: { head: { p: [0.8, 1.86, 0], r: [0, 0, -0.15], s: 1 }, neck: { p: [0.56, 1.22, 0], r: [0, 0, -0.79], s: 1.12 }, back: { p: [-0.05, 1.34, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [0.82, 1.5, 0], r: [0, 0, 0], s: 1.19 } } }),
-    adult: sized('cow', 'adult', { h: 1.959, r: 0.622, seg: [-0.422, 0.897], legs: { hip: 0.74, foot: 0.15, x: [0.46, -0.48], z: 0.24 }, attach: { head: { p: [1, 1.92, 0], r: [0, 0, -0.15], s: 0.9 }, neck: { p: [0.78, 1.36, 0], r: [0, 0, -0.79], s: 1.2 }, back: { p: [-0.05, 1.46, 0], r: [0, 0, 0], s: 1.15 }, eye: { p: [1.02, 1.6, 0], r: [0, 0, 0], s: 1.03 } } }),
+  cow: { // 86-1: a Meshy body (meshyStages above; its patches recoloured per common variant, materials.js patched)
+    move: 'walk', walk: { hop: 0, pace: 0.7 }, patches: true,
+    files: { baby: 'assets/models/meshy_cow.glb', adult: 'assets/models/meshy_cow.glb' },
+    ...meshyStages('cow', { h: 1.959, r: 0.6, seg: [-0.6, 0.89], attach: { head: { p: [1, 1.88, 0], r: [0, 0, -0.15], s: 0.9 }, neck: { p: [0.8, 1.1, 0], r: [0, 0, -0.79], s: 1.2 }, back: { p: [-0.05, 1.38, 0], r: [0, 0, 0], s: 1.1 }, eye: { p: [1.033, 1.216, -0.143], r: [0, 0.35, 0], s: 1 } } }),
   },
   // 18-1 pond (tools/bake-pond.mjs). walk.water: a walker that also goes in the pond (walk.js): 'swim' = any depth, the body
   // floating with `float` of its height under the surface, and lying down (sunk by its leg length) when it rests there; 'wade' =
@@ -529,7 +534,7 @@ export const SPECIES = [
       gradient: [{ id: 'peach', name: '복숭아', body: '#ffe0d2', second: '#e98e88' }, { id: 'sunset', name: '노을', body: '#ffd08a', second: '#c8664a' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
     legendary: [{ id: 'fortune', name: '황금 복돼지', mat: 'fortune', effect: 'coins' }] },
-  { id: 'cow', name: '소', habitat: 'meadow', model: 'cow', colors: { accent: '#9a5a34', hoof: '#55504c', beak: '#f0a5a0', horn: '#efe0b8' },
+  { id: 'cow', fit: { headphones: { s: 1.55, p: [-0.1, 0.2, 0.035] }, earmuffs: { s: 1.55, p: [-0.1, 0.2, 0.035] } }, name: '소', habitat: 'meadow', model: 'cow', colors: { accent: '#9a5a34', hoof: '#55504c', beak: '#f0a5a0', horn: '#efe0b8' },
     palette: {
       solid: [{ id: 'brown', name: '갈색 얼룩', body: '#fbf8f2' }, { id: 'ink', name: '먹색 얼룩', body: '#fbf8f2', accent: '#3a3436' }, { id: 'gold', name: '누렁', body: '#d6a066', accent: '#9a5e36', seldom: true }],
       twotone: [{ id: 'brown', name: '갈색', body: '#8a5a3a', second: '#fbf6ee' }, { id: 'ink', name: '먹색', body: '#3d3638', second: '#fbf6ee', accent: '#f4efe8' }, { id: 'sky', name: '하늘', body: '#8fb8e0', second: '#ffffff', accent: '#ffffff', seldom: true }],
@@ -767,14 +772,14 @@ export const ZONES = {
 // sign's picture (worldmap.js ICON). sound: the beds this habitat plays, 0..1 (13-0: recorded, sound-map.js BEDS; sound.js adds rainLight and rainHeavy
 // wherever it rains), from day/night 0..1, dry (1 - rain - snow), rain and snow 0..1
 export const HABITATS = [
-  { id: 'meadow', name: '초원', ready: true, nest: 'meadow_nest', room: { swim: 9 * bodyArea(MODELS.duck.adult), walk: 427 },
+  { id: 'meadow', name: '초원', ready: true, nest: 'meadow_nest', room: { swim: 9 * bodyArea(SDF_REF.duck.adult), walk: 427 },
     map: { at: [168, 466], label: [168, 505], icon: 'horse' }, sound: ({ day, night, dry, rain }) => ({ grassWind: 0.4 * dry + 0.15, birdsFar: day * dry, nightField: night * (1 - rain), insects: night * dry, frogs: 0.5 * night * (1 - rain), stream: 0.45, rainLeaves: rain }) },
   // Pond (19-2, resized in inbox 7, the water grown to ~60% of the board in inbox 10): its swim lanes (swim.js: radius
   // pond.r x pond.lanes 0.15~0.66 + 1.2, z x pond.k; 445 sq units) cover 13.0x the meadow's (34), so 117 adult ducks; the
   // land as in the meadow: 427 / 646 of the walkable ground (372 sq units with the island tops, the same 0.25 grid that gives
   // the meadow's 646). The water the turtle, otter, capybara and flamingo also go in (918 sq units, 286 of it shallow) is
   // not counted: it is the ducks' room.
-  { id: 'pond', name: '연못', ready: true, nest: 'pond_nest', room: { swim: 117 * bodyArea(MODELS.duck.adult), walk: 246 },
+  { id: 'pond', name: '연못', ready: true, nest: 'pond_nest', room: { swim: 117 * bodyArea(SDF_REF.duck.adult), walk: 246 },
     map: { at: [98, 292], label: [98, 331], icon: 'duck' }, sound: ({ day, night, dry, rain }) => ({ pond: 1 - 0.3 * rain, stream: 0.6, frogs: (0.3 + 0.7 * night) * (1 - 0.5 * rain), birdsFar: 0.6 * day * dry, rainWater: rain }) },
   // Snow (25-1): its land the same way, 427 / 646 of the walkable ground (873 sq units with the ice floes on the same 0.25
   // grid, 857 of it the mainland). The ice pond is for the penguin, seal and polar bear (walkers that swim), so it has no

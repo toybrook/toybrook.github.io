@@ -1007,9 +1007,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const deg = THREE.MathUtils.degToRad, wrap = a => Math.atan2(Math.sin(a), Math.cos(a)), smooth = k => k * k * (3 - 2 * k);
   const HOME = { target: mid0.clone(), radius: camera.position.distanceTo(controls.target), phi: 0.0, theta: 0, wide: homeRadius() };
   HOME.phi = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target)).phi;
-  // inbox 63: the home view (the start, the default) is on the friends: the middle of the biggest group (those within 12 m of
-  // one), as near as a grown horse fills SHARE of the screen height (0.105 with 1-3 friends out, 0.095 with 8 or more), backed
-  // off till that group shows between the top bar and the bottom buttons but never past 0.0887 (90% of 0.71's 0.0985, 375x812).
+  // inbox 63: the home view (the start, the default) is on the friends (86-3나: 2-4 of them, setHome), backed off till that group
+  // shows between the top bar and the bottom buttons but never past a grown horse's 0.0887 (90% of 0.71's 0.0985, 375x812).
   // 전체 보기 (wide): the whole board, its middle at homeRadius; from there the button reads 친구들 보기 and comes back.
   // d = 2.643 H / share: measured (horse 71 px of 812 at 102 m, H 3.375; this tilt and fov)
   const homeCam = new THREE.PerspectiveCamera(), fv = new THREE.Vector3(), atShare = (s, h = SIZE.unit) => Math.min(HOME.wide, 2.643 * h / s);
@@ -1018,11 +1017,14 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // a touch on the view, a follow or a double tap ends it (overview / the first home view start it)
   let wide = false, homeOn = false, homeT = 0;
   function setHome() {
-    // inbox 64-A: the share is the smallest friend's out here (a lone baby rabbit was ~4% of the screen), 0.3 with 1-3 out; the
-    // backing off below still stops at a grown horse's 0.0887
-    const as = [...actors.values()], n = as.length; HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(n <= 3 ? 0.3 : THREE.MathUtils.clamp(0.12 - (n - 3) * 0.0018, 0.111, 0.12), Math.min(...as.map(hOf))); if (wide || !n) return;
-    const near = a => as.filter(b => Math.hypot(b.position.x - a.position.x, b.position.z - a.position.z) < 12);
-    const tg = as.find(a => a.rec.tut), g = tg ? near(tg) : as.map(near).reduce((x, y) => y.length > x.length ? y : x), t = HOME.target.set(0, 0, 0); // 66-1: the tutorial's guest stays in the home view
+    // inbox 86-3나: a middle distance on 2-4 friends together: the one with the most others within 12 m (ties: the tighter) and its
+    // 3 nearest of them, as near as the smallest of those fills 0.12 of the screen height (one alone: the ground and props round it
+    // show; 64-A's 0.3 showed one baby rabbit and grass), backed off till they all show, still never past a grown horse's 0.0887
+    const as = [...actors.values()], n = as.length, dd = (a, b) => Math.hypot(b.position.x - a.position.x, b.position.z - a.position.z);
+    const near = a => as.filter(b => dd(a, b) < 12).sort((x, y) => dd(a, x) - dd(a, y)).slice(0, 4), spread = g => dd(g[0], g.at(-1));
+    const tg = as.find(a => a.rec.tut), g = !n ? [] : tg ? near(tg) : as.map(near).reduce((x, y) => y.length > x.length || y.length === x.length && spread(y) < spread(x) ? y : x); // 66-1: the tutorial's guest stays in the home view
+    HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(0.12, Math.min(...g.map(hOf))); if (wide || !n) return;
+    const t = HOME.target.set(0, 0, 0);
     for (const a of g) t.add(a.position); t.divideScalar(g.length).setY(0); t.x = THREE.MathUtils.clamp(t.x, ...panX); t.z = THREE.MathUtils.clamp(t.z, ...panZ);
     homeCam.copy(camera);
     const shows = r => { homeCam.position.copy(t).addScaledVector(homeDir, r); homeCam.lookAt(t); homeCam.updateMatrixWorld(); return g.every(a => { fv.copy(a.position).project(homeCam); return Math.abs(fv.x) < 0.8 && fv.y > -0.55 && fv.y < 0.65; }); };

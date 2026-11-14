@@ -14,14 +14,33 @@ import { SP, RAR, variantOf, colorOf } from '../game/rules.js';
 export const eyeMat = new THREE.MeshPhysicalMaterial({ color: '#0b0b0d', roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.03 });
 
 // { body, accent, hoof } of a species' variant in colour cId (none or unknown = its first colour).
-// A legendary's look is its `mat`, any other variant's its id. over: look id -> the look to wear instead (84: MODELS meshy, on a Meshy body)
-export function variantMats(spId, vId, cId, over) {
-  const v = variantOf(spId, vId), c = colorOf(spId, vId, cId), id = v?.mat || v?.id || 'solid';
-  return looks(over?.[id] ?? id, v?.rarity === 'common' ? { ...SP[spId].colors, ...c } : c ?? {});
+// A legendary's look is its `mat`, any other variant's its id. over: look id -> the look to wear instead (84: MODELS meshy, on a Meshy body),
+// len: that body's length / height (85-3: the amber's tail tip; figure.js)
+export function variantMats(spId, vId, cId, over, len) {
+  const v = variantOf(spId, vId), c = colorOf(spId, vId, cId), id = v?.mat || v?.id || 'solid', o = over?.[id];
+  return looks(o ?? id, v?.rarity === 'common' ? { ...SP[spId].colors, ...c } : o ? { ...c, len } : c ?? {});
 }
 // 82: a common on a body with its own texture (the Meshy figures, data.js meshyStages): the texture as it is, the commons' plastic
 const painted = new WeakMap();
 export const texBody = map => { if (!painted.has(map)) { const m = toyMat('#ffffff', { map }); rim(m); painted.set(map, m); } return painted.get(map); };
+// 86-1: a common on a Meshy body painted with patches (MODELS patches: the cow): its texture's base wears the variant's own common
+// look (colour and pattern, as on every body), the brown patches its accent (as the SDF cow's patch mesh did; where and what shape
+// as painted), the pink nose and inner ears as painted; the texture's own light and dark kept on both. Linear texels: brown has
+// almost no blue for its green (cream and pink about 0.8), pink little green for its red (cream 0.77)
+const patchedBy = new WeakMap();
+export function patched(map, m) {
+  if (!patchedBy.has(m.body)) {
+    const c = m.body.clone(), prev = m.body.onBeforeCompile, k = m.body.customProgramCacheKey(), u = { value: m.accent.color };
+    c.userData = m.body.userData; c.map = map;
+    c.onBeforeCompile = (sh, r) => { prev.call(c, sh, r); sh.uniforms.uPatch = u;
+      sh.fragmentShader = 'uniform vec3 uPatch;\n' + sh.fragmentShader.replace('#include <map_fragment>', 'vec4 tx = texture2D(map, vMapUv);').replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+{ float L = dot(tx.rgb, vec3(0.2126, 0.7152, 0.0722)), s = 1.0 - smoothstep(0.25, 0.6, tx.b / max(tx.g, 1e-4)), pk = (1.0 - s) * (1.0 - smoothstep(0.5, 0.65, tx.g / max(tx.r, 1e-4)));
+  diffuseColor.rgb = mix(mix(diffuseColor.rgb * min(L / 0.65, 1.15), uPatch * min(L / 0.085, 1.5), s), tx.rgb, pk); }`); };
+    c.customProgramCacheKey = () => k + '-patch';
+    patchedBy.set(m.body, c);
+  }
+  return patchedBy.get(m.body);
+}
 // 84: a non-common look on a Meshy body: its scanned normals turn past the silhouette in the creases, and the looks' edge
 // terms draw a dotted dark outline there: a clone that turns those normals back to face the eye a little (the SDF figures
 // sharing the look keep theirs)
@@ -557,20 +576,19 @@ const BONE = () => Object.assign(phys('#fff0d4', { roughness: 0.5, emissive: '#f
   blending: THREE.CustomBlending, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor, opacity: 0.88,
   stencilWrite: true, stencilRef: 1, stencilFunc: THREE.EqualStencilFunc }), { userData: { order: 3.5 } });
 // 84 (the Meshy rex): clear honey with the skeleton inside it. Drawn before the glass copies the screen: the body's far
-// wall (its back faces, wall), glowing orange, brightest in the middle, writes stencil 2; the bones (thickened along their
-// normals) only there, so a toe or a finger tip that sticks out of the body stays hidden; they write no depth, so the amber
-// still covers a rib that pokes out the front. The amber then shows that copy, so the bones are seen through it. Toes and the tail's tip deeper (AMBER_TIP: the Meshy rex's pattern space, the tail at -x).
-const AMBER_TIP = 'max(smoothstep(0.09, 0.0, p.y), smoothstep(0.22, 0.0, (p.x + 0.6857) / 1.3714))';
+// wall (its back faces, wall), glowing orange, brightest in the middle, writes stencil 2; the bones (85-1: tools/meshy-bones.mjs,
+// every vertex inside the body) only there, with depth, so the near ribs hide the far ones and every bar keeps its edge. The
+// amber then shows that copy, so the bones are seen through it. Toes and the tail's tip deeper (AMBER_TIP, on any body: its lowest 9 %
+// and the last 22 % of its length, the tail at -x; uLen = the body's length / height, figure.js).
+const AMBER_TIP = 'max(smoothstep(0.09, 0.0, p.y), smoothstep(0.22, 0.0, p.x / uLen + 0.5))';
 const AMBER84 = `{ float tip = ${AMBER_TIP};
       gl_FragColor.rgb *= mix(1.0, 0.42, tip);
       gl_FragColor.rgb += vec3(1.0, 0.62, 0.16) * 0.3 * pow(s, 8.0) * (1.0 - 0.6 * tip) + vec3(1.0, 0.78, 0.4) * 0.7 * rim; }`;
-const amberWall = () => Object.assign(new THREE.ShaderMaterial({ side: THREE.BackSide, stencilWrite: true, stencilRef: 2, stencilZPass: THREE.ReplaceStencilOp,
+const amberWall = len => Object.assign(new THREE.ShaderMaterial({ uniforms: { uLen: { value: len } }, side: THREE.BackSide, stencilWrite: true, stencilRef: 2, stencilZPass: THREE.ReplaceStencilOp,
   vertexShader: 'attribute vec3 _op; varying vec3 vN, vV, vOp; void main() { vOp = _op; vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalMatrix * normal; vV = -mv.xyz; gl_Position = projectionMatrix * mv; }',
-  fragmentShader: `varying vec3 vN, vV, vOp; void main() { vec3 p = vOp; float nv = abs(dot(normalize(vN), normalize(vV))), tip = ${AMBER_TIP};
-    gl_FragColor = vec4(mix(vec3(0.38, 0.12, 0.0), vec3(0.95, 0.5, 0.06), nv * nv) * mix(1.0, 0.3, tip), 1.0); }` }), { userData: { order: 2 } });
-const amberBone = () => { const m = phys('#f7e6bf', { roughness: 0.5, emissive: '#ffe2a8', emissiveIntensity: 0.55, depthWrite: false, stencilWrite: true, stencilRef: 2, stencilFunc: THREE.EqualStencilFunc });
-  m.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += objectNormal * 0.018;'); };
-  m.customProgramCacheKey = () => 'amber84bone'; m.userData.order = 2.5; return m; };
+  fragmentShader: `uniform float uLen; varying vec3 vN, vV, vOp; void main() { vec3 p = vOp; float nv = abs(dot(normalize(vN), normalize(vV))), tip = ${AMBER_TIP};
+    gl_FragColor = vec4(mix(vec3(0.3, 0.08, 0.0), vec3(0.88, 0.45, 0.03), nv * nv) * mix(1.0, 0.3, tip), 1.0); }` }), { userData: { order: 2 } });
+const amberBone = () => Object.assign(phys('#f8d89a', { roughness: 0.45, emissive: '#ffc070', emissiveIntensity: 0.12, stencilWrite: true, stencilRef: 2, stencilFunc: THREE.EqualStencilFunc }), { userData: { order: 2.5 } });
 // 84 홍칠 (the Meshy fox's legendary): deep red lacquer under a mirror clearcoat, drawn on in thin gold lines (patternTex
 // lacq: the line work only, G and B), the flower and leaf faces (R) a shade deeper red. Triplanar in pattern space, sized and
 // placed as tools/pilot72.js lays it on the same body; the gold reflects the studio
@@ -676,8 +694,8 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
       extra: { stencilWrite: true, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp } })), bone: BONE() }),
   // 84, worn instead on the Meshy bodies (data.js MODELS meshy): the rex's glass thicker with a stronger outline, the amber rex, the lacquer fox
   glass84rex: c => same(clear({ key: 'glass84rex', tint: c.tint, neutral: 0.8, absorb: 2.1, dark: 0.7, rimK: 1.0, bend: 0.2 })),
-  amber84: () => ({ ...same(clear({ key: 'amber84', tint: '#ffd890', absorb: 0.6, inner: '#b06000', dark: 0.3, color: '#140600', rough: 0.05, coat: 1, post: AMBER84, bend: 0.03, rimK: 0 })),
-    wall: amberWall(), bone: amberBone(), noEye: true }), // the skull's socket instead of the bead
+  amber84: c => ({ ...same(clear({ key: 'amber84', tint: '#ffd890', absorb: 0.9, inner: '#b06000', dark: 0.3, color: '#140600', rough: 0.05, coat: 1, post: AMBER84, bend: 0, rimK: 0, uniforms: { uLen: c.len ?? 1 } })),
+    wall: amberWall(c.len ?? 1), bone: amberBone(), noEye: true }), // the skull's socket instead of the bead
   lacquer: () => same(look(phys('#9a1008', { roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.008 }), 'lacquer', LACQUER, { uPat: patternTex(1024, true) }, { studio: 0.6 })),
   malachite: () => { const m = k => look(phys('#2a8a5a', { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.02 }), 'malachite', MALACHITE, { uK: k });
     return { body: m(1), accent: m(0.6), hoof: m(0.5), horn: shine('#ffc75a') }; },

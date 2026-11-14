@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.79.1-aaacb80f">
+<meta name="build" content="toybrook-0.79.2-6c295f43">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -27,7 +27,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="1058324" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="1058374" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -101,8 +101,8 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
       <li data-upd><i aria-hidden="true">🔄</i><span>새 판이 나오면 위에 「새로 고침」 띠가 떠요</span></li>
-      <li data-top><i aria-hidden="true">🦊</i><span>설원의 북극여우가 새 몸이 되었어요. 새끼도 같은 모습으로 태어나 그대로 자라요. 투명·청화·붉은 옻칠 모습도 새 몸으로 바뀌었어요</span></li>
-      <li><i aria-hidden="true">🌼</i><span>정원이 숨 쉬어요: 친구들이 자주 다니는 곳은 흙길이 되고, 색이 다른 들꽃이 가까이 있으면 섞인 색 꽃이 피어요. 처음 핀 색은 도감의 「들꽃 도감」에 남아요</span></li>
+      <li data-top><i aria-hidden="true">🐄</i><span>초원의 소가 새 몸이 되었어요. 둥지에서 친구를 서식지로 보내도 깰 알이 남아 있으면 둥지가 그대로 열려 있어요</span></li>
+      <li><i aria-hidden="true">🦊</i><span>설원의 북극여우가 새 몸이 되었어요. 새끼도 같은 모습으로 태어나 그대로 자라요. 투명·청화·붉은 옻칠 모습도 새 몸으로 바뀌었어요</span></li>
       <li><i aria-hidden="true">❄️</i><span>12월 5일부터 2주 동안 첫눈 이벤트: 눈 덮인 초원에서 눈더미를 모아 눈사람을 만들고, 친구에게 털모자를 씌워요</span></li>
     </ul>
     <p class="note">베타 기간의 데이터는 정식 출시 때 초기화돼요.</p>

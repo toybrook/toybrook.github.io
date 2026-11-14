@@ -227,8 +227,10 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     } else if (go === 'look') { // out in its own habitat, and the camera goes there to see it
       const home = habitatOf(a); G.release(a.id); close(); nav.go(home, a.id);
     } else if (go) {
-      const fresh = !G.S.codex[key(a.species, a.variant)]; G.release(a.id); close();
-      if (hab && habitatOf(a) === habId) hab.drop(a, true); // inbox 43: a look at it, then back
+      const fresh = !G.S.codex[key(a.species, a.variant)]; G.release(a.id);
+      const more = G.S.slots.some(s => s && G.now() >= s.end); // inbox 86-3가: another 부화! slot: the nest stays open on the slots (no look: it would be behind the sheet)
+      if (more) { cardEl.hidden = true; stageOff(); busy = false; resume(); } else close();
+      if (hab && habitatOf(a) === habId) hab.drop(a, !more); // inbox 43: a look at it, then back
       toast(`${nm}${josa(nm, '이', '가')} ${HAB[habitatOf(a)].name}에 나왔어요${fresh ? ' · 도감에 등록됐어요' : ''}${gift}`, fresh ? 3200 : undefined);
     } else {
       const n = G.sendBack(a.id); heart(e.clientX, e.clientY); toast(`${nm}${josa(nm, '을', '를')} 돌려보냈어요 · ♥+${n}`);
