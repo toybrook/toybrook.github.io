@@ -10,6 +10,7 @@ import { toyMat, windTime, nightGlow } from '../habitat/toyKit.js';
 import { QUALITY } from '../config.js';
 import { SHARED_VARIANTS } from '../game/data.js';
 import { SP, RAR, variantOf, colorOf } from '../game/rules.js';
+import { mergeGeometries } from '../../vendor/utils/BufferGeometryUtils.js';
 
 export const eyeMat = new THREE.MeshPhysicalMaterial({ color: '#0b0b0d', roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.03 });
 
@@ -625,6 +626,162 @@ const STORM = `float n = fbm3(p * 3.0 + vec3(0.0, uTime * 0.05, 0.0)), v = abs(f
 const shine = (hex, rough = 0.15) => look(phys(hex, { roughness: rough, metalness: 1 }), 'shine', '', {}, { studio: 0.85 });
 
 const glaze = (col, key, body) => look(phys(col, { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.015, specularIntensity: 1 }), key, body);
+// ---- 89-4 시범 (?m89 only: data.js M89 wears these instead of the species' own look; photos, nothing public): the concept
+// sheets' looks (docs/concepts/Tier_fox_rex.jpg, Legends8.jpg) on the game's SDF bodies. SH: a crisp edge at t, a pixel or two
+// wide; GILD: gold leaf where k (polished, in the studio's reflection: the look needs o.studio); TRI89: patternTex triplanar at uS (as LACQUER)
+const SH89 = '#define SH(v, t) smoothstep((t) - clamp(fwidth(v), 0.03, 0.3), (t) + clamp(fwidth(v), 0.03, 0.3), v)\n';
+const GILD89 = '#define GILD(k) { float gk = (k); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.57, 0.1), gk); roughnessFactor = mix(roughnessFactor, 0.2, gk); metalnessFactor = mix(metalnessFactor, 1.0, gk); lookStudio = mix(lookStudio, 0.85, gk); totalEmissiveRadiance *= 1.0 - 0.9 * gk; }\n';
+// (TRI90: the same, sharper where the three views meet, so a drawing does not show twice; ink4.a the tile's gold)
+const tri89 = e => `vec3 tw = pow(abs(on), vec3(${e})); tw /= tw.x + tw.y + tw.z; vec3 tp = p * uS + vec3(-0.04, 0.05, 0.3);
+  vec4 ink4 = texture2D(uPat, tp.zy * vec2(sign(on.x), 1.0) + vec2(0.37, 0.11)) * tw.x + texture2D(uPat, tp.xz + vec2(0.61, 0.29)) * tw.y + texture2D(uPat, tp.xy * vec2(sign(-on.z), 1.0)) * tw.z; vec3 ink = ink4.rgb;\n`;
+const TRI89 = tri89('4.0'), TRI90 = tri89('10.0');
+// 90: tiles made from our own concept art (assets/patterns/pat89_*.webp, 512 px, from assets-raw/patterns' 1024 px; source note:
+// docs/concepts/pattern-sources.md): rgb the drawing on its ground (only the lacquer's is used: the moon's and jade's grounds are
+// streaked, so those keep the material's own), alpha its gold (picked out by colour), which becomes gold leaf (GILD). Mipmaps
+// thin the fine lines out into the ground at a distance
+const tiles90 = {}, tile90 = n => tiles90[n] ??= Object.assign(new THREE.TextureLoader().load(new URL(`../../assets/patterns/pat89_${n}.webp`, import.meta.url).href),
+  { colorSpace: THREE.SRGBColorSpace, wrapS: THREE.RepeatWrapping, wrapT: THREE.RepeatWrapping, anisotropy: 4 });
+const TILE90 = SH89 + GILD89 + TRI90 + 'float au = smoothstep(0.2, 0.75, ink4.a);\n';
+// 투명 (T2 여우, T6 티라노; 90): clear glass: the scene through it nearly untouched (a very pale sky blue where thick), almost no
+// reflection on the face (fr eased in pre), a bright line on each round's upper left and a thin bright outline
+const GLASS89 = 'gl_FragColor.rgb += vec3(0.9, 0.96, 1.0) * (0.35 * pow(1.0 - nv, 4.0) + 0.7 * smoothstep(0.05, 0.0, abs(vn.x + 0.45 - 0.2 * vn.y)) * smoothstep(0.15, 0.5, vn.y) * (1.0 - fr));';
+// 청화 (T3 여우, T7 티라노): white porcelain, the drawing in cobalt: the outer petals and leaves a wash, the inner petals deeper,
+// the lines deepest; from uEar up (the fox's ear tips) and the paws' band all cobalt
+const BW89 = SH89 + TRI89 + `vec3 pc = mix(diffuseColor.rgb, mix(vec3(0.07, 0.17, 0.68), vec3(0.02, 0.07, 0.48), SH(ink.r, 0.9)), SH(ink.r, 0.35));
+  diffuseColor.rgb = mix(pc, vec3(0.002, 0.007, 0.13), SH(max(ink.g, ink.b), 0.4));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.02, 0.07, 0.4), max(smoothstep(uEar, uEar + 0.02, p.y), smoothstep(0.05, 0.04, p.y)));` + GLINT;
+// 호박 (T8 티라노): 86-2's amber (AMBER86) deeper and redder, more of it solid; the legs get the glowing far wall too (amber89's parts)
+const AMBER89 = `float toe = ${TOE}, fe = pow(1.0 - nv, 2.5);
+  diffuseColor.rgb = mix(vec3(0.42, 0.1, 0.0), vec3(0.04, 0.012, 0.002), toe);
+  diffuseColor.a = mix(mix(0.68, 0.97, fe), 0.95, toe);
+  totalEmissiveRadiance += (vec3(1.0, 0.42, 0.01) * (0.4 + 0.45 * nv * nv) + vec3(1.0, 0.55, 0.08) * 0.7 * fe) * (1.0 - toe);`;
+// 구미호's tails sway, each on its own beat (tools/bake-pilot89.mjs: _thickness = tail x 2 + along it, 0 on the body; tail i leans
+// back 0.2 + 0.185 i from upright): along the fan and across it; most at the tip, none at the root. The foxfire on each tip moves with it
+const SWAY89 = `uniform float uTime;
+vec3 sway89(float ti) { float th = 0.2 + ti * 0.185; return vec3(-cos(th), -sin(th), 0.0) * 0.05 * sin(uTime * (1.1 + 0.13 * ti) + ti * 2.1) + vec3(0.0, 0.0, 0.05) * sin(uTime * (0.9 + 0.11 * ti) + ti * 1.3); }\n`;
+// 달 양 (L1), 옥토끼 (L2), 별자리 거북 (L5)'s shell (90): the tiles; the moon its own part (moonDisc89); jade the concept's clouded
+// yellow-green with a little glow from within, the tile moved so a whole crescent (at u = 0: on both flanks) sits on the haunch
+const MOON90 = TILE90 + 'GILD(au);';
+const JADE90 = 'p.xy += vec2(0.12, 0.72);\n' + TILE90 + 'diffuseColor.rgb = mix(vec3(0.08, 0.2, 0.05), vec3(0.26, 0.42, 0.16), smoothstep(0.3, 0.75, fbm3(p * 3.0 + 2.0))); totalEmissiveRadiance += diffuseColor.rgb * vec3(0.05, 0.12, 0.07) * (0.5 + nv); GILD(au);';
+// the shell: the star tile's lines gold (in less of the studio's light: thin gold lines in its overhead box read white), its stars glowing
+const STAR90 = TILE90 + 'GILD(au); lookStudio *= 1.0 - 0.6 * au; totalEmissiveRadiance += vec3(1.0, 0.8, 0.45) * smoothstep(0.3, 0.8, max(ink.r, ink.g)) * 6.0;';
+// 벚꽃 사슴 (L3): ivory, gold leaves all over (patternTex's vines and leaf outlines); a big five-petal pink blossom on each rear flank,
+// a smaller one above it. Gold hooves and a gold branch in bloom for antlers: cherry89's horn and parts
+const CHERRY89 = SH89 + GILD89 + TRI89 + `float side = smoothstep(0.3, 0.6, abs(on.z)), bl = 0.0, hc = 0.0;
+  for (int i = 0; i < 2; i++) { vec3 f = i == 0 ? vec3(-0.3, 0.55, 0.085) : vec3(-0.14, 0.65, 0.05);
+    vec2 d = (p.xy - f.xy) / f.z; float r = length(d), a = atan(d.y, d.x) + float(i), pr = 0.55 + 0.45 * pow(abs(cos(2.5 * a)), 0.5), fw = fwidth(r);
+    bl = max(bl, 1.0 - smoothstep(pr - fw, pr + fw, r)); hc = max(hc, 1.0 - smoothstep(0.2 - fw, 0.2 + fw, r)); }
+  bl *= side; hc *= side;
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.39, 0.52), bl);
+  GILD(max(SH(ink.b, 0.3) * (1.0 - bl), hc));`;
+// 오로라 펭귄 (L4): clear lavender glass; inside it aurora curtains (green low, purple high) across the middle of the body and small stars
+const AURORA89 = `{ vec3 q = p + rd * 0.12; float t = uTime * 0.05, f = q.x * 2.5 + q.z * 2.0 + 0.8 * fbm3(q * 1.5 + vec3(0.0, t, t)), lo = smoothstep(0.22, 0.36, q.y) * smoothstep(0.92, 0.75, q.y);
+      float cur = pow(0.5 + 0.5 * sin(f * 8.0 - uTime * 0.3), 3.0) * smoothstep(0.3, 0.55, fbm3(vec3(f * 0.7, q.y * 1.2 - t, q.z * 0.5))) * lo;
+      vec3 ac = mix(vec3(0.1, 1.0, 0.45), vec3(0.75, 0.3, 1.0), smoothstep(0.45, 0.75, q.y + 0.08 * sin(f * 3.0)));
+      vec3 sc = cells((p + rd * 0.05) * 30.0); float st = (1.0 - smoothstep(0.03, 0.08 + fwidth(sc.x), sc.x)) * step(0.6, sc.z);
+      gl_FragColor.rgb *= mix(vec3(1.0), vec3(0.6, 0.58, 0.92), smoothstep(0.2, 0.35, p.y) * (1.0 - fr));
+      gl_FragColor.rgb += (ac * cur * 2.2 + vec3(1.0, 0.97, 0.9) * st * smoothstep(0.25, 0.4, p.y) * (0.6 + 0.4 * sin(uTime * 2.0 + sc.z * 40.0))) * (1.0 - fr); }`;
+// 별자리 거북 (L5)'s rim: gold cloud scrolls between gold edges; the legs and head: gold cloud curls low down
+const RIM89 = SH89 + GILD89 + `float cl = SH(texture2D(uCloud, vec2(atan(p.z, p.x + 0.15) * 1.2732, p.y * 4.0)).r, 0.2);
+  GILD(max(cl, max(smoothstep(0.4, 0.41, p.y), smoothstep(0.205, 0.195, p.y))));`;
+const TBODY89 = SH89 + GILD89 + `vec3 tw = pow(abs(on), vec3(4.0)); tw /= tw.x + tw.y + tw.z; vec3 tq = p * 3.0;
+  GILD(SH((texture2D(uCloud, tq.zy) * tw.x + texture2D(uCloud, tq.xz + 0.37) * tw.y + texture2D(uCloud, tq.xy) * tw.z).r, 0.15) * smoothstep(0.3, 0.25, p.y));`;
+// 옻칠 (T4, 구미호; 90): the lacquer tile, its peonies and vines gold; gold paws. tip: the 구미호's tails' tips gold too (vTail: sway89)
+const lacq89 = (S, tip) => look(phys('#9a1008', { roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.008 }), 'lacquer90' + (tip ? 't' : ''),
+  TILE90 + `diffuseColor.rgb = ink; GILD(max(max(au, smoothstep(0.075, 0.065, p.y)), ${tip ? 'smoothstep(0.86, 0.9, vTail)' : '0.0'}));`, { uPat: tile90('lacquer'), uS: S }, { studio: 0.6 });
+const bw89 = (S, ear, claw) => { const b = look(phys('#f6f7fa', { roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.04 }), 'bw89', BW89, { uPat: patternTex(), uS: S, uEar: ear });
+  return { body: b, accent: b, hoof: phys(claw, { roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.04 }), beak: phys('#14183a', { roughness: 0.12, clearcoat: 1 }) }; };
+// the tails' sway in the vertex shader (the normals and the shadow stay: a few degrees)
+const sway89 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    sh.vertexShader = 'attribute float _thickness;\nvarying float vTail;\n' + SWAY89 + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float ti = floor(_thickness * 0.5); vTail = _thickness - 2.0 * ti; transformed += pow(smoothstep(0.15, 1.0, vTail), 2.0) * sway89(ti); }');
+    sh.fragmentShader = 'varying float vTail;\n' + sh.fragmentShader; };
+  m.customProgramCacheKey = () => k + '-sway'; return m; };
+// A look's own parts (figure.js m.parts): made once per body file (by the geometry they grow from), in a Group (merge leaves them)
+const made89 = new WeakMap(), group89 = (body, list) => { const g = new THREE.Group();
+  for (const [geo, mat, ord] of list) { const o = wear(new THREE.Mesh(geo, mat), ord); o.receiveShadow = true; o.frustumCulled = ord !== 5; g.add(o); } body.add(g); };
+// 구미호: the fox's own body (one tail) and ear patches out, the nine-tailed one (MODELS legend: g89body, g89accent) in; a blue
+// foxfire on each tip (tools/pilot72.js's, all nine in one draw: aC the tip, aT the tail), flickering on its own, swaying with its tail
+const FLAME89 = Array.from({ length: 14 }, (_, i) => { const t = i / 13; return new THREE.Vector2(Math.max(0.001, 0.2 * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.25 + 0.05)), 0.7) * (1 - t * 0.6)), t); });
+const fire89 = (inner, k, y) => new THREE.ShaderMaterial({ uniforms: { uTime: windTime, uK: { value: new THREE.Vector3(...k) }, uY: { value: y } }, transparent: true, depthWrite: false, blending: inner ? THREE.AdditiveBlending : THREE.NormalBlending,
+  vertexShader: SWAY89 + `uniform vec3 uK; uniform float uY; attribute vec3 aC; attribute float aT; varying float vY; varying vec3 vN, vV;
+    void main() { vec3 p = position; vY = p.y; float s = p.y * p.y, u = uTime${inner ? ' * 1.1 + 1.3' : ''} + aT * 1.7;
+      p.x += sin(u * 7.0 + p.y * 9.0) * 0.06 * s + sin(u * 13.0) * 0.015 * p.y; p.z += cos(u * 6.0 + p.y * 8.0) * 0.05 * s; p.y *= 1.0 + 0.08 * sin(u * 9.0);
+      vec4 mv = modelViewMatrix * vec4(aC + sway89(aT) + p * uK + vec3(0.0, uY, 0.0), 1.0); vN = normalMatrix * normal; vV = -mv.xyz; gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `varying float vY; varying vec3 vN, vV;
+    void main() { float f = pow(abs(dot(normalize(vN), normalize(vV))), 1.6), y = clamp(vY, 0.0, 1.0);
+      vec3 c = ${inner ? 'mix(vec3(0.85, 0.97, 1.0), vec3(0.3, 0.75, 1.0), y)' : 'mix(vec3(0.15, 0.45, 1.0), vec3(0.08, 0.2, 0.95), y)'};
+      gl_FragColor = ${inner ? 'vec4(c * f * (1.0 - y * 0.75) * 1.3, 1.0)' : 'vec4(c, clamp(f * 1.6, 0.0, 1.0) * (1.0 - y * 0.55))'}; }` });
+function foxfire89(body, G) {
+  for (const o of [...body.children]) if (o.geometry === G.body || o.geometry === G.accent) body.remove(o);
+  const geo = G.legend.g89body;
+  if (!made89.has(geo)) {
+    const P = geo.attributes.position, T = geo.attributes._thickness, sum = Array.from({ length: 9 }, () => [0, 0, 0, 0]);
+    for (let i = 0; i < P.count; i++) { const t = T.getX(i), ti = Math.floor(t / 2); if (t - 2 * ti > 0.97) { const s = sum[ti]; s[0] += P.getX(i); s[1] += P.getY(i); s[2] += P.getZ(i); s[3]++; } }
+    const tips = sum.map(s => [s[0] / s[3], s[1] / s[3], s[2] / s[3]]), k = 0.28 * Math.max(...tips.map(t => t[1])); // the flames' size: 0.63 adult, 0.46 baby
+    const flames = seg => mergeGeometries(tips.map((c, i) => { const l = new THREE.LatheGeometry(FLAME89, seg), n = l.attributes.position.count;
+      l.setAttribute('aC', new THREE.Float32BufferAttribute(Array.from({ length: n }, () => c).flat(), 3)); l.setAttribute('aT', new THREE.Float32BufferAttribute(new Array(n).fill(i), 1)); return l; }));
+    made89.set(geo, [[flames(18), fire89(false, [1.25 * k, 0.8 * k, 1.25 * k], -0.02 * k), 5], [flames(14), fire89(true, [0.6 * k, 0.5 * k, 0.6 * k], 0.03 * k), 5]]);
+  }
+  group89(body, made89.get(geo));
+}
+// a tube along a curve, its radius w(t) at t (by length, as TubeGeometry takes its rings)
+const tube89 = (curve, seg, w) => { const g = new THREE.TubeGeometry(curve, seg, 1, 12), P = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < P.count; i++) { const t = Math.floor(i / 13) / seg, at = curve.getPointAt(t); P.setXYZ(i, ...v.fromBufferAttribute(P, i).sub(at).multiplyScalar(w(t)).add(at).toArray()); }
+  return g; };
+// 달 양's horns: gold ram horns, each a ridged tube tapering to a point that spirals in, back, down and forward round a point above
+// and behind the eye, a turn and a bit, moving out as it goes
+function ramHorns89(body, G, S, gold) {
+  if (!made89.has(G.eye)) { const e = S.attach.eye.p, R0 = 0.25 * e[1] / 1.62, N = 2.2 * Math.PI;
+    made89.set(G.eye, [[mergeGeometries([1, -1].map(sz => {
+      const c = new THREE.Vector3(e[0] - 0.9 * R0, e[1] + 0.37 * R0, 1.45 * R0 * sz), curve = new THREE.Curve();
+      curve.getPoint = (t, v = new THREE.Vector3()) => { const a = t * N, r = R0 * Math.pow(0.55, a / (2 * Math.PI)); return v.set(c.x + r * Math.cos(Math.PI / 2 + a), c.y + r * Math.sin(Math.PI / 2 + a), c.z + sz * 0.26 * R0 * a / (2 * Math.PI)); };
+      return tube89(curve, 96, t => R0 * (0.5 - 0.36 * t) * (1 + 0.07 * Math.cos(t * 60)) * Math.sqrt(Math.min(1, (1 - t) * 14))); })), gold, 2]]); }
+  group89(body, made89.get(G.eye));
+}
+// 달 양's full moon (90: its own part, as the concept's): on each flank a glowing domed disc (soft craters) in a gold ring, at the
+// old shader moon's place (x -0.12, y 0.55 of the height from the middle) on the outermost wool there (rays), facing out
+const MOONGLOW89 = 'float cr = smoothstep(0.5, 0.75, fbm3(p * 14.0)); diffuseColor.rgb *= 1.0 - 0.15 * cr; totalEmissiveRadiance *= 1.0 - 0.3 * cr;';
+function moonDisc89(body, G, gold) {
+  if (!made89.has(G.body)) { const b = G.body.boundingBox, H = b.max.y, x = (b.min.x + b.max.x) / 2 - 0.12 * H, y = 0.55 * H, R = 0.16 * H, ray = new THREE.Raycaster();
+    const wool = [G.body, G.accent].filter(Boolean).map(g => new THREE.Mesh(g)), disc = [], ring = [];
+    for (const sz of [1, -1]) { let z = 0;
+      for (let a = 0; a < 7; a++) { ray.set(new THREE.Vector3(x + (a && R * Math.cos(a)), y + (a && R * Math.sin(a)), 9 * sz), new THREE.Vector3(0, 0, -sz)); z = Math.max(z, ...ray.intersectObjects(wool).slice(0, 1).map(h => h.point.z * sz)); }
+      const d = new THREE.SphereGeometry(R / Math.sin(0.5), 32, 4, 0, Math.PI * 2, 0, 0.5).translate(0, -R / Math.tan(0.5), 0).rotateX(sz * Math.PI / 2).translate(x, y, sz * (z - 0.1 * R));
+      d.setAttribute('_op', new THREE.Float32BufferAttribute(d.attributes.position.array.map(v => v / H), 3)); disc.push(d);
+      ring.push(new THREE.TorusGeometry(R, 0.09 * R, 8, 48).translate(x, y, sz * (z - 0.1 * R))); }
+    made89.set(G.body, [[mergeGeometries(disc), look(phys('#ffeec2', { roughness: 0.3, clearcoat: 1, emissive: '#ffb04a', emissiveIntensity: 1.6 }), 'moonglow89', MOONGLOW89), 2], [mergeGeometries(ring), gold, 2]]); }
+  group89(body, made89.get(G.body));
+}
+// 벚꽃 사슴's cherry branch in place of the antlers: on each side a gold bough up and back with three twigs (in the antlers' height h,
+// from their base), five-petal pink blossoms with gold hearts at the ends and buds along them
+const BOUGH89 = [[[0, 0, 0.1], [0.02, 0.4, 0.16], [-0.2, 0.75, 0.22], [-0.7, 0.92, 0.28], [-1.4, 0.72, 0.32]], [[0.01, 0.35, 0.15], [0.15, 0.7, 0.2], [0.2, 1.0, 0.22]],
+  [[-0.25, 0.78, 0.22], [-0.3, 1.1, 0.25]], [[-0.7, 0.92, 0.28], [-0.8, 1.15, 0.3]], [[-1.05, 0.85, 0.3], [-1.2, 1.0, 0.34]]];
+function branch89(body, G, pink, gold) {
+  for (const o of [...body.children]) if (o.geometry === G.horn) body.remove(o);
+  if (!made89.has(G.horn)) {
+    G.horn.computeBoundingBox(); const b = G.horn.boundingBox, h = b.max.y - b.min.y, x0 = (b.min.x + b.max.x) / 2, R = rand(89), wood = [], pg = [], gg = [], m = new THREE.Matrix4(), one = new THREE.Vector3(1, 1, 1);
+    const flower = (at, sz, bud) => { const n = new THREE.Vector3((R() - 0.5) * 0.6, 0.4, sz).normalize(), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
+      if (bud) return pg.push(new THREE.SphereGeometry(0.055 * h, 8, 6).scale(1, 1.3, 1).applyMatrix4(m.compose(at, q, one)));
+      const a0 = R() * 6.28; for (let j = 0; j < 5; j++) pg.push(new THREE.SphereGeometry(0.11 * h, 10, 6).scale(1, 0.3, 0.75).translate(0.11 * h, 0, 0).rotateY(a0 + j / 5 * Math.PI * 2).applyMatrix4(m.compose(at, q, one)));
+      gg.push(new THREE.SphereGeometry(0.045 * h, 8, 6).applyMatrix4(m.compose(at.clone().addScaledVector(n, 0.02 * h), q, one))); };
+    for (const sz of [1, -1]) BOUGH89.forEach((pts, k) => { const c = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => new THREE.Vector3(x0 + x * h, b.min.y + y * h, z * sz * h)));
+      wood.push(tube89(c, 24, t => (k ? 0.035 : 0.06) * h * (1 - 0.6 * t))); flower(c.getPointAt(1), sz, k % 2);
+      for (const t of k ? [0.5] : [0.4, 0.6, 0.85]) flower(c.getPointAt(t), sz, t !== 0.6); });
+    made89.set(G.horn, [[mergeGeometries([...wood, ...gg]), gold, 2], [mergeGeometries(pg), pink, 2]]);
+  }
+  group89(body, made89.get(G.horn));
+}
+// 오로라 펭귄's ice: blue-white crystal points standing in the bottom of the glass body (drawn before it: the glass shows them)
+function crystals89(body, G, ice) {
+  if (!made89.has(G.body)) {
+    const R = rand(41), b = G.body.boundingBox, H = b.max.y, cx = (b.min.x + b.max.x) / 2, list = [];
+    for (let i = 0; i < 14; i++) { const h = (0.1 + 0.1 * R()) * H, r = (0.03 + 0.018 * R()) * H;
+      list.push(new THREE.ConeGeometry(r, h, 6, 1).translate(0, h / 2, 0).rotateZ((R() - 0.5) * 0.9).rotateX((R() - 0.5) * 0.9).translate(cx + (R() - 0.45) * 0.7, b.min.y + 0.05 * H, (R() - 0.5) * 0.75)); }
+    made89.set(G.body, [[mergeGeometries(list), ice, 2]]);
+  }
+  group89(body, made89.get(G.body));
+}
 const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ...)
   solid: c => plain(toyBody(c.body), c),
   twotone: c => plain(look(toyBody(c.body), 'twotone', TWOTONE, { uSecond: c.second }), c),
@@ -705,6 +862,26 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
     return { body, wing: body, accent: s(0.75), hoof: s(0.6), beak: shine('#ffc75a') }; },
   storm: () => { const b = look(phys('#1a2034', { roughness: 0.25, clearcoat: 0.6, clearcoatRoughness: 0.1 }), 'storm', STORM);
     return { ...same(b), wing: b, beak: shine('#d8dee8', 0.2) }; },
+  // 89-4 시범 (?m89 only: data.js M89), the concept sheets' cells
+  glass89: () => same(clear({ key: 'glass90', tint: '#e2f0ff', absorb: 0.5, dark: 0.1, rimK: 0.9, bend: 0.1, extra: { specularIntensity: 0.3 }, pre: 'fr *= 0.35;', post: GLASS89 })),
+  bw89fox: () => bw89(2.8, 0.93, '#14215e'),
+  bw89rex: () => bw89(3.2, 9, '#1c3c9c'),
+  amber89: () => { const wall = amberWall86(); wall.fragmentShader = wall.fragmentShader.replace('vec3(0.72, 0.3, 0.0), vec3(1.0, 0.6, 0.06)', 'vec3(0.5, 0.12, 0.0), vec3(1.0, 0.48, 0.03)');
+    return { ...amber86(), ...same(look(phys('#ffc860', { roughness: 0.2, specularIntensity: 0.3, clearcoat: 1, clearcoatRoughness: 0.03, transparent: true, depthWrite: false }), 'amber89', AMBER89)), wall,
+      parts: o => { for (const g of o.children) if (g.userData.front !== undefined) g.children[0].add(new THREE.Mesh(g.children[0].geometry, wall)); } }; },
+  lacquer89: () => ({ ...same(lacq89(1.25)), accent: shine('#ffc75a'), beak: phys('#2a2628', { roughness: 0.12, clearcoat: 1 }) }),
+  gumiho89: () => { const L = LOOKS.lacquer89(); return { ...L, g89body: sway89(lacq89(1.5, true)), g89accent: L.accent, parts: foxfire89 }; },
+  moon89: () => { const g = shine('#ffc75a'), b = look(phys('#f6efea', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03, iridescence: 1, iridescenceIOR: 1.35, iridescenceThicknessRange: [250, 650],
+      sheen: 1, sheenColor: new THREE.Color('#ffd3e6') }), 'moon90', MOON90, { uPat: tile90('moon'), uS: 0.8 }, { studio: 0 });
+    return { ...same(b), hoof: g, horn: g, parts: (o, G, S) => { ramHorns89(o, G, S, g); moonDisc89(o, G, g); } }; },
+  jade89: () => same(look(phys('#5fb88a', { roughness: 0.07, clearcoat: 1, clearcoatRoughness: 0.02 }), 'jade90', JADE90, { uPat: tile90('jade'), uS: 0.5 }, { studio: 0 })),
+  cherry89: () => { const g = shine('#ffc75a'), pink = phys('#ffb3c6', { roughness: 0.35, clearcoat: 0.5 }),
+      b = look(phys('#f4ead8', { roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.04 }), 'cherry89', CHERRY89, { uPat: patternTex(), uS: 1.5 }, { studio: 0 });
+    return { body: b, accent: b, hoof: g, horn: g, beak: phys('#4a3022', { roughness: 0.2, clearcoat: 0.6 }), pink, parts: (o, G) => branch89(o, G, pink, g) }; },
+  aurora89: () => { const ice = phys('#d8ecff', { roughness: 0.05, clearcoat: 1, emissive: '#7ab4ff', emissiveIntensity: 0.6, flatShading: true });
+    return { ...same(clear({ key: 'aurora89', tint: '#e6e0ff', absorb: 0.6, dark: 0.3, neutral: 0.5, rimK: 0.9, bend: 0.06, post: AURORA89 })), ice, parts: (o, G) => crystals89(o, G, ice) }; },
+  star89: () => { const k = '#0c0c10', o = { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.03 }, u = { uCloud: cloudTex() }, legs = look(phys(k, o), 'tbody89', TBODY89, u, { studio: 0 });
+    return { body: legs, hoof: legs, accent: look(phys(k, o), 'star90', STAR90, { uPat: tile90('star'), uS: 0.8 }, { studio: 0 }), horn: look(phys(k, o), 'rim89', RIM89, u, { studio: 0 }) }; },
 };
 
 // 황금 복돼지 relief: cloud curls (a scalloped cloud with a curl at each end) as a height map in the red channel, lines
@@ -783,9 +960,9 @@ const rand = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ 
 const texCache = {};
 // lacq (84, the fox's lacquer): the same drawing in lines two-thirds as wide and one leaf per bend instead of two: thin gold, more red between
 export function patternTex(S = 1024, lacq = false) {
-  const key = S + (lacq ? 'l' : ''); if (texCache[key]) return texCache[key];
+  const key = S + (lacq ? 'l' + lacq : ''); if (texCache[key]) return texCache[key];
   const C = [0, 1, 2].map(() => { const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, S, S); g.lineCap = g.lineJoin = 'round'; return g; });
-  const [W, L, V] = C, R = rand(11), u = S / 1024, w = lacq ? u * 0.65 : u; // u: sizes, w: line widths
+  const [W, L, V] = C, R = rand(11), u = S / 1024, w = u * (lacq === true ? 0.65 : lacq || 1); // u: sizes, w: line widths (lacq a number: 89's wider gold)
   const each = f => { for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) { for (const g of C) { g.save(); g.translate(dx, dy); } f(); for (const g of C) g.restore(); } };
   const lobes = (g, x, y, r, n, rr, a0, grow = 0) => { g.beginPath(); for (let i = 0; i < n; i++) { const a = a0 + i / n * Math.PI * 2; g.moveTo(x + Math.cos(a) * r + rr + grow, y + Math.sin(a) * r); g.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, rr + grow, 0, Math.PI * 2); } g.fill(); };
   function peony(x, y, r, a0) {

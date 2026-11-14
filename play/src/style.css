@@ -649,3 +649,14 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .cell.bloom .fl{display:block;width:64px;height:64px;margin:6px auto 2px;background:radial-gradient(circle 9px at 32px 32px,var(--m) 8.5px,transparent 9px),radial-gradient(circle 12px at 32px 15px,var(--p) 11.5px,transparent 12px),radial-gradient(circle 12px at 48.2px 26.7px,var(--p) 11.5px,transparent 12px),radial-gradient(circle 12px at 42px 45.8px,var(--p) 11.5px,transparent 12px),radial-gradient(circle 12px at 22px 45.8px,var(--p) 11.5px,transparent 12px),radial-gradient(circle 12px at 15.8px 26.7px,var(--p) 11.5px,transparent 12px);filter:drop-shadow(0 1px 1px rgba(80,50,20,.35))}
 .cell.bloom.unk .fl{opacity:.28;filter:grayscale(1)}.cell.bloom small{word-break:keep-all}
 .nbtns [data-firm]{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;flex:1.2}.nbtns [data-firm] small{font-weight:400;font-size:calc(11px*var(--fs));opacity:.85;word-break:keep-all} /* 17-3 꾸미기: 진짜 길로 굳히기 */
+/* 92-2 one goal under the top bar */
+.goal{position:absolute;left:50%;top:calc(60px + var(--sa-t));transform:translateX(-50%);z-index:999;pointer-events:none;max-width:min(230px,62vw);display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 11px 6px;border-radius:12px;background:rgba(30,26,20,.5);color:#fff;font-size:calc(11.5px*var(--fs));font-weight:700;text-align:center;line-height:1.3;word-break:keep-all}
+.goal[hidden],#habitat.decorating .goal,body:has(#camBtns:not([hidden])) .goal,.photo .goal,.skyview .goal{display:none}
+.goal i{display:block;width:100%;min-width:120px;height:5px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden}.goal b{display:block;height:100%;background:#ffd27a;border-radius:3px;transition:width .6s}
+/* 93-2 첫 주 선물: 7 cells under the 돌아왔어요 row (got: a stamp, now: today's, the rest faint) */
+.ret .week{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:4px 0 0}
+.ret .week span{display:flex;flex-direction:column;align-items:center;padding:3px 1px;border-radius:7px;background:#fff6e6;font-size:9px;line-height:1.15;color:#8a7a66;opacity:.55;text-align:center;word-break:keep-all}
+.ret .week b{font-size:10px}.ret .week .got{opacity:1;color:#4f9a5a;background:#e9f6e8}.ret .week .now{opacity:1;background:#ffe2a3;color:#6b4d12;box-shadow:0 0 0 1.5px #e0a93a inset}
+/* 93-1: tomorrow's legendary egg in the nest, locked */
+.negg.lock{position:relative;cursor:default;filter:saturate(.8);opacity:.85}.negg.lock img{filter:brightness(.92)}
+.negg.lock small{position:absolute;left:0;right:0;bottom:2px;font-size:9px;text-align:center;color:#6b4d12;background:#fff3cfdd;border-radius:6px;margin:0 2px}

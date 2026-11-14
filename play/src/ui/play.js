@@ -25,6 +25,7 @@ import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
 import { rosterOf, isRegular } from '../game/guests.js'; // 66-1 떠돌이 손님
 import { WISH, GUEST, guestWear } from '../game/guests-data.js';
 import { PREFS, calm } from '../config.js';
+import { track } from './stats.js'; // 93-3
 
 const $ = id => document.getElementById(id);
 const nameOf = callName; // 26-4: its name if it has one
@@ -281,12 +282,12 @@ export function initPlay(nav) {
     if (!hab || !appHintDue(DEV, G.S.flags)) return void (appT = 0);
     if (overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden]), .tip, #toast.on') || document.body.classList.contains('photo') || !home.hidden) appQuiet = Date.now(); // busy() but not the quiet rest: the save is at stake
     if (Date.now() - appQuiet < 2000) { appT = setTimeout(appBand, 800); return; }
-    G.flag('appHintSeen');
+    G.flag('appHintSeen'); track('webview_hint'); // 93-3
     const bar = Object.assign(document.createElement('div'), { className: 'rate appband', role: 'group' }); bar.setAttribute('aria-label', '다른 브라우저에서 이어서 하기');
-    bar.innerHTML = `<span>Safari·Chrome에서 열면 이어서 할 수 있어요</span><button data-a="copy">이어서 하기 링크 복사</button>${/Android/.test(DEV.ua) ? `<a class="more" href="${chromeLink()}">Chrome으로 열기</a>` : ''}<button class="x" aria-label="닫기">✕</button>`;
+    bar.innerHTML = `<span>${/Instagram/.test(DEV.ua) ? '인스타' : '앱'} 안에서는 저장이 사라질 수 있어요 · 브라우저로 이어 하기</span><button data-a="copy">이어서 하기 링크 복사</button>${/Android/.test(DEV.ua) ? `<a class="more" data-a="chrome" href="${chromeLink()}">Chrome으로 열기</a>` : ''}<button class="x" aria-label="닫기">✕</button>`;
     document.body.append(bar); setTimeout(() => bar.remove(), 60e3); // the tips wait under it (hud.js)
-    bar.onclick = async e => { const b = e.target.closest('button,a'); if (!b) return;
-      if (b.dataset.a === 'copy') { const ok = await copyLink(); bar.remove(); if (ok) toast('링크를 복사했어요 · Safari·Chrome 주소창에 붙여 넣어 열어 주세요', 4000, true); }
+    bar.onclick = async e => { const b = e.target.closest('button,a'); if (!b) return; if (b.dataset.a) track('webview_move', { by: b.dataset.a });
+      if (b.dataset.a === 'copy') { const ok = await copyLink(); bar.remove(); if (ok) toast(/iPhone|iPad/.test(DEV.ua) ? '링크를 복사했어요 · 사파리 주소창에 붙여 넣어 열어 주세요' : '링크를 복사했어요 · Chrome 주소창에 붙여 넣어 열어 주세요', 4000, true); }
       else setTimeout(() => bar.remove()); };
   }
   home.onclick = e => { const b = e.target.closest('button'); if (!b) return;

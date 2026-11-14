@@ -313,7 +313,7 @@ async function shootNow(c) {
   cam.lookAt(mid.clone().addScaledVector(right, -S.at[0] * 2 * D * th).add(new THREE.Vector3(0, -S.at[1] * 2 * D * tv, 0))); cam.updateMatrixWorld();
   const fp = new THREE.Vector3(x, 0, z); timed(() => { cur.light(S.t, P.sun.clone()); cur.sun.position.copy(P.sun).multiplyScalar(40).add(fp); cur.sun.target.position.copy(fp); cur.fill.position.copy(cam.position).sub(fp).add(new THREE.Vector3(0, 3, 0)); });
   try {
-    await R.compileAsync(cur.scene, cam);
+    R.compile(cur.scene, cam); // 91: not compileAsync: its timer reads each material's program, a material let go meanwhile threw 'isReady' of undefined, uncaught (inbox 49)
     const big = () => cv(W + 2 * M, H + 2 * M);
     // 1 the water's mirror, 2 the photo, 3 without the friend (what the blur behind it shows), 4 how far from the focus
     R.shadowMap.needsUpdate = true;

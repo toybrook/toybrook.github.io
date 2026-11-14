@@ -34,7 +34,9 @@ export const HOLD = { myth: false, dino: true }; // release build: the jungle he
 //           `pet` for each petting tap that gives a heart and `feed` for each feed (at most `feeds` a day per baby)
 //   heart:  temporary (19단계 특별 행동 replaces it): tap an animal, once per cooldown each, `daily` a day (refills at local midnight)
 //   sendBack: hearts for sending back a variant already in the codex (on the reveal card). Never shards
-//   unlock: next habitat: this share of the previous codex + this many hearts (a threshold, not spent)
+//   unlock: next habitat: this share of the previous codex + this many hearts (a threshold, not spent); friends: the second
+//           habitat also opens once this many eggs have hatched (92-2)
+//   nest.fast: hatch times of a new game's first eggs (92-1), then hatch × hatchScale
 //   expand: 땅 넓히기 prices;   xp: 정원사 레벨 XP (BALANCE.level.xp)
 //   play:   28-2 놀이 소품: their prices (PROPS) and the level each opens at (merged into BALANCE.level.unlock). Set again with the
 //           release balance (11차): release has the beta numbers for now. 28-6: the 땅 tab's stamps too, and the line brushes' levels
@@ -83,14 +85,14 @@ export const PACE = {
     pal: PAL,
   },
   beta: { // max 20: 10 h of eggs (the night between the last visit and the first); slots 3: with 2 the snow opened on day 4 (inbox-31.md)
-    nest: { every: 30 * MIN, max: 20, start: 1, startRarity: 'common', early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3 }, // 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
+    nest: { every: 30 * MIN, max: 20, start: 3, startRarity: 'common', fast: [0, 10e3, 15e3], early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3 }, // 92-1: 3 eggs to start, the first three hatch in 0·10·15 s (fast); 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
     hatch: { common: 1 * MIN, rare: 3 * MIN, heroic: 8 * MIN, legendary: 20 * MIN },
     slots: 3,
     grow: { time: { common: 5 * MIN, rare: 10 * MIN, heroic: 20 * MIN, legendary: 40 * MIN }, pet: 0.02, feed: 0.1, feeds: 3 },
     heart: { perTap: 1, cooldown: 10 * 1000, daily: 120 },
     sendBack: { common: 6, rare: 15, heroic: 40, legendary: 120 },
     codexHeart: 3,                                   // inbox 38: hearts when a codex cell is filled for the first time
-    unlock: { codex: 0.2, hearts: 30 },
+    unlock: { codex: 0.2, hearts: 30, friends: 8 },  // 92-2: the second habitat (연못) also opens at `friends` hatched (sim-guests 3: 8th hatch at 2.6~7 min, middle ~4.5)
     expand: [20, 45, 140, 200, 400, 650],
     priceX: { small: 0.75, big: 0.5 },               // 42 F-1: prop prices x (big: listed ♥100 and up), to 5 hearts. inbox 51: small 1 -> 0.75 (the player found props dear); sim: one every 10~20 min, a big one on day 2
     xp: { codex: 8, grown: 2, pet: 1, petDaily: 10, login: 5, achieve: 10 },
@@ -747,6 +749,16 @@ export const SPECIES = [
     },
     legendary: [{ id: 'sunstone', name: '선스톤', mat: 'sunstone', effect: 'twinkle' }] },
 ];
+// 89-4 시범 (?m89, photos only; without it nothing here changes): the concept sheets' looks (Tier_fox_rex, Legends8) on the SDF
+// bodies, worn instead of the species' own look (MODELS m89, materials.js), and 신수 구미호 (the fox's nine tails: its legend file)
+export const M89 = false; // release build: the 89-4·90 trial looks stay off (89-2)
+if (M89) {
+  const o = { arcticFox: { glass: 'glass89', bluewhite: 'bw89fox', starlight: 'lacquer89' }, tRex: { glass: 'glass89', bluewhite: 'bw89rex', amberbone: 'amber89' },
+    sheep: { cotton: 'moon89' }, rabbit: { jade: 'jade89' }, reindeer: { lantern: 'cherry89' }, penguin: { aurora: 'aurora89' }, turtle: { coral: 'star89' } };
+  for (const k in o) MODELS[k].m89 = o[k];
+  MODELS.arcticFox.legend = { baby: 'assets/models/pilot89_fox_baby.glb', adult: 'assets/models/pilot89_fox_adult.glb' };
+  SPECIES.find(s => s.id === 'arcticFox').legendary.push({ id: 'gumiho89', name: '신수 구미호', mat: 'gumiho89' });
+}
 
 // inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the
 // world is UNIT times that (the first board 54 x 87, step 6 102 x 111)
@@ -1029,6 +1041,11 @@ export const EV_ACC = {
   g_band: { name: '손님 반다나', base: 'bandana', colors: { body: '#e8553d' } }, // 86-3마: the blue bandana on the grey penguin was ΔE 39.6
 };
 export const ATTEND = [{ hearts: 20 }, { candy: 2 }, { eggs: 1 }, { hearts: 30 }, { candy: 3 }, { eggs: 1 }, { hearts: 50 }];
+// 93-2 첫 주 선물: a new save's first 7 출석 slots instead of ATTEND (then ATTEND as before); slot 1 is given when the game
+// begins (rules weekStart), so the next day's first visit is slot 2, the legendary egg (93-1). Days away wait (no reset).
+// legendNow: gift legendary eggs (no pity) that hatch at once; heroEggs: gift heroic eggs; freeExp: a free 땅 넓히기 step in the
+// first habitat; clue: 신수 단서 (the campfire, free, if the save has none: the story's first page is the fire prints beside it)
+export const WEEK1 = [{ hearts: 30 }, { legendNow: 1 }, { prop: 'att_rainbow' }, { eggs: 2 }, { freeExp: 1 }, { heroEggs: 1 }, { hearts: 50, clue: 1 }];
 export const ATTEND_PROPS = ['att_sunflower', 'att_birdhouse', 'att_balloons', 'att_wcan', 'att_signpost', 'att_cart', 'att_rainbow'];
 // 13-1 산책: where a walk goes (picked when it leaves) and the postcard's line ({n} the friend's name, {이/가} its josa).
 // The picture of each is ui/stroll.js SCENES

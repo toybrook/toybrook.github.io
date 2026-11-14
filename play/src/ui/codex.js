@@ -131,7 +131,7 @@ function detail(c) {
 // found / all for a habitat, and what is left to open the next one (rules.unlockInfo)
 function bar(habId, cells, n) {
   const next = HABITATS[HABITATS.findIndex(h => h.id === habId) + 1], L = next && unlockInfo(G.S, next.id);
-  const left = L && !L.open && L.need ? `${next.name}${josa(next.name, '이', '가')} 열리기까지 도감 ${Math.max(0, L.need - L.have)}칸${G.S.hearts < L.hearts ? ` · 하트 ${L.hearts - G.S.hearts}개 더 <span style="white-space:nowrap">(친구를 쓰다듬으면 생겨요)</span>` : ''}` : '';
+  const left = L && !L.open && L.friends ? `${next.name}${josa(next.name, '이', '가')} 열리기까지 친구 ${Math.max(0, L.friends - L.got)}마리` : L && !L.open && L.need ? `${next.name}${josa(next.name, '이', '가')} 열리기까지 도감 ${Math.max(0, L.need - L.have)}칸${G.S.hearts < L.hearts ? ` · 하트 ${L.hearts - G.S.hearts}개 더 <span style="white-space:nowrap">(친구를 쓰다듬으면 생겨요)</span>` : ''}` : '';
   const W = wholeOf(G.S, habId), R = COMPLETE[habId], i = G.S.whole?.[habId] || 0, at = R && i < R.length && Math.ceil(COMPLETE.at[i] * W.all - 1e-9);
   const gift = at ? `<small>모으기 선물까지 ${at - W.got}칸: ${R[i] === 'expand' ? `땅 넓히기 한 번 무료${ZONES[habId]?.[levelOf(G.S, habId)] ? ` (${ZONES[habId][levelOf(G.S, habId)].name})` : ''}` : `큰 소품 「${PROP[R[i]]?.name}」`}</small>` : R ? '<small>모으기 선물을 다 받았어요</small>' : '';
   return `<div class="cbar">${HAB[habId].name} 모으기 ${W.got}/${W.all} (${Math.round(W.got / W.all * 100)}%) <span style="white-space:nowrap">· 알 친구 ${n}/${cells.length}</span><u><i style="width:${W.got / W.all * 100}%"></i></u>${gift}${left ? `<small>${left}</small>` : ''}</div>`;

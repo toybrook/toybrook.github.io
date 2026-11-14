@@ -220,7 +220,7 @@ function merge(body, joints) {
 // Needs loadModel(model) to have finished. stage: one of the model's `files` keys ('baby' | 'adult'). acc: a secret accessory id, or none.
 // color: one of the variant's colour ids (none = its first).
 export function makeFigure(spId, vId, stage, acc = null, color = null) {
-  const sp = SP[spId], M = MODELS[sp.model], S = M[stage], G = ready[sp.model][stage], map = G.body.userData.map, m = variantMats(spId, vId, color, map && M.meshy);
+  const sp = SP[spId], M = MODELS[sp.model], S = M[stage], G = ready[sp.model][stage], map = G.body.userData.map, m = variantMats(spId, vId, color, map ? M.meshy : M.m89); // 89-4: ?m89's looks (data.js M89)
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   body.scale.setScalar(S.s); body.position.y = -(S.sink || 0);
   const V = variantOf(spId, vId), skin = !map ? m.body : V?.rarity === 'common' ? (M.patches ? patched(map, m) : texBody(map)) : meshyMat(m.body); // 82: a common wears the body's own texture (86-1: recoloured); 84: another look, a clone without the dotted edge
@@ -258,6 +258,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
     a.rotation.fromArray(fit.r || at.r); a.scale.setScalar(Math.max(at.s * (fit.s || 1), AC(acc).min || 0)); // min: 86-3마 the guest hat
     body.add(a);
   }
+  m.parts?.(body, G, S); // 89-4: a look's own parts (materials.js), before the merge
   const skeleton = merge(body, [...(M.walk?.oneLeg ? [] : legs), ...wings]);
   const down = Math.max(0, belly(G.body) * S.s - (S.sink || 0)); // inbox 35: lying down, the belly comes down to the feet's level
   return {

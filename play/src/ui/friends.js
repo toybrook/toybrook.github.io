@@ -21,6 +21,7 @@ const star = a => a.fav ? '<i class="fav" aria-label="아끼는 친구">★</i>'
 let habId = null, hab = null, sort = 'new', stage = 'all', rar = '', fsp = '', shown = '';
 
 export function openFriends(id, api) {
+  if (!HAB[id]) return; // 91: no habitat yet (myth.js before initMyth, a board loading)
   habId = id; hab = api; el.hidden = false; shown = ''; draw();
   const seen = outIn(G.S, id).filter(a => a.card).map(a => a.id); if (seen.length) G.grownSeen(seen); // the red dot: looked at
 }

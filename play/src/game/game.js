@@ -57,7 +57,7 @@ export async function takeOver() { await navigator.locks.request(LOCK, { steal: 
 let view = false;
 export function start(h = {}) {
   if (h.view) { view = true; off = true; S = h.view; return []; }
-  hooks = h; const now = clock(); S = load(now) || R.newGame(now); S.edition = EDITION;
+  hooks = h; const now = clock(); S = load(now) || R.weekStart(R.newGame(now), now); S.edition = EDITION;
   const ev = R.advance(S, now); save(); claim(false); // saved as soon as this tab holds the lock
   setInterval(() => { const ev = tick(clock()); if (ev.length) save(); emit(ev); }, 1000);
   addEventListener('visibilitychange', save); addEventListener('pagehide', save);
@@ -216,4 +216,4 @@ export const crackMany = (type, n) => act(now => {
   S.album = album;
   return { cracked: out };
 });
-export const reset = () => { S = R.newGame(clock()); save(); emit([{ type: 'reset' }]); };
+export const reset = () => { S = R.weekStart(R.newGame(clock()), clock()); save(); emit([{ type: 'reset' }]); };

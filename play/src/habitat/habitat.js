@@ -273,7 +273,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   habitat.ctx.land = (kind = '') => {
     let sg = D.list.length; for (const o of D.list) sg = (sg * 31 + o.x * 17 + o.z * 7 + o.r) % 1e9;
     if (sg !== landSig) { landSig = sg; for (const k in lands) delete lands[k]; }
-    const c = habitat.ctx; return lands[kind] ??= landOf(open, kind ? (x, z) => c.walkable(x, z) || c.wet(x, z, kind) : c.walkable, c.bridgeEnds.length > 1 ? [c.bridgeEnds.slice(0, 2)] : []);
+    const c = habitat.ctx; return lands[kind] ??= landOf(open, kind ? (x, z) => c.walkable(x, z) || !!c.wet?.(x, z, kind) : c.walkable, c.bridgeEnds.length > 1 ? [c.bridgeEnds.slice(0, 2)] : []); // 91: a board without water has no wet()
   };
   habitat.ctx.cramped = again => ui.cramped?.(again); // no room inside a closed fence: one put outside (walk.js unstick), said once
   let skyOn = false, skyT = null, skyAt = 0; // 16-2 하늘 보기 (the camera tipped up to the sky); skyT: ui.skyNow(), read once a second
@@ -863,6 +863,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       const r = ed?.ok ? { uid: ed.uid, x: +(ed.x / U).toFixed(4), z: +(ed.z / U).toFixed(4), rot: ed.rot, ...!ed.nat && { c: ed.c, sz: ed.sz, on: ed.on ?? undefined, sl: ed.sl ?? undefined } } : null; if (r) { endEdit(); back = null; } return r; }, // x, z saved in the first board's units (28-5 with its look, on: on top of)
     cancel() { endEdit(); if (back) { aim = back; goingHome = false; } back = null; }, // the camera glides back to where it was before the pick-up
     // just put down at x, z: if the panel (its top at screen y = top) covers it, slide the view so it shows above the panel
+    cheer() { habitat.ctx.cheer = performance.now() + 60e3; }, // 92-3: the player's first prop: for a minute every friend goes to look at it (walk.js peek)
     reveal(x, z, top) { // x, z as saved
       x *= U; z *= U; const [sx, sy] = project({ position: new THREE.Vector3(x, D.y(x, z), z) }, 0.4); if (sy < top - 30) return;
       const r = renderer.domElement.getBoundingClientRect(), q = groundAt({ clientX: sx, clientY: Math.max(r.top + 40, top - 70) }); if (!q) return;
@@ -1210,7 +1211,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const goal = focus ? glide : aim ? { radius: aim.radius, phi: aim.phi ?? 0.5, theta: aim.theta } : decorOn ? { radius: HOME.wide * 0.85, phi: 0.5, theta: 0 } : HOME; // decorating: closer, more from above
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off);
     const face = focus && faceOf(focus);
-    if (facing) goal.theta = face;
+    if (facing && goal) goal.theta = face; // 91: following with no glide (the user took the camera) leaves goal null
     if (tw) { // 정면: eased from where it was; the target eases onto the (moving) animal the same way
       tw.t = calm() ? 1 : Math.min(1, tw.t + dt / FRONT_T); const u = smooth(tw.t);
       sph.radius = tw.r + (goal.radius - tw.r) * u; sph.phi = tw.p + (goal.phi - tw.p) * u; sph.theta = tw.th + wrap(goal.theta - tw.th) * u;
@@ -1225,8 +1226,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       controls.target.lerp(want, k);
     }
     camera.position.copy(controls.target).add(off.setFromSpherical(sph));
-    if (aim && Math.abs(sph.radius - goal.radius) < 0.2 && controls.target.distanceTo(aim.at) < 0.1 && (aim.theta == null || Math.abs(wrap(sph.theta - aim.theta)) < 0.01)) aim = null;
-    if (goingHome && Math.abs(sph.radius - goal.radius) < 0.2 && Math.abs(sph.phi - goal.phi) < 0.01 && Math.abs(wrap(sph.theta - (goal.theta ?? 0))) < 0.01 && controls.target.distanceTo(HOME.target) < 0.1) goingHome = false;
+    if (aim && goal && Math.abs(sph.radius - goal.radius) < 0.2 && controls.target.distanceTo(aim.at) < 0.1 && (aim.theta == null || Math.abs(wrap(sph.theta - aim.theta)) < 0.01)) aim = null;
+    if (goingHome && goal && Math.abs(sph.radius - goal.radius) < 0.2 && Math.abs(sph.phi - goal.phi) < 0.01 && Math.abs(wrap(sph.theta - (goal.theta ?? 0))) < 0.01 && controls.target.distanceTo(HOME.target) < 0.1) goingHome = false;
   }
 
   // perf: optional overlay (?debug) + drop resolution in steps if frames run long (never below 1x)

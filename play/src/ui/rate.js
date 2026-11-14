@@ -1,13 +1,14 @@
 // inbox 61 C 「토이브룩 어때요? 😍 🙂 😐」: once a day, after 3 minutes on the game screen that day, a small bar at the bottom.
 // A tap sends only the stats event rate (love / ok / meh; stats.js: not when stats are off, Do Not Track or GPC) and then offers
 // 「한 줄 더 남기기」 (the feedback form). Not tapped: gone after 20 s, not again that day. fbUrl: the form's address, or null
-import { track, playedToday, rateDay } from './stats.js';
+import { track, playedToday, rateDay, firstDay } from './stats.js';
 import { topWindow, overlayOpen } from './hud.js';
 
 const FACES = [['love', '😍', '좋아요'], ['ok', '🙂', '괜찮아요'], ['meh', '😐', '그저 그래요']];
 export function initRate(fbUrl) {
   const t = setInterval(() => {
-    if (playedToday() < 180 || document.hidden || topWindow() || overlayOpen() || document.body.classList.contains('photo')) return;
+    if (playedToday() < (firstDay() ? 600 : 180) || // 92-4: the first day after 10 minutes only
+        document.hidden || topWindow() || overlayOpen() || document.body.classList.contains('photo')) return;
     clearInterval(t); if (!rateDay()) return;
     const bar = Object.assign(document.createElement('div'), { className: 'rate', role: 'group' }); bar.setAttribute('aria-label', '토이브룩 어때요?');
     const shut = '<button class="x" data-x aria-label="닫기">✕</button>';

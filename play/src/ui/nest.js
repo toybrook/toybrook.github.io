@@ -72,13 +72,13 @@ export function initNest(nav) {
     if (!types.includes(tab)) tab = types[0];
     $('ncount').textContent = `알 ${n.eggs.length}/${B.nest.max}`;
     once('tabs', types.join() + tab, () => { tabsEl.innerHTML = types.map(t => `<button data-tab="${t}"${t === tab ? ' class="on"' : ''}>${EGG[t].name}</button>`).join(''); });
-    const mine = n.eggs.filter(e => e.type === tab);
-    once('eggs', mine.map(e => e.id).join() + tab, () => {
-      eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => `<button class="negg" data-id="${e.id}" aria-label="${RAR[e.rarity].name} 알"><img alt=""></button>`).join('')}</div><p class="nnote"></p>`;
-      eggsEl.querySelectorAll('img').forEach((img, i) => eggThumb(mine[i].rarity).then(u => { img.src = u; }));
+    const mine = n.eggs.filter(e => e.type === tab).sort((a, b) => !!b.now - !!a.now), d2 = G.S.flags.week1 && G.S.attend.n === 1 && habId === HABITATS[0].id; // 93-1: tomorrow's legendary egg, locked
+    once('eggs', mine.map(e => e.id).join() + tab + d2, () => {
+      eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => `<button class="negg" data-id="${e.id}" aria-label="${RAR[e.rarity].name} 알"><img alt=""></button>`).join('')}${d2 ? '<span class="negg lock" aria-label="전설 알 · 내일 열려요"><img alt=""><small>내일 열려요</small></span>' : ''}</div><p class="nnote"></p>`;
+      eggsEl.querySelectorAll('img').forEach((img, i) => eggThumb(mine[i]?.rarity ?? 'legendary').then(u => { img.src = u; }));
     });
     eggsEl.lastChild.textContent = (mine.length ? '알을 누르면 부화 칸에 들어가요 · ' : '알이 없어요 · ')
-      + (n.eggs.length >= B.nest.max ? '둥지가 가득 찼어요' : `다음 알까지 ${clock(n.t + eggGap(G.S) - now)}`);
+      + (n.eggs.length >= B.nest.max ? '둥지가 가득 찼어요' : `다음 알까지 ${clock(n.t + eggGap(G.S) - now)}`) + (d2 ? ` · 금빛 알은 ${clock(new Date(now).setHours(24, 0, 0, 0) - now)} 뒤 열려요` : '');
     drawGauges(); slotsEl.classList.toggle('n3', G.S.slots.length > 2); // inbox 31: three slots in one row
     G.S.slots.forEach((s, i) => { const was = sig['slot' + i]; once('slot' + i, s ? `${s.egg.id}` : '-', () => {
       const b = slotsEl.children[i] || slotsEl.appendChild(Object.assign(document.createElement('button'), { className: 'nslot', innerHTML: '<img alt=""><span><b></b><small></small></span>' }));

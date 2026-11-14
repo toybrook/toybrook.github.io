@@ -14,7 +14,7 @@ import { ASSETS, DEBUG, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, sa
 import { applySound, sfx } from './ui/sound.js';
 import { watch, track } from './ui/stats.js';
 import { openCode } from './ui/mail.js'; // inbox 41 B 우편함
-import { initAttend, todayRow, takeToday } from './ui/attend.js'; // inbox 41 C 출석부
+import { initAttend, todayRow, takeToday, weekOn, weekCells } from './ui/attend.js'; // inbox 41 C 출석부
 import './ui/first.js'; // inbox 41 D 첫날 할 일
 import { initEvent } from './ui/event.js'; // 15-1 계절 이벤트
 import { initMyth, onMyth, mythCut, mythDue } from './ui/myth.js'; // 14-1 신수의 부름
@@ -253,12 +253,13 @@ function showRet() {
   if (!n && !grown.length && !att && !back.length && !myth && !sk && !newsDue && !ar && !wr) return;
   const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
-  const rows = [top && ['📰', `새 소식 ${VERSION}`, top, 'news'], myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], att && ['📅', `${att[0]}일째 출석`, att[1], 'attend'], ar, wr, n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
+  const d2 = att && att[2], wk = att && weekOn(); // 93-1: the second day's legendary egg, the card's top row (a tap: into the nest, then the nest)
+  const rows = [d2 && ['🥚', '이틀째 선물 · 전설 알이 왔어요', '누르면 둥지로 · 기다림 없이 바로 깨요', 'd2'], top && ['📰', `새 소식 ${VERSION}`, top, 'news'], myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], !d2 && att && ['📅', wk ? `첫 주 선물 ${att[0]}일째` : `${att[0]}일째 출석`, att[1], 'attend'], ar, wr, n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
     grown.length && ['🌱', `다 자란 친구 ${grown.length}`, '보러 가요', 'grown'], ready && ['✨', `부화 끝난 알 ${ready}`, '깨우러 가요', 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', '백업해 두면 기기를 바꿔도 이어서 할 수 있어요', '설정 › 내 저장 백업', 'backup']); G.flag('backupNag', today); }
   ret.innerHTML = `<div><h2>돌아왔어요</h2><ul>${rows.map(([i, t, sub, k]) => `<li><button data-go="${k}"${k === 'attend' ? ' class="take"' : ''}><i aria-hidden="true">${i}</i><span>${t}<small>${sub}</small></span></button>${
-    k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => '<span><img alt="새끼"><b>→</b><img alt="성체"></span>').join('')}</p>` : ''}</li>`).join('')}</ul>
+    (k === 'attend' || k === 'd2') && wk ? weekCells() : k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => '<span><img alt="새끼"><b>→</b><img alt="성체"></span>').join('')}</p>` : ''}</li>`).join('')}</ul>
 <div class="nbtns"><button class="go" data-close>확인</button></div></div>`;
   ret.dataset.wild = wn ? JSON.stringify([wn.hab, wn.at]) : ''; if (wn) G.wildSeen();
   ret.dataset.eggs = most || ''; ret.dataset.grown = grown[0] ? habitatOf(grown[0]) : ''; retGrown = grown.map(a => a.id);
@@ -274,6 +275,7 @@ ret.onclick = async e => {
   if (retAttend()) { const t = takeToday(retHome()); if (t) toast(`오늘 출석 · ${t}`, 2600); }
   const first = retGrown[0]; if (retGrown.length) { G.grownSeen(retGrown); retGrown = []; }
   if (d.go == null) return;
+  if (d.go === 'd2') { ret.dataset.eggs = Object.keys(G.S.nests).find(h => G.S.nests[h].eggs.some(e => e.now)) || ''; d.go = 'eggs'; } // taken above (retAttend)
   if (d.go === 'backup') return BK.open();
   if (d.go === 'news') { news.hidden = false; return; }
   const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home, cards: home, myth: 'meadow', sky: 'meadow', art: home, wild: JSON.parse(ret.dataset.wild || '[]')[0] || home }[d.go];

@@ -39,7 +39,7 @@ import * as G from '../game/game.js';
 import { unlockInfo } from '../game/rules.js';
 const stageEl = () => document.getElementById('stage');
 // why a habitat is shut, and how far along: "초원 도감 8칸 + 하트 30개면 열려요 (지금 3칸 · ♥12)"
-export const lockText = id => { const L = unlockInfo(G.S, id); return L.need ? `${L.prev.name} 도감 ${L.need}칸 + 하트 ${L.hearts}개면 열려요 (지금 ${L.have}칸 · ♥${G.S.hearts})` : '아직 잠겨 있어요'; };
+export const lockText = id => { const L = unlockInfo(G.S, id); return L.friends ? `${L.prev.name} 친구 ${L.friends}마리가 태어나면 열려요 (지금 ${Math.min(L.got, L.friends)}마리)` : L.need ? `${L.prev.name} 도감 ${L.need}칸 + 하트 ${L.hearts}개면 열려요 (지금 ${L.have}칸 · ♥${G.S.hearts})` : '아직 잠겨 있어요'; };
 
 // a question over everything: true for ok; 취소, a tap outside, Esc / back = false
 export function ask(text, ok = '확인', no = '취소') {

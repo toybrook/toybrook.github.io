@@ -88,7 +88,7 @@ export function createActor(ctx, rec) {
       if (o && !ctx.night && d < 15 && o.join({ kind: 'tail', o: api, until: h.now + 20, side: body.r + o.body.r + 0.35, back: 0.3 })) { h.soc = { kind: 'lead', until: h.now + 20 }; if (social()) return; }
       else if (d > 5 && rec.id > ctx.bf.get(rec.id)) { const a = Math.atan2(h.z - b.z, h.x - b.x), x = b.x + Math.cos(a) * 3.5, z = b.z + Math.sin(a) * 3.5; if (ok(x, z)) { h.goal = { x, z, act: 'roam', n: 4 }; if (toward()) return; h.goal = null; } } }
     if ((!(ctx.rain > 0.3) || ctx.snowy) && Math.random() < (pe() === 'prank' ? 0.16 : 0.07) && startSocial()) return; // inbox 42 C 동물끼리 (15-2: on snow, snowing too: 눈싸움)
-    if (pe() === 'curious' && ctx.fresh?.length && peek()) return; // 17-1 호기심쟁이
+    if ((pe() === 'curious' || ctx.cheer > performance.now()) && ctx.fresh?.length && peek()) return; // 17-1 호기심쟁이; 92-3 everyone, the first prop
     if (h.atSet) { const k = h.atSet === 'perch' ? 2.5 : 1; h.atSet = false; h.state = Math.random() < 0.6 * k ? 'graze' : 'idle'; h.t = 0; h.dur = (3 + Math.random() * 4) * k; return; } // 23-2: got there: stays a while
     if (ctx.play?.length) { const m = me(); if (Math.random() < (due(ctx, h.now, m, st => !m.can || m.can(st.x, st.z)) ? 0.7 : 0.2) + 0.15 * (ctx.night || 0) && toPlay()) return; } // 28-2 소품 쓰기 (more by night: the campfire); inbox 42 C: 7 -> 20%, 70% while one of its kind waits (due)
     if (ctx.sets?.length && Math.random() < 0.3 && toSet()) return; // 23-2 세트 보너스: likes to play by a whole set

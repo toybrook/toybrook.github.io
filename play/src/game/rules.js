@@ -36,7 +36,7 @@ import { blank as artBlank, tidyArt, artTick } from './art.js'; // 17-2
 import { blank as wildBlank, tidyWild, wildTick } from './wild.js'; // 17-3
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
 import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's name
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -294,7 +294,7 @@ export function sureRarity(S, type) {
 export function crack(S, e, now, rng = Math.random, forced = false) { // forced: a secret for sure (?debug 다음 알 시크릿, game.hatch)
   const top = e.gift ? null : sureRarity(S, e.type), sure = !!top && RANK[top] >= RANK[e.rarity], rarity = sure ? top : e.rarity; // 44: a gift egg leaves the gauges alone
   let r;
-  if (sure) {
+  if (sure || e.gift) { // 93-1: a gift egg (no pity) also picks one not owned yet first
     const all = hatchPool(e.type, rarity).flatMap(({ sp, vs }) => vs.map(v => ({ species: sp.id, variant: v.id })));
     const miss = all.filter(p => !owned(S, key(p.species, p.variant))), from = miss.length ? miss : all;
     r = from[Math.floor(rng() * from.length)];
@@ -432,8 +432,8 @@ export function unlockInfo(S, habId) {
   const i = HABITATS.findIndex(h => h.id === habId), prev = HABITATS[i - 1];
   if (i <= 0) return { open: true, met: true };
   const cells = codexCells(prev.id).length, have = codexCells(prev.id).filter(c => S.codex[c.key]).length;
-  const need = Math.ceil(cells * B.unlock.codex);
-  return { open: S.unlocked.includes(habId), met: cells > 0 && have >= need && S.hearts >= B.unlock.hearts, prev, have, need, hearts: B.unlock.hearts };
+  const need = Math.ceil(cells * B.unlock.codex), friends = i === 1 ? B.unlock.friends : null, got = S.stats?.hatch || 0; // 92-2: the second habitat also at `friends` hatched
+  return { open: S.unlocked.includes(habId), met: cells > 0 && have >= need && S.hearts >= B.unlock.hearts || friends > 0 && got >= friends, prev, have, need, hearts: B.unlock.hearts, friends, got };
 }
 
 // Player actions. Each returns something falsy when it can't happen.
@@ -446,7 +446,8 @@ export function takeEgg(S, habId, now, eggId) {
   const [e] = n.eggs.splice(j, 1);
   const first = firstEgg(S); // inbox 61 B: a new save's very first egg is ready at once (바로 깨기), and the next one is laid now
   if (first) n.t = Math.min(n.t, now - eggGap(S)); // (「둥지에 다음 알이 있어요」); from the second on, the usual waits
-  S.slots[i] = { egg: e, start: now, end: first ? now : now + B.hatch[e.rarity] * (EGG[e.type]?.hatchScale ?? 1) };
+  const fast = B.nest.fast?.[(S.stats.hatch || 0) + S.slots.filter(Boolean).length]; // 92-1: a new save's first eggs (hatched + in slots before this one)
+  S.slots[i] = { egg: e, start: now, end: first || e.now ? now : now + (fast ?? B.hatch[e.rarity] * (EGG[e.type]?.hatchScale ?? 1)) };
   return i;
 }
 // A ready slot cracks. The animal waits (pending) for the reveal card's answer, so a reload shows the same card again.
@@ -873,7 +874,7 @@ const kstEnd = s => kst(s) + (/:/.test(String(s)) ? 0 : DAY_MS);
 const live = (m, now) => !(now < kst(m.start)) && !(now >= kstEnd(m.end));
 export const mailOpen = (S, m, now) => typeof m?.id === 'string' && !!m.id && !S.mailGot.includes(m.id) && live(m, now) && (m.before == null || S.since < kst(m.before));
 export function give(S, rw, now, rng = Math.random, at = null) { // at: the habitat on screen (a prop goes there if open)
-  const n = k => Math.max(0, Math.min(/eggs/i.test(k) ? 20 : 9999, Math.floor(+rw?.[k] || 0))); // a file from outside: whole numbers, capped
+  const n = k => Math.max(0, Math.min(/eggs|Now|Exp/i.test(k) ? 20 : 9999, Math.floor(+rw?.[k] || 0))); // a file from outside: whole numbers, capped
   const got = { hearts: n('hearts'), candy: n('candy'), eggs: 0, extra: 0, prop: null, legend: 0, wait: 0 };
   S.hearts += got.hearts; S.candy = (S.candy || 0) + got.candy;
   const open = [...S.unlocked].reverse().map(id => HAB[id]).filter(h => h?.nest && h.ready);
@@ -881,16 +882,20 @@ export function give(S, rw, now, rng = Math.random, at = null) { // at: the habi
     const h = open.find(h => (S.nests[h.id]?.eggs.length ?? 0) < B.nest.max);
     if (h) { (S.nests[h.id] ??= { t: now, eggs: [] }).eggs.push(layEgg(S, h.nest, rng)); got.eggs++; } else { S.hearts += GIFT.eggHearts; got.extra++; }
   }
-  got.legend = layLegend(S, now, n('legendEggs')); got.wait = n('legendEggs') - got.legend; S.giftEggs += got.wait;
-  const P = PROP[rw?.prop], hab = P?.habitat ?? (open.find(h => h.id === at) ?? open[0])?.id;
-  if (P && !P.paid && hab) { S.props.push({ uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 }); got.prop = P.id; }
+  const now1 = layLegend(S, now, n('legendNow'), { now: 1 }); // 93-1: hatches at once, in even with the nest full (the day-2 gift: a night fills it)
+  got.legend = layLegend(S, now, n('legendEggs')); got.wait = n('legendEggs') + n('legendNow') - got.legend - now1; got.legend += now1; S.giftEggs += got.wait;
+  got.hero = layLegend(S, now, n('heroEggs'), {}, 'heroic', true); // 93-2
+  if (n('freeExp')) { const h = HABITATS[0].id; S.freeExp = { ...S.freeExp, [h]: (S.freeExp?.[h] || 0) + n('freeExp') }; got.exp = n('freeExp'); }
+  const clue = !!rw?.clue && !S.props.some(p => p.prop === 'campfire'); if (rw?.clue) got.clue = 1; // 93-2 신수 단서: the campfire, free
+  const P = PROP[clue ? 'campfire' : rw?.prop], hab = clue ? MY.habitat : P?.habitat ?? (open.find(h => h.id === at) ?? open[0])?.id;
+  if (P && !P.paid && hab) { S.props.push({ uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0, ...(clue ? { cost: 0 } : {}) }); got.prop = P.id; }
   return got;
 }
 const newestNest = S => [...S.unlocked].reverse().map(id => HAB[id]).find(h => h?.nest && h.ready);
 export const legendRoom = S => { const h = newestNest(S); return !!h && (S.nests[h.id]?.eggs.length ?? 0) < B.nest.max; };
-function layLegend(S, now, k) {
+function layLegend(S, now, k, ex = {}, rarity = 'legendary', over = !!ex.now) { // over (93): the week's gift eggs go in even past a full nest
   const h = newestNest(S); let n = 0;
-  for (; n < k && legendRoom(S); n++) (S.nests[h.id] ??= { t: now, eggs: [] }).eggs.push({ ...egg(S, h.nest, 'legendary'), gift: true });
+  for (; n < k && h && (over || legendRoom(S)); n++) (S.nests[h.id] ??= { t: now, eggs: [] }).eggs.push({ ...egg(S, h.nest, rarity), gift: true, ...ex });
   return n;
 }
 // the waiting legend eggs, as many as the nest has room for
@@ -917,12 +922,16 @@ export function useCode(S, codes, input, now, used = [], rng = Math.random) {
 }
 // inbox 41 C 출석부: a slot a day (dayOf); none on a day before the last one's time (a clock turned back), so at most one a day.
 // The slots run on after days away; the 7th adds the next of ATTEND_PROPS (the 7 in turn). at: the habitat on screen (give)
+// 93-2 첫 주 선물: a save the game itself starts (game.js; not the sims, which keep newGame as it was) takes slot 1 now (♥),
+// so the next day's first visit is slot 2, the legendary egg
+export function weekStart(S, now) { S.flags.week1 = 1; S.attend = { day: dayOf(now), at: now, n: 1 }; S.hearts += WEEK1[0].hearts; return S; }
 export const attendDue = (S, now) => dayOf(now) !== S.attend.day && now >= S.attend.at;
 export function attend(S, now, rng = Math.random, at = null) {
   if (!attendDue(S, now)) return null;
-  const A = S.attend, L = ATTEND.length, k = A.n % L, rw = k === L - 1 ? { ...ATTEND[k], prop: ATTEND_PROPS[Math.floor(A.n / L) % ATTEND_PROPS.length] } : ATTEND[k];
+  const A = S.attend, L = ATTEND.length, k = A.n % L, wk = S.flags.week1 && A.n < WEEK1.length, // 93-2: a new save's first week
+    rw = wk ? WEEK1[A.n] : k === L - 1 ? { ...ATTEND[k], prop: ATTEND_PROPS[Math.floor(A.n / L) % ATTEND_PROPS.length] } : ATTEND[k];
   A.day = dayOf(now); A.at = now; A.n++;
-  const got = { slot: k + 1, ...give(S, rw, now, rng, at) };
+  const got = { slot: k + 1, week: wk ? A.n : 0, ...give(S, rw, now, rng, at) };
   return { got, events: [{ type: 'attend', got }] };
 }
 // 15-1 계절 이벤트 (data.js EVENTS, docs/event.md). The dates come from play/events.json (setCal; ui/event.js reads it and keeps

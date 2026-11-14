@@ -44,6 +44,8 @@ export function track(name, data, key = name) {
 }
 // inbox 61 C: seconds on the game screen today; rateDay(): true the first time a day (the 「어때요?」 bar, kept even while off)
 export const playedToday = () => st.pv?.day === dayOf(Date.now()) ? st.pv.s : 0;
+// 92: the device's first day (a player from before 0.71: never)
+export const firstDay = () => !!st.t0 && st.t0 !== 'old' && dayOf(Date.now()) === dayOf(st.t0);
 export const rateDay = () => { const d = dayOf(Date.now()); if (st.rate === d) return false; st.rate = d; keep(); return true; };
 // once ever, marked even while off (turned on later, it is not sent late)
 const once = (name, data) => { if (st[name]) return; st[name] = 1; keep(); track(name, data); };
@@ -82,6 +84,8 @@ export function watch(G) {
     const first = (name, done) => { if (!done || st[name]) return; st[name] = 1; keep(); if (st.t0 !== 'old' && today === dayOf(st.t0)) track(name); };
     first('first_nest', G.S.flags.nestTapped); first('first_decor', G.S.props.some(p => p.placed && !p.nat)); first('hatch_3', G.S.stats.hatch >= 3);
     first('first_drag', G.S.flags.carried); // 66-1
+    first('first_pet', G.S.stats.pet > 0); // 92-3
+    for (let k = 1; k <= 3; k++) if (G.S.stats.hatch >= k && !st['fw_egg' + k]) { st['fw_egg' + k] = 1; keep(); const s = (Date.now() - st.t0) / 1000; if (firstDay()) track('fw_egg' + k, { in: s < 30 ? '30초 안' : s < 60 ? '1분 안' : s < 180 ? '3분 안' : '3분 넘게' }); } // 92-1: from the first visit
     if (G.S.stats.hatch >= 2 && !st.hatch_2) { st.hatch_2 = 1; keep(); if (st.t0 !== 'old' && today === dayOf(st.t0) && st.h1) track('hatch_2', { in: Date.now() - st.h1 <= 120e3 ? '2분 안' : '2분 넘게' }); }
   };
   tick(); G.on(tick);

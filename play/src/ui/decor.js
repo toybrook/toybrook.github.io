@@ -164,7 +164,8 @@ ${rl ? railLine(railNow(false), '', '<button class="sb" data-rhelp>놓는 법</b
 // put the held one down where it is (null: red there, or the cap)
 function put() {
   const r = hab.decor.confirm(); if (!r) { toast('빨간 곳엔 놓을 수 없어요'); return null; }
-  const was = layoutOf(G.S, habId), ran = G.S.flags['train:' + habId], p = r.ring ? G.placeRing(habId, r.cells, r.clear) : G.placeProp(r.uid, r.x, r.z, r.rot, r); // 28-5 r: its colour, size, and the prop it stands on
+  const was = layoutOf(G.S, habId), ran = G.S.flags['train:' + habId], first = !G.S.props.some(p => p.placed && !p.nat), p = r.ring ? G.placeRing(habId, r.cells, r.clear) : G.placeProp(r.uid, r.x, r.z, r.rot, r); // 28-5 r: its colour, size, and the prop it stands on
+  if (p && first) hab.decor.cheer(); // 92-3 (first.js's toast says what the task gave)
   if (!p) toast(r.ring ? ringNo() ?? "놓을 수 없어요" : full(held?.prop)); else { sfx('place'); undo.push(was); if (undo.length > UNDO) undo.shift(); redo = []; if (r.ring && ran) toast('고리가 닫혔어요! 태엽 기차가 달려요', 2600, true); } // the first loop: main.js says so
   held = null; draw(); hab.decor.reveal(r.x, r.z, el.getBoundingClientRect().top); return p;
 }
