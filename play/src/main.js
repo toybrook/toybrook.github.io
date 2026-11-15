@@ -269,7 +269,7 @@ function showRet() {
 }
 ret.onclick = async e => {
   const b = e.target.closest('button'), d = b?.dataset; if (!d) return;
-  if (d.go === 'attend') { const t = takeToday(retHome()), r = b.getBoundingClientRect(); b.disabled = true; b.querySelector('small').textContent = t ? `받았어요 · ${t}` : '받았어요';
+  if (d.go === 'attend') { const t = takeToday(retHome()), r = b.getBoundingClientRect(); b.disabled = true; b.querySelector('small').textContent = !t ? '받았어요' : t.endsWith('받았어요') ? t : `받았어요 · ${t}`; // 102: a full nest's line says it itself
     for (let i = 0; i < 3; i++) setTimeout(() => heart(r.right - 30 + (i - 1) * 14, r.top + r.height / 2), i * 120); return; } // 76: no window; ♥ pops right there
   ret.hidden = true;
   if (retAttend()) { const t = takeToday(retHome()); if (t) toast(`오늘 출석 · ${t}`, 2600); }

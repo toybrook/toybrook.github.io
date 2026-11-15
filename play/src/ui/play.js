@@ -8,7 +8,7 @@ import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
 import { weatherAt } from '../habitat/weather.js';
 import { gameHours } from '../habitat/daylight.js';
-import { toast, hideToast, heart, span, josa, overlayOpen, clock, tip, resting, redodge } from './hud.js';
+import { toast, say, hideToast, heart, span, josa, overlayOpen, clock, tip, resting, redodge } from './hud.js';
 import { openCodex, hasNew } from './codex.js';
 import { initNest } from './nest.js';
 import { openStore, leaveStore } from './store.js';
@@ -191,11 +191,11 @@ export function initPlay(nav) {
     if (e.what === 'wish') fly(at(e.id), e.hearts); // a wish met for the first time: its small burst
     if (e.what === 'happy' || e.what === 'great') {
       const p = at(e.id), x = [];
-      if (e.egg?.slot != null) x.push('알을 부화 칸에 넣었어요'); else if (e.egg?.nest) x.push(`${HAB[e.egg.hab]?.name ?? ''} 둥지에 알을 두고 갔어요`); else if (e.egg?.hearts) x.push(`알 대신 ♥+${e.egg.hearts}`);
-      if (e.slot != null && e.slot >= 0) x.push('부화가 빨라졌어요');
+      const egg = [e.egg?.slot != null ? '알을 부화 칸에 넣었어요' : e.egg?.nest ? `${HAB[e.egg.hab]?.name ?? ''} 둥지에 알을 두고 갔어요` : e.egg?.hearts && `알 대신 ♥+${e.egg.hearts}`, e.slot != null && e.slot >= 0 && '부화가 빨라졌어요'].filter(Boolean);
+      if (egg.length) x.push(egg.join(' · '));
       if (e.gift?.prop) x.push(`선물 「${PROPS.find(P => P.id === e.gift.prop)?.name ?? ''}」 · 꾸미기 › ${tabName(e.gift.prop)}`); else if (e.gift?.hearts) x.push(`선물 ♥+${e.gift.hearts}`);
       if (e.memo?.prop) x.push(`기념 소품 「${PROPS.find(P => P.id === e.memo.prop)?.name ?? ''}」 · 꾸미기 › ${tabName(e.memo.prop)}`); else if (e.memo?.hearts) x.push(`기념 ♥+${e.memo.hearts}`); // 69-3
-      toast(`${e.what === 'great' ? '대만족! ' : ''}${nm}${josa(nm, '이', '가')} 기뻐해요 · ♥+${e.hearts}${x.length ? ' · ' + x.join(' · ') : ''}`, 3600, true);
+      say(`${e.what === 'great' ? '대만족! ' : ''}${nm}${josa(nm, '이', '가')} 기뻐해요${e.hearts ? ` · ♥+${e.hearts}` : ''}`); x.forEach(t => say(t)); // 102: one news a line, in turn (they came glued in one)
       fly(p, e.hearts + (e.egg?.hearts || 0) + (e.gift?.hearts || 0) + (e.memo?.hearts || 0)); if (e.what === 'great') sfx('grown');
       if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; }
     }
@@ -204,10 +204,10 @@ export function initPlay(nav) {
       toast(`「${P?.name ?? ''}」${josa(P?.name ?? '', '을', '를')} 받았어요 · 꾸미기 › ${tabName(e.prop)}에서 꺼내 손님 곁에 놓아 주세요`, 4200, true); }
     // 66-2 단골 · 큰 소원 · 정착 (after the 기뻐해요 toast: the next one waits for it)
     const later = (ms, f) => setTimeout(f, ms);
-    if (e.what === 'arrive' && here && e.big != null) later(3300, () => toast(`${nm}${josa(nm, '이', '가')} 큰 소원을 들고 왔어요 (${e.big + 1}/${GUEST.big}) · 눌러서 보세요`, 3600, true));
-    if (e.what === 'regular') later(3700, () => toast(`${nm}${josa(nm, '이', '가')} 단골이 됐어요 · 다음에 오면 큰 소원을 말해 줄 거예요`, 4200, true));
-    if (e.what === 'step' && e.s < e.n) later(3700, () => toast(`큰 소원 ${e.s}/${e.n} · ${nm}: 「내일 또 올게」`, 3600, true));
-    if (e.what === 'settle') later(3700, () => { toast(`${nm}${josa(nm, '이', '가')} 여기 살기로 했어요 · 떠돌이 친구${e.stored ? ' · 자리가 없어 보관함에 있어요' : ''}`, 4800, true); sfx('level'); });
+    if (e.what === 'arrive' && here && e.big != null) later(3300, () => say(`${nm}${josa(nm, '이', '가')} 큰 소원을 들고 왔어요 (${e.big + 1}/${GUEST.big}) · 눌러서 보세요`, 3600));
+    if (e.what === 'regular') later(3700, () => say(`${nm}${josa(nm, '이', '가')} 단골이 됐어요 · 다음에 오면 큰 소원을 말해 줄 거예요`, 4200));
+    if (e.what === 'step' && e.s < e.n) later(3700, () => say(`큰 소원 ${e.s}/${e.n} · ${nm}: 「내일 또 올게」`, 3600));
+    if (e.what === 'settle') later(3700, () => { say(`${nm}${josa(nm, '이', '가')} 여기 살기로 했어요 · 떠돌이 친구${e.stored ? ' · 자리가 없어 보관함에 있어요' : ''}`, 4800); sfx('level'); });
     if (e.what === 'dayEnd' && hab) dusk(e.k); // 69-3 하루 마무리
     if (e.what === 'hello') toast('떠돌이 손님이 찾아오기 시작했어요 · 소원을 들어주면 하트와 알을 두고 가요', 4200, true);
     if (e.what === 'tutDone') { const R = e.night && rosterOf({ k: e.night }); toast(R ? `오늘 밤 손님 · 「${R.name}」${josa(R.name, '이', '가')} 올지도 몰라요` : '손님맞이를 다 익혔어요 · 이제 손님이 가끔 찾아와요', 4200, true); }

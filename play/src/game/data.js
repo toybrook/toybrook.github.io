@@ -113,7 +113,7 @@ export const BALANCE = {
   candy: { price: 15, free: 1 },                     // 꼬마 사탕 (inbox 14): holds a baby's growth (nothing shows on it); given back when it grows on. Hearts; a new game has `free`
   pity: { heroic: 30, legendary: 180 },              // shard gauges per egg type: every egg cracked +1 to each; full = the next egg is that rarity (legendary first).
                                                      // A natural one of that rarity or better empties the gauge. Guaranteed eggs prefer variants not owned yet
-  secret: { chance: 0.02, sendBackX: 2 },            // any hatch: this chance of wearing one accessory (all equally likely); sending a secret back pays x2
+  secret: { chance: 0.03, sendBackX: 2 },            // any hatch: this chance of wearing one accessory (all equally likely); sending a secret back pays x2
   unlock: P.unlock,                                  // PACE
   maxVisible: 12,                                    // animals out in one habitat; also each zone's room (HABITATS room). Over either: storage
   decor: { max: 8, rails: 40 },                     // props placed in one habitat at once, before 땅 넓히기 (then expand.decor).
@@ -593,7 +593,7 @@ export const SPECIES = [
       stripes: [{ id: 'mint', name: '민트', body: '#a8e0c8', second: '#ffffff', accent: '#4ea688' }, { id: 'lemon', name: '레몬', body: '#fbe7a0', second: '#fffaf0', accent: '#c8a83a' }, { id: 'lavender', name: '라벤더', body: '#c4b2ec', second: '#ffffff', accent: '#8a70c8', seldom: true }],
       gradient: [{ id: 'forest', name: '숲', body: '#e8f4c8', second: '#6aa84f' }, { id: 'sea', name: '바다', body: '#eaf6ff', second: '#477cc6', accent: '#2f5a9a' }, { id: 'aurora', name: '오로라', body: '#9ff0c8', second: '#a585f0', accent: '#7a5cc8', seldom: true }],
     },
-    legendary: [{ id: 'coral', name: '용궁 산호', mat: 'coral', effect: 'bubbles' }] },
+    legendary: [{ id: 'coral', name: '별자리 거북', mat: 'star89', effect: 'bubbles' }] }, // 103 (사용자 결정): 101's constellation look (materials.js star89) in public; the id stays coral for saves
   { id: 'otter', name: '수달', habitat: 'pond', model: 'otter', colors: { accent: '#f2dfc0', beak: '#3a2a24' },
     palette: {
       solid: [{ id: 'brown', name: '갈색', body: '#9a6a48' }, { id: 'choco', name: '초코', body: '#6a4a36', accent: '#d8c0a0' }, { id: 'cream', name: '크림', body: '#e8d2b0', accent: '#fff6e6', seldom: true }],
@@ -752,12 +752,14 @@ export const SPECIES = [
 // 89-4 시범 (?m89, photos only; without it nothing here changes): the concept sheets' looks (Tier_fox_rex, Legends8) on the SDF
 // bodies, worn instead of the species' own look (MODELS m89, materials.js), and 신수 구미호 (the fox's nine tails: its legend file)
 export const M89 = false; // release build: the 89-4·90 trial looks stay off (89-2)
+// 97: ready = the five looks made ready for the game (each in place of the slot it names: odds, variant count and the codex the
+// same; a lighter level in the habitat, materials.js HAB89); trial = the rest, photos only
 if (M89) {
-  const o = { arcticFox: { glass: 'glass89', bluewhite: 'bw89fox', starlight: 'lacquer89' }, tRex: { glass: 'glass89', bluewhite: 'bw89rex', amberbone: 'amber89' },
-    sheep: { cotton: 'moon89' }, rabbit: { jade: 'jade89' }, reindeer: { lantern: 'cherry89' }, penguin: { aurora: 'aurora89' }, turtle: { coral: 'star89' } };
-  for (const k in o) MODELS[k].m89 = o[k];
+  const ready = { arcticFox: { glass: 'glass89', starlight: 'lacquer89' }, tRex: { glass: 'glass89' }, sheep: { cotton: 'moon89' }, rabbit: { jade: 'jade89' } }, // 103: the turtle's look is public now (its legendary)
+    trial = { arcticFox: { bluewhite: 'bw89fox' }, tRex: { bluewhite: 'bw89rex', amberbone: 'amber89' }, reindeer: { lantern: 'cherry89' }, penguin: { aurora: 'aurora89' } };
+  for (const k of new Set([...Object.keys(ready), ...Object.keys(trial)])) MODELS[k].m89 = { ...ready[k], ...trial[k] };
   MODELS.arcticFox.legend = { baby: 'assets/models/pilot89_fox_baby.glb', adult: 'assets/models/pilot89_fox_adult.glb' };
-  SPECIES.find(s => s.id === 'arcticFox').legendary.push({ id: 'gumiho89', name: '신수 구미호', mat: 'gumiho89' });
+  SPECIES.find(s => s.id === 'arcticFox').legendary.push({ id: 'gumiho89', name: '신수 구미호', mat: 'gumiho89' }, { id: 'gumiho89b', name: '신수 구미호(전신 옻칠)', mat: 'gumiho89b' }); // 97: A, B
 }
 
 // inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the
