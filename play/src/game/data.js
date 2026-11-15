@@ -387,9 +387,9 @@ export const MODELS = {
   penguin: {
     move: 'walk', walk: { hop: 0, trot: 1.2, pace: 0.6, roam: 0.55, water: 'swim', wet: 0.35, float: 0.55, slide: 0.15 }, legMat: 'hoof', // the chick's leg stub the shank's colour
     paints: ['cheek', 'face'], waddle: 8, // inbox 10: its painted layers (colors.paint) and a waddle, 8 degrees (figure.js)
-    files: { baby: 'assets/models/penguin_baby.glb', adult: 'assets/models/penguin_adult.glb' },
-    baby: sized('penguin', 'baby', { h: 1.575, r: 0.629, seg: [-0.037, 0.065], legs: { hip: 0.12, x: [0.24], z: 0.22 }, wing: [-0.05, 1, 0.54], attach: { head: { p: [0.16, 1.5, 0], r: [0, 0, -0.1], s: 1.05 }, neck: { p: [0.2, 1.04, 0], r: [0, 0, -0.3], s: 1.8 }, back: { p: [-0.64, 0.85, 0], r: [0, 0, 1.571], s: 1 }, eye: { p: [0.34, 1.18, 0], r: [0, 0, 0], s: 1.2 } } }),
-    adult: sized('penguin', 'adult', { h: 2.084, r: 0.648, seg: [0.044, 0.068], legs: { hip: 0.12, x: [0.2], z: 0.21 }, wing: [0, 0.923, 0.585], attach: { head: { p: [0.22, 2.03, 0], r: [0, 0, -0.1], s: 0.75 }, neck: { p: [0.2, 1.52, 0], r: [0, 0, -0.3], s: 1.1 }, back: { p: [-0.49, 0.95, 0], r: [0, 0, 1.62], s: 1 }, eye: { p: [0.31, 1.86, 0], r: [0, 0, 0], s: 0.84 } } }),
+    files: { baby: 'assets/models/penguin107_baby.glb', adult: 'assets/models/penguin107_adult.glb' }, // 107 (사용자 OK): 104's bodies (tools/bake-pilot89.mjs bodies, copied from pilot89_penguin_*); penguin_*.glb kept, unused
+    baby: sized('penguin', 'baby', { h: 1.697, r: 0.613, seg: [-0.016, 0.024], legs: { hip: 0.12, x: [0.2], z: 0.22 }, wing: [-0.031, 0.822, 0.56], attach: { head: { p: [0.1, 1.64, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.18, 0.98, 0], r: [0, 0, -0.3], s: 1.6 }, back: { p: [-0.56, 0.8, 0], r: [0, 0, 1.571], s: 1 }, eye: { p: [0.3, 1.42, 0], r: [0, 0, 0], s: 1.1 } } }),
+    adult: sized('penguin', 'adult', { h: 2.189, r: 0.595, seg: [-0.001, 0.038], legs: { hip: 0.12, x: [0.18], z: 0.2 }, wing: [0.011, 1.022, 0.52], attach: { head: { p: [0.2, 2.13, 0], r: [0, 0, -0.1], s: 0.72 }, neck: { p: [0.2, 1.62, 0], r: [0, 0, -0.3], s: 1 }, back: { p: [-0.48, 0.95, 0], r: [0, 0, 1.62], s: 1 }, eye: { p: [0.34, 1.98, 0], r: [0, 0, 0], s: 0.8 } } }),
   },
   polarBear: {
     move: 'walk', walk: { hop: 0, pace: 0.75, trot: 0.8, roam: 0.45, water: 'swim', wet: 0.3, float: 0.55 },
@@ -634,9 +634,9 @@ export const SPECIES = [
   // spots; hoof = the penguin's feet, the owl's talons, the seal's muzzle pads; beak = the beak / nose mesh; nostril = the
   // penguin's dark upper beak; horn = the antlers, the seal's cream bib, the penguin's pale yellow upper chest; paint = the
   // penguin's cheek comma and face. The legendaries are 가칭 (temporary names)
-  { id: 'penguin', fit: { wings: { r: [0, 0, 0.15], p: [0.06, 0.1, 0] }, medal: { adult: { r: [0, 0, 0.1], p: [0.1, 0, 0] } } }, name: '펭귄', habitat: 'snow', model: 'penguin', colors: { accent: '#fbf8f2', hoof: '#7a5638', beak: '#f3a440', nostril: '#33363d', horn: '#fbd98a', paint: { cheek: '#f7a23c', face: '#3c414b' } },
+  { id: 'penguin', fit: { wings: { r: [0, 0, 0.15], p: [0.06, 0.1, 0] }, medal: { adult: { r: [0, 0, 0.1], p: [0.1, 0, 0] } } }, name: '펭귄', habitat: 'snow', model: 'penguin', colors: { accent: '#f5ecdc', hoof: '#3e4044', beak: '#f3a440', nostril: '#33363d', horn: '#fbd98a', paint: { cheek: '#f7a23c', face: '#3c414b' } },
     palette: {
-      solid: [{ id: 'grey', name: '회색', body: '#626a78' }, { id: 'navy', name: '남색', body: '#3e4a66' }, { id: 'sky', name: '하늘', body: '#86a8cc', seldom: true }],
+      solid: [{ id: 'grey', name: '회색', body: '#4d4f54' }, { id: 'navy', name: '남색', body: '#3e4a66' }, { id: 'sky', name: '하늘', body: '#86a8cc', seldom: true }],
       twotone: [{ id: 'sky', name: '하늘', body: '#5a6880', second: '#a8d0ee' }, { id: 'mint', name: '민트', body: '#5e6e74', second: '#a4dfca' }, { id: 'pink', name: '분홍', body: '#6a6274', second: '#f4b8cc', seldom: true }],
       spots: [{ id: 'snow', name: '눈송이', body: '#626a78', second: '#ffffff' }, { id: 'sky', name: '하늘', body: '#86a8cc', second: '#ffffff' }, { id: 'starry', name: '별밤', body: '#3e5a7a', second: '#f6f0c8', seldom: true }],
       stripes: [{ id: 'mint', name: '민트', body: '#a8e0c8', second: '#ffffff' }, { id: 'sea', name: '바다', body: '#7fb3e8', second: '#ffffff' }, { id: 'ink', name: '먹색', body: '#ffffff', second: '#3a3436', seldom: true }],
@@ -760,6 +760,10 @@ if (M89) {
   for (const k of new Set([...Object.keys(ready), ...Object.keys(trial)])) MODELS[k].m89 = { ...ready[k], ...trial[k] };
   MODELS.arcticFox.legend = { baby: 'assets/models/pilot89_fox_baby.glb', adult: 'assets/models/pilot89_fox_adult.glb' };
   SPECIES.find(s => s.id === 'arcticFox').legendary.push({ id: 'gumiho89', name: '신수 구미호', mat: 'gumiho89' }, { id: 'gumiho89b', name: '신수 구미호(전신 옻칠)', mat: 'gumiho89b' }); // 97: A, B
+  // 104 시범: the arctic fox adult remodelled toward the concept the user chose (tools/bake-pilot89.mjs bodies); the penguin's two
+  // stages from 104 are public since 107 (MODELS.penguin, its colours above)
+  MODELS.arcticFox.files.adult = 'assets/models/pilot89_arcticFox_adult.glb';
+  MODELS.arcticFox.adult = sized('arcticFox', 'adult', { h: 2.136, r: 0.483, seg: [-1.305, 0.837], legs: { hip: 0.6, x: [0.34, -0.42], z: 0.21 }, attach: { head: { p: [0.72, 1.86, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.54, 1.36, 0], r: [0, 0, -0.8], s: 1.15 }, back: { p: [-0.15, 1.56, 0], r: [0, 0, 0], s: 1 }, eye: { p: [0.78, 1.63, 0], r: [0, 0, 0], s: 0.9 } } });
 }
 
 // inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the
