@@ -24,7 +24,8 @@ export const iosSafariTab = ({ ua = '', touch = 0, standalone = false }) => (/iP
 export const homeHintDue = (dev, flags = {}) => iosSafariTab(dev) && !flags.homeHintSeen;
 // inbox 64-A: Instagram·Threads(Barcelona)·Facebook·KakaoTalk·LINE in-app browsers keep their own storage, so the save stays behind there
 export const inApp = (ua = '') => /Instagram|Barcelona|Threads|FBAN|FBAV|FB_IAB|KAKAOTALK|Line\/|DaumApps/.test(ua);
-export const appHintDue = (dev, flags = {}) => inApp(dev.ua) && !flags.appHintSeen;
+// inbox 107: or inside another site's frame (와플 waffleweb.co): that save is apart from the one at toybrook.github.io
+export const appHintDue = (dev, flags = {}) => (inApp(dev.ua) || !!dev.framed) && !flags.appHintSeen;
 
 // text pasted or read from a file -> { save, at } or { err: what to tell the player }. newest: the game's SCHEMA_VERSION.
 export function unpack(text, edition, newest) {

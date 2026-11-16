@@ -37,7 +37,8 @@ ${u ? `<div class="row"><b>되돌리기 <small>(${sumUp(u)})</small></b><div cla
 const say = t => { const v = $('bkText')?.value || ''; msg = t; draw(); $('bkText').value = v; }; // keep what is in the box
 // inbox 39: this device for homeHintDue (a home-screen app opens standalone: manifest display)
 export const DEV = { ua: navigator.userAgent, touch: navigator.maxTouchPoints || 0,
-  standalone: navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches };
+  standalone: navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches,
+  framed: (() => { try { return top !== self; } catch { return true; } })() }; // inbox 107: in another site's frame (a cross-origin top may refuse to be read)
 export function open() { msg = ''; draw(); $('prefs').hidden = true; el.hidden = false; }
 
 async function copy(code) {
@@ -89,7 +90,7 @@ const linked = location.hash.startsWith('#backup=') && location.hash.slice(8);
 if (linked) history.replaceState(null, '', location.pathname + location.search); // the code does not stay in the address bar
 setTimeout(() => {
   if (linked) { let t = ''; try { t = decodeURIComponent(linked); } catch { /* cut short */ } open(); $('bkText').value = t; load(t); return; }
-  const done = sessionStorage.getItem(DONE); sessionStorage.removeItem(DONE);
+  let done = null; try { done = sessionStorage.getItem(DONE); sessionStorage.removeItem(DONE); } catch { /* storage off (a frame's blocked storage): nothing to say */ }
   if (done) toast(done === 'undo' ? '불러오기 전 저장으로 돌아왔어요' : '백업을 불러왔어요 · 설정 › 내 저장 백업에서 되돌릴 수 있어요', 3500, true);
   else if (G.refused === 'beta' || G.bad) { // on the start card when it is up (a toast would sit under it)
     const t = G.bad ? '저장을 읽을 수 없어서 처음부터 시작해요. 백업 코드가 있으면 설정 › 내 저장 백업에서 불러올 수 있어요.' : '베타 데이터는 정식판으로 옮길 수 없어요. 처음부터 시작해요.', i = $('intro');

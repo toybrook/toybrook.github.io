@@ -20,7 +20,7 @@ import { figureThumb, silhouetteThumb } from './thumbs.js';
 import { guestName } from '../game/visit.js';
 import { PE } from '../game/pals.js';
 import { sfx } from './sound.js';
-import { homeHintDue, appHintDue } from '../game/backup.js';
+import { homeHintDue, appHintDue, inApp } from '../game/backup.js';
 import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
 import { rosterOf, isRegular } from '../game/guests.js'; // 66-1 떠돌이 손님
 import { WISH, GUEST, guestWear } from '../game/guests-data.js';
@@ -284,7 +284,9 @@ export function initPlay(nav) {
     if (Date.now() - appQuiet < 2000) { appT = setTimeout(appBand, 800); return; }
     G.flag('appHintSeen'); track('webview_hint'); // 93-3
     const bar = Object.assign(document.createElement('div'), { className: 'rate appband', role: 'group' }); bar.setAttribute('aria-label', '다른 브라우저에서 이어서 하기');
-    bar.innerHTML = `<span>${/Instagram/.test(DEV.ua) ? '인스타' : '앱'} 안에서는 저장이 사라질 수 있어요 · 브라우저로 이어 하기</span><button data-a="copy">이어서 하기 링크 복사</button>${/Android/.test(DEV.ua) ? `<a class="more" data-a="chrome" href="${chromeLink()}">Chrome으로 열기</a>` : ''}<button class="x" aria-label="닫기">✕</button>`;
+    bar.innerHTML = DEV.framed && !inApp(DEV.ua) // inbox 107: in another site's frame (와플)
+      ? `<span>다른 사이트 화면 안에서 열렸어요. 여기서 한 저장은 toybrook.github.io에서 바로 연 저장과 따로이고, 아이폰은 한동안 안 들어오면 지워질 수 있어요. 설정 › 내 저장 백업으로 백업 코드를 만들어 두세요.</span><a class="more" data-a="tab" href="https://toybrook.github.io/play/" target="_blank" rel="noopener">새 창으로 열기</a><button class="x" aria-label="닫기">✕</button>`
+      : `<span>${/Instagram/.test(DEV.ua) ? '인스타' : '앱'} 안에서는 저장이 사라질 수 있어요 · 브라우저로 이어 하기</span><button data-a="copy">이어서 하기 링크 복사</button>${/Android/.test(DEV.ua) ? `<a class="more" data-a="chrome" href="${chromeLink()}">Chrome으로 열기</a>` : ''}<button class="x" aria-label="닫기">✕</button>`;
     document.body.append(bar); setTimeout(() => bar.remove(), 60e3); // the tips wait under it (hud.js)
     bar.onclick = async e => { const b = e.target.closest('button,a'); if (!b) return; if (b.dataset.a) track('webview_move', { by: b.dataset.a });
       if (b.dataset.a === 'copy') { const ok = await copyLink(); bar.remove(); if (ok) toast(/iPhone|iPad/.test(DEV.ua) ? '링크를 복사했어요 · 사파리 주소창에 붙여 넣어 열어 주세요' : '링크를 복사했어요 · Chrome 주소창에 붙여 넣어 열어 주세요', 4000, true); }
