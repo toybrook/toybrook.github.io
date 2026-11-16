@@ -4,6 +4,7 @@
 // A code holds only where things stand; no animals, hearts, eggs, names or anything about the player.
 // 69-4: what goes out is the 구경 링크 (ui/visit.js: the layout + the friends out there, opened to look at only), its QR and
 // 사진 모드's 구경 그림; a link pasted or read from a QR loads like a code. TG1 codes still load (and the 배치 저장 칸 keep them).
+import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { HABITATS, PROPS } from '../game/data.js';
 import { levelOf, LAY_NAMES } from '../game/rules.js';
@@ -29,34 +30,22 @@ export function openShare(id, api, keep) { habId = id; hab = api; before = keep;
 
 function qr(text) { try { const q = qrcode(0, 'L'); q.addData(text); q.make(); return q.createDataURL(4, 4); } catch { return null; } } // too long: none
 function gardenList() {
-  if (gardens === 'wait') return '<p class="bkp">불러오는 중…</p>';
-  if (gardens === 'err') return '<p class="bkp">목록을 읽지 못했어요 · 잠시 뒤 다시 해 주세요</p><div class="seg"><button data-act="gardens">다시 보기</button></div>';
-  if (!gardens) return '<div class="seg"><button data-act="gardens">추천 정원 보기</button></div>';
-  if (!gardens.length) return '<p class="bkp">아직 추천 정원이 없어요</p>';
+  if (gardens === 'wait') return $t('<p class="bkp">불러오는 중…</p>');
+  if (gardens === 'err') return $t('<p class="bkp">목록을 읽지 못했어요 · 잠시 뒤 다시 해 주세요</p><div class="seg"><button data-act="gardens">다시 보기</button></div>');
+  if (!gardens) return $t('<div class="seg"><button data-act="gardens">추천 정원 보기</button></div>');
+  if (!gardens.length) return $t('<p class="bkp">아직 추천 정원이 없어요</p>');
   return `<div class="gcards">${gardens.map((g, i) => `<div class="gcard"><img src="${esc(g.photo)}" alt="" loading="lazy"><b>${esc(g.title)}</b><small>${habName(g.hab)}</small>
-<button data-g="${i}"${g.hab === habId ? '' : ' disabled'}>${g.hab === habId ? '불러오기' : `${habName(g.hab)}에서 불러와요`}</button></div>`).join('')}</div>`;
+<button data-g="${i}"${g.hab === habId ? '' : ' disabled'}>${g.hab === habId ? $t('불러오기') : $t('{0}에서 불러와요', habName(g.hab))}</button></div>`).join('')}</div>`;
 }
 function draw() {
   const url = seeLink(habId), q = qr(url), ghosts = G.S.ghost?.[habId]?.length || 0, v = $('shText')?.value || '';
-  el.innerHTML = `<div><h2>구경 링크 · ${habName(habId)}</h2>
-<p class="bkp">소품 자리와 방향·색·크기, 쌓은 것, 칠한 땅, 넓히기 단계, 나와 있는 친구의 종류·색·장식이 담겨요. 이름·하트·알은 들어가지 않아요.</p>
-<div class="row"><b>배치 저장 칸</b>${LAY_NAMES.map((d, k) => { const L = G.S.lays?.[habId]?.[k]; // 28-5: 3 named layouts, saved as their codes
-    return `<div class="lay"><input id="lay${k}" maxlength="8" value="${esc(L?.n ?? d)}" aria-label="${k + 1}번 칸 이름" autocomplete="off"><button data-save="${k}">${L ? '덮어쓰기' : '저장'}</button><button data-lay="${k}"${L ? '' : ' disabled'}>불러오기</button></div>`; }).join('')}</div>
-<div class="row"><b>구경 링크</b><p class="bkp">받은 사람은 이 서식지를 둘러보기만 해요 · 그 사람의 저장은 바뀌지 않아요</p>${q ? `<img class="shqr" src="${q}" alt="구경 링크 QR">` : '<p class="bkp">배치가 많아 QR은 못 만들어요 · 링크를 보내 주세요</p>'}
-<textarea id="shMine" rows="3" readonly spellcheck="false">${url}</textarea><div class="seg"><button data-act="send">링크 보내기</button><button data-act="copy">복사</button><button data-act="card">구경 그림</button></div></div>
-<div class="row"><b>불러오기</b><textarea id="shText" rows="3" placeholder="받은 구경 링크나 꾸미기 코드(TG1.…)를 붙여 넣어요" spellcheck="false" autocomplete="off"></textarea>
-<div class="seg"><button data-act="load">불러오기</button>${'BarcodeDetector' in window ? '<button data-act="pick">QR 사진 고르기</button>' : ''}</div></div>
-<p class="bkmsg" role="status"${msg ? '' : ' hidden'}>${msg}</p>
-${G.S.layoutUndo?.hab === habId ? '<div class="row"><b>되돌리기</b><div class="seg"><button data-act="undo">불러오기 전으로 되돌리기</button></div></div>' : ''}
-${ghosts ? `<div class="row"><b>반투명 미리보기 ${ghosts}개</b><div class="seg"><button data-act="clear">미리보기 지우기</button></div></div>` : ''}
-<div class="row"><b>정원 구경하기</b>${gardenList()}</div>
-<input type="file" id="shFile" accept="image/*" hidden>
-<button data-close>닫기</button></div>`;
+  el.innerHTML = $t('<div><h2>구경 링크 · {0}</h2>\n<p class="bkp">소품 자리와 방향·색·크기, 쌓은 것, 칠한 땅, 넓히기 단계, 나와 있는 친구의 종류·색·장식이 담겨요. 이름·하트·알은 들어가지 않아요.</p>\n<div class="row"><b>배치 저장 칸</b>{1}</div>\n<div class="row"><b>구경 링크</b><p class="bkp">받은 사람은 이 서식지를 둘러보기만 해요 · 그 사람의 저장은 바뀌지 않아요</p>{2}\n<textarea id="shMine" rows="3" readonly spellcheck="false">{3}</textarea><div class="seg"><button data-act="send">링크 보내기</button><button data-act="copy">복사</button><button data-act="card">구경 그림</button></div></div>\n<div class="row"><b>불러오기</b><textarea id="shText" rows="3" placeholder="받은 구경 링크나 꾸미기 코드(TG1.…)를 붙여 넣어요" spellcheck="false" autocomplete="off"></textarea>\n<div class="seg"><button data-act="load">불러오기</button>{4}</div></div>\n<p class="bkmsg" role="status"{5}>{6}</p>\n{7}\n{8}\n<div class="row"><b>정원 구경하기</b>{9}</div>\n<input type="file" id="shFile" accept="image/*" hidden>\n<button data-close>닫기</button></div>', habName(habId), LAY_NAMES.map((d, k) => { const L = G.S.lays?.[habId]?.[k]; // 28-5: 3 named layouts, saved as their codes
+    return $t('<div class="lay"><input id="lay{0}" maxlength="8" value="{1}" aria-label="{2}번 칸 이름" autocomplete="off"><button data-save="{3}">{4}</button><button data-lay="{5}"{6}>불러오기</button></div>', k, esc(L?.n ?? d), k + 1, k, L ? $t('덮어쓰기') : $t('저장'), k, L ? '' : ' disabled'); }).join(''), q ? $t('<img class="shqr" src="{0}" alt="구경 링크 QR">', q) : $t('<p class="bkp">배치가 많아 QR은 못 만들어요 · 링크를 보내 주세요</p>'), url, 'BarcodeDetector' in window ? $t('<button data-act="pick">QR 사진 고르기</button>') : '', msg ? '' : ' hidden', msg, G.S.layoutUndo?.hab === habId ? $t('<div class="row"><b>되돌리기</b><div class="seg"><button data-act="undo">불러오기 전으로 되돌리기</button></div></div>') : '', ghosts ? $t('<div class="row"><b>반투명 미리보기 {0}개</b><div class="seg"><button data-act="clear">미리보기 지우기</button></div></div>', ghosts) : '', gardenList());
   $('shText').value = v;
   $('shFile').onchange = async e => { // a photo of a QR: the browser's own reader (Android Chrome and others; the button shows only then)
     const f = e.target.files[0]; if (!f) return;
-    try { const [c] = await new window.BarcodeDetector({ formats: ['qr_code'] }).detect(await createImageBitmap(f)); if (!c) return say('사진에서 QR을 찾지 못했어요'); $('shText').value = c.rawValue; load(c.rawValue); }
-    catch { say('사진을 읽지 못했어요 · 코드를 붙여 넣어 주세요'); }
+    try { const [c] = await new window.BarcodeDetector({ formats: ['qr_code'] }).detect(await createImageBitmap(f)); if (!c) return say($t('사진에서 QR을 찾지 못했어요')); $('shText').value = c.rawValue; load(c.rawValue); }
+    catch { say($t('사진을 읽지 못했어요 · 코드를 붙여 넣어 주세요')); }
   };
 }
 const say = t => { msg = t; draw(); };
@@ -76,42 +65,42 @@ async function loadGardens() {
 }
 // what loading did, in one line (rules.js importLayout counts)
 function summary(n, d) {
-  const t = [n.placed ? `소품 ${n.placed}개를 그 자리에 놓았어요` : '가진 소품 중엔 놓을 게 없었어요'];
-  if (n.trees) t.push(`나무·덤불·바위·꽃 ${n.trees}개도 코드 자리로`);
+  const t = [n.placed ? $t('소품 {0}개를 그 자리에 놓았어요', n.placed) : $t('가진 소품 중엔 놓을 게 없었어요')];
+  if (n.trees) t.push($t('나무·덤불·바위·꽃 {0}개도 코드 자리로', n.trees));
   if (n.ghost) { const c = {}; for (const g of G.S.ghost?.[habId] || []) c[g.prop] = (c[g.prop] || 0) + 1; // 28-5: which ones are missing
-    t.push(`모자란 소품 ${n.ghost}개(${Object.entries(c).map(([id, k]) => `${PROPS.find(P => P.id === id)?.name ?? id}${k > 1 ? ` ${k}` : ''}`).join(', ')})는 반투명 미리보기예요(레벨·하트로 얻으면 그 자리에서 시작해요)`); }
-  if (n.off || n.cellOff) t.push(`자리가 안 맞아 ${[n.off && `${n.off}개`, n.cellOff && `칠한 칸 ${n.cellOff}`].filter(Boolean).join('와 ')}는 빠졌어요${d.step > levelOf(G.S, habId) ? '(땅을 넓히면 더 들어가요)' : ''}`);
-  if (n.full) t.push(`소품 칸이 모자라 ${n.full}개는 빠졌어요`);
-  if (n.nat) t.push(`나무·덤불·바위·꽃이 모자라 ${n.nat}개는 빠졌어요`);
-  if (n.lock) t.push(`아직 못 쓰는 붓이라 ${n.lock}칸은 칠하지 않았어요`);
-  if (n.unknown) t.push(`모르는 소품 ${n.unknown}개는 건너뛰었어요`);
+    t.push($t('모자란 소품 {0}개({1})는 반투명 미리보기예요(레벨·하트로 얻으면 그 자리에서 시작해요)', n.ghost, Object.entries(c).map(([id, k]) => `${PROPS.find(P => P.id === id)?.name ?? id}${k > 1 ? ` ${k}` : ''}`).join(', '))); }
+  if (n.off || n.cellOff) t.push($t('자리가 안 맞아 {0}는 빠졌어요{1}', [n.off && $t('{0}개', n.off), n.cellOff && $t('칠한 칸 {0}', n.cellOff)].filter(Boolean).join($t('와 ')), d.step > levelOf(G.S, habId) ? $t('(땅을 넓히면 더 들어가요)') : ''));
+  if (n.full) t.push($t('소품 칸이 모자라 {0}개는 빠졌어요', n.full));
+  if (n.nat) t.push($t('나무·덤불·바위·꽃이 모자라 {0}개는 빠졌어요', n.nat));
+  if (n.lock) t.push($t('아직 못 쓰는 붓이라 {0}칸은 칠하지 않았어요', n.lock));
+  if (n.unknown) t.push($t('모르는 소품 {0}개는 건너뛰었어요', n.unknown));
   return t.join(' · ');
 }
 async function load(text, title) {
-  const m = /#see=([\w.-]+)/.exec(text), d = m ? readSee(m[1])?.d ?? { error: '구경 링크가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요' } : decode(text); if (d.error) return say(d.error); // 69-4: a link loads its layout
-  if (d.hab !== habId) return say(`${habName(d.hab)} 꾸미기 코드예요 · ${G.S.unlocked.includes(d.hab) ? `${habName(d.hab)}에서 불러와 주세요` : '그 서식지를 연 뒤에 불러올 수 있어요'}`);
-  if (!await ask(`지금 ${habName(habId)} 배치를 ${title ? `「${title}」` : '이 코드'}로 바꿔요.\n가진 소품만 놓이고, 없는 소품은 반투명 미리보기로 보여요.\n지금 배치는 한 번 남겨 둘게요.`, '불러오기')) return;
-  before?.(); const n = G.importLayout(habId, d, hab.decor.fitAll, hab.decor.cellOk); if (!n) return say('불러오지 못했어요');
+  const m = /#see=([\w.-]+)/.exec(text), d = m ? readSee(m[1])?.d ?? { error: $t('구경 링크가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요') } : decode(text); if (d.error) return say(d.error); // 69-4: a link loads its layout
+  if (d.hab !== habId) return say($t('{0} 꾸미기 코드예요 · {1}', habName(d.hab), G.S.unlocked.includes(d.hab) ? $t('{0}에서 불러와 주세요', habName(d.hab)) : $t('그 서식지를 연 뒤에 불러올 수 있어요')));
+  if (!await ask($t('지금 {0} 배치를 {1}로 바꿔요.\n가진 소품만 놓이고, 없는 소품은 반투명 미리보기로 보여요.\n지금 배치는 한 번 남겨 둘게요.', habName(habId), title ? `「${title}」` : $t('이 코드')), $t('불러오기'))) return;
+  before?.(); const n = G.importLayout(habId, d, hab.decor.fitAll, hab.decor.cellOk); if (!n) return say($t('불러오지 못했어요'));
   el.hidden = true; toast(summary(n, d), 6000);
 }
 
 el.onclick = async e => {
   const b = e.target.closest('button'), d = b?.dataset; if (!d || b.disabled) return;
   if (d.close != null) { el.hidden = true; return; }
-  if (d.act === 'copy') return say(await copy($('shMine').value) ? '구경 링크를 복사했어요 · 메신저에 붙여 넣어 보내요' : '복사가 안 돼요 · 위 칸의 링크를 길게 눌러 복사해 주세요');
-  if (d.act === 'send') { track('see_sent', undefined, 'see_sent#'); return send($('shMine').value, `${habName(habId)} 구경 오세요 · 토이브룩`); } // 69-4
+  if (d.act === 'copy') return say(await copy($('shMine').value) ? $t('구경 링크를 복사했어요 · 메신저에 붙여 넣어 보내요') : $t('복사가 안 돼요 · 위 칸의 링크를 길게 눌러 복사해 주세요'));
+  if (d.act === 'send') { track('see_sent', undefined, 'see_sent#'); return send($('shMine').value, $t('{0} 구경 오세요 · 토이브룩', habName(habId))); } // 69-4
   if (d.act === 'card') { el.hidden = true; (await import('./decor.js')).closeDecor(); $('snapBtn').click(); return; } // 69-4: framed in 사진 모드, then 구경 그림
   if (d.act === 'load') return load($('shText').value);
   if (d.act === 'pick') return $('shFile').click();
   if (d.act === 'gardens') return loadGardens();
   if (d.g) { const g = gardens[+d.g]; return load(g.code, g.title); }
   if (d.save) { const k = +d.save, had = G.S.lays?.[habId]?.[k]; // 28-5 배치 저장 칸
-    if (had && !await ask(`「${had.n}」 칸을 지금 배치로 덮어써요.`, '덮어쓰기')) return;
-    const L = G.saveLay(habId, k, $('lay' + k).value); return say(L ? `「${esc(L.n)}」에 지금 배치를 저장했어요` : '저장하지 못했어요'); }
+    if (had && !await ask($t('「{0}」 칸을 지금 배치로 덮어써요.', had.n), $t('덮어쓰기'))) return;
+    const L = G.saveLay(habId, k, $('lay' + k).value); return say(L ? $t('「{0}」에 지금 배치를 저장했어요', esc(L.n)) : $t('저장하지 못했어요')); }
   if (d.lay) { const L = G.S.lays?.[habId]?.[+d.lay]; if (L) return load(L.c, L.n); }
   if (d.act === 'undo') {
-    if (!await ask('불러오기 전 배치로 돌아가요. 지금 배치는 사라져요.', '되돌리기')) return;
-    before?.(); G.undoImport(); el.hidden = true; toast('불러오기 전 배치로 돌아왔어요'); return;
+    if (!await ask($t('불러오기 전 배치로 돌아가요. 지금 배치는 사라져요.'), $t('되돌리기'))) return;
+    before?.(); G.undoImport(); el.hidden = true; toast($t('불러오기 전 배치로 돌아왔어요')); return;
   }
-  if (d.act === 'clear') { before?.(); G.clearGhost(habId); return say('미리보기를 지웠어요'); }
+  if (d.act === 'clear') { before?.(); G.clearGhost(habId); return say($t('미리보기를 지웠어요')); }
 };

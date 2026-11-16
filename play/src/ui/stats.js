@@ -22,7 +22,7 @@ const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catc
 export const allowed = () => !!UMAMI_ID && PREFS.stats !== false && location.hostname === STATS_HOST
   && navigator.doNotTrack !== '1' && window.doNotTrack !== '1' && navigator.globalPrivacyControl !== true;
 let tag = null, failed = false; const queue = []; // failed: not reached (blocked, no network): not asked again till the browser is back online
-const send = (name, data) => { try { if (allowed()) window.umami?.track(name, data); } catch { /* the script's trouble, never the game's */ } };
+const send = (name, data) => { try { if (allowed()) window.umami?.track(name, { ...data, lang: document.documentElement.lang || 'ko' }); } catch { /* the script's trouble, never the game's */ } };
 function load() {
   if (tag || failed || !allowed() || !navigator.onLine) return;
   tag = Object.assign(document.createElement('script'), { src: 'https://cloud.umami.is/script.js', defer: true });

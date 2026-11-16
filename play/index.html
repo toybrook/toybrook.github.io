@@ -13,7 +13,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.79.13-d3ef4e0e">
+<meta name="build" content="toybrook-0.80.0-f54f5526">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -22,16 +22,16 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 <body>
 <div class="side">
   <h1>토이브룩 · 오픈 베타</h1>
-  월드맵에서 <b>초원</b>에 들어가 아래 <b>둥지</b> 버튼을 누르면 알과 부화 칸이 나와요. 알을 칸에 넣고 다 되면 눌러 깨우세요. 새끼를 서식지로 보내면 도감에 올라가고, 시간이 지나면 자라요(쓰다듬기·먹이로 조금 빨리). 꼬마 사탕을 주면 새끼 모습 그대로 있어요.<br><br>
-  드래그로 돌려 보기, 휠·두 손가락 벌리기로 확대, 오른쪽 드래그·Shift+드래그·두 손가락 드래그로 옮기기, 두 번 눌러 가까이 보기. 진행은 이 기기에만 저장돼요.
+  <span data-t>월드맵에서 <b>초원</b>에 들어가 아래 <b>둥지</b> 버튼을 누르면 알과 부화 칸이 나와요. 알을 칸에 넣고 다 되면 눌러 깨우세요. 새끼를 서식지로 보내면 도감에 올라가고, 시간이 지나면 자라요(쓰다듬기·먹이로 조금 빨리). 꼬마 사탕을 주면 새끼 모습 그대로 있어요.</span><br><br>
+  <span data-t>드래그로 돌려 보기, 휠·두 손가락 벌리기로 확대, 오른쪽 드래그·Shift+드래그·두 손가락 드래그로 옮기기, 두 번 눌러 가까이 보기. 진행은 이 기기에만 저장돼요.</span>
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="1086060" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="1100187" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
-  <script type="module">import { loadTip } from './src/ui/tips.js'; document.querySelector('#boot .ltip').innerHTML = loadTip();</script>
+  <script type="module">import { loadTip } from './src/ui/tips.js'; import { localize } from './src/i18n/i18n.js'; const b = document.getElementById('boot'); localize(b); b.querySelector('.ltip').innerHTML = loadTip();</script>
   <section class="scene" id="world" aria-label="월드맵">
    <div class="map" id="map"><!-- 390x693 design space, scaled to cover the stage like the image -->
     <img class="bg" id="mapimg" alt="섬 위에 초원, 연못, 설원, 공룡 정글 서식지가 있는 월드맵">
@@ -101,7 +101,9 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
       <li data-upd><i aria-hidden="true">🔄</i><span>새 판이 나오면 위에 「새로 고침」 띠가 떠요</span></li>
-      <li data-top><i aria-hidden="true">💞</i><span>단짝 놀이: 단짝 둘이 좋아하는 소품 곁에 있으면 함께 놀아요(처음엔 ♥+20)</span></li>
+      <li data-top><i aria-hidden="true">🐰</i><span>토끼에 「박하사탕」·「반딧불」, 양에 「밤하늘」·「뭉게구름」 모습이 새로 생겼어요</span></li>
+      <li><i aria-hidden="true">🌐</i><span>English·日本語로도 할 수 있어요(설정 › 언어)</span></li>
+      <li><i aria-hidden="true">💞</i><span>단짝 놀이: 단짝 둘이 좋아하는 소품 곁에 있으면 함께 놀아요(처음엔 ♥+20)</span></li>
       <li><i aria-hidden="true">🎁</i><span>첫 주 선물: 새로 시작하면 이틀째에 전설 알, 6일째에 영웅 알, 7일째에 신수 단서를 받아요</span></li>
       <li><i aria-hidden="true">❄️</i><span>12월 5일부터 2주 동안 첫눈 이벤트: 눈 덮인 초원에서 눈더미를 모아 눈사람을 만들고, 친구에게 털모자를 씌워요</span></li>
     </ul>

@@ -30,6 +30,7 @@
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
+import { $t, ko } from '../i18n/i18n.js';
 import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
 import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
 import { blank as palBlank, tidyPals, palTick, peOf } from './pals.js'; // 17-1
@@ -816,7 +817,7 @@ export function stowProp(S, uid) {
   p.placed = false; tidy(S); return p; // 28-5: what stood on it goes into storage too
 }
 // 28-5 배치 저장 칸: per habitat 3 named layouts ({ n: name, c: its 꾸미기 code, at }); loading one is loading its code (share.js)
-export const LAY_NAMES = ['봄 정원', '밤 축제', '배치 3'];
+export const LAY_NAMES = [$t('봄 정원'), $t('밤 축제'), $t('배치 3')];
 export function saveLay(S, habId, k, name, now) {
   if (!HAB[habId] || !(k >= 0 && k < LAY_NAMES.length)) return null;
   const L = Array.from({ length: LAY_NAMES.length }, (_, i) => isObj(S.lays[habId]?.[i]) ? S.lays[habId][i] : null);
@@ -825,15 +826,16 @@ export function saveLay(S, habId, k, name, now) {
 // 26-4 아끼는 친구 and names. A name: up to 8 letters, without < > & " ' ` (names go into the windows' HTML) or control characters
 export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'` -]/g, '').trim()].slice(0, 8).join('').trim() : '';
 // inbox 58: a variant whose name has the species in it already (황금 복돼지) is not called 황금 복돼지 돼지
-export const twoName = (v = '', s = '') => (!v ? s : !s || v.includes(s) ? v : `${v} ${s}`);
+export const twoName = (v = '', s = '') => (!v ? s : !s || v.toLowerCase().includes(s.toLowerCase()) ? v : `${v} ${s}`); // 123: Duck / duck
 // 86-3라: a common is called by its colour, 단색 left out: 「흰 닭」 (not 「단색 닭 흰색」), 「갈색 점박이 말」, 「깨점 닭」 (the colour names
 // the dots already). cId undefined: not known (a postcard keeps no colour): 「닭」, 「점박이 닭」. Names only: ids and saves as they were
-const ADJ = { 흰색: '흰', 노랑: '노란', 하늘: '하늘색', 흑고니: '검은' };
-export const lookName = (sp, v, cId) => { const V = variantOf(sp, v), s = SP[sp]?.name;
+// 123: the tests run on the Korean names (ko()), so they hold in English and Japanese too (not 「Inky Spotted Cow」, 「Boar Striped Pig」)
+const ADJ = { 흰색: [$t('흰'), '흰'], 노랑: [$t('노란'), '노란'], 하늘: [$t('하늘색'), '하늘색'], 흑고니: [$t('검은'), '검은'] };
+export const lookName = (sp, v, cId) => { const V = variantOf(sp, v), s = SP[sp]?.name, sk = ko(s ?? '');
   if (V?.rarity !== 'common') return twoName(V?.name, s);
-  const c = cId !== undefined && colorOf(sp, v, cId), dots = V.id === 'spots' && /점$|얼룩/.test(c?.name);
-  const n = c ? ADJ[c.name] ?? c.name : '', p = V.id === 'solid' || dots ? '' : V.name; // a colour that names the species (멧돼지): 「줄무늬 멧돼지」
-  return (n.includes(s) ? [p, n] : [s.startsWith(n) ? '' : n, p, s]).filter(Boolean).join(' '); }; // 흰 + 흰올빼미: 「흰올빼미」
+  const c = cId !== undefined && colorOf(sp, v, cId), ck = c ? ko(c.name) : '', dots = V.id === 'spots' && /점$|얼룩/.test(ck);
+  const n = c ? ADJ[ck]?.[0] ?? c.name : '', nk = c ? ADJ[ck]?.[1] ?? ck : '', p = V.id === 'solid' || dots ? '' : V.name; // a colour that names the species (멧돼지): 「줄무늬 멧돼지」
+  return (nk.includes(sk) ? [p, n] : [sk.startsWith(nk) ? '' : n, p, s]).filter(Boolean).join(' '); }; // 흰 + 흰올빼미: 「흰올빼미」
 export const kindName = a => (a.wd && GUESTS.find(R => R.k === a.wd)?.name) || lookName(a.species, a.variant, a.color); // 66-2: a settled guest keeps its name
 export const tierOf = a => a.wd ? EARNED.wanderer : RAR[variantOf(a.species, a.variant)?.rarity]; // 66-2: 떠돌이 tier, never sold
 export const growStage = lv => [2, 3, 4, 5, 6].filter(n => lv >= needFor('expand:' + n)).length; // 68-3: 명성 steps = the 땅 넓히기 levels (3/8/11/14/18)
@@ -941,7 +943,7 @@ function layLegend(S, now, k, ex = {}, rarity = 'legendary', over = !!ex.now) { 
 // the waiting legend eggs, as many as the nest has room for
 export function claimLegend(S, now) {
   const k = layLegend(S, now, S.giftEggs); if (!k) return null;
-  S.giftEggs -= k; const got = [{ id: 'legend', title: '기다리던 전설 알', hearts: 0, candy: 0, eggs: 0, extra: 0, prop: null, legend: k, wait: 0 }];
+  S.giftEggs -= k; const got = [{ id: 'legend', title: $t('기다리던 전설 알'), hearts: 0, candy: 0, eggs: 0, extra: 0, prop: null, legend: k, wait: 0 }];
   return { got, events: [{ type: 'gift', got }] };
 }
 // mail that can be had now (ids: only those), each once: ids kept in mailGot
@@ -957,7 +959,7 @@ export function useCode(S, codes, input, now, used = [], rng = Math.random) {
   if (!c || now < kst(c.start)) return { err: 'none' };
   if (S.codes.includes(k) || used.includes(k)) return { err: 'used' };
   if (!live(c, now)) return { err: 'end' };
-  S.codes.push(k); const got = [{ id: k, title: String(c.title ?? '선물 코드'), ...give(S, c.rewards, now, rng) }];
+  S.codes.push(k); const got = [{ id: k, title: String(c.title ?? $t('선물 코드')), ...give(S, c.rewards, now, rng) }];
   return { got, events: [{ type: 'gift', got }] };
 }
 // inbox 41 C 출석부: a slot a day (dayOf); none on a day before the last one's time (a clock turned back), so at most one a day.

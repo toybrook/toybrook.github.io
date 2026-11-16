@@ -2,6 +2,7 @@
 // { game, edition, v: schemaVersion, at, sum, save }; sum = FNV-1a of edition + save JSON (catches a cut-off or edited
 // code, not a cheat guard). Moving a save, not sharing one: a code given to someone copies the animals (not blocked).
 // No personal data: the save has none (settings are kept apart in toyhabitat.prefs and do not go in).
+import { $t } from '../i18n/i18n.js';
 import { now } from './clock.js';
 
 const GAME = 'toyhabitat', TAG = 'TB1.', MAX = 1e6; // MAX: characters; a full late save is ~30 KB
@@ -30,15 +31,15 @@ export const appHintDue = (dev, flags = {}) => (inApp(dev.ua) || !!dev.framed) &
 // text pasted or read from a file -> { save, at } or { err: what to tell the player }. newest: the game's SCHEMA_VERSION.
 export function unpack(text, edition, newest) {
   text = String(text ?? '').trim();
-  if (!text) return { err: '백업 코드를 붙여 넣거나 파일을 골라 주세요' };
-  if (text.length > MAX) return { err: '너무 커서 백업이 아니에요' };
+  if (!text) return { err: $t('백업 코드를 붙여 넣거나 파일을 골라 주세요') };
+  if (text.length > MAX) return { err: $t('너무 커서 백업이 아니에요') };
   let o;
   try { o = JSON.parse(text.startsWith(TAG) ? unb64(text.slice(TAG.length).replace(/\s+/g, '')) : text); }
-  catch { return { err: text.startsWith(TAG) ? '코드가 손상됐어요 · 끝까지 다 복사됐는지 확인해 주세요' : '백업 코드가 아니에요' }; }
-  if (!o || typeof o !== 'object' || o.game !== GAME) return { err: '다른 게임의 데이터예요' };
-  if (!o.save || typeof o.save !== 'object' || o.sum !== fnv(o.edition + JSON.stringify(o.save))) return { err: '코드가 손상됐어요 · 끝까지 다 복사됐는지 확인해 주세요' };
-  if ((o.edition || 'beta') !== edition) return { err: edition === 'release' ? '베타 데이터는 정식판으로 옮길 수 없어요.' : '정식판 데이터는 베타에서 열 수 없어요.' };
-  if (!(o.save.schemaVersion >= 1)) return { err: '읽을 수 없는 백업이에요' };
-  if (o.save.schemaVersion > newest) return { err: '더 새 버전에서 만든 백업이에요 · 페이지를 새로 고친 뒤 다시 해 주세요' };
+  catch { return { err: text.startsWith(TAG) ? $t('코드가 손상됐어요 · 끝까지 다 복사됐는지 확인해 주세요') : $t('백업 코드가 아니에요') }; }
+  if (!o || typeof o !== 'object' || o.game !== GAME) return { err: $t('다른 게임의 데이터예요') };
+  if (!o.save || typeof o.save !== 'object' || o.sum !== fnv(o.edition + JSON.stringify(o.save))) return { err: $t('코드가 손상됐어요 · 끝까지 다 복사됐는지 확인해 주세요') };
+  if ((o.edition || 'beta') !== edition) return { err: edition === 'release' ? $t('베타 데이터는 정식판으로 옮길 수 없어요.') : $t('정식판 데이터는 베타에서 열 수 없어요.') };
+  if (!(o.save.schemaVersion >= 1)) return { err: $t('읽을 수 없는 백업이에요') };
+  if (o.save.schemaVersion > newest) return { err: $t('더 새 버전에서 만든 백업이에요 · 페이지를 새로 고친 뒤 다시 해 주세요') };
   return { save: o.save, at: o.at };
 }

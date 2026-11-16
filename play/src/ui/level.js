@@ -2,6 +2,7 @@
 // ("레벨 6! 새로 풀린 것: 풍차"). The XP and what each level opens are BALANCE.level; rules.js keeps S.xp / S.lv.
 // 23-2: 도전 과제 (game/achieve.js) from the level sheet: the list with each one's progress; (74: 칭호 hidden)
 // (shown under the level). A toast when one is done.
+import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B, SETS, BRUSHES } from '../game/data.js';
 import { PROP, HAB, xpAt, unlocksBetween, growStage, slotsAt } from '../game/rules.js';
@@ -15,17 +16,17 @@ const $ = id => document.getElementById(id);
 // an unlock key in words: [name, what it is, the props to show]
 export function unlockText(k) {
   const [kind, id] = k.split(':'), where = P => P.habitat ? ` · ${HAB[P.habitat].name}` : '';
-  if (kind === 'set') { const s = SETS.find(s => s.id === id); return [`${s.name} 세트`, s.props.map(p => PROP[p].name).join(' · ') + where(PROP[s.props[0]]), s.props]; }
-  if (kind === 'prop') return [PROP[id].name, '큰 소품' + where(PROP[id]), [id]];
-  if (kind === 'brush') { const b = BRUSHES.find(b => b.id === id); return [`${b.name} 붓`, '땅 칠하기', [], b.c]; }
-  return [`땅 넓히기 ${id}단계`, `하트 ${B.expand.price[id - 1]}개로 살 수 있어요`, []];
+  if (kind === 'set') { const s = SETS.find(s => s.id === id); return [$t('{0} 세트', s.name), s.props.map(p => PROP[p].name).join(' · ') + where(PROP[s.props[0]]), s.props]; }
+  if (kind === 'prop') return [PROP[id].name, $t('큰 소품') + where(PROP[id]), [id]];
+  if (kind === 'brush') { const b = BRUSHES.find(b => b.id === id); return [$t('{0} 붓', b.name), $t('땅 칠하기'), [], b.c]; }
+  return [$t('땅 넓히기 {0}단계', id), $t('하트 {0}개로 살 수 있어요', B.expand.price[id - 1]), []];
 }
 
 export function initLevel(getApi) {
   const stage = $('stage'), pill = document.createElement('button');
-  pill.className = 'pill lvl'; pill.id = 'lvPill'; pill.setAttribute('aria-label', '정원사 레벨');
+  pill.className = 'pill lvl'; pill.id = 'lvPill'; pill.setAttribute('aria-label', $t('정원사 레벨'));
   pill.innerHTML = '<b></b><i><s></s></i>'; $('hearts').after(pill);
-  const sheet = mk('lvSheet', 'intro pop lvs', '정원사 레벨'), card = mk('lvup', 'intro pop lvup', '레벨이 올랐어요'), achs = mk('achSheet', 'intro pop lvs ach', '도전 과제');
+  const sheet = mk('lvSheet', 'intro pop lvs', $t('정원사 레벨')), card = mk('lvup', 'intro pop lvup', $t('레벨이 올랐어요')), achs = mk('achSheet', 'intro pop lvs ach', $t('도전 과제'));
   function mk(id, cls, label) { const el = document.createElement('section'); el.id = id; el.className = cls; el.hidden = true; el.setAttribute('aria-label', label); stage.append(el); return el; }
   const part = L => { const a = xpAt(L), b = xpAt(L + 1); return [G.S.xp - a, b - a]; };
   function draw() { const L = G.S.lv, [x, n] = part(L); pill.firstChild.textContent = `Lv ${L}`; pill.querySelector('s').style.width = Math.min(100, x / n * 100) + '%'; }
@@ -39,12 +40,7 @@ export function initLevel(getApi) {
   const done = () => ACH.filter(a => G.S.ach?.[a.id]).length;
   pill.onclick = () => {
     const L = G.S.lv, [x, n] = part(L), X = B.level.xp, road = Object.entries(B.level.unlock);
-    sheet.innerHTML = `<div><h2>정원사 레벨 ${L}</h2><p class="bar"><i style="width:${Math.min(100, x / n * 100)}%"></i></p><p class="sub">다음 레벨까지 ${n - x} XP · 모은 XP ${G.S.xp}</p>
-<h3>XP를 받는 것</h3><ul class="src"><li>도감에 새 칸<b>+${X.codex}</b></li><li>새끼가 다 자라면<b>+${X.grown}</b></li><li>쓰다듬기 (하루 ${X.petDaily}번까지)<b>+${X.pet}</b></li><li>하루 첫 방문<b>+${X.login}</b></li><li>도전 과제 하나<b>+${X.achieve}</b></li></ul>
-<button class="achBtn" data-ach>도전 과제 ${done()}/${ACH.length}</button>
-<h3>레벨마다 풀리는 것</h3><ol class="road">${road.map(([l, list]) => `<li class="${+l <= L ? 'done' : +l === L + 1 ? 'next' : ''}"><em>Lv ${l}</em><span>${list.map(k => unlockText(k)[0]).join(', ')}</span></li>`).join('')}
-<li class="${L > road.length ? 'done' : ''}"><em>그 뒤</em><span>${B.level.after} XP마다 레벨이 올라요</span></li></ol>
-<p class="sub">하트로 사는 가격은 그대로예요. 레벨은 살 수 있는 자격이에요. 서식지는 도감으로 열려요.</p><button data-close>닫기</button></div>`;
+    sheet.innerHTML = $t('<div><h2>정원사 레벨 {0}</h2><p class="bar"><i style="width:{1}%"></i></p><p class="sub">다음 레벨까지 {2} XP · 모은 XP {3}</p>\n<h3>XP를 받는 것</h3><ul class="src"><li>도감에 새 칸<b>+{4}</b></li><li>새끼가 다 자라면<b>+{5}</b></li><li>쓰다듬기 (하루 {6}번까지)<b>+{7}</b></li><li>하루 첫 방문<b>+{8}</b></li><li>도전 과제 하나<b>+{9}</b></li></ul>\n<button class="achBtn" data-ach>도전 과제 {10}/{11}</button>\n<h3>레벨마다 풀리는 것</h3><ol class="road">{12}\n<li class="{13}"><em>그 뒤</em><span>{14} XP마다 레벨이 올라요</span></li></ol>\n<p class="sub">하트로 사는 가격은 그대로예요. 레벨은 살 수 있는 자격이에요. 서식지는 도감으로 열려요.</p><button data-close>닫기</button></div>', L, Math.min(100, x / n * 100), n - x, G.S.xp, X.codex, X.grown, X.petDaily, X.pet, X.login, X.achieve, done(), ACH.length, road.map(([l, list]) => `<li class="${+l <= L ? 'done' : +l === L + 1 ? 'next' : ''}"><em>Lv ${l}</em><span>${list.map(k => unlockText(k)[0]).join(', ')}</span></li>`).join(''), L > road.length ? 'done' : '', B.level.after);
     sheet.querySelector('[data-close]').onclick = () => { sheet.hidden = true; };
     sheet.querySelector('[data-ach]').onclick = () => { sheet.hidden = true; list(); };
     sheet.hidden = false;
@@ -55,10 +51,9 @@ export function initLevel(getApi) {
 
   function list() {
     const S = G.S;
-    achs.innerHTML = `<div><h2>도전 과제</h2><p class="sub">${done()}/${ACH.length} 이룸 · 하나마다 XP +${B.level.xp.achieve}</p><ul class="achl">${ACH.map(a => {
+    achs.innerHTML = $t('<div><h2>도전 과제</h2><p class="sub">{0}/{1} 이룸 · 하나마다 XP +{2}</p><ul class="achl">{3}</ul>\n<p class="btns"><button data-back>정원사 레벨</button><button data-close>닫기</button></p></div>', done(), ACH.length, B.level.xp.achieve, ACH.map(a => {
       const ok = S.ach?.[a.id], v = Math.min(a.n, a.v(S)); // 74: 칭호 hidden (S.title stays in saves, shown nowhere)
-      return `<li class="${ok ? 'done' : ''}"><b>「${a.title}」</b><em>${ok ? '✓' : `${v}/${a.n}`}</em><small>${a.text}</small>${ok ? '' : `<i><s style="width:${v / a.n * 100}%"></s></i>`}</li>`; }).join('')}</ul>
-<p class="btns"><button data-back>정원사 레벨</button><button data-close>닫기</button></p></div>`;
+      return `<li class="${ok ? 'done' : ''}"><b>「${a.title}」</b><em>${ok ? '✓' : `${v}/${a.n}`}</em><small>${a.text}</small>${ok ? '' : `<i><s style="width:${v / a.n * 100}%"></s></i>`}</li>`; }).join(''));
     achs.querySelector('[data-close]').onclick = () => { achs.hidden = true; };
     achs.querySelector('[data-back]').onclick = () => { achs.hidden = true; pill.onclick(); };
     achs.hidden = false;
@@ -79,17 +74,15 @@ export function initLevel(getApi) {
     if (topWindow() || overlayOpen() || document.body.classList.contains('photo') || document.body.classList.contains('skyview')) return; // 16-2: not over the sky
     const onMap = !$('world').classList.contains('hidden') || !$('loading').hidden; // inbox 43: a card left from the last visit waits for the habitat (on the map it would eat the 초원 tap)
     const xa = B.level.xp.achieve;
-    if (got.length === 1) toast(`도전 과제 「${got[0].title}」 · ${got[0].text} · XP +${xa}`, 3200);
-    else if (got.length) toast(`도전 과제 ${got.length}개를 이뤘어요 · XP +${got.length * xa} · 위의 Lv에서 볼 수 있어요`, 3200);
+    if (got.length === 1) toast($t('도전 과제 「{0}」 · {1} · XP +{2}', got[0].title, got[0].text, xa), 3200);
+    else if (got.length) toast($t('도전 과제 {0}개를 이뤘어요 · XP +{1} · 위의 Lv에서 볼 수 있어요', got.length, got.length * xa), 3200);
     got = [];
     const since = G.now() - (G.S.flags.lvCard?.at || 0); // a clock set back (since < 0) does not hold the card
     if (!pend || !card.hidden || (since >= 0 && since < GAP) || onMap || resting()) return; // inbox 43
     const { level, from } = pend, unlocks = unlocksBetween(from, level); pend = null; G.flag('lvCard', { lv: level, at: G.now() });
     // 66-2 명성 (this Lv): a 땅 넓히기 Lv also grows the habitats a step (habitat.js grow), and new guests start to come
     const grew = growStage(level) > growStage(from), news = GUESTS.filter(R => R.lv > from && R.lv <= level && !R.when && G.S.unlocked.includes(R.hab)).map(R => R.name);
-    card.innerHTML = `<div><h2>레벨 ${level}!</h2>${unlocks.length ? `<p class="sub">새로 풀린 것</p><ul>${unlocks.map(k => row(k, true)).join('')}</ul>` : '<p class="sub">정원사 레벨이 올랐어요</p>'}${
-      slotsAt(level) > slotsAt(from) ? `<p class="sub">부화 칸 +${slotsAt(level) - slotsAt(from)}</p>` : ''}${ // 112
-      grew ? '<p class="sub">소문이 나서 서식지에 들꽃 무더기와 오솔길이 생겼어요</p>' : ''}${news.length ? `<p class="sub">새 손님이 찾아오기 시작해요 · ${news.join(', ')}</p>` : ''}<button data-close>좋아요</button></div>`;
+    card.innerHTML = $t('<div><h2>레벨 {0}!</h2>{1}{2}{3}{4}<button data-close>좋아요</button></div>', level, unlocks.length ? $t('<p class="sub">새로 풀린 것</p><ul>{0}</ul>', unlocks.map(k => row(k, true)).join('')) : $t('<p class="sub">정원사 레벨이 올랐어요</p>'), slotsAt(level) > slotsAt(from) ? $t('<p class="sub">부화 칸 +{0}</p>', slotsAt(level) - slotsAt(from)) : '', grew ? $t('<p class="sub">소문이 나서 서식지에 들꽃 무더기와 오솔길이 생겼어요</p>') : '', news.length ? $t('<p class="sub">새 손님이 찾아오기 시작해요 · {0}</p>', news.join(', ')) : '');
     thumbs(card);
     card.querySelector('[data-close]').onclick = () => { card.hidden = true; tip('level', '#lvPill'); };
     card.hidden = false; sfx('level');

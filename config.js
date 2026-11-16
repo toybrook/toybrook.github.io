@@ -17,6 +17,7 @@ for (const a of document.querySelectorAll('[data-link]')) {
   const k = a.dataset.link, v = SITE[k], mail = k === 'CONTACT_EMAIL';
   if (!on(v)) { a.removeAttribute('href'); a.dataset.todo = k; if (a.dataset.soon) a.textContent = a.dataset.soon; continue; }
   a.href = mail ? 'mailto:' + v : v;
+  if (k === 'PLAY_URL' && document.documentElement.lang !== 'ko') a.href += '?lang=' + document.documentElement.lang; // 119: the English / Japanese page opens the game in that language (until 설정 › 언어 is picked)
   if (mail && 'show' in a.dataset) a.textContent = v;
 }
 // 등급 자리(index.html의 #rating): 등급분류를 받아 RATING_MARK나 RATING_TEXT를 채우면 보입니다.

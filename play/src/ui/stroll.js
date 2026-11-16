@@ -1,5 +1,6 @@
 // 13-1 산책 보내기: the length picker (the animal card, 친구들 ⋯, 보관함's 산책) and the 엽서 album (보관함's 엽서, 돌아왔어요).
 // A postcard: the place's picture (SCENES, drawn here), the friend's figure on it, its line (data.js PLACES), what it brought.
+import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B, PLACES, PROPS, MYTHIC } from '../game/data.js';
 import { strollCap, strolling, callName, mythHill } from '../game/rules.js';
@@ -16,12 +17,11 @@ let menu = null;
 export function pickStroll(a) {
   const nm = callName(a), n = strolling(G.S).length, cap = strollCap(G.S), R = B.stroll, full = n >= cap;
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
-  menu.innerHTML = `<div><h2>산책 보내기</h2><p class="sub">${nm} · ${full ? `지금 ${n}마리가 산책 중이라 더 못 가요` : `산책 중 ${n}/${cap} · 돌아오면 엽서와 하트를 줘요`}</p><div class="col">${
-    R.hours.map(h => `<button data-h="${h}"${full ? ' disabled' : ''}>${h}시간 · ♥${R.hearts[h]}${R.candy[h] ? ` · 사탕 ${R.candy[h]}` : ''}</button>`).join('')}${mythHill(G.S) ? `<button data-h="${R.hours[0]}" data-pl="${FH.id}"${full ? ' disabled' : ''}>🔥 ${FH.name} · ${R.hours[0]}시간 · ${MYTHIC[0].hair}</button>` : ''}<button data-visit>친구네 놀러 가기</button><button class="sb" data-shut>닫기</button></div></div>`;
+  menu.innerHTML = $t('<div><h2>산책 보내기</h2><p class="sub">{0} · {1}</p><div class="col">{2}{3}<button data-visit>친구네 놀러 가기</button><button class="sb" data-shut>닫기</button></div></div>', nm, full ? $t('지금 {0}마리가 산책 중이라 더 못 가요', n) : $t('산책 중 {0}/{1} · 돌아오면 엽서와 하트를 줘요', n, cap), R.hours.map(h => $t('<button data-h="{0}"{1}>{2}시간 · ♥{3}{4}</button>', h, full ? ' disabled' : '', h, R.hearts[h], R.candy[h] ? $t(' · 사탕 {0}', R.candy[h]) : '')).join(''), mythHill(G.S) ? $t('<button data-h="{0}" data-pl="{1}"{2}>🔥 {3} · {4}시간 · {5}</button>', R.hours[0], FH.id, full ? ' disabled' : '', FH.name, R.hours[0], MYTHIC[0].hair) : '');
   menu.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.visit != null) { menu.remove(); menu = null; if (a.stage !== 'baby') document.getElementById('friends').hidden = true; return void import('./visit.js').then(m => m.sendSheet(a)); } // 74: 놀러 보내기 is a branch of 산책 (16-1)
-    const h = +b.dataset.h; if (h && G.sendStroll(a.id, h, b.dataset.pl)) toast(`${nm}${josa(nm, '이', '가')} 산책을 나갔어요 · ${h}시간 뒤에 돌아와요`, 2600);
+    const h = +b.dataset.h; if (h && G.sendStroll(a.id, h, b.dataset.pl)) toast($t('{0}{이/가} 산책을 나갔어요 · {1}시간 뒤에 돌아와요', nm, h), 2600);
     menu.remove(); menu = null;
   };
   host().append(menu);
@@ -40,15 +40,14 @@ const SCENES = {
   path: sky('#cfe8f5') + cloud(220, 40) + `<rect y="108" width="300" height="92" fill="#a5d67a"/><path d="M0 200 C80 170 170 150 200 108 L214 108 C200 160 150 185 120 200Z" fill="#ead2a2"/>` + [40, 75, 110, 145].map(x => `<rect x="${x}" y="${120 - x / 20}" width="6" height="24" rx="2" fill="#b07a48"/>`).join('') + `<rect x="36" y="128" width="118" height="5" rx="2" fill="#b07a48"/>`,
 };
 const scene = id => `<svg viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${SCENES[id] ?? sky('#cfe8f5')}</svg>`;
-const when = t => { const d = new Date(t); return `${d.getMonth() + 1}월 ${d.getDate()}일`; };
-const meta = c => `${PL[c.pl]?.name ?? ''} · ${c.h}시간 · ${when(c.at)} · ♥+${c.hearts}${c.candy ? ` · 사탕 ${c.candy}` : ''}${c.prop ? ` · ${PNAME[c.prop]}` : ''}${c.myth ? ` · ${c.myth}` : ''}`;
+const when = t => { const d = new Date(t); return $t('{0}월 {1}일', d.getMonth() + 1, d.getDate()); };
+const meta = c => $t('{0} · {1}시간 · {2} · ♥+{3}{4}{5}{6}', PL[c.pl]?.name ?? '', c.h, when(c.at), c.hearts, c.candy ? $t(' · 사탕 {0}', c.candy) : '', c.prop ? ` · ${PNAME[c.prop]}` : '', c.myth ? ` · ${c.myth}` : '');
 
 const el = document.getElementById('cards');
 export function openCards() {
   const list = [...G.S.cards].reverse(), been = new Set(G.S.cards.map(c => c.pl).filter(p => p !== FH.id)).size;
-  el.innerHTML = `<div class="chead"><b>엽서</b><span>${list.length}장 · 가 본 곳 ${been}/${PLACES.length}</span><button class="back" data-close>닫기</button></div>
-<div class="cbody">${list.length ? '' : '<p class="cnote">친구를 산책 보내면 엽서가 와요 · 친구를 누르거나 보관함에서 「산책」</p>'}<div class="pcards">${list.map(c => PHOTO_PLACES.includes(c.pl) ? photoCard(c, cardLine(c), meta(c), PL[c.pl].name) : `<figure class="pcard">
-<div class="ppic">${scene(c.pl)}<img alt="${c.nm}">${c.new ? '<i>NEW</i>' : ''}</div><figcaption><b>${cardLine(c)}</b><small>${meta(c)}</small></figcaption></figure>`).join('')}</div></div>`;
+  el.innerHTML = $t('<div class="chead"><b>엽서</b><span>{0}장 · 가 본 곳 {1}/{2}</span><button class="back" data-close>닫기</button></div>\n<div class="cbody">{3}<div class="pcards">{4}</div></div>', list.length, been, PLACES.length, list.length ? '' : $t('<p class="cnote">친구를 산책 보내면 엽서가 와요 · 친구를 누르거나 보관함에서 「산책」</p>'), list.map(c => PHOTO_PLACES.includes(c.pl) ? photoCard(c, cardLine(c), meta(c), PL[c.pl].name) : `<figure class="pcard">
+<div class="ppic">${scene(c.pl)}<img alt="${c.nm}">${c.new ? '<i>NEW</i>' : ''}</div><figcaption><b>${cardLine(c)}</b><small>${meta(c)}</small></figcaption></figure>`).join(''));
   el.querySelectorAll('.pcard').forEach((f, i) => { const c = list[i], img = f.querySelector('img'), fig = () => figureThumb(c.sp, c.v, c.c, c.acc, c.st);
     (f.classList.contains('photo') ? cardPhoto(c).catch(fig) : fig()).then(u => { img.src = u; f.classList.add('shot'); }); }); // 78: a photo (shot once, kept); no WebGL: the figure
   if (PHOTO_PLACES.length) prunePhotos(G.S.cards.filter(c => PHOTO_PLACES.includes(c.pl)));

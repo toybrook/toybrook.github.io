@@ -14,17 +14,18 @@
 //   the animals keep their habits); p: { cell: steps } the walked days' steps, the older fewer (WILD.decay a walked day); q: the
 //   walked days; tr: [cell] the trails (from WILD.trail times the average cell, kept till under WILD.stay); sp: who walks the
 //   most; pn: 1 the trail told; fl: { kind: 1 } its first told; a: the first day stepped; v: a version (the board draws again) }
+import { $t } from '../i18n/i18n.js';
 import { SP, HAB } from './rules.js';
 import { dayNo } from './clock.js';
 
 export const WILD = { days: 40, cap: { f: 48, m: 30, u: 14, r: 24, l: 16, t: 90 }, keep: { f: 300, s: 60, e: 80, w: 50, src: 80, t: 600, p: 300 },
   decay: 0.85, trail: 2.5, stay: 1.5, min: 300, q: 2, every: 3, bud: 2, news: 12 };
 // the 들꽃 colours: petal, middle; from: where one of the first ones grows (the 도감's hint)
-export const BLOOMS = { wh: { name: '하양', c: ['#ffffff', '#ffcf33'], from: '들꽃 무리' }, ye: { name: '노랑', c: ['#ffd447', '#f08a24'], from: '들꽃 무리·해바라기' },
-  rd: { name: '빨강', c: ['#ff6b6b', '#ffd447'], from: '튤립 화분' }, pu: { name: '보라', c: ['#9d86e8', '#fff1a8'], from: '들꽃 무리' },
-  pk: { name: '분홍', c: ['#f7a8c4', '#ffe066'] }, lv: { name: '연보라', c: ['#b9a0f2', '#ffd447'] }, or: { name: '주황', c: ['#ffa04a', '#ffe066'] },
-  cr: { name: '크림', c: ['#fff0b3', '#f0a830'] }, ap: { name: '살구', c: ['#ffbf9a', '#ffe066'] }, mg: { name: '자주', c: ['#d65fa8', '#ffe9a8'] },
-  sk: { name: '하늘', c: ['#a9d4f5', '#ffe066'] } };
+export const BLOOMS = { wh: { name: $t('하양'), c: ['#ffffff', '#ffcf33'], from: $t('들꽃 무리') }, ye: { name: $t('노랑'), c: ['#ffd447', '#f08a24'], from: $t('들꽃 무리·해바라기') },
+  rd: { name: $t('빨강'), c: ['#ff6b6b', '#ffd447'], from: $t('튤립 화분') }, pu: { name: $t('보라'), c: ['#9d86e8', '#fff1a8'], from: $t('들꽃 무리') },
+  pk: { name: $t('분홍'), c: ['#f7a8c4', '#ffe066'] }, lv: { name: $t('연보라'), c: ['#b9a0f2', '#ffd447'] }, or: { name: $t('주황'), c: ['#ffa04a', '#ffe066'] },
+  cr: { name: $t('크림'), c: ['#fff0b3', '#f0a830'] }, ap: { name: $t('살구'), c: ['#ffbf9a', '#ffe066'] }, mg: { name: $t('자주'), c: ['#d65fa8', '#ffe9a8'] },
+  sk: { name: $t('하늘'), c: ['#a9d4f5', '#ffe066'] } };
 export const MIX = { 'rd+wh': 'pk', 'rd+ye': 'or', 'wh+ye': 'cr', 'pu+wh': 'lv', 'pk+ye': 'ap', 'pu+rd': 'mg', 'lv+wh': 'sk' };
 export const mixOf = (a, b) => a === b ? a : MIX[[a, b].sort().join('+')] ?? null;
 export const recipe = c => Object.keys(MIX).find(k => MIX[k] === c)?.split('+'); // ['rd', 'wh'] for pk
@@ -172,8 +173,8 @@ export const seen = S => { S.wild.news = []; };
 export function newsOf(S) {
   const N = S.wild.news; if (!N.length || S.flags.wildOff) return null;
   const b = [...N].sort((x, y) => RANK.indexOf(x.k) - RANK.indexOf(y.k))[0];
-  const text = { bloom: () => `${BLOOMS[b.c]?.name ?? ''} 들꽃이 처음 피었어요`, path: () => `${SP[b.sp]?.name ?? '친구'}들이 다니는 길이 생겼어요`,
-    moss: () => '그늘에 이끼가 돋았어요', mush: () => '이끼 사이에 작은 버섯이 났어요', reed: () => '물가에 갈대가 자라기 시작했어요',
-    lily: () => '연못에 수련이 떴어요', grow: () => `새 들꽃이 ${b.n}곳에 피었어요` }[b.k]();
-  return { text, sub: N.length > 1 ? `정원 변화 ${N.length}가지 · 보러 가요` : '정원 변화 · 보러 가요', hab: b.hab, at: b.at };
+  const text = { bloom: () => $t('{0} 들꽃이 처음 피었어요', BLOOMS[b.c]?.name ?? ''), path: () => $t('{0}들이 다니는 길이 생겼어요', SP[b.sp]?.name ?? $t('친구')),
+    moss: () => $t('그늘에 이끼가 돋았어요'), mush: () => $t('이끼 사이에 작은 버섯이 났어요'), reed: () => $t('물가에 갈대가 자라기 시작했어요'),
+    lily: () => $t('연못에 수련이 떴어요'), grow: () => $t('새 들꽃이 {0}곳에 피었어요', b.n) }[b.k]();
+  return { text, sub: N.length > 1 ? $t('정원 변화 {0}가지 · 보러 가요', N.length) : $t('정원 변화 · 보러 가요'), hab: b.hab, at: b.at };
 }

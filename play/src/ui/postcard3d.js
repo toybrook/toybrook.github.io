@@ -3,6 +3,7 @@
 // in a small diorama of the place made of the habitat's parts (its ground, the pond's water shader, trees, reeds, flowers,
 // lily pads), lit and posed as its line says, from low down with the background out of focus. The picture (≤ 30 KB) is kept
 // in IndexedDB, so a card is shot once. Each place's diorama is built the first time a card of it is shot, and kept.
+import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import { makeSkyEnv, nightGlow, snowNow, rainNow, windTime } from '../habitat/toyKit.js';
 import { TIMES } from '../habitat/daylight.js';
@@ -373,42 +374,36 @@ export const prunePhotos = cards => { const keep = new Set(cards.map(key)); tx('
 // ---- the card: the photo on paper with the place's stamp, a postmark with the day, the line by hand, a paw for a name;
 // tapped, its back (what it wrote). All drawn here: no outside art or fonts.
 const NOTES = { // the back, by place and line (data.js PLACES)
-  brook: ['물이 생각보다 차가워서 깜짝 놀랐어요. 그래도 발가락 사이로 물이 지나가는 게 간지러웠어요.',
-    '돌이 다섯 개였어요. 가운데 돌이 조금 흔들려서 꾹 버티고 건넜어요.',
-    '졸졸 소리를 듣다가 잠이 들었어요. 깨 보니 해가 한 뼘 움직여 있었어요.'],
-  flowers: ['노란 꽃은 햇볕 냄새가 났어요. 코에 꽃가루가 묻어서 재채기를 했어요.',
-    '나비가 앉았다 날았다 해서 계속 따라갔어요. 돌아보니 꽃밭 한가운데였어요.',
-    '꽃잎 하나가 등에 내려앉았어요. 떨어질까 봐 집까지 천천히 걸어왔어요.'],
-  hill: ['꼭대기는 바람이 세서 귀가 다 넘어갔어요. 저 멀리 우리 집도 보였어요.',
-    '한 발 헛디뎠는데 그대로 데굴데굴 굴렀어요. 어지러웠지만 또 하고 싶어요.',
-    '누워서 구름을 셌어요. 하나는 꼭 알처럼 생겼어요. 일곱까지 세다가 잊어버렸어요.'],
-  forest: ['반들반들한 도토리를 찾았어요. 모자까지 쓴 걸로요. 꼭 쥐고 왔어요.',
-    '큰 나무 밑은 시원했어요. 나뭇잎 사이로 햇빛이 동전처럼 떨어졌어요.',
-    '다람쥐가 그루터기 위에서 나를 봤어요. 나도 가만히 봤어요. 누가 먼저 움직였는지는 비밀이에요.'],
-  lake: ['물이 거울처럼 잔잔해서 내 얼굴이 또렷하게 보였어요. 생각보다 동그랗더라고요.',
-    '커다란 오리배가 천천히 지나갔어요. 손을 흔들었는데 대답은 없었어요. 그래도 좋았어요.',
-    '해가 호수 너머로 넘어갈 때까지 안 일어났어요. 물이 주황색이 됐다가 보라색이 됐어요.'],
-  path: ['오솔길 끝에는 또 다른 길이 있었어요. 다음엔 거기까지 가 볼래요.',
-    '울타리 너머에는 키 큰 풀이 바람에 누웠다 일어났다 했어요. 넘어가지는 않았어요.',
-    '네잎클로버를 찾았어요! 진짜예요. 잎을 네 번 세어 봤어요.'],
+  brook: [$t('물이 생각보다 차가워서 깜짝 놀랐어요. 그래도 발가락 사이로 물이 지나가는 게 간지러웠어요.'),
+    $t('돌이 다섯 개였어요. 가운데 돌이 조금 흔들려서 꾹 버티고 건넜어요.'),
+    $t('졸졸 소리를 듣다가 잠이 들었어요. 깨 보니 해가 한 뼘 움직여 있었어요.')],
+  flowers: [$t('노란 꽃은 햇볕 냄새가 났어요. 코에 꽃가루가 묻어서 재채기를 했어요.'),
+    $t('나비가 앉았다 날았다 해서 계속 따라갔어요. 돌아보니 꽃밭 한가운데였어요.'),
+    $t('꽃잎 하나가 등에 내려앉았어요. 떨어질까 봐 집까지 천천히 걸어왔어요.')],
+  hill: [$t('꼭대기는 바람이 세서 귀가 다 넘어갔어요. 저 멀리 우리 집도 보였어요.'),
+    $t('한 발 헛디뎠는데 그대로 데굴데굴 굴렀어요. 어지러웠지만 또 하고 싶어요.'),
+    $t('누워서 구름을 셌어요. 하나는 꼭 알처럼 생겼어요. 일곱까지 세다가 잊어버렸어요.')],
+  forest: [$t('반들반들한 도토리를 찾았어요. 모자까지 쓴 걸로요. 꼭 쥐고 왔어요.'),
+    $t('큰 나무 밑은 시원했어요. 나뭇잎 사이로 햇빛이 동전처럼 떨어졌어요.'),
+    $t('다람쥐가 그루터기 위에서 나를 봤어요. 나도 가만히 봤어요. 누가 먼저 움직였는지는 비밀이에요.')],
+  lake: [$t('물이 거울처럼 잔잔해서 내 얼굴이 또렷하게 보였어요. 생각보다 동그랗더라고요.'),
+    $t('커다란 오리배가 천천히 지나갔어요. 손을 흔들었는데 대답은 없었어요. 그래도 좋았어요.'),
+    $t('해가 호수 너머로 넘어갈 때까지 안 일어났어요. 물이 주황색이 됐다가 보라색이 됐어요.')],
+  path: [$t('오솔길 끝에는 또 다른 길이 있었어요. 다음엔 거기까지 가 볼래요.'),
+    $t('울타리 너머에는 키 큰 풀이 바람에 누웠다 일어났다 했어요. 넘어가지는 않았어요.'),
+    $t('네잎클로버를 찾았어요! 진짜예요. 잎을 네 번 세어 봤어요.')],
 };
 const rnd = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); };
 const hand = (s, k) => s.split(' ').map((w, j) => `<span class="w">${[...w].map((ch, i) => `<span style="--r:${((rnd(k + j, i) - 0.5) * 7).toFixed(1)}deg;--y:${((rnd(i, k + j) - 0.5) * 2.4).toFixed(1)}px">${ch}</span>`).join('')}</span>`).join(' ');
 const PAW = '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="15.5" rx="5.2" ry="4.4"/><ellipse cx="5.6" cy="9.6" rx="2" ry="2.6" transform="rotate(-18 5.6 9.6)"/><ellipse cx="9.6" cy="6" rx="2" ry="2.7"/><ellipse cx="14.4" cy="6" rx="2" ry="2.7"/><ellipse cx="18.4" cy="9.6" rx="2" ry="2.6" transform="rotate(18 18.4 9.6)"/></svg>';
-const STAMP = { lake: '<rect width="56" height="66" fill="#fde3c4"/><rect width="56" height="30" fill="#f6b98a"/><circle cx="38" cy="26" r="7" fill="#ff9a52"/><path d="M0 30 Q14 22 28 29 T56 27 V36 H0Z" fill="#6aa553"/><ellipse cx="28" cy="42" rx="25" ry="7" fill="#5e9fd1"/><rect x="18" y="40" width="20" height="1.6" rx=".8" fill="#ffd6a8" opacity=".8"/><path d="M8 50 v-12 M10 50 v-10 M12 50 v-13" stroke="#4f8a30" stroke-width="1.4"/><ellipse cx="8" cy="37.5" rx="1" ry="2.6" fill="#8b5a2b"/><ellipse cx="12" cy="36.5" rx="1" ry="2.6" fill="#8b5a2b"/><text x="28" y="61" font-size="8" text-anchor="middle" fill="#7a4a2a" font-weight="700">호숫가</text>',
-  brook: '<rect width="56" height="66" fill="#e3f1f4"/><path d="M0 26 Q16 20 30 25 T56 23 V54 H0Z" fill="#7cbc40"/><path d="M0 36 Q14 31 28 37 T56 35 V45 Q42 41 28 46 T0 46Z" fill="#7cc3e6"/><path d="M8 40 q4 -2 8 0 M30 42 q4 -2 8 0" stroke="#e8f6fb" stroke-width="1.2" fill="none"/><ellipse cx="20" cy="41" rx="3.6" ry="1.8" fill="#b9b2a4"/><ellipse cx="28" cy="39.5" rx="3.4" ry="1.7" fill="#c6bfb1"/><ellipse cx="36" cy="41.5" rx="3.6" ry="1.8" fill="#b9b2a4"/><text x="28" y="61" font-size="8" text-anchor="middle" fill="#2f6a7a" font-weight="700">시냇가</text>',
-  flowers: '<rect width="56" height="66" fill="#fff4cf"/><path d="M0 30 Q18 25 34 29 T56 28 V52 H0Z" fill="#8bc64a"/>' + [[9, 36, '#ffd447'], [20, 42, '#f7a8c4'], [31, 35, '#ffffff'], [42, 43, '#ffd447'], [48, 34, '#b9a0f2'], [14, 47, '#ffffff'], [36, 48, '#f7a8c4']].map(([x, y, c]) => `<g fill="${c}">${[0, 72, 144, 216, 288].map(a => `<circle cx="${(x + 2.4 * Math.cos(a * Math.PI / 180)).toFixed(1)}" cy="${(y + 2.4 * Math.sin(a * Math.PI / 180)).toFixed(1)}" r="1.7"/>`).join('')}</g><circle cx="${x}" cy="${y}" r="1.3" fill="#f08a24"/>`).join('') + '<g transform="translate(40 17) rotate(-12)"><ellipse cx="-3" cy="0" rx="3.2" ry="4" fill="#ff9fbf"/><ellipse cx="3" cy="0" rx="3.2" ry="4" fill="#ff9fbf"/><rect x="-.6" y="-3.5" width="1.2" height="7" rx=".6" fill="#3a2a20"/></g><text x="28" y="61" font-size="8" text-anchor="middle" fill="#8a5a1a" font-weight="700">꽃밭</text>',
-  hill: '<rect width="56" height="66" fill="#d6ebf8"/><g fill="#ffffff"><circle cx="13" cy="15" r="4.5"/><circle cx="19" cy="12" r="5.5"/><circle cx="25" cy="15" r="4.2"/><circle cx="41" cy="22" r="3"/><circle cx="45" cy="20" r="3.6"/><circle cx="49" cy="22" r="2.8"/></g><path d="M-4 52 Q10 24 28 24 T60 52Z" fill="#7cbc40"/><path d="M-4 52 Q20 36 60 46 V52Z" fill="#6daf3b"/><rect x="27" y="17" width="2" height="7" fill="#8a5733"/><circle cx="28" cy="15" r="4.5" fill="#5c9a35"/><text x="28" y="61" font-size="8" text-anchor="middle" fill="#2f6a4a" font-weight="700">바람 언덕</text>',
-  forest: '<rect width="56" height="66" fill="#eaf2dc"/><rect y="40" width="56" height="12" fill="#6b8f3a"/><g fill="#8a5733"><rect x="9" y="26" width="3" height="16"/><rect x="41" y="24" width="3" height="18"/></g><circle cx="10.5" cy="22" r="8" fill="#6daf3b"/><circle cx="42.5" cy="19" r="9" fill="#7cbc40"/><path d="M26 41 L19 41 L26 14 L33 41Z" fill="#4f8a30"/><g transform="translate(32 46) rotate(20)"><ellipse cx="0" cy="1.5" rx="2.6" ry="3.2" fill="#c98a4b"/><path d="M-3 0 Q0 -3.4 3 0Z" fill="#7a5232"/></g><text x="28" y="61" font-size="8" text-anchor="middle" fill="#3f5a20" font-weight="700">숲길</text>',
-  path: '<rect width="56" height="66" fill="#fde9cf"/><path d="M0 28 Q20 24 56 27 V52 H0Z" fill="#8bc64a"/><path d="M26 28 Q30 28 31 30 Q28 38 38 52 H16 Q26 38 25 30Z" fill="#d6b383"/><g stroke="#c88a4b" stroke-width="1.5"><path d="M44 30 v8 M49 32 v9 M54 34 v10"/><path d="M43 33 L56 37 M43 36.5 L56 41" stroke-width="1.1"/></g><text x="28" y="61" font-size="7.2" text-anchor="middle" fill="#7a4a2a" font-weight="700">들판 오솔길</text>',
+const STAMP = { lake: $t('<rect width="56" height="66" fill="#fde3c4"/><rect width="56" height="30" fill="#f6b98a"/><circle cx="38" cy="26" r="7" fill="#ff9a52"/><path d="M0 30 Q14 22 28 29 T56 27 V36 H0Z" fill="#6aa553"/><ellipse cx="28" cy="42" rx="25" ry="7" fill="#5e9fd1"/><rect x="18" y="40" width="20" height="1.6" rx=".8" fill="#ffd6a8" opacity=".8"/><path d="M8 50 v-12 M10 50 v-10 M12 50 v-13" stroke="#4f8a30" stroke-width="1.4"/><ellipse cx="8" cy="37.5" rx="1" ry="2.6" fill="#8b5a2b"/><ellipse cx="12" cy="36.5" rx="1" ry="2.6" fill="#8b5a2b"/><text x="28" y="61" font-size="8" text-anchor="middle" fill="#7a4a2a" font-weight="700">호숫가</text>'),
+  brook: $t('<rect width="56" height="66" fill="#e3f1f4"/><path d="M0 26 Q16 20 30 25 T56 23 V54 H0Z" fill="#7cbc40"/><path d="M0 36 Q14 31 28 37 T56 35 V45 Q42 41 28 46 T0 46Z" fill="#7cc3e6"/><path d="M8 40 q4 -2 8 0 M30 42 q4 -2 8 0" stroke="#e8f6fb" stroke-width="1.2" fill="none"/><ellipse cx="20" cy="41" rx="3.6" ry="1.8" fill="#b9b2a4"/><ellipse cx="28" cy="39.5" rx="3.4" ry="1.7" fill="#c6bfb1"/><ellipse cx="36" cy="41.5" rx="3.6" ry="1.8" fill="#b9b2a4"/><text x="28" y="61" font-size="8" text-anchor="middle" fill="#2f6a7a" font-weight="700">시냇가</text>'),
+  flowers: '<rect width="56" height="66" fill="#fff4cf"/><path d="M0 30 Q18 25 34 29 T56 28 V52 H0Z" fill="#8bc64a"/>' + [[9, 36, '#ffd447'], [20, 42, '#f7a8c4'], [31, 35, '#ffffff'], [42, 43, '#ffd447'], [48, 34, '#b9a0f2'], [14, 47, '#ffffff'], [36, 48, '#f7a8c4']].map(([x, y, c]) => `<g fill="${c}">${[0, 72, 144, 216, 288].map(a => `<circle cx="${(x + 2.4 * Math.cos(a * Math.PI / 180)).toFixed(1)}" cy="${(y + 2.4 * Math.sin(a * Math.PI / 180)).toFixed(1)}" r="1.7"/>`).join('')}</g><circle cx="${x}" cy="${y}" r="1.3" fill="#f08a24"/>`).join('') + $t('<g transform="translate(40 17) rotate(-12)"><ellipse cx="-3" cy="0" rx="3.2" ry="4" fill="#ff9fbf"/><ellipse cx="3" cy="0" rx="3.2" ry="4" fill="#ff9fbf"/><rect x="-.6" y="-3.5" width="1.2" height="7" rx=".6" fill="#3a2a20"/></g><text x="28" y="61" font-size="8" text-anchor="middle" fill="#8a5a1a" font-weight="700">꽃밭</text>'),
+  hill: $t('<rect width="56" height="66" fill="#d6ebf8"/><g fill="#ffffff"><circle cx="13" cy="15" r="4.5"/><circle cx="19" cy="12" r="5.5"/><circle cx="25" cy="15" r="4.2"/><circle cx="41" cy="22" r="3"/><circle cx="45" cy="20" r="3.6"/><circle cx="49" cy="22" r="2.8"/></g><path d="M-4 52 Q10 24 28 24 T60 52Z" fill="#7cbc40"/><path d="M-4 52 Q20 36 60 46 V52Z" fill="#6daf3b"/><rect x="27" y="17" width="2" height="7" fill="#8a5733"/><circle cx="28" cy="15" r="4.5" fill="#5c9a35"/><text x="28" y="61" font-size="8" text-anchor="middle" fill="#2f6a4a" font-weight="700">바람 언덕</text>'),
+  forest: $t('<rect width="56" height="66" fill="#eaf2dc"/><rect y="40" width="56" height="12" fill="#6b8f3a"/><g fill="#8a5733"><rect x="9" y="26" width="3" height="16"/><rect x="41" y="24" width="3" height="18"/></g><circle cx="10.5" cy="22" r="8" fill="#6daf3b"/><circle cx="42.5" cy="19" r="9" fill="#7cbc40"/><path d="M26 41 L19 41 L26 14 L33 41Z" fill="#4f8a30"/><g transform="translate(32 46) rotate(20)"><ellipse cx="0" cy="1.5" rx="2.6" ry="3.2" fill="#c98a4b"/><path d="M-3 0 Q0 -3.4 3 0Z" fill="#7a5232"/></g><text x="28" y="61" font-size="8" text-anchor="middle" fill="#3f5a20" font-weight="700">숲길</text>'),
+  path: $t('<rect width="56" height="66" fill="#fde9cf"/><path d="M0 28 Q20 24 56 27 V52 H0Z" fill="#8bc64a"/><path d="M26 28 Q30 28 31 30 Q28 38 38 52 H16 Q26 38 25 30Z" fill="#d6b383"/><g stroke="#c88a4b" stroke-width="1.5"><path d="M44 30 v8 M49 32 v9 M54 34 v10"/><path d="M43 33 L56 37 M43 36.5 L56 41" stroke-width="1.1"/></g><text x="28" y="61" font-size="7.2" text-anchor="middle" fill="#7a4a2a" font-weight="700">들판 오솔길</text>'),
 };
 const when = t => { const d = new Date(t); return `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, '0')}`; };
-const POST = (pl, t) => `<svg class="ppost" viewBox="0 0 120 60" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="30" cy="30" r="24"/><circle cx="30" cy="30" r="19" stroke-width="1"/>${[18, 26, 34, 42].map(y => `<path d="M58 ${y} q8 -4 16 0 t16 0 t16 0 t12 0"/>`).join('')}</g><g fill="currentColor" text-anchor="middle" font-weight="700"><text x="30" y="24" font-size="8">${pl}</text><text x="30" y="35" font-size="10">${when(t)}</text><text x="30" y="45" font-size="6.5">토이브룩</text></g></svg>`;
+const POST = (pl, t) => $t('<svg class="ppost" viewBox="0 0 120 60" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="30" cy="30" r="24"/><circle cx="30" cy="30" r="19" stroke-width="1"/>{0}</g><g fill="currentColor" text-anchor="middle" font-weight="700"><text x="30" y="24" font-size="8">{1}</text><text x="30" y="35" font-size="10">{2}</text><text x="30" y="45" font-size="6.5">토이브룩</text></g></svg>', [18, 26, 34, 42].map(y => `<path d="M58 ${y} q8 -4 16 0 t16 0 t16 0 t12 0"/>`).join(''), pl, when(t));
 // c: the card, line: its line (stroll.js cardLine), meta: place · hours · date · what it brought
-export const photoCard = (c, line, meta, place) => `<figure class="pcard photo"><div class="pflip">
-<div class="pfront"><div class="pshot"><img alt="${c.nm}"><span class="pdev">사진 뽑는 중…</span>${c.new ? '<i>NEW</i>' : ''}</div>
-<div class="pstamp"><svg viewBox="0 0 56 66" aria-hidden="true">${STAMP[c.pl] ?? ''}</svg></div>${POST(place, c.at)}
-<p class="phand">${hand(line, c.id)}</p><p class="ppaw">${c.nm} ${PAW}</p><span class="pturn">뒷면 ↻</span></div>
-<div class="pback"><div class="pmsg"><p class="pnote">${hand(NOTES[c.pl]?.[c.ln] ?? '', c.id + 7)}</p><p class="ppaw">${c.nm} ${PAW}</p></div>
-<div class="paddr"><small>받는 사람</small><p>${hand('토이브룩', c.id + 3)}</p><p>${hand('우리 집', c.id + 5)}</p></div><small class="pmeta">${meta}</small><span class="pturn">앞면 ↻</span></div>
-</div></figure>`;
+export const photoCard = (c, line, meta, place) => $t('<figure class="pcard photo"><div class="pflip">\n<div class="pfront"><div class="pshot"><img alt="{0}"><span class="pdev">사진 뽑는 중…</span>{1}</div>\n<div class="pstamp"><svg viewBox="0 0 56 66" aria-hidden="true">{2}</svg></div>{3}\n<p class="phand">{4}</p><p class="ppaw">{5} {6}</p><span class="pturn">뒷면 ↻</span></div>\n<div class="pback"><div class="pmsg"><p class="pnote">{7}</p><p class="ppaw">{8} {9}</p></div>\n<div class="paddr"><small>받는 사람</small><p>{10}</p><p>{11}</p></div><small class="pmeta">{12}</small><span class="pturn">앞면 ↻</span></div>\n</div></figure>', c.nm, c.new ? '<i>NEW</i>' : '', STAMP[c.pl] ?? '', POST(place, c.at), hand(line, c.id), c.nm, PAW, hand(NOTES[c.pl]?.[c.ln] ?? '', c.id + 7), c.nm, PAW, hand($t('토이브룩'), c.id + 3), hand($t('우리 집'), c.id + 5), meta);

@@ -5,6 +5,10 @@ body{margin:0;background:linear-gradient(#fbf1e1,#f6e4c8 60%,#f1d8b4);color:var(
 img{display:block;max-width:100%;height:auto}
 a{color:inherit}
 .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+/* 119 language links (top right) */
+.langs{display:flex;justify-content:flex-end;gap:4px 16px;flex-wrap:wrap;max-width:1040px;margin:0 auto;padding:12px 20px 0;font-size:14px;color:var(--soft)}
+.langs a{text-underline-offset:3px}.langs a[aria-current]{color:var(--wood);font-weight:700;text-decoration:none}
+html[lang=ja] body{word-break:normal;line-break:strict;font-family:-apple-system,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo','Noto Sans JP',system-ui,sans-serif}
 /* first screen */
 .hero{padding:40px 0 24px;display:grid;gap:28px;justify-items:center;text-align:center}
 .logo{display:flex;align-items:center;gap:10px;margin:0;font-size:40px;line-height:1.1;letter-spacing:-.02em;color:var(--wood)}

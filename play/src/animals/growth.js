@@ -2,11 +2,12 @@
 // (materials.js eggMat); hatching = wobble, crack, break (shells fly and vanish), under 2 s.
 // 69-1 부화 5박자 (same length): wobble -> cracks run over it -> they light up in the rarity's own colour (the real result,
 // nest.js passes it) -> it breaks -> the friend (nest.js: the figure, then the card).
+import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import { toyMat } from '../habitat/toyKit.js';
 import { wear } from './materials.js';
 
-export const STAGE_NAME = { egg: '알', baby: '새끼', adult: '성체' };
+export const STAGE_NAME = { egg: $t('알'), baby: $t('새끼'), adult: $t('성체') };
 export const HATCH = { crack: 0.45, glow: 0.8, pop: 1.15, end: 1.85 }; // seconds after the tap (69-1: crack 0.75 -> 0.45, glow new)
 
 // Egg profile: blunt, slightly wider bottom. Height 1.2, base at y=0.

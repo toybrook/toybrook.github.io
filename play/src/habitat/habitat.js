@@ -3,6 +3,7 @@
 // placed (서식지 꾸미기) stand here too; decorate mode (ui/decor.js) moves one at a time (editProp).
 // Knows no species: it loads the models of whoever lives in this habitat (data.js) and drives each with its
 // model's behaviour (src/animals/<move>.js).
+import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { buildMeadow } from './meadow/index.js';
@@ -556,7 +557,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     x = g(x); z = e(z); return { x, z, ax, tiles: [[x, z - 2], [x, z + 2]] };
   }
   // inbox 37 작은 고리: four curves round one middle (x, z from it, quarter turns), held and put down at once (rules.js placeRing)
-  const RING_P = { id: 'railring', name: '작은 고리', rail: 4, ring: true, r: 4 }, RING = [[-2, -2, 1], [2, -2, 0], [2, 2, 3], [-2, 2, 2]];
+  const RING_P = { id: 'railring', name: $t('작은 고리'), rail: 4, ring: true, r: 4 }, RING = [[-2, -2, 1], [2, -2, 0], [2, 2, 3], [-2, 2, 2]];
   const railSpots = (P, x, z, rot) => railAt(P, x, z, rot).tiles.map(([tx, tz]) => ({ x: tx, z: tz, r: TILE / 2, open: true, water: false, rail: true, fade: null }));
   // may it go there (exact: x, z must be where it snaps to, a saved one): its tiles free of rails, open ground under a tile (the
   // bridge: at each end; its middle may cross the stream, a rill or a path; dry: up to the bank, where walkers keep off), no other prop near it
@@ -998,9 +999,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const { x, z } = p.spot, near = (a, r) => Math.hypot(a.position.x - x, a.position.z - z) < r;
     if (PR[p.prop].art) { sfx('place'); ui.onArt?.(p.spot.uid); return; } // 17-2: who made it, or its choice (ui/art.js)
     if (p.prop === 'sky_scope') { p.obj.userData.tap(); sfx('place'); return; } // 16-2 하늘 망원경 (74: a prop that nods; ui/sky.js no longer opens it)
-    if (p.obj.userData.tap() === false) { sfx('undo'); ui.say?.('작은 폭죽은 밤에만 쏠 수 있어요'); return; }
+    if (p.obj.userData.tap() === false) { sfx('undo'); ui.say?.($t('작은 폭죽은 밤에만 쏠 수 있어요')); return; }
     sfx(p.prop);
-    if (p.prop === 'musicbox') { const n = music(); ui.say?.(n ? `오르골: ${n}${PREFS.mute || !PREFS.vAll || !PREFS.vAmb ? ' · 소리를 켜면 들려요' : ''}` : '오르골을 멈췄어요'); if (n) for (const a of shown) if (near(a, 14)) a.poke(); } // 27-7e: the sound off, it says why there is no tune
+    if (p.prop === 'musicbox') { const n = music(); ui.say?.(n ? $t('오르골: {0}{1}', n, PREFS.mute || !PREFS.vAll || !PREFS.vAmb ? $t(' · 소리를 켜면 들려요') : '') : $t('오르골을 멈췄어요')); if (n) for (const a of shown) if (near(a, 14)) a.poke(); } // 27-7e: the sound off, it says why there is no tune
     if (p.prop === 'bell') gather(x, z, 6, 'rest', 2.4); // up to 6 run over (pathClear: not over the stream, out of the paddock or through a tree) and stay a while
   }
   // camera: tap an animal -> glide in and follow it; a drag then circles it (360 deg) and pinch zooms, still following; moving
@@ -1236,7 +1237,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   if (perfEl) container.parentElement.appendChild(perfEl);
   const gpu = (() => { // only when the browser exposes it (some hide it for privacy)
     const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
-    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '알 수 없음 (브라우저가 숨김)';
+    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : $t('알 수 없음 (브라우저가 숨김)');
   })();
   let fN = 0, fT = 0, slow = 0, worst = 0, lite = false;
   // 26-3 배터리 절약: 30 frames a second, 15 after a minute without a touch, a key or the mouse
@@ -1250,11 +1251,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     slow = fps < fpsCap() * 0.83 ? slow + 1 : 0; // 50 of 60 (25 of 30 with 배터리 절약)
     if (slow >= 2 && !lite && glassLite()) { lite = true; slow = 0; } // first step: drop the glass refraction pass (real glass only)
     else if (slow >= 2 && pr > 1) { pr = Math.max(1, pr - 0.25); renderer.setPixelRatio(pr); renderer.setSize(W(), H()); slow = 0; }
-    if (perfEl) { const i = renderer.info.render; perfEl.textContent = `품질 ${QUALITY.gfx}${PREFS.saver ? ` (절약 ${fpsCap()}fps)` : ''}  삼각형 ${(i.triangles / 1000).toFixed(0)}k
-FPS ${fps.toFixed(0)}  (${(1000 / fps).toFixed(1)}ms, 최장 ${(worst * 1000).toFixed(0)}ms)
-픽셀 비율 ${pr.toFixed(2)}x${lite ? ' (유리 간이)' : ''} / 기기 ${(window.devicePixelRatio || 1).toFixed(2)}x  ${renderer.domElement.width}×${renderer.domElement.height}
-드로콜 ${i.calls}
-GPU ${gpu}`; }
+    if (perfEl) { const i = renderer.info.render; perfEl.textContent = $t('품질 {0}{1}  삼각형 {2}k\nFPS {3}  ({4}ms, 최장 {5}ms)\n픽셀 비율 {6}x{7} / 기기 {8}x  {9}×{10}\n드로콜 {11}\nGPU {12}', QUALITY.gfx, PREFS.saver ? $t(' (절약 {0}fps)', fpsCap()) : '', (i.triangles / 1000).toFixed(0), fps.toFixed(0), (1000 / fps).toFixed(1), (worst * 1000).toFixed(0), pr.toFixed(2), lite ? $t(' (유리 간이)') : '', (window.devicePixelRatio || 1).toFixed(2), renderer.domElement.width, renderer.domElement.height, i.calls, gpu); }
     fN = 0; fT = 0; worst = 0;
   }
 
@@ -1413,10 +1410,10 @@ GPU ${gpu}`; }
     // 66-1 떠돌이 손님 (game/guests.js judge): what is round x, z (m) within r: ground tags, prop ids, friends (not guests)
     guestLook(x, z, r) { const c = habitat.ctx, h = c.heightAt, near = (o, rr = 0) => Math.hypot(o.x - x, o.z - z) < r + rr, ground = [];
       const ring = [0, 1, 2, 3, 4, 5, 6, 7].map(k => [x + Math.cos(k * 0.785) * r, z + Math.sin(k * 0.785) * r]);
-      if (c.water != null && [[x, z], ...ring.map(([a, b]) => [(a + x) / 2, (b + z) / 2]), ...ring].some(([a, b]) => h(a, b) < c.water - 0.05)) ground.push('물가');
-      if (underfoot(x, h(x, z), z) === 'grass') ground.push('풀밭');
-      if (h(x, z) - ring.reduce((s, [a, b]) => s + h(a, b), 0) / 8 > GUEST_HIGH) ground.push('높은 곳');
-      if ((c.shelter || []).some(o => near(o, o.r || 1))) ground.push('그늘');
+      if (c.water != null && [[x, z], ...ring.map(([a, b]) => [(a + x) / 2, (b + z) / 2]), ...ring].some(([a, b]) => h(a, b) < c.water - 0.05)) ground.push($t('물가'));
+      if (underfoot(x, h(x, z), z) === 'grass') ground.push($t('풀밭'));
+      if (h(x, z) - ring.reduce((s, [a, b]) => s + h(a, b), 0) / 8 > GUEST_HIGH) ground.push($t('높은 곳'));
+      if ((c.shelter || []).some(o => near(o, o.r || 1))) ground.push($t('그늘'));
       const props = [...[...placed.values()].filter(e => near(e.spot, e.spot.r)).map(e => e.prop), ...natSpots.filter(o => near(o, o.r)).map(o => o.prop)];
       const pals = [...actors.values()].filter(a => !a.rec.guest && a.obj.visible && near(a.position)).map(a => ({ species: a.rec.species, baby: a.rec.stage === 'baby' }));
       return { ground, props, pals }; },

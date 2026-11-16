@@ -6,6 +6,7 @@
 //   28-5 (ver 2): more 1 when it has any of: a turn off the 45 deg steps, c its colour (PALETTES index), sz its size (SIZES index),
 //   sl k + 1 on the k-th top spot of the prop under it (found again by where it stands); else as ver 1. ver 1 (no more bit) still reads
 //   28-6 (ver 3): brush 4 bits, when a brush past 7 is painted (울타리, 돌담, ...); else as ver 2, so older games still read it
+import { $t } from '../i18n/i18n.js';
 import { HABITATS, BRUSHES } from './data.js';
 
 export const TAG = 'TG1.', MAX = 4000; // MAX: characters (a full 6-step board with everything placed is ~1500)
@@ -65,17 +66,17 @@ export function encode(S, habId, step = S.expand?.[habId] || 0) {
 // text -> { hab, step, items: [{ prop, x, z, rot, c, sz, sl }], paint: { 'i,j': brush } } or { error: what to tell the player }
 export function decode(text) {
   const s = String(text ?? '').replace(/\s+/g, '');
-  if (!s) return { error: '코드를 붙여 넣어 주세요' };
-  if (s.length > MAX) return { error: '코드가 너무 길어요 · 꾸미기 코드가 맞는지 확인해 주세요' };
-  if (s.startsWith('TB1.')) return { error: '이건 저장 백업 코드예요 · 설정 › 내 저장 백업에서 불러와 주세요' };
-  if (!s.startsWith(TAG) || !/^[A-Za-z0-9_-]+$/.test(s.slice(TAG.length))) return { error: '꾸미기 코드가 아니에요 · 「TG1.」로 시작하는 코드를 붙여 넣어 주세요' };
-  let bytes; try { bytes = unb64(s.slice(TAG.length)); } catch { return { error: '코드가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요' }; }
+  if (!s) return { error: $t('코드를 붙여 넣어 주세요') };
+  if (s.length > MAX) return { error: $t('코드가 너무 길어요 · 꾸미기 코드가 맞는지 확인해 주세요') };
+  if (s.startsWith('TB1.')) return { error: $t('이건 저장 백업 코드예요 · 설정 › 내 저장 백업에서 불러와 주세요') };
+  if (!s.startsWith(TAG) || !/^[A-Za-z0-9_-]+$/.test(s.slice(TAG.length))) return { error: $t('꾸미기 코드가 아니에요 · 「TG1.」로 시작하는 코드를 붙여 넣어 주세요') };
+  let bytes; try { bytes = unb64(s.slice(TAG.length)); } catch { return { error: $t('코드가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요') }; }
   let at = 0; const len = bytes.length * 8;
   const get = n => { if (at + n > len) throw 0; let v = 0; for (let k = 0; k < n; k++, at++) v = (v << 1) | ((bytes[at >> 3] >> (7 - (at & 7))) & 1); return v; };
   try {
-    const ver = get(4); if (ver < 1 || ver > 3) return { error: '더 새 판의 코드예요 · 게임을 새로 고친 뒤 다시 해 주세요' };
+    const ver = get(4); if (ver < 1 || ver > 3) return { error: $t('더 새 판의 코드예요 · 게임을 새로 고친 뒤 다시 해 주세요') };
     const hab = HABITATS[get(4)]?.id, step = get(3), items = [], paint = {}, unknown = new Set();
-    if (!hab) return { error: '모르는 서식지의 코드예요' };
+    if (!hab) return { error: $t('모르는 서식지의 코드예요') };
     for (let n = get(7); n > 0; n--) {
       const k = get(7), prop = KINDS[k];
       for (let m = get(9); m > 0; m--) {
@@ -84,7 +85,7 @@ export function decode(text) {
       }
     }
     for (let n = get(12); n > 0; n--) { const j = get(7) - 64, i = get(7) - 64, m = get(6) + 1, b = get(ver === 3 ? 4 : 3); if (BRUSHES[b]) for (let d = 0; d < m; d++) paint[`${i + d},${j}`] = b; }
-    if (len - at >= 8) return { error: '코드가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요' }; // more than the padding left over
+    if (len - at >= 8) return { error: $t('코드가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요') }; // more than the padding left over
     return { hab, step, items, paint, unknown: unknown.size };
-  } catch { return { error: '코드가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요' }; }
+  } catch { return { error: $t('코드가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요') }; }
 }

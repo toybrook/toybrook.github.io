@@ -1,6 +1,7 @@
 // 26-1 the habitat's loading screen: a bar of what has arrived, and one tip (tips.js). Light: on the first screen.
 // What it counts: the 3D code (three.js, the habitats, their windows: CODE_BYTES, from the time it was asked for) if it
 // is still on the way, then the model files the habitat asked for and those still arriving (figure.js fills `fetched`).
+import { $t } from '../i18n/i18n.js';
 import { CODE_BYTES } from '../config.js';
 import { loadTip } from './tips.js';
 
@@ -15,7 +16,7 @@ const codeGot = () => performance.getEntriesByType('resource').filter(e => e.sta
 export function loadBar(on, codeDone = true) {
   if (!el) {
     el = document.getElementById('loading');
-    el.innerHTML = '<p>서식지 불러오는 중…</p><p class="lbar"><i></i></p><button class="lfirst" hidden>바로 깨기</button><p class="ltip"></p>'; bar = el.querySelector('i');
+    el.innerHTML = $t('<p>서식지 불러오는 중…</p><p class="lbar"><i></i></p><button class="lfirst" hidden>바로 깨기</button><p class="ltip"></p>'); bar = el.querySelector('i');
   }
   el.hidden = !on; if (!on) return;
   el.querySelector('.ltip').innerHTML = loadTip();

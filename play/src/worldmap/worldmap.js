@@ -1,5 +1,6 @@
 // World map: painted island (no UI in the picture) with tappable habitat spots.
 // Locks, signs and name labels are drawn here from HABITATS (game/data.js) and the save's unlocks.
+import { $t } from '../i18n/i18n.js';
 import { toast, lockText } from '../ui/hud.js';
 import * as G from '../game/game.js';
 import { HABITATS } from '../game/data.js';
@@ -45,10 +46,10 @@ export function initWorldMap(root, { enter }) {
       const h = HABITATS.find(h => h.id === spot.dataset.hab), P = h.map; // where its marker and label sit (data.js)
       const state = !unlockInfo(G.S, h.id).open ? 'lock' : h.ready ? 'in' : 'soon';
       add(state === 'lock' ? 'mark lock' : 'mark sign', P.at, state === 'lock' ? LOCK : SIGN(P.icon));
-      const word = { lock: '잠김', in: '들어가기', soon: '준비 중' }[state];
+      const word = { lock: $t('잠김'), in: $t('들어가기'), soon: $t('준비 중') }[state];
       add('label', P.label, `${h.name} · ${word}`);
-      spot.setAttribute('aria-label', `${h.name} 서식지, ${word}`);
-      spot.onclick = state === 'in' ? () => enter(h.id) : state === 'soon' ? () => toast('준비 중이에요') : () => lockToast(h.id);
+      spot.setAttribute('aria-label', $t('{0} 서식지, {1}', h.name, word));
+      spot.onclick = state === 'in' ? () => enter(h.id) : state === 'soon' ? () => toast($t('준비 중이에요')) : () => lockToast(h.id);
     }
   }
   // inbox 40: the map covers the stage like a picture, so a tall narrow screen (Fold cover, Flip) loses its sides;

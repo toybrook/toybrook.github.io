@@ -6,6 +6,7 @@
 // short effects (sfx); the volumes in PREFS (설정: 전체 / 배경 / 효과 / 동물 소리, 모두 끄기). Nothing plays before the first touch
 // (iPhone needs one), everything stops while the tab is hidden, and a habitat's files are fetched when it is entered (not with the
 // first screen). Light: no three.js (the first screen has it).
+import { $t } from '../i18n/i18n.js';
 import { DEBUG, PREFS } from '../config.js';
 import { HABITATS } from '../game/data.js';
 import { LOOP, BEDS, SPRITES, SHOTS } from './sound-map.js';
@@ -134,12 +135,12 @@ export function sfx(name, delay = 0) {
 // the next one (after the last: off); another habitat stops it. Each tune: beats a second, beats a loop, and its notes
 // [beat, midi, length in beats] (the tune, then the low notes under it, softer)
 const TUNES = [
-  { name: '별빛 왈츠', bps: 1.7, loop: 24, mel: [[76, 1], [79, 1], [81, 1], [79, 2], [76, 1], [74, 1], [76, 1], [79, 1], [72, 3], [69, 1], [72, 1], [74, 1], [76, 2], [79, 1], [81, 1], [79, 1], [74, 1], [76, 3]],
+  { name: $t('별빛 왈츠'), bps: 1.7, loop: 24, mel: [[76, 1], [79, 1], [81, 1], [79, 2], [76, 1], [74, 1], [76, 1], [79, 1], [72, 3], [69, 1], [72, 1], [74, 1], [76, 2], [79, 1], [81, 1], [79, 1], [74, 1], [76, 3]],
     low: [60, 57, 55, 60, 53, 60, 55, 60].flatMap((m, i) => [[i * 3, m], [i * 3 + 1, m + 7], [i * 3 + 2, m + 7]]) },
-  { name: '아침 산책', bps: 2, loop: 32, mel: [[79, 1], [83, 0.5], [86, 0.5], [83, 1], [81, 1], [79, 1.5], [76, 0.5], [74, 2], [76, 0.5], [79, 0.5], [81, 1], [83, 1], [81, 1], [79, 3], [0, 1],
+  { name: $t('아침 산책'), bps: 2, loop: 32, mel: [[79, 1], [83, 0.5], [86, 0.5], [83, 1], [81, 1], [79, 1.5], [76, 0.5], [74, 2], [76, 0.5], [79, 0.5], [81, 1], [83, 1], [81, 1], [79, 3], [0, 1],
     [74, 1], [76, 0.5], [79, 0.5], [81, 1], [79, 1], [76, 1], [74, 1], [71, 2], [74, 0.5], [76, 0.5], [79, 1], [83, 1], [86, 1], [79, 3], [0, 1]],
     low: [67, 64, 60, 67, 60, 64, 62, 67].flatMap((m, i) => [[i * 4, m], [i * 4 + 2, m + 7]]) },
-  { name: '자장가', bps: 2.6, loop: 48, mel: [[84, 2], [81, 1], [79, 2], [77, 1], [79, 3], [81, 3], [84, 2], [86, 1], [84, 2], [81, 1], [79, 6], [77, 2], [79, 1], [81, 2], [84, 1], [86, 3], [84, 3], [81, 2], [79, 1], [77, 2], [79, 1], [77, 6]],
+  { name: $t('자장가'), bps: 2.6, loop: 48, mel: [[84, 2], [81, 1], [79, 2], [77, 1], [79, 3], [81, 3], [84, 2], [86, 1], [84, 2], [81, 1], [79, 6], [77, 2], [79, 1], [81, 2], [84, 1], [86, 3], [84, 3], [81, 2], [79, 1], [77, 2], [79, 1], [77, 6]],
     low: [65, 60, 65, 60, 70, 65, 60, 65].flatMap((m, i) => [[i * 6, m], [i * 6 + 3, m + 7]]) },
 ].map(T => { let b = 0; const ev = T.mel.map(([m, d]) => { const e = [b, m, 0.07]; b += d; return e; }).filter(e => e[1]);
   return { ...T, ev: [...ev, ...T.low.map(([b, m]) => [b, m, 0.035])].sort((a, c) => a[0] - c[0]) }; });

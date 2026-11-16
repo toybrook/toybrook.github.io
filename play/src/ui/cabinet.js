@@ -4,6 +4,7 @@
 // The cabinet fits the screen's width; a shelf with more figures than fit slides sideways on its own (drag along it),
 // its overflowing end faded. Drag up and down for more shelves. Its own small renderer, running only while open (the
 // habitat pauses meanwhile); three.js frustum culling skips figures off screen, clipping cuts any past the side boards.
+import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import * as G from '../game/game.js';
 import { HABITATS } from '../game/data.js';
@@ -37,9 +38,7 @@ const sig = () => JSON.stringify([tab, codexCells(tab).map(c => G.S.codex[c.key]
 
 export function openCabinet(habId, api) {
   tab = habId || tab; hab = api; sel = null; el.hidden = false; hab?.setActive(false);
-  el.innerHTML = `<div class="chead"><b>진열장</b><span id="cabn"></span><button class="back" data-night>밤에 보기</button><button class="back" data-close>닫기</button></div>
-<div class="ctabs">${HABITATS.map(h => `<button data-tab="${h.id}"${h.id === tab ? ' class="on"' : ''}${G.S.unlocked.includes(h.id) || codexCells(h.id).some(c => G.S.codex[c.key]) ? '' : ' disabled'}>${h.name}</button>`).join('')}</div>
-<div class="cview" id="cview">${DEBUG ? '<p class="cfps" id="cfps"></p>' : ''}</div><div class="cchips" id="cchips"><p>피규어를 누르면 본 색 중에서 고를 수 있어요</p></div>`;
+  el.innerHTML = $t('<div class="chead"><b>진열장</b><span id="cabn"></span><button class="back" data-night>밤에 보기</button><button class="back" data-close>닫기</button></div>\n<div class="ctabs">{0}</div>\n<div class="cview" id="cview">{1}</div><div class="cchips" id="cchips"><p>피규어를 누르면 본 색 중에서 고를 수 있어요</p></div>', HABITATS.map(h => `<button data-tab="${h.id}"${h.id === tab ? ' class="on"' : ''}${G.S.unlocked.includes(h.id) || codexCells(h.id).some(c => G.S.codex[c.key]) ? '' : ' disabled'}>${h.name}</button>`).join(''), DEBUG ? '<p class="cfps" id="cfps"></p>' : '');
   if (!st) setup();
   night = false; setNight();
   el.querySelector('#cview').prepend(st.R.domElement);
@@ -51,7 +50,7 @@ function close() { el.hidden = true; live = false; hab?.setActive(true); }
 function setNight() {
   nightLights(st.S, night); st.R.setClearColor(night ? '#262d4a' : '#e9d2ae', 1);
   st.hemi.color.set(night ? '#8e9ad0' : '#fff6e8'); st.hemi.groundColor.set(night ? '#3a3550' : '#b48a5c'); st.hemi.intensity = night ? 0.35 : 0.6; silMat.color.set(night ? '#69709a' : '#cdb895');
-  const b = el.querySelector('[data-night]'); if (b) b.textContent = night ? '낮에 보기' : '밤에 보기';
+  const b = el.querySelector('[data-night]'); if (b) b.textContent = night ? $t('낮에 보기') : $t('밤에 보기');
 }
 function setup() {
   const S = studio(), { R, scene } = S; R.setClearColor('#e9d2ae', 1);
@@ -150,13 +149,13 @@ function tap(e) {
 }
 function pick(f) {
   const bar = el.querySelector('#cchips');
-  if (!f) { sel = null; bar.innerHTML = '<p>피규어를 누르면 본 색 중에서 고를 수 있어요</p>'; return; }
+  if (!f) { sel = null; bar.innerHTML = $t('<p>피규어를 누르면 본 색 중에서 고를 수 있어요</p>'); return; }
   const { c, got } = f.userData; sel = c.key;
-  if (!got) { bar.innerHTML = '<p>아직 못 찾은 변종이에요</p>'; return; }
+  if (!got) { bar.innerHTML = $t('<p>아직 못 찾은 변종이에요</p>'); return; }
   const all = colorsOf(c.species.id, c.variant.id), seen = G.S.colors[c.key] || [], cur = displayColor(G.S, c.key);
   const held = G.S.animals.filter(a => a.hold && key(a.species, a.variant) === c.key).length, kid = G.S.codex[c.key].adult == null;
-  bar.innerHTML = `<p><b>${lookName(c.species.id, c.variant.id, cur)}</b> · 본 색 ${seen.length}/${all.length}${kid ? ' · 아직 새끼 모습만 봤어요' : ''}${held ? ` · 성장 멈춤 ${held}마리` : ''}</p><div>${all.filter(x => seen.includes(x.id))
-    .map(x => `<button data-c="${x.id}"${x.id === cur ? ' class="on"' : ''}><u style="background:${swatch(x)}"></u>${x.name}</button>`).join('') || '<small>색이 하나뿐인 변종이에요</small>'}</div>`;
+  bar.innerHTML = $t('<p><b>{0}</b> · 본 색 {1}/{2}{3}{4}</p><div>{5}</div>', lookName(c.species.id, c.variant.id, cur), seen.length, all.length, kid ? $t(' · 아직 새끼 모습만 봤어요') : '', held ? $t(' · 성장 멈춤 {0}마리', held) : '', all.filter(x => seen.includes(x.id))
+    .map(x => `<button data-c="${x.id}"${x.id === cur ? ' class="on"' : ''}><u style="background:${swatch(x)}"></u>${x.name}</button>`).join('') || $t('<small>색이 하나뿐인 변종이에요</small>'));
 }
 
 function frame(now) {
@@ -167,7 +166,7 @@ function frame(now) {
   if (star && !still) star.rotation.y = t * 0.8;
   st.R.render(st.scene, st.cam);
   st.fN++; st.fT += dt;
-  if (DEBUG && st.fT >= 1) { el.querySelector('#cfps').textContent = `FPS ${(st.fN / st.fT).toFixed(0)} · 드로콜 ${st.R.info.render.calls} · 피규어 ${figs.filter(f => f.userData.got).length} · 실루엣 ${figs.filter(f => !f.userData.got).length}`; st.fN = st.fT = 0; }
+  if (DEBUG && st.fT >= 1) { el.querySelector('#cfps').textContent = $t('FPS {0} · 드로콜 {1} · 피규어 {2} · 실루엣 {3}', (st.fN / st.fT).toFixed(0), st.R.info.render.calls, figs.filter(f => f.userData.got).length, figs.filter(f => !f.userData.got).length); st.fN = st.fT = 0; }
 }
 
 el.addEventListener('click', e => {

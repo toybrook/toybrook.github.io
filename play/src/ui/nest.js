@@ -2,6 +2,7 @@
 // a tab per egg type. Middle: the shard gauges (BALANCE.pity). Bottom: the hatch slots. A ready slot hatches on a
 // small 3D stage inside the sheet, then the reveal card: out into the habitat (always offered), or back for hearts
 // (only a variant already in the codex). The hatched animal stays `pending` until the card is answered.
+import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import * as G from '../game/game.js';
 import { BALANCE as B, ACCESSORIES, HABITATS } from '../game/data.js';
@@ -47,13 +48,7 @@ ${PIECES.map((p, i) => `<polygon points="${p.pts}" ${i < n ? `fill="hsl(${RAR[k]
 
 export function initNest(nav) {
   const el = $('nest'), btn = $('nestBtn'), badge = btn.querySelector('i');
-  el.innerHTML = `<div class="nsheet" role="dialog" aria-label="둥지">
-  <div class="chead"><b>둥지</b><span id="ncount"></span><button class="back" data-tidy>정리</button><button class="back" data-close>닫기</button></div>
-  <div class="ngift" id="ngift" hidden></div>
-  <div class="ctabs" id="ntabs"></div>
-  <div class="ntop"><div class="neggs" id="neggs"></div><div class="nstage" id="nstage" hidden></div></div>
-  <div class="nlow"><div class="ngauges" id="ngauges"></div><div class="nslots" id="nslots"></div><div class="ncard" id="ncard" hidden></div></div>
-</div>`;
+  el.innerHTML = $t('<div class="nsheet" role="dialog" aria-label="둥지">\n  <div class="chead"><b>둥지</b><span id="ncount"></span><button class="back" data-tidy>정리</button><button class="back" data-close>닫기</button></div>\n  <div class="ngift" id="ngift" hidden></div>\n  <div class="ctabs" id="ntabs"></div>\n  <div class="ntop"><div class="neggs" id="neggs"></div><div class="nstage" id="nstage" hidden></div></div>\n  <div class="nlow"><div class="ngauges" id="ngauges"></div><div class="nslots" id="nslots"></div><div class="ncard" id="ncard" hidden></div></div>\n</div>');
   const eggsEl = $('neggs'), giftEl = $('ngift'), tidyBtn = el.querySelector('[data-tidy]'), stageEl = $('nstage'), gEl = $('ngauges'), slotsEl = $('nslots'), cardEl = $('ncard'), tabsEl = $('ntabs');
   let sel = null, habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {}, after = null, ready = null;
   const nest = () => G.S.nests[habId] || { eggs: [], t: G.now() };
@@ -64,36 +59,36 @@ export function initNest(nav) {
     const n = habId ? nest().eggs.length : 0, now = G.now();
     badge.textContent = n; badge.hidden = !n;
     btn.classList.toggle('ready', G.S.slots.some(s => s && now >= s.end) || !!pending());
-    btn.ariaLabel = `둥지: 알 ${n}개`;
+    btn.ariaLabel = $t('둥지: 알 {0}개', n);
   }
   const once = (k, v, f) => { if (sig[k] !== v) { sig[k] = v; f(); } };
   function draw() {
     drawBtn(); if (el.hidden) return;
     const now = G.now(), n = nest(), types = [...new Set([HAB[habId].nest, ...n.eggs.map(e => e.type)])].filter(Boolean);
     if (!types.includes(tab)) tab = types[0];
-    $('ncount').textContent = `알 ${n.eggs.length}/${B.nest.max}`;
+    $('ncount').textContent = $t('알 {0}/{1}', n.eggs.length, B.nest.max);
     once('tabs', types.join() + tab, () => { tabsEl.innerHTML = types.map(t => `<button data-tab="${t}"${t === tab ? ' class="on"' : ''}>${EGG[t].name}</button>`).join(''); });
     const mine = n.eggs.filter(e => e.type === tab).sort((a, b) => !!b.now - !!a.now), d2 = G.S.flags.week1 && G.S.attend.n === 1 && habId === HABITATS[0].id; // 93-1: tomorrow's legendary egg, locked
     if (sel && !n.eggs.some(canLetGo)) sel = null;
     tidyBtn.hidden = !n.eggs.some(canLetGo); tidyBtn.classList.toggle('on', !!sel); eggsEl.classList.toggle('tidy', !!sel);
     once('eggs', mine.map(e => e.id).join() + tab + d2 + !!sel, () => {
-      eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => `<button class="negg${canLetGo(e) ? '' : ' keep'}" data-id="${e.id}" aria-label="${RAR[e.rarity].name} 알${canLetGo(e) ? '' : ' · 선물'}"><img alt=""></button>`).join('')}${d2 ? '<span class="negg lock" aria-label="전설 알 · 내일 열려요"><img alt=""><small>내일 열려요</small></span>' : ''}</div><p class="nnote"></p>${
-        sel ? '<div class="nbtns ntidy"><button class="sb" data-untidy>취소</button><button class="go" data-letgo>놓아주기</button></div>' : ''}`;
+      eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => $t('<button class="negg{0}" data-id="{1}" aria-label="{2} 알{3}"><img alt=""></button>', canLetGo(e) ? '' : ' keep', e.id, RAR[e.rarity].name, canLetGo(e) ? '' : $t(' · 선물'))).join('')}${d2 ? $t('<span class="negg lock" aria-label="전설 알 · 내일 열려요"><img alt=""><small>내일 열려요</small></span>') : ''}</div><p class="nnote"></p>${
+        sel ? $t('<div class="nbtns ntidy"><button class="sb" data-untidy>취소</button><button class="go" data-letgo>놓아주기</button></div>') : ''}`;
       eggsEl.querySelectorAll('img').forEach((img, i) => eggThumb(mine[i]?.rarity ?? 'legendary').then(u => { img.src = u; }));
     });
     const note = eggsEl.querySelector('.nnote');
     if (sel) { // 112 정리: tap eggs to pick, 놓아주기 lets them go for hearts (gifts can't be picked)
       const P = n.eggs.filter(e => sel.has(e.id)), h = P.reduce((s, e) => s + (B.nest.release[e.rarity] || 0), 0);
       eggsEl.querySelectorAll('.negg[data-id]').forEach(b => b.classList.toggle('sel', sel.has(+b.dataset.id)));
-      note.textContent = P.length ? `알 ${P.length}개 · ♥+${h}` : '놓아줄 알을 골라요 · 선물 알은 빼고요'; eggsEl.querySelector('[data-letgo]').disabled = !P.length;
-    } else note.textContent = (mine.length ? '알을 누르면 부화 칸에 들어가요 · ' : '알이 없어요 · ')
-      + (n.eggs.length >= B.nest.max ? '둥지가 가득 찼어요 · 깨우거나 놓아줘요' : `다음 알까지 ${clock(n.t + eggGap(G.S) - now)}`) + (d2 ? ` · 금빛 알은 ${clock(new Date(now).setHours(24, 0, 0, 0) - now)} 뒤 열려요` : '');
+      note.textContent = P.length ? $t('알 {0}개 · ♥+{1}', P.length, h) : $t('놓아줄 알을 골라요 · 선물 알은 빼고요'); eggsEl.querySelector('[data-letgo]').disabled = !P.length;
+    } else note.textContent = (mine.length ? $t('알을 누르면 부화 칸에 들어가요 · ') : $t('알이 없어요 · '))
+      + (n.eggs.length >= B.nest.max ? $t('둥지가 가득 찼어요 · 깨우거나 놓아줘요') : $t('다음 알까지 {0}', clock(n.t + eggGap(G.S) - now))) + (d2 ? $t(' · 금빛 알은 {0} 뒤 열려요', clock(new Date(now).setHours(24, 0, 0, 0) - now)) : '');
     const gr = G.S.giftRow, free = G.S.slots.includes(null); giftEl.hidden = !gr.length; // 112 선물 알: given over a full nest, the first one into a free slot
     once('gift', gr.map(e => e.id).join(), () => {
-      giftEl.innerHTML = `<b>선물 알</b>${gr.map((e, i) => `<button class="negg" data-gift aria-label="선물 ${RAR[e.rarity].name} 알"><img alt=""></button>`).join('')}<small></small>`;
+      giftEl.innerHTML = $t('<b>선물 알</b>{0}<small></small>', gr.map((e, i) => $t('<button class="negg" data-gift aria-label="선물 {0} 알"><img alt=""></button>', RAR[e.rarity].name)).join(''));
       giftEl.querySelectorAll('img').forEach((img, i) => eggThumb(gr[i].rarity).then(u => { img.src = u; }));
     });
-    if (gr.length) giftEl.lastChild.textContent = free ? '누르면 부화 칸에 들어가요' : '부화 칸이 비면 넣을 수 있어요';
+    if (gr.length) giftEl.lastChild.textContent = free ? $t('누르면 부화 칸에 들어가요') : $t('부화 칸이 비면 넣을 수 있어요');
     drawGauges(); slotsEl.classList.toggle('n3', G.S.slots.length > 2); slotsEl.classList.toggle('n4', G.S.slots.length > 3); slotsEl.classList.toggle('n5', G.S.slots.length > 4); // inbox 31: three slots in one row (112: four, five)
     G.S.slots.forEach((s, i) => { const was = sig['slot' + i]; once('slot' + i, s ? `${s.egg.id}` : '-', () => {
       const b = slotsEl.children[i] || slotsEl.appendChild(Object.assign(document.createElement('button'), { className: 'nslot', innerHTML: '<img alt=""><span><b></b><small></small></span>' }));
@@ -104,10 +99,10 @@ export function initNest(nav) {
     G.S.slots.forEach((s, i) => {
       const b = slotsEl.children[i], ready = !!s && now >= s.end, [t, sub] = b.lastChild.children;
       b.classList.toggle('ready', ready);
-      t.textContent = !s ? '빈 칸' : ready ? '부화!' : clock(s.end - now);
+      t.textContent = !s ? $t('빈 칸') : ready ? $t('부화!') : clock(s.end - now);
       const from = eggHome(s?.egg.type), there = from && from.id !== habId ? from.name + ' ' : '';
-      sub.textContent = !s ? '알을 눌러 넣어요' : ready ? `${there}눌러서 깨우기` : `${there}${RAR[s.egg.rarity].name} 알`;
-      b.ariaLabel = `부화 칸 ${i + 1}: ${!s ? '비어 있음' : `${RAR[s.egg.rarity].name} 알, ${ready ? '눌러서 부화' : span(s.end - now) + ' 남음'}`}`;
+      sub.textContent = !s ? $t('알을 눌러 넣어요') : ready ? $t('{0}눌러서 깨우기', there) : $t('{0}{1} 알', there, RAR[s.egg.rarity].name);
+      b.ariaLabel = $t('부화 칸 {0}: {1}', i + 1, !s ? $t('비어 있음') : $t('{0} 알, {1}', RAR[s.egg.rarity].name, ready ? $t('눌러서 부화') : span(s.end - now) + $t(' 남음')));
     });
   }
   function drawGauges() {
@@ -115,8 +110,7 @@ export function initNest(nav) {
     once('gauges', JSON.stringify(P) + tab, () => {
       gEl.innerHTML = gaugesOf(tab).map(k => {
         const have = P[k], target = pityOf(tab)[k], full = have >= target, nm = RAR[k].name;
-        return `<div class="gauge${full ? ' full' : ''}" data-k="${k}">${gaugeSvg(k, have, target)}<div><b>${nm} 조각</b><span>${have}/${target}</span>
-<small>${full ? `다음 알 ${nm} 확정!` : `${nm}까지 <span style="white-space:nowrap">${target - have}알</span>`}</small></div></div>`;
+        return $t('<div class="gauge{0}" data-k="{1}">{2}<div><b>{3} 조각</b><span>{4}/{5}</span>\n<small>{6}</small></div></div>', full ? ' full' : '', k, gaugeSvg(k, have, target), nm, have, target, full ? $t('다음 알 {0} 확정!', nm) : $t('{0}까지 <span style="white-space:nowrap">{1}알</span>', nm, target - have));
       }).join('');
     });
   }
@@ -220,12 +214,7 @@ export function initNest(nav) {
     const gift = B.codexHeart && !G.S.codex[key(a.species, a.variant)]; // inbox 38: its cell is filled when it is kept (out or storage)
     const H = HAB[habitatOf(a)], away = H.id !== habId, open = G.S.unlocked.includes(H.id), room = fits(G.S, a); // inbox 20: never gone without a word
     cardEl.style.setProperty('--rc', RAR[v.rarity].color); // 75
-    cardEl.innerHTML = `<div class="nchips"><span class="rar">${RAR[v.rarity].name}</span>${fresh ? '<i class="new">NEW</i>' : newCol ? '<i class="new">새 색!</i>' : ''}${gift ? `<i class="gift">♥+${B.codexHeart}</i>` : ''}${r?.sure ? '<span class="sure">조각으로 확정!</span>' : ''}${r?.newAcc ? '<i class="new">새 치장!</i>' : ''}</div>
-<b class="nname">${nameOf(a)}${col && v?.rarity !== 'common' ? ` <small>${col.name}</small>` : ''}</b>
-${a.acc ? `<div class="nsecret"><em>시크릿!</em> ${ACCESSORIES[a.acc].wear} 나왔어요${'<i>✦</i>'.repeat(6)}${r?.newAcc ? '<small>처음 만난 치장이에요 · 치장 앨범에 남았어요</small>' : ''}</div>` : ''}
-<p class="nwhy">${SP[a.species].name} · ${H.name} 친구 · ${fresh ? '처음 만난 변종이에요' : newCol ? '처음 보는 색이에요' : back ? '이미 도감에 있는 변종이에요' : '이미 데려온 변종이에요'}</p>
-${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')} 열리면 데려갈 수 있어요. 그때까지 보관함에서 기다려요.` : room ? `${H.name}에서 사는 친구예요. ${H.name}으로 보낼게요.` : `${H.name}에서 사는 친구예요. ${H.name}에 자리가 모자라 보관함에서 기다려요.`}</p>` : ''}
-<div class="nbtns${away && room && back ? ' three' : ''}">${!room ? '<button class="go" data-store>보관함으로</button>' : away ? `<button class="sb" data-look>${H.name}에서 보기</button><button class="go" data-go>확인</button>` : '<button class="go" data-go>서식지로 보내기</button>'}${back ? `<button class="sb" data-back>돌려보내기 <span class="hrt">♥</span>+${n}</button>` : ''}</div><p class="nload">서식지 준비 중…</p>`; // inbox 64-A: the first board still being built (body.building, main.js)
+    cardEl.innerHTML = $t('<div class="nchips"><span class="rar">{0}</span>{1}{2}{3}{4}</div>\n<b class="nname">{5}{6}</b>\n{7}\n<p class="nwhy">{8} · {9} 친구 · {10}</p>\n{11}\n<div class="nbtns{12}">{13}{14}</div><p class="nload">서식지 준비 중…</p>', RAR[v.rarity].name, fresh ? '<i class="new">NEW</i>' : newCol ? $t('<i class="new">새 색!</i>') : '', gift ? `<i class="gift">♥+${B.codexHeart}</i>` : '', r?.sure ? $t('<span class="sure">조각으로 확정!</span>') : '', r?.newAcc ? $t('<i class="new">새 치장!</i>') : '', nameOf(a), col && v?.rarity !== 'common' ? ` <small>${col.name}</small>` : '', a.acc ? $t('<div class="nsecret"><em>시크릿!</em> {0} 나왔어요{1}{2}</div>', ACCESSORIES[a.acc].wear, '<i>✦</i>'.repeat(6), r?.newAcc ? $t('<small>처음 만난 치장이에요 · 치장 앨범에 남았어요</small>') : '') : '', SP[a.species].name, H.name, fresh ? $t('처음 만난 변종이에요') : newCol ? $t('처음 보는 색이에요') : back ? $t('이미 도감에 있는 변종이에요') : $t('이미 데려온 변종이에요'), away ? `<p class="nwhy away">${!open ? $t('{0}{이/가} 열리면 데려갈 수 있어요. 그때까지 보관함에서 기다려요.', H.name) : room ? $t('{0}에서 사는 친구예요. {1}으로 보낼게요.', H.name, H.name) : $t('{0}에서 사는 친구예요. {1}에 자리가 모자라 보관함에서 기다려요.', H.name, H.name)}</p>` : '', away && room && back ? ' three' : '', !room ? $t('<button class="go" data-store>보관함으로</button>') : away ? $t('<button class="sb" data-look>{0}에서 보기</button><button class="go" data-go>확인</button>', H.name) : $t('<button class="go" data-go>서식지로 보내기</button>'), back ? $t('<button class="sb" data-back>돌려보내기 <span class="hrt">♥</span>+{0}</button>', n) : ''); // inbox 64-A: the first board still being built (body.building, main.js)
     cardEl.dataset.id = a.id; cardEl.hidden = false; stageEl.classList.toggle('secret', !!a.acc);
   }
   function answer(go, e) {
@@ -237,7 +226,7 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     const k = key(a.species, a.variant); if (go && !G.S.codex[k] && RAR[variantOf(a.species, a.variant)?.rarity]?.story) setTimeout(() => import('./story.js').then(m => m.giveStory('l', k)), 600); // 14-2: a legendary's first one, its card once it is kept
     if (go === 'store') { // its habitat is full or not open yet (rules.fits): it waits in storage
       const H = HAB[habitatOf(a)], shut = !G.S.unlocked.includes(H.id);
-      G.store(a.id); toast(`${shut ? `${H.name}${josa(H.name, '이', '가')} 열리면 데려갈 수 있어요` : `${H.name}에 자리가 모자라요`} · ${nm}${josa(nm, '은', '는')} 보관함에서 기다려요${gift}`, 3200);
+      G.store(a.id); toast($t('{0} · {1}{은/는} 보관함에서 기다려요{2}', shut ? $t('{0}{이/가} 열리면 데려갈 수 있어요', H.name) : $t('{0}에 자리가 모자라요', H.name), nm, gift), 3200);
       cardEl.hidden = true; stageOff(); busy = false; resume(); // 27-7a: nothing to see outside, so the nest stays open for the next egg (as 돌려보내기)
     } else if (go === 'look') { // out in its own habitat, and the camera goes there to see it
       const home = habitatOf(a); G.release(a.id); close(); nav.go(home, a.id);
@@ -246,9 +235,9 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
       const more = G.S.slots.some(s => s && G.now() >= s.end); // inbox 86-3가: another 부화! slot: the nest stays open on the slots (no look: it would be behind the sheet)
       if (more) { cardEl.hidden = true; stageOff(); busy = false; resume(); } else close();
       if (hab && habitatOf(a) === habId) hab.drop(a, !more); // inbox 43: a look at it, then back
-      toast(`${nm}${josa(nm, '이', '가')} ${HAB[habitatOf(a)].name}에 나왔어요${fresh ? ' · 도감에 등록됐어요' : ''}${gift}`, fresh ? 3200 : undefined);
+      toast($t('{0}{이/가} {1}에 나왔어요{2}{3}', nm, HAB[habitatOf(a)].name, fresh ? $t(' · 도감에 등록됐어요') : '', gift), fresh ? 3200 : undefined);
     } else {
-      const n = G.sendBack(a.id); heart(e.clientX, e.clientY); toast(`${nm}${josa(nm, '을', '를')} 돌려보냈어요 · ♥+${n}`);
+      const n = G.sendBack(a.id); heart(e.clientX, e.clientY); toast($t('{0}{을/를} 돌려보냈어요 · ♥+{1}', nm, n));
       cardEl.hidden = true; stageOff(); busy = false; resume();
     }
   }
@@ -275,23 +264,22 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     else if (b.dataset.tab) { tab = b.dataset.tab; draw(); }
     else if (b.dataset.tidy != null || b.dataset.untidy != null) { sel = sel || b.dataset.untidy != null ? null : new Set(); draw(); }
     else if (b.dataset.letgo != null) letGo(e);
-    else if (b.dataset.gift != null) { if (G.takeGift() < 0) toast('부화 칸이 가득 찼어요 · 알을 깨우면 넣을 수 있어요'); else sfx('egg'); }
-    else if (sel && b.dataset.id) { const id = +b.dataset.id, x = nest().eggs.find(x => x.id === id); if (x && canLetGo(x)) { sel.has(id) ? sel.delete(id) : sel.add(id); draw(); } else toast('선물 알은 놓아줄 수 없어요'); }
-    else if (b.dataset.id) { if (G.takeEgg(habId, +b.dataset.id) < 0) toast('부화 칸이 가득 찼어요'); else { sfx('egg'); tip('hatch', '#nslots'); } }
+    else if (b.dataset.gift != null) { if (G.takeGift() < 0) toast($t('부화 칸이 가득 찼어요 · 알을 깨우면 넣을 수 있어요')); else sfx('egg'); }
+    else if (sel && b.dataset.id) { const id = +b.dataset.id, x = nest().eggs.find(x => x.id === id); if (x && canLetGo(x)) { sel.has(id) ? sel.delete(id) : sel.add(id); draw(); } else toast($t('선물 알은 놓아줄 수 없어요')); }
+    else if (b.dataset.id) { if (G.takeEgg(habId, +b.dataset.id) < 0) toast($t('부화 칸이 가득 찼어요')); else { sfx('egg'); tip('hatch', '#nslots'); } }
     else if (b.dataset.i != null) {
       const s = G.S.slots[+b.dataset.i], now = G.now();
-      if (!s) toast('위의 알을 누르면 이 칸에 들어가요');
-      else if (now < s.end) { toast(`${RAR[s.egg.rarity].name} 알 · ${span(s.end - now)} 뒤에 깨어나요`); knock(b); }
+      if (!s) toast($t('위의 알을 누르면 이 칸에 들어가요'));
+      else if (now < s.end) { toast($t('{0} 알 · {1} 뒤에 깨어나요', RAR[s.egg.rarity].name, span(s.end - now))); knock(b); }
       else hatchSlot(+b.dataset.i);
     }
   });
   // 112 놓아주기: one question when a heroic or better egg is among them
   async function letGo(e) {
     const P = nest().eggs.filter(x => sel?.has(x.id)), [x, y] = [e.clientX, e.clientY], big = P.filter(x => RANK[x.rarity] >= RANK.heroic); if (!P.length) return;
-    if (big.length && !await ask(`${[...new Set(big.map(x => RAR[x.rarity].name))].join('·')} 알이 들어 있어요.
-놓아준 알은 돌아오지 않아요. 놓아줄까요?`, '놓아주기')) return;
+    if (big.length && !await ask($t('{0} 알이 들어 있어요.\n놓아준 알은 돌아오지 않아요. 놓아줄까요?', [...new Set(big.map(x => RAR[x.rarity].name))].join('·')), $t('놓아주기'))) return;
     const r = G.letGo(habId, P.map(x => x.id)); sel = null; draw(); if (!r) return;
-    heart(x, y); sfx('grown'); toast(`알 ${r.n}개를 놓아줬어요 · ♥+${r.hearts}`);
+    heart(x, y); sfx('grown'); toast($t('알 {0}개를 놓아줬어요 · ♥+{1}', r.n, r.hearts));
   }
   // 69-1: an egg still waiting, tapped (톡), answers from inside a moment later: two little rocks and 톡톡 (the same for every rarity)
   function knock(b) { sfx('tap'); sfx('tok', 0.28); sfx('tok', 0.42); b.classList.remove('knock'); void b.offsetWidth; b.classList.add('knock'); }

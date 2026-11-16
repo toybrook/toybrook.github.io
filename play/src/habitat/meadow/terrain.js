@@ -1,3 +1,4 @@
+import { $t } from '../../i18n/i18n.js';
 import * as THREE from 'three';
 import { R, S, Z, SW, sPts, pPts, pond, paddock, dist2D, heightAt, occupied, CLIFF_Z, stream, rand as meadowRand } from './layout.js';
 import { toyMat, roundedBox, worldColor, glslColor, instanced, rainNow, snowNow, SNOW_RGB } from '../toyKit.js';
@@ -94,27 +95,7 @@ export function buildTerrain(scene) {
 // 25-1: B.g snow, B.b ice
 const BRUSH_RGB = BRUSHES.map(b => new THREE.Color(b.c));
 const v3 = c => `vec3(${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)})`, CC = h => v3(new THREE.Color(h));
-const PAINT = `
-    { vec2 pq = vWp.xz / uU + (vec2(vnoise(vWp.xz * 1.3), vnoise(vWp.xz * 1.3 + 9.0)) - 0.5) * 0.5;
-      vec2 pt = (pq - uPO) / uPN; vec4 pa = texture2D(uPA, pt), pb = texture2D(uPB, pt); float pg = pb.r;
-      if (pa.r + pa.g + pa.b + pa.a + pb.r + pb.g + pb.b > 0.01) {
-        float sh = clamp(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)) / LUM, 0.62, 1.12); // keeps the slopes and contact shadows
-        vec4 k = smoothstep(0.18, 0.72, pa); float kg = smoothstep(0.18, 0.72, pg); // inbox 67-3: a wide soft edge, no disc
-        vec3 grass = ${v3(BRUSH_RGB[0])} * (0.92 + 0.16 * vnoise(vWp.xz * 0.9));
-        vec3 sand = ${v3(BRUSH_RGB[2])} * (0.96 + 0.08 * vnoise(vWp.xz * 4.0));
-        vec3 dirt = ${v3(BRUSH_RGB[1])} * (0.94 + 0.12 * vnoise(vWp.xz * 3.0)); // 17-3: a worn trail, soft (the 흙길 brush itself is drawn as a path, uPC)
-        float gv = vnoise(vWp.xz * 9.0); vec3 gravel = ${v3(BRUSH_RGB[3])} * (0.82 + 0.3 * step(0.55, gv) - 0.12 * step(gv, 0.2));
-        vec2 fc = floor(vWp.xz * 4.0), ff = fract(vWp.xz * 4.0) - 0.5; float fh = hash12(fc), fd = length(ff - (vec2(hash12(fc + 3.1), hash12(fc + 7.7)) - 0.5) * 0.4);
-        vec3 fcol = fh > 0.93 ? ${CC('#fff7ee')} : fh > 0.86 ? ${CC('#ffd54a')} : fh > 0.79 ? ${CC('#ff9cc4')} : ${CC('#b9a0f2')};
-        vec3 bloom = mix(${v3(BRUSH_RGB[4])}, fcol, (fh > 0.9 ? 0.6 : 0.0) * (1.0 - smoothstep(0.06, 0.14, fd))); // inbox 67-3: a few soft specks, not a painted carpet
-        vec3 c = diffuseColor.rgb;
-        c = mix(c, grass * sh, kg); c = mix(c, dirt * sh, k.r); c = mix(c, sand * sh, k.g); c = mix(c, gravel * sh, k.b); c = mix(c, bloom * sh, k.a);
-        // 25-1 the snow's: fresh snow with a few glints, smooth pale ice (paler streaks, a crack line here and there)
-        vec2 kb = smoothstep(0.18, 0.72, pb.gb); float sg = step(0.985, hash12(floor(vWp.xz * 14.0)));
-        vec3 snow = ${v3(BRUSH_RGB[5])} * (0.97 + 0.05 * vnoise(vWp.xz * 1.5)) + sg * 0.12;
-        float ck = 1.0 - smoothstep(0.0, 0.04, abs(vnoise(vWp.xz * 1.1 + 3.0) - 0.5)); vec3 ice = mix(${v3(BRUSH_RGB[6])}, ${CC('#eef8fc')}, 0.35 * vnoise(vWp.xz * 0.7) + 0.4 * ck);
-        c = mix(c, snow * sh, kb.x); c = mix(c, ice * sh, kb.y);
-        diffuseColor.rgb = c; } }`;
+const PAINT = $t('\n    { vec2 pq = vWp.xz / uU + (vec2(vnoise(vWp.xz * 1.3), vnoise(vWp.xz * 1.3 + 9.0)) - 0.5) * 0.5;\n      vec2 pt = (pq - uPO) / uPN; vec4 pa = texture2D(uPA, pt), pb = texture2D(uPB, pt); float pg = pb.r;\n      if (pa.r + pa.g + pa.b + pa.a + pb.r + pb.g + pb.b > 0.01) {\n        float sh = clamp(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)) / LUM, 0.62, 1.12); // keeps the slopes and contact shadows\n        vec4 k = smoothstep(0.18, 0.72, pa); float kg = smoothstep(0.18, 0.72, pg); // inbox 67-3: a wide soft edge, no disc\n        vec3 grass = {0} * (0.92 + 0.16 * vnoise(vWp.xz * 0.9));\n        vec3 sand = {1} * (0.96 + 0.08 * vnoise(vWp.xz * 4.0));\n        vec3 dirt = {2} * (0.94 + 0.12 * vnoise(vWp.xz * 3.0)); // 17-3: a worn trail, soft (the 흙길 brush itself is drawn as a path, uPC)\n        float gv = vnoise(vWp.xz * 9.0); vec3 gravel = {3} * (0.82 + 0.3 * step(0.55, gv) - 0.12 * step(gv, 0.2));\n        vec2 fc = floor(vWp.xz * 4.0), ff = fract(vWp.xz * 4.0) - 0.5; float fh = hash12(fc), fd = length(ff - (vec2(hash12(fc + 3.1), hash12(fc + 7.7)) - 0.5) * 0.4);\n        vec3 fcol = fh > 0.93 ? {4} : fh > 0.86 ? {5} : fh > 0.79 ? {6} : {7};\n        vec3 bloom = mix({8}, fcol, (fh > 0.9 ? 0.6 : 0.0) * (1.0 - smoothstep(0.06, 0.14, fd))); // inbox 67-3: a few soft specks, not a painted carpet\n        vec3 c = diffuseColor.rgb;\n        c = mix(c, grass * sh, kg); c = mix(c, dirt * sh, k.r); c = mix(c, sand * sh, k.g); c = mix(c, gravel * sh, k.b); c = mix(c, bloom * sh, k.a);\n        // 25-1 the snow\'s: fresh snow with a few glints, smooth pale ice (paler streaks, a crack line here and there)\n        vec2 kb = smoothstep(0.18, 0.72, pb.gb); float sg = step(0.985, hash12(floor(vWp.xz * 14.0)));\n        vec3 snow = {9} * (0.97 + 0.05 * vnoise(vWp.xz * 1.5)) + sg * 0.12;\n        float ck = 1.0 - smoothstep(0.0, 0.04, abs(vnoise(vWp.xz * 1.1 + 3.0) - 0.5)); vec3 ice = mix({10}, {11}, 0.35 * vnoise(vWp.xz * 0.7) + 0.4 * ck);\n        c = mix(c, snow * sh, kb.x); c = mix(c, ice * sh, kb.y);\n        diffuseColor.rgb = c; } }', v3(BRUSH_RGB[0]), v3(BRUSH_RGB[2]), v3(BRUSH_RGB[1]), v3(BRUSH_RGB[3]), CC('#fff7ee'), CC('#ffd54a'), CC('#ff9cc4'), CC('#b9a0f2'), v3(BRUSH_RGB[4]), v3(BRUSH_RGB[5]), v3(BRUSH_RGB[6]), CC('#eef8fc'));
 // 28-6 길 잇기: 흙길, 돌길, 나무판길 (uPC r, g, b; a texel per cell, not blended) drawn as a band through each cell that joins the
 // paths beside it: a rounded square in the middle, an arm to each path cell next to it, the corner filled where three meet. Any
 // two kinds join. The edge wobbles a little and has a darker rim. Stone: rows of rounded flags; planks: boards across the way.
@@ -178,20 +159,7 @@ export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lu
   }
   tg.setAttribute('color', new THREE.BufferAttribute(cols, 3));
   // close up, the vertex colours alone look smooth: add fine mottling and specks, faded out with distance
-  const ground = worldColor(toyMat('#ffffff', { vertexColors: true, roughness: 0.82, envMapIntensity: 0.85 }), (PAINT + PATH).replaceAll('LUM', lum.toFixed(2)) + `
-    float near = 1.0 - smoothstep(14.0, 34.0, distance(cameraPosition, vWp));
-    float d = vnoise(vWp.xz * 2.3) * 0.55 + vnoise(vWp.xz * 7.5) * 0.45;
-    float speck = step(0.9, vnoise(vWp.xz * 15.0 + 7.0));
-    diffuseColor.rgb *= 1.0 + near * ((d - 0.5) * 0.2 - speck * 0.08);
-    // the lower part of the rounded edge is the cut: soil, shaded just under the wavy turf line
-    float e = min(min(vWp.x - ${r[0].toFixed(2)}, ${r[1].toFixed(2)} - vWp.x), min(vWp.z - ${r[2].toFixed(2)}, ${r[3].toFixed(2)} - vWp.z));
-    float turf = e - (TURF + 0.06 * sin((vWp.x + vWp.z) * 2.3) + 0.08 * (vnoise(vec2((vWp.x + vWp.z) * 3.0, 0.0)) - 0.5));
-    if (turf < 0.0) { ${SOIL}
-      diffuseColor.rgb = c * (1.0 - 0.35 * smoothstep(-0.2, 0.0, turf)); }
-    diffuseColor.rgb *= 1.0 - 0.2 * uWet; // 21-2: wet in the rain
-    // 15-2 첫눈: lying snow in soft drifts (bare patches between), never on the cut
-    float sn = uSnow * smoothstep(0.32, 0.58, vnoise(vWp.xz * 0.33) * 0.75 + d * 0.25 + 0.12) * step(0.0, turf);
-    diffuseColor.rgb = mix(diffuseColor.rgb, ${SNOW_RGB} * (0.94 + 0.06 * d), sn * 0.92);`.replace('TURF', TURF.toFixed(2)) + GRID);
+  const ground = worldColor(toyMat('#ffffff', { vertexColors: true, roughness: 0.82, envMapIntensity: 0.85 }), (PAINT + PATH).replaceAll('LUM', lum.toFixed(2)) + $t('\n    float near = 1.0 - smoothstep(14.0, 34.0, distance(cameraPosition, vWp));\n    float d = vnoise(vWp.xz * 2.3) * 0.55 + vnoise(vWp.xz * 7.5) * 0.45;\n    float speck = step(0.9, vnoise(vWp.xz * 15.0 + 7.0));\n    diffuseColor.rgb *= 1.0 + near * ((d - 0.5) * 0.2 - speck * 0.08);\n    // the lower part of the rounded edge is the cut: soil, shaded just under the wavy turf line\n    float e = min(min(vWp.x - {0}, {1} - vWp.x), min(vWp.z - {2}, {3} - vWp.z));\n    float turf = e - (TURF + 0.06 * sin((vWp.x + vWp.z) * 2.3) + 0.08 * (vnoise(vec2((vWp.x + vWp.z) * 3.0, 0.0)) - 0.5));\n    if (turf < 0.0) { {4}\n      diffuseColor.rgb = c * (1.0 - 0.35 * smoothstep(-0.2, 0.0, turf)); }\n    diffuseColor.rgb *= 1.0 - 0.2 * uWet; // 21-2: wet in the rain\n    // 15-2 첫눈: lying snow in soft drifts (bare patches between), never on the cut\n    float sn = uSnow * smoothstep(0.32, 0.58, vnoise(vWp.xz * 0.33) * 0.75 + d * 0.25 + 0.12) * step(0.0, turf);\n    diffuseColor.rgb = mix(diffuseColor.rgb, {5} * (0.94 + 0.06 * d), sn * 0.92);', r[0].toFixed(2), r[1].toFixed(2), r[2].toFixed(2), r[3].toFixed(2), SOIL, SNOW_RGB).replace('TURF', TURF.toFixed(2)) + GRID);
   // the paint: two RGBA textures, a texel per cell (A: dirt, sand, gravel, bloom; B.r: grass), linear so a cell is a soft blob
   const i0 = Math.floor(r[0] / U), j0 = Math.floor(r[2] / U), nI = Math.ceil(r[1] / U) - i0, nJ = Math.ceil(r[3] / U) - j0;
   const tex = (f = THREE.LinearFilter) => { const t = new THREE.DataTexture(new Uint8Array(nI * nJ * 4), nI, nJ); t.magFilter = t.minFilter = f; t.needsUpdate = true; return t; };

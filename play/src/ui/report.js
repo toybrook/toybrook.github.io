@@ -2,6 +2,7 @@
 // apart from the save (so not in backups). inbox 41 A: and, while 이용 통계 is on, one line (120 characters + file:line) a day per error (stats.js). 설정 › 문제 알리기 copies a short text for the
 // feedback form: version, device (OS, browser, screen), where the player is, the latest errors. No names, no save.
 // main.js imports this first, so it listens before the rest of the game runs.
+import { $t } from '../i18n/i18n.js';
 import { VERSION, PREFS } from '../config.js';
 import { EDITION } from '../game/data.js';
 import { track } from './stats.js';
@@ -31,19 +32,19 @@ addEventListener('unhandledrejection', e => { const r = e.reason; note(r?.name ?
 export const errors = () => list.slice();
 
 const ua = navigator.userAgent;
-const BROWSERS = [['Edg', 'Edge'], ['SamsungBrowser', '삼성 인터넷'], ['Whale', '웨일'], ['CriOS', 'Chrome'], ['FxiOS', 'Firefox'], ['Firefox', 'Firefox'], ['Chrome', 'Chrome'], ['Version', 'Safari']];
-const browser = () => { for (const [k, n] of BROWSERS) { const m = ua.match(new RegExp(k + '/(\\d+)')); if (m) return `${n} ${m[1]}`; } return '브라우저 모름'; };
-const os = () => { const m = ua.match(/(iPhone|iPad)[^)]*OS (\d+)|Android (\d+)|Windows|Mac OS X|CrOS|Linux/); return !m ? '기기 모름' : m[1] ? `${m[1]} iOS ${m[2]}` : m[3] ? `Android ${m[3]}` : m[0].replace('Mac OS X', 'Mac').replace('CrOS', 'ChromeOS'); };
+const BROWSERS = [['Edg', 'Edge'], ['SamsungBrowser', $t('삼성 인터넷')], ['Whale', $t('웨일')], ['CriOS', 'Chrome'], ['FxiOS', 'Firefox'], ['Firefox', 'Firefox'], ['Chrome', 'Chrome'], ['Version', 'Safari']];
+const browser = () => { for (const [k, n] of BROWSERS) { const m = ua.match(new RegExp(k + '/(\\d+)')); if (m) return `${n} ${m[1]}`; } return $t('브라우저 모름'); };
+const os = () => { const m = ua.match(/(iPhone|iPad)[^)]*OS (\d+)|Android (\d+)|Windows|Mac OS X|CrOS|Linux/); return !m ? $t('기기 모름') : m[1] ? `${m[1]} iOS ${m[2]}` : m[3] ? `Android ${m[3]}` : m[0].replace('Mac OS X', 'Mac').replace('CrOS', 'ChromeOS'); };
 const day = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'); return `${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
 export function reportText(place = placeOf()) {
   const last = list.slice(-5).reverse();
-  return [`[토이브룩 문제 알림]`, `버전 ${VERSION} (${EDITION === 'beta' ? '베타' : EDITION})`,
-    `기기 ${os()} · ${browser()} · 화면 ${innerWidth}×${innerHeight} ×${+devicePixelRatio.toFixed(2)}${matchMedia('(pointer:coarse)').matches ? ' · 터치' : ''} · 그래픽 ${({ low: '낮음', mid: '보통', high: '높음' })[PREFS.gfx] || PREFS.gfx}`,
-    `있던 곳 ${place}`,
-    list.length ? `최근 오류 ${list.length}개 중 ${last.length}개:` : '최근 오류 없음',
+  return [$t('[토이브룩 문제 알림]'), $t('버전 {0} ({1})', VERSION, EDITION === 'beta' ? $t('베타') : EDITION),
+    $t('기기 {0} · {1} · 화면 {2}×{3} ×{4}{5} · 그래픽 {6}', os(), browser(), innerWidth, innerHeight, +devicePixelRatio.toFixed(2), matchMedia('(pointer:coarse)').matches ? $t(' · 터치') : '', ({ low: $t('낮음'), mid: $t('보통'), high: $t('높음') })[PREFS.gfx] || PREFS.gfx),
+    $t('있던 곳 {0}', place),
+    list.length ? $t('최근 오류 {0}개 중 {1}개:', list.length, last.length) : $t('최근 오류 없음'),
     ...last.map(e => `- ${day(e.t)} ${e.m}${e.at ? ` (${e.at})` : ''}${e.n > 1 ? ` ×${e.n}` : ''}`),
-    '', '무슨 일이 있었는지 아래에 적어 주세요:', ''].join('\n');
+    '', $t('무슨 일이 있었는지 아래에 적어 주세요:'), ''].join('\n');
 }
 // at the tap, before the form opens in a new tab (after that this page loses focus and the clipboard API refuses)
 export function copyNow(text) {

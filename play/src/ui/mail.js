@@ -3,6 +3,7 @@
 // gifts, overflow eggs as hearts) are in rules.js; this file shows the mailbox (the top bar's ✉, a red dot while one waits),
 // the 선물 코드 넣기 card (설정) and what came.
 // Beta: the list and the received ids live on the phone, so a player who edits them can take a gift again (release: a server).
+import { $t, LANG } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { mailOpen, legendRoom, PROP, kindName } from '../game/rules.js';
 import { GIFT, BALANCE } from '../game/data.js';
@@ -14,43 +15,39 @@ const $ = id => document.getElementById(id), box = $('mail'), btn = $('mailBtn')
 const esc = t => String(t ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 let list = null; // { mail: [...], codes: [...] } once read
 const load = () => navigator.onLine ? fetch('mail.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null)
-  .then(d => { if (d && typeof d === 'object') { list = d; dot(); } }, () => {}).catch(() => {}) : Promise.resolve();
+  .then(d => { if (d && typeof d === 'object') { list = tr(d); dot(); } }, () => {}).catch(() => {}) : Promise.resolve();
+// 119: a mail or code may carry title_en / body_ja ... (docs/mail.md); one missing keeps the Korean
+const tr = d => { if (LANG !== 'ko') for (const m of [...(Array.isArray(d.mail) ? d.mail : []), ...(Array.isArray(d.codes) ? d.codes : [])]) for (const k of ['title', 'body']) if (typeof m?.[k + '_' + LANG] === 'string') m[k] = m[k + '_' + LANG]; return d; };
 const all = () => [...(Array.isArray(list?.mail) ? list.mail : []), ...G.evMail()]; // 15-1: an event's mail while it runs
 const waiting = () => all().filter(m => mailOpen(G.S, m, G.now()));
 const cards = () => G.S.visit.cards.filter(c => !c.got); // 16-1: postcards from where a friend went
 const dot = () => { const on = waiting().length > 0 || cards().length > 0 || (G.S.giftEggs > 0 && legendRoom(G.S)); btn.classList.toggle('new', on); if (box.hidden) btn.hidden = !on; }; // 74: shown only with mail
-const day = s => { const m = /^\d{4}-(\d\d)-(\d\d)/.exec(String(s ?? '')); return m ? `${+m[1]}월 ${+m[2]}일까지` : ''; };
-const gifts = r => [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`, r?.candy > 0 && `꼬마 사탕 ${Math.floor(r.candy)}개`,
-  r?.eggs > 0 && `둥지 알 ${Math.floor(r.eggs)}개`, PROP[r?.prop] && `소품 「${PROP[r.prop].name}」`, r?.legendEggs > 0 && `전설 알 ${Math.floor(r.legendEggs)}개`].filter(Boolean).join(' · ');
+const day = s => { const m = /^\d{4}-(\d\d)-(\d\d)/.exec(String(s ?? '')); return m ? $t('{0}월 {1}일까지', +m[1], +m[2]) : ''; };
+const gifts = r => [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`, r?.candy > 0 && $t('꼬마 사탕 {0}개', Math.floor(r.candy)),
+  r?.eggs > 0 && $t('둥지 알 {0}개', Math.floor(r.eggs)), PROP[r?.prop] && $t('소품 「{0}」', PROP[r.prop].name), r?.legendEggs > 0 && $t('전설 알 {0}개', Math.floor(r.legendEggs))].filter(Boolean).join(' · ');
 
 function draw() {
   const L = waiting(), k = G.S.giftEggs, room = legendRoom(G.S), C = cards(), V = G.S.visit, n = V.cardDay === dayOf(G.now()) ? V.cardN : 0; // 44: legend eggs that found the nest full wait here
-  const pc = C.map((c, i) => `<li><i aria-hidden="true">💌</i><span>${esc(gardenName(c.g))}에서 온 엽서<small>${PICS[c.pic]} ${esc(LINES[c.line])} · ${esc(kindName(c))}</small><small class="gift">${n + i < BALANCE.visit.cardDaily ? `♥${BALANCE.visit.card}` : '오늘 엽서 하트는 다 받았어요'}</small></span><button data-pc="${c.lid}">받기</button></li>`).join('');
-  const wait = k > 0 ? `<li><i aria-hidden="true">🥚</i><span>전설 알 ${k}개<small>둥지에 자리가 생기면 받기</small><small class="gift">${room ? '지금 둥지에 자리가 있어요' : '둥지가 가득 찼어요. 알을 하나 부화하면 받을 수 있어요'}</small></span><button data-legend${room ? '' : ' disabled'}>받기</button></li>` : '';
-  box.innerHTML = `<div><h2>우편함</h2>${L.length || wait || pc ? `<ul>${wait}${pc}${L.map(m => `<li><i aria-hidden="true">✉️</i><span>${esc(m.title)}<small>${esc(m.body)}</small><small class="gift">${esc(gifts(m.rewards))}${m.end ? ` · ${day(m.end)}` : ''}</small></span><button data-get="${esc(m.id)}">받기</button></li>`).join('')}</ul>`
-    : '<p class="note">새 우편이 없어요</p>'}
-<div class="nbtns">${L.length + C.length > 1 ? '<button class="sb" data-all>모두 받기</button>' : ''}<button class="go" data-close>닫기</button></div></div>`;
+  const pc = C.map((c, i) => $t('<li><i aria-hidden="true">💌</i><span>{0}에서 온 엽서<small>{1} {2} · {3}</small><small class="gift">{4}</small></span><button data-pc="{5}">받기</button></li>', esc(gardenName(c.g)), PICS[c.pic], esc(LINES[c.line]), esc(kindName(c)), n + i < BALANCE.visit.cardDaily ? `♥${BALANCE.visit.card}` : $t('오늘 엽서 하트는 다 받았어요'), c.lid)).join('');
+  const wait = k > 0 ? $t('<li><i aria-hidden="true">🥚</i><span>전설 알 {0}개<small>둥지에 자리가 생기면 받기</small><small class="gift">{1}</small></span><button data-legend{2}>받기</button></li>', k, room ? $t('지금 둥지에 자리가 있어요') : $t('둥지가 가득 찼어요. 알을 하나 부화하면 받을 수 있어요'), room ? '' : ' disabled') : '';
+  box.innerHTML = $t('<div><h2>우편함</h2>{0}\n<div class="nbtns">{1}<button class="go" data-close>닫기</button></div></div>', L.length || wait || pc ? `<ul>${wait}${pc}${L.map(m => $t('<li><i aria-hidden="true">✉️</i><span>{0}<small>{1}</small><small class="gift">{2}{3}</small></span><button data-get="{4}">받기</button></li>', esc(m.title), esc(m.body), esc(gifts(m.rewards)), m.end ? ` · ${day(m.end)}` : '', esc(m.id))).join('')}</ul>`
+    : $t('<p class="note">새 우편이 없어요</p>'), L.length + C.length > 1 ? $t('<button class="sb" data-all>모두 받기</button>') : '');
 }
 // what came (a mail, all of them, or a code); eggs that found every nest full are told as hearts
 function show(got) {
   const row = got.reduce((n, g) => n + (g.row || 0), 0), extra = got.reduce((n, g) => n + g.extra, 0), wait = got.reduce((n, g) => n + (g.wait || 0), 0);
-  box.innerHTML = `<div><h2>받았어요</h2><ul>${got.map(g => `<li><i aria-hidden="true">🎁</i><span>${esc(g.title)}<small class="gift">${esc([gifts({ ...g, legendEggs: (g.legend || 0) + (g.wait || 0) }), g.row && `선물 알 ${g.row}개`].filter(Boolean).join(' · ') || (g.extra ? `알 대신 ♥${g.extra * GIFT.eggHearts}` : ''))}</small></span></li>`).join('')}</ul>${
-    wait ? `<p class="note">둥지가 가득 차서 전설 알 ${wait}개는 우편함에 맡겨 뒀어요. 둥지에 자리가 생기면 우편함(✉)에서 받으세요</p>` : ''}${
-    row ? `<p class="note">둥지가 가득 차서 알 ${row}개는 둥지 위 「선물 알」 줄에서 기다려요</p>` : ''}${ // 112
-    extra ? `<p class="note">둥지가 가득 차서 알 ${extra}개는 ♥${extra * GIFT.eggHearts}로 바꿨어요 (알 1개 = ♥${GIFT.eggHearts})</p>` : ''}
-<div class="nbtns"><button class="go" data-close>좋아요</button></div></div>`;
+  box.innerHTML = $t('<div><h2>받았어요</h2><ul>{0}</ul>{1}{2}{3}\n<div class="nbtns"><button class="go" data-close>좋아요</button></div></div>', got.map(g => `<li><i aria-hidden="true">🎁</i><span>${esc(g.title)}<small class="gift">${esc([gifts({ ...g, legendEggs: (g.legend || 0) + (g.wait || 0) }), g.row && $t('선물 알 {0}개', g.row)].filter(Boolean).join(' · ') || (g.extra ? $t('알 대신 ♥{0}', g.extra * GIFT.eggHearts) : ''))}</small></span></li>`).join(''), wait ? $t('<p class="note">둥지가 가득 차서 전설 알 {0}개는 우편함에 맡겨 뒀어요. 둥지에 자리가 생기면 우편함(✉)에서 받으세요</p>', wait) : '', row ? $t('<p class="note">둥지가 가득 차서 알 {0}개는 둥지 위 「선물 알」 줄에서 기다려요</p>', row) : '', extra ? $t('<p class="note">둥지가 가득 차서 알 {0}개는 ♥{1}로 바꿨어요 (알 1개 = ♥{2})</p>', extra, extra * GIFT.eggHearts, GIFT.eggHearts) : '');
   box.hidden = false; sfx('grown'); dot();
 }
-const ERR = { none: '맞는 선물 코드가 없어요', used: '이 기기에서 이미 쓴 코드예요', end: '기간이 끝난 코드예요' };
+const ERR = { none: $t('맞는 선물 코드가 없어요'), used: $t('이 기기에서 이미 쓴 코드예요'), end: $t('기간이 끝난 코드예요') };
 export function openCode() {
-  box.innerHTML = `<div><h2>선물 코드 넣기</h2><input id="codeIn" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="선물 코드" placeholder="코드를 적어 주세요">
-<p class="note" id="codeErr" role="status"></p><div class="nbtns"><button class="sb" data-close>닫기</button><button class="go" data-code>넣기</button></div></div>`;
+  box.innerHTML = $t('<div><h2>선물 코드 넣기</h2><input id="codeIn" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="선물 코드" placeholder="코드를 적어 주세요">\n<p class="note" id="codeErr" role="status"></p><div class="nbtns"><button class="sb" data-close>닫기</button><button class="go" data-code>넣기</button></div></div>');
   box.hidden = false; $('codeIn').focus(); load();
 }
 async function useCode() {
   const err = $('codeErr'), v = $('codeIn').value; if (!v.trim()) return;
   if (!list) await load();
-  if (!list) { err.textContent = '코드 목록을 불러오지 못했어요. 인터넷에 연결한 뒤 다시 해 주세요'; return; }
+  if (!list) { err.textContent = $t('코드 목록을 불러오지 못했어요. 인터넷에 연결한 뒤 다시 해 주세요'); return; }
   const out = G.useCode(list.codes, v);
   if (out.got) show(out.got); else err.textContent = ERR[out.err];
 }

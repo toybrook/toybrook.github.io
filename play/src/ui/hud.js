@@ -1,4 +1,5 @@
 // Small DOM overlays: toast message, tap heart, sleep "z".
+import { $t, LANG } from '../i18n/i18n.js';
 const toastEl = document.getElementById('toast');
 let toastT;
 
@@ -33,19 +34,19 @@ export const overlayOpen = () => !!document.querySelector('#habitat > section:no
 
 // time left: 4:05 / 1:02:05 (slots), 40초 / 12분 / 1시간 5분 (sentences)
 export const clock = ms => { const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = String(s % 60).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${x}` : `${m}:${x}`; };
-export const span = ms => { const m = Math.ceil(ms / 60000); return ms < 60000 ? `${Math.max(1, Math.ceil(ms / 1000))}초` : m < 60 ? `${m}분` : `${Math.floor(m / 60)}시간${m % 60 ? ` ${m % 60}분` : ''}`; };
+export const span = ms => { const m = Math.ceil(ms / 60000); return ms < 60000 ? $t('{0}초', Math.max(1, Math.ceil(ms / 1000))) : m < 60 ? $t('{0}분', m) : $t('{0}시간{1}', Math.floor(m / 60), m % 60 ? $t(' {0}분', m % 60) : ''); };
 // Korean particle after a word: a if it ends in a final consonant (이/을/은), else b (가/를/는)
-export const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? a : b; };
+export const josa = (w, a, b) => { if (LANG !== 'ko') return ''; const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? a : b; };
 
 // ---- inbox 20 편의성: a yes/no question, closing the top window (Esc / back / a tap outside), first-time tips
 import * as G from '../game/game.js';
 import { unlockInfo } from '../game/rules.js';
 const stageEl = () => document.getElementById('stage');
 // why a habitat is shut, and how far along: "초원 도감 8칸 + 하트 30개면 열려요 (지금 3칸 · ♥12)"
-export const lockText = id => { const L = unlockInfo(G.S, id); return L.friends ? `${L.prev.name} 친구 ${L.friends}마리가 태어나면 열려요 (지금 ${Math.min(L.got, L.friends)}마리)` : L.need ? `${L.prev.name} 도감 ${L.need}칸 + 하트 ${L.hearts}개면 열려요 (지금 ${L.have}칸 · ♥${G.S.hearts})` : '아직 잠겨 있어요'; };
+export const lockText = id => { const L = unlockInfo(G.S, id); return L.friends ? $t('{0} 친구 {1}마리가 태어나면 열려요 (지금 {2}마리)', L.prev.name, L.friends, Math.min(L.got, L.friends)) : L.need ? $t('{0} 도감 {1}칸 + 하트 {2}개면 열려요 (지금 {3}칸 · ♥{4})', L.prev.name, L.need, L.hearts, L.have, G.S.hearts) : $t('아직 잠겨 있어요'); };
 
 // a question over everything: true for ok; 취소, a tap outside, Esc / back = false
-export function ask(text, ok = '확인', no = '취소') {
+export function ask(text, ok = $t('확인'), no = $t('취소')) {
   return new Promise(res => {
     const el = document.createElement('section'); el.className = 'intro ask'; el.id = 'ask';
     el.innerHTML = `<div><p></p><div class="nbtns"><button class="sb" data-close>${no}</button><button class="go" data-ok>${ok}</button></div></div>`;
@@ -91,7 +92,7 @@ function nextTip() {
   const [{ k, anchor }] = waiting.splice(i, 1), a = typeof anchor === 'string' ? document.querySelector(anchor) : anchor;
   const st = stageEl(), s = window.__stageScale || 1, sr = st.getBoundingClientRect(), r = a.getBoundingClientRect();
   tipEl = document.createElement('div'); tipEl.className = 'tip'; tipEl.dataset.k = k; tipEl.setAttribute('role', 'status');
-  tipEl.innerHTML = `<p><b>${TIPS[k][0]}</b> ${TIPS[k][1]}</p><div><button data-off>안내 끄기</button><button data-close>알겠어요</button></div>`;
+  tipEl.innerHTML = $t('<p><b>{0}</b> {1}</p><div><button data-off>안내 끄기</button><button data-close>알겠어요</button></div>', TIPS[k][0], TIPS[k][1]);
   st.append(tipEl);
   const W = st.clientWidth, H = st.clientHeight, cx = (r.left + r.width / 2 - sr.left) / s, top = (r.top - sr.top) / s, bot = (r.bottom - sr.top) / s;
   const w = tipEl.offsetWidth, x = Math.max(12, Math.min(W - 12 - w, cx - w / 2)); tipEl.style.left = x + 'px';

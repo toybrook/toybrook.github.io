@@ -4,6 +4,7 @@
 // inbox 62: a phone keeps the app open for days (iOS home screen, a tab left open), so the check also runs whenever the page
 // comes back (after 10 minutes since the last one). Opened afresh with a newer version waiting (or one found before the first
 // tap), it reloads into it at once: one open is enough, not two.
+import { $t } from '../i18n/i18n.js';
 export async function initOffline(touched = () => true) {
   const sw = navigator.serviceWorker; if (!sw) return;
   // a worker opened this page: only then can an older build be on screen (deploy-4). Read at the page's start (index.html):
@@ -41,7 +42,7 @@ export async function initOffline(touched = () => true) {
     if (fresh() && !soon()) { try { sessionStorage.setItem('toyhabitat.sw' + (moved ? 'old' : 'go'), String(Date.now())); } catch { /* none */ } return go(); }
     if (document.getElementById('upd')) return;
     const el = document.createElement('div'); el.className = 'upd'; el.id = 'upd'; el.setAttribute('role', 'status');
-    el.innerHTML = '새 버전이 있어요 · <button>새로 고침</button>'; document.getElementById('stage').append(el);
+    el.innerHTML = $t('새 버전이 있어요 · <button>새로 고침</button>'); document.getElementById('stage').append(el);
     el.querySelector('button').onclick = go;
   };
   bar();

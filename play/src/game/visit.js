@@ -4,17 +4,18 @@
 // a line from the lists below); its link (#postcard=TP1.<code>) gives the sender a mail with ♥visit.card (cardDaily a day).
 // No free text anywhere: the garden name is two words from GARDEN. Codes: base64url of a JSON array + an FNV sum (a cut or
 // edited link is dropped quietly, not a cheat guard). Nothing is sent anywhere: the code sits after # (not to the server).
+import { $t } from '../i18n/i18n.js';
 import { BALANCE as B, ACCESSORIES, HABITATS, SPECIES, PROPS, FOSSIL, paletteOf } from './data.js';
 import { SP, HAB, NAT, variantOf, variantsOf, colorsOf, kindName, outIn, newGame, xpAt } from './rules.js';
 import { encode, decode, TAG, MAX, b64, unb64 } from './layout.js';
 import { dayOf } from './clock.js';
 import { when } from './story.js';
 
-export const GARDEN = [['햇살', '달빛', '별빛', '무지개', '솜사탕', '꽃잎', '이슬', '바람', '조약돌', '도토리', '구름', '노을'],
-  ['언덕', '들판', '숲속', '호숫가', '오솔길', '마을', '골짜기', '바닷가', '꽃밭', '풀밭', '시냇가', '섬']];
+export const GARDEN = [[$t('햇살'), $t('달빛'), $t('별빛'), $t('무지개'), $t('솜사탕'), $t('꽃잎'), $t('이슬'), $t('바람'), $t('조약돌'), $t('도토리'), $t('구름'), $t('노을')],
+  [$t('언덕'), $t('들판'), $t('숲속'), $t('호숫가'), $t('오솔길'), $t('마을'), $t('골짜기'), $t('바닷가'), $t('꽃밭'), $t('풀밭'), $t('시냇가'), $t('섬')]];
 export const PICS = ['🌼', '🍀', '🌙', '⭐', '🌈', '🍓', '❄️', '🎈'];
-export const LINES = ['또 놀러 와요!', '덕분에 즐거웠어요', '우리 정원 친구들이 반겨 줬어요', '사진을 많이 찍었어요', '쓰다듬어 줬더니 좋아했어요', '다음엔 우리 애가 놀러 갈게요'];
-export const gardenName = ([a, b] = [0, 0]) => `${GARDEN[0][a] ?? GARDEN[0][0]} ${GARDEN[1][b] ?? GARDEN[1][0]} 정원`;
+export const LINES = [$t('또 놀러 와요!'), $t('덕분에 즐거웠어요'), $t('우리 정원 친구들이 반겨 줬어요'), $t('사진을 많이 찍었어요'), $t('쓰다듬어 줬더니 좋아했어요'), $t('다음엔 우리 애가 놀러 갈게요')];
+export const gardenName = ([a, b] = [0, 0]) => $t('{0} {1} 정원', GARDEN[0][a] ?? GARDEN[0][0], GARDEN[1][b] ?? GARDEN[1][0]);
 const okG = (a, b) => Number.isInteger(a) && Number.isInteger(b) && a >= 0 && b >= 0 && a < GARDEN[0].length && b < GARDEN[1].length;
 
 const fnv = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193); return (h >>> 0).toString(36); };
@@ -101,9 +102,9 @@ export function claimCard(S, lid, now) {
   const c = S.visit.cards.find(x => x.lid === lid && !x.got); if (!c) return null;
   const day = dayOf(now); if (S.visit.cardDay !== day) { S.visit.cardDay = day; S.visit.cardN = 0; }
   const hearts = S.visit.cardN < B.visit.cardDaily ? B.visit.card : 0; if (hearts) S.visit.cardN++;
-  c.got = now; S.hearts += hearts; return { title: `${gardenName(c.g)}에서 온 엽서 · ${kindName(c)}`, hearts, extra: 0 };
+  c.got = now; S.hearts += hearts; return { title: $t('{0}에서 온 엽서 · {1}', gardenName(c.g), kindName(c)), hearts, extra: 0 };
 }
-export const guestName = g => `${gardenName(g.g)}의 ${kindName(g)}`;
+export const guestName = g => $t('{0}의 {1}', gardenName(g.g), kindName(g));
 
 // 69-4 서식지 구경 링크 (#see=TH1.<base64url>): one habitat as it stands, to look at only (ui/visit.js; nothing of it is kept).
 // Bytes: FNV sum 4 · 정원사 레벨 1 (its 명성 look) · garden name 2 · friends n 1 · n × (species 1, +128 a baby · variant 1 ·

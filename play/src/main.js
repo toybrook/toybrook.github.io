@@ -1,5 +1,6 @@
 // Screen flow: world map <-> habitats. The game (game/game.js) runs underneath either way.
 import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // first: it listens for errors before the rest runs
+import { $t, LANG, LANGS, localize, ko } from './i18n/i18n.js';
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
 import { BALANCE, HABITATS, ZONES, PROPS } from './game/data.js';
@@ -24,14 +25,15 @@ import { initArt, place as artPlace, retRow as artRow, open as artOpen, tapped a
 import { newsOf as wildNews } from './game/wild.js'; // 17-3 정원이 숨 쉬어요
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
+localize(document); // 119: index.html's own text in the chosen language (the code's text goes through $t)
 // 26-7 한 번에 한 탭: a tab opened second, or one another tab took over, is covered (nothing saved there) till 「여기서 하기」
 function tabOff(first) {
   if ($('tabOff')) $('tabOff').remove(); const el = document.createElement('section'); el.className = 'intro'; el.id = 'tabOff';
-  el.innerHTML = `<div><h2>${first ? '다른 탭에서 열려 있어요' : '다른 탭에서 이어서 하고 있어요'}</h2><p>${first ? '이 탭에서 하는 것은 저장되지 않아요. 여기서 하려면 아래를 누르세요. 다른 탭은 멈춰요.' : '이 탭은 멈췄어요. 여기서 다시 하려면 아래를 누르세요.'}</p><button data-take>여기서 하기</button></div>`;
+  el.innerHTML = $t('<div><h2>{0}</h2><p>{1}</p><button data-take>여기서 하기</button></div>', first ? $t('다른 탭에서 열려 있어요') : $t('다른 탭에서 이어서 하고 있어요'), first ? $t('이 탭에서 하는 것은 저장되지 않아요. 여기서 하려면 아래를 누르세요. 다른 탭은 멈춰요.') : $t('이 탭은 멈췄어요. 여기서 다시 하려면 아래를 누르세요.'));
   el.querySelector('[data-take]').onclick = e => { e.target.disabled = true; G.takeOver(); }; $('stage').append(el);
 }
 // 26-7: a save that failed (full storage etc.) is told once, with the way to a backup code (made from the game in memory)
-const saveFail = () => ask('저장하지 못했어요. 기기 저장 공간이 꽉 찼을 수 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.', '백업 코드 만들기', '닫기').then(ok => ok && BK.open());
+const saveFail = () => ask($t('저장하지 못했어요. 기기 저장 공간이 꽉 찼을 수 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.'), $t('백업 코드 만들기'), $t('닫기')).then(ok => ok && BK.open());
 // 69-4 서식지 구경 링크: someone's habitat to look at. This page stores nothing at all (the player's own save, prefs, counts
 // stay as they were): every storage write is a no-op till 「내 정원으로」 opens the page again without the link
 const SEE = seeHash();
@@ -61,7 +63,7 @@ $('overview').onclick = () => api?.overview(); $('frontBtn').onclick = () => api
 const nav = {
   async go(id, aid) {
     if (cur !== id) { if (cur) { api?.setActive(false); play?.leave(); } if (!await enter(id)) return false; }
-    if (aid != null && !api?.look(aid)) toast('지금은 볼 수 없어요');
+    if (aid != null && !api?.look(aid)) toast($t('지금은 볼 수 없어요'));
   },
 };
 // 26-1: the first screen (the world map) needs none of the 3D. three.js, the habitats and their windows (ui/play.js) are
@@ -95,8 +97,8 @@ const ui = {
   lostLong: id => { // inbox 53: not given back in 3 s: built on a new canvas. None to be had (a probe first: three logs an error when it can't): 다시 불러오기
     const c = document.createElement('canvas'), g = c.getContext('webgl2') || c.getContext('webgl'); if (!g || g.isContextLost()) return glFail('no context');
     g.getExtension('WEBGL_lose_context')?.loseContext(); redo(id); built[id]?.then(glRebuilt, glFail); },
-  onDig: () => { const id = G.dig(); if (id) toast(`화석을 발견했어요! ${PROPS.find(p => p.id === id).name} · 꾸미기 › 선물에 넣어 두었어요`, 2800, true); return id; }, // 14-3 화석 발굴
-  onPile: () => { const n = G.tapPile(), L = n && G.event(); if (n) toast(`눈더미에서 ${L.e.coin.icon} ${L.e.coin.name} ${n}개!`, 2200, true); return n; }, // 15-2 첫눈
+  onDig: () => { const id = G.dig(); if (id) toast($t('화석을 발견했어요! {0} · 꾸미기 › 선물에 넣어 두었어요', PROPS.find(p => p.id === id).name), 2800, true); return id; }, // 14-3 화석 발굴
+  onPile: () => { const n = G.tapPile(), L = n && G.event(); if (n) toast($t('눈더미에서 {0} {1} {2}개!', L.e.coin.icon, L.e.coin.name, n), 2200, true); return n; }, // 15-2 첫눈
   hello: (x, y) => heart(x, y), // inbox 64-A: the first friend's hop
   skyNow, onStar, // 16-2 특별한 하늘 (ui/sky.js)
   onMyth, // 14-1 the meadow's fire prints, hoofprints, altar and 신수 tapped (ui/myth.js)
@@ -104,7 +106,7 @@ const ui = {
   onWalk: (h, t, n) => G.wildWalk(h, t, n), onWild: (h, c) => G.wildGround(h, c), // 17-3: the animals' steps; where things may grow (game/wild.js)
   say: t => toast(t, 1800, true), // 28-3: a short note from the habitat (the music box's tune, the fireworks by day)
   zzz(xy) { if (!hab.classList.contains('hidden') && !overlayOpen() && !document.querySelector('body > section.pop:not([hidden])')) zzz(xy); }, // not over a sheet (28-5: nor 설정·꾸미기 코드·도움말, outside #habitat)
-  onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; $('overview').textContent = s === 'w' ? '친구들 보기' : '전체 보기'; }, // following: 정면 + 전체 보기; away from the start view: 전체 보기; at the whole board (inbox 63): 친구들 보기
+  onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; $('overview').textContent = s === 'w' ? $t('친구들 보기') : $t('전체 보기'); }, // following: 정면 + 전체 보기; away from the start view: 전체 보기; at the whole board (inbox 63): 친구들 보기
   tag: (text, rec) => { play.tag(text, rec); snap.followed(); }, // ui/play.js: a baby's tag shows its growth; 26-4 사진 모드's 따라가기 shows who
   onTap: (...a) => { if (!snap.on()) play.onTap(...a); }, // 24-1 사진 모드: no hearts or bubbles (a tap still follows the animal)
   scene: e => play?.scene(e, snap.on()), // 13-2 놀이 장면 (ui/play.js)
@@ -115,11 +117,11 @@ const ui = {
   onCarry: rec => { G.flag('tip_carry'); if (!G.S.flags.carried) G.flag('carried'); play.onCarry(rec); }, // inbox 42 E: found it alone: no tip for it; 66-1 first_drag; 69-1 출생 기록
   onLetGo: rec => play.onLetGo(rec),
   onGuestMove: (id, x, z) => G.moveGuest(id, x, z), // 66-1: a 떠돌이 손님 carried somewhere
-  cramped(again) { if (again || !G.S.flags.cramped) { G.flag('cramped'); toast('울타리 안이 너무 좁아요', 2200, true); } }, // inbox 42 B: one put outside a fence closed too tight (once)
-  train(hab, loop) { const k = 'train:' + hab; if (loop && !G.S.flags[k]) { G.flag(k); toast('고리가 닫혔어요! 태엽 기차가 달려요', 2600, true); } return !!G.S.flags[k]; }, // 28-4: once closed, it runs (a broken track: back and forth)
+  cramped(again) { if (again || !G.S.flags.cramped) { G.flag('cramped'); toast($t('울타리 안이 너무 좁아요'), 2200, true); } }, // inbox 42 B: one put outside a fence closed too tight (once)
+  train(hab, loop) { const k = 'train:' + hab; if (loop && !G.S.flags[k]) { G.flag(k); toast($t('고리가 닫혔어요! 태엽 기차가 달려요'), 2600, true); } return !!G.S.flags[k]; }, // 28-4: once closed, it runs (a broken track: back and forth)
 };
 
-placeFrom(() => cur ? HAB[cur].name : '지도'); // inbox 49: where the player was, for 문제 알리기 and an error's clues
+placeFrom(() => cur ? ko(HAB[cur].name) : '지도'); // inbox 49: where the player was, for 문제 알리기 and an error's clues
 const built = {}, lv = {}; // each habitat's scene is built the first time it is entered (and its models fetched then); lv: the 땅 넓히기 step it was built at
 // 22-1: a build hands the board's own trees, bushes, rocks and flowers to the save the first time (and a 땅 넓히기 step's new ones)
 const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r => setTimeout(r, 60)).then(code).then(h => h.startHabitat($('gl'), ui, id, G.withGuests(), { level: lv[id], ...opt }))
@@ -132,18 +134,18 @@ const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r 
 const firstHere = id => code().then(() => new Promise(done => {
   const L = $('loading'), b = L.querySelector('.lfirst'), say = L.firstChild, off = () => document.body.classList.remove('building');
   document.body.classList.add('building');
-  say.textContent = '첫 알이에요! 눌러서 깨워 보세요'; b.hidden = false; b.focus?.();
-  b.onclick = () => { b.onclick = null; b.hidden = true; say.textContent = ''; play.firstEgg(id, () => { say.textContent = '서식지 불러오는 중…'; done(); }, () => (built[id] ??= build(id)).then(off, off)); };
+  say.textContent = $t('첫 알이에요! 눌러서 깨워 보세요'); b.hidden = false; b.focus?.();
+  b.onclick = () => { b.onclick = null; b.hidden = true; say.textContent = ''; play.firstEgg(id, () => { say.textContent = $t('서식지 불러오는 중…'); done(); }, () => (built[id] ??= build(id)).then(off, off)); };
 }), () => {});
 async function enter(id) {
-  cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + ' 서식지 3D');
+  cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + $t(' 서식지 3D'));
   $('habName').querySelector('b').textContent = HAB[id].short ?? HAB[id].name; // 14-3: the chip's room (375 wide) fits two letters
   loadBar(true, !!play); if (G.S.flags.lastHab !== id) G.flag('lastHab', id);
-  if (!SEE) track('habitat_open', { habitat: HAB[id].name }, 'open:' + id); // inbox 41 A: a day each
+  if (!SEE) track('habitat_open', { habitat: ko(HAB[id].name) }, 'open:' + id); // inbox 41 A: a day each
   if (firstEgg(G.S) && !built[id]) await firstHere(id); // inbox 61 A·B
   try { api = await (built[id] ??= build(id)); }
   catch (e) { console.warn('enter', id, e); // 26-1: offline, and this habitat's files were never fetched (or the network dropped): back to the map, try again later
-    delete built[id]; loadBar(false); if (cur === id) $('back').click(); toast('인터넷에 연결되면 열 수 있어요', 2600); return false;
+    delete built[id]; loadBar(false); if (cur === id) $('back').click(); toast($t('인터넷에 연결되면 열 수 있어요'), 2600); return false;
   }
   // 27-2: the animals and props come out in attach; their shaders are made behind the curtain (the first frame after it froze 2.6 s in Chrome, 3.3 s in WebKit)
   api.setActive(true); play.attach(api, id);
@@ -160,7 +162,7 @@ const rebuild = (id, ex) => { // ex: the 땅 넓히기 that asks for it (the mis
   const reveal = !!ex, prev = built[id];
   built[id] = (async () => {
     const old = await prev, shown = cur === id;
-    if (shown) { veil.firstChild.textContent = reveal ? '땅을 넓히는 중…' : '다시 짓는 중…'; await fade(true); } // a slow phone can take a few seconds
+    if (shown) { veil.firstChild.textContent = reveal ? $t('땅을 넓히는 중…') : $t('다시 짓는 중…'); await fade(true); } // a slow phone can take a few seconds
     const pose = old.pose(); old.setActive(false); // the layouts are shared: the old board must be still while the new one is laid out
     const next = await build(id, { pose, reveal }); old.dispose();
     if (cur === id) { api = next; next.setActive(true); play.attach(next, id); if (ex) next.showZone(ex.level); } else next.setActive(false); // 28-1: the camera to the new zone, animals run there
@@ -171,8 +173,8 @@ const rebuild = (id, ex) => { // ex: the 땅 넓히기 that asks for it (the mis
 };
 // 28-1: 「새 구역: 과수원」 and what one can see there, in a line (ZONES)
 function zoneCard(id, L, free) {
-  const z = ZONES[id]?.[L - 1], el = document.createElement('section'); el.id = 'zoneCard'; el.className = 'intro pop lvup'; el.setAttribute('aria-label', '새 구역');
-  el.innerHTML = `<div><h2>새 구역: ${z.name}</h2><p class="sub">${z.line}</p><p class="sub">땅 넓히기 ${L}단계 · ${free ? '모으기 선물로 무료' : `♥-${BALANCE.expand.price[L - 1]}`}</p><button data-close>좋아요</button></div>`;
+  const z = ZONES[id]?.[L - 1], el = document.createElement('section'); el.id = 'zoneCard'; el.className = 'intro pop lvup'; el.setAttribute('aria-label', $t('새 구역'));
+  el.innerHTML = $t('<div><h2>새 구역: {0}</h2><p class="sub">{1}</p><p class="sub">땅 넓히기 {2}단계 · {3}</p><button data-close>좋아요</button></div>', z.name, z.line, L, free ? $t('모으기 선물로 무료') : `♥-${BALANCE.expand.price[L - 1]}`);
   el.querySelector('[data-close]').onclick = () => el.remove(); $('habitat').append(el); sfx('level');
 }
 G.on(ev => {
@@ -182,8 +184,8 @@ G.on(ev => {
 // 26-3 그래픽 품질 changed: the habitat on screen is built again now (under the cloud), the others when next entered
 const redo = id => { if (id === cur) rebuild(id); else if (built[id]) { const p = built[id]; delete built[id]; p.then(a => a.dispose(), () => {}); } }, regfx = () => Object.keys(built).forEach(redo);
 // inbox 53: no new GL context either (the GPU gone for the page): a short note and a reload (the save is kept on every change)
-const glFail = e => { console.warn('rebuild', e); if ($('glFail')) return; const el = document.createElement('section'); el.id = 'glFail'; el.className = 'intro pop'; el.setAttribute('aria-label', '다시 불러오기');
-  el.innerHTML = '<div><h2>화면을 다시 그리지 못했어요</h2><p>모은 동물과 꾸미기는 저장돼 있어요.</p><button>다시 불러오기</button></div>'; el.querySelector('button').onclick = () => location.reload(); $('stage').append(el); };
+const glFail = e => { console.warn('rebuild', e); if ($('glFail')) return; const el = document.createElement('section'); el.id = 'glFail'; el.className = 'intro pop'; el.setAttribute('aria-label', $t('다시 불러오기'));
+  el.innerHTML = $t('<div><h2>화면을 다시 그리지 못했어요</h2><p>모은 동물과 꾸미기는 저장돼 있어요.</p><button>다시 불러오기</button></div>'); el.querySelector('button').onclick = () => location.reload(); $('stage').append(el); };
 const level = initLevel(() => api); level.events(offline); // 23-1 정원사 레벨
 const snap = initPhoto(() => api, () => cur); // 24-1 사진 모드
 initSky(() => api, () => cur);
@@ -255,13 +257,12 @@ function showRet() {
   const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
   const d2 = att && att[2], wk = att && weekOn(); // 93-1: the second day's legendary egg, the card's top row (a tap: into the nest, then the nest)
-  const rows = [d2 && ['🥚', '이틀째 선물 · 전설 알이 왔어요', '누르면 둥지로 · 기다림 없이 바로 깨요', 'd2'], top && ['📰', `새 소식 ${VERSION}`, top, 'news'], myth && ['🔥', '밤사이 제단에 불갈기 천리마가 내려왔어요', '다시 보기', 'myth'], sk && ['🌌', sk.text, '다시 보기', 'sky'], back.length && ['🐾', '산책에서 돌아왔어요', `${names.slice(0, 2).join(', ')}${names.length > 2 ? ` 외 ${names.length - 2}` : ''} · 엽서 ${back.length}장 보기`, 'cards'], !d2 && att && ['📅', wk ? `첫 주 선물 ${att[0]}일째` : `${att[0]}일째 출석`, att[1], 'attend'], ar, wr, n && ['🥚', `알 ${n}개`, `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? '둥지가 가득 찼어요' : `둥지에 생겼어요${full.length ? ` · ${full.map(h => HAB[h].name).join('·')} 가득` : ''}`}`, 'eggs'],
-    grown.length && ['🌱', `다 자란 친구 ${grown.length}`, '보러 가요', 'grown'], ready && ['✨', `부화 끝난 알 ${ready}`, '깨우러 가요', 'ready']].filter(Boolean);
+  const rows = [d2 && ['🥚', $t('이틀째 선물 · 전설 알이 왔어요'), $t('누르면 둥지로 · 기다림 없이 바로 깨요'), 'd2'], top && ['📰', $t('새 소식 {0}', VERSION), top, 'news'], myth && ['🔥', $t('밤사이 제단에 불갈기 천리마가 내려왔어요'), $t('다시 보기'), 'myth'], sk && ['🌌', sk.text, $t('다시 보기'), 'sky'], back.length && ['🐾', $t('산책에서 돌아왔어요'), $t('{0}{1} · 엽서 {2}장 보기', names.slice(0, 2).join(', '), names.length > 2 ? $t(' 외 {0}', names.length - 2) : '', back.length), 'cards'], !d2 && att && ['📅', wk ? $t('첫 주 선물 {0}일째', att[0]) : $t('{0}일째 출석', att[0]), att[1], 'attend'], ar, wr, n && ['🥚', $t('알 {0}개', n), `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? $t('둥지가 가득 찼어요') : $t('둥지에 생겼어요{0}', full.length ? $t(' · {0} 가득', full.map(h => HAB[h].name).join('·')) : '')}`, 'eggs'],
+    grown.length && ['🌱', $t('다 자란 친구 {0}', grown.length), $t('보러 가요'), 'grown'], ready && ['✨', $t('부화 끝난 알 {0}', ready), $t('깨우러 가요'), 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
-  if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', '백업해 두면 기기를 바꿔도 이어서 할 수 있어요', '설정 › 내 저장 백업', 'backup']); G.flag('backupNag', today); }
-  ret.innerHTML = `<div><h2>돌아왔어요</h2><ul>${rows.map(([i, t, sub, k]) => `<li><button data-go="${k}"${k === 'attend' ? ' class="take"' : ''}><i aria-hidden="true">${i}</i><span>${t}<small>${sub}</small></span></button>${
-    (k === 'attend' || k === 'd2') && wk ? weekCells() : k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => '<span><img alt="새끼"><b>→</b><img alt="성체"></span>').join('')}</p>` : ''}</li>`).join('')}</ul>
-<div class="nbtns"><button class="go" data-close>확인</button></div></div>`;
+  if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', $t('백업해 두면 기기를 바꿔도 이어서 할 수 있어요'), $t('설정 › 내 저장 백업'), 'backup']); G.flag('backupNag', today); }
+  ret.innerHTML = $t('<div><h2>돌아왔어요</h2><ul>{0}</ul>\n<div class="nbtns"><button class="go" data-close>확인</button></div></div>', rows.map(([i, t, sub, k]) => `<li><button data-go="${k}"${k === 'attend' ? ` class="take" data-take="${$t('받기')}"` : ''}><i aria-hidden="true">${i}</i><span>${t}<small>${sub}</small></span></button>${
+    (k === 'attend' || k === 'd2') && wk ? weekCells() : k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => $t('<span><img class="b" alt="새끼"><b>→</b><img alt="성체"></span>')).join('')}</p>` : ''}</li>`).join(''));
   ret.dataset.wild = wn ? JSON.stringify([wn.hab, wn.at]) : ''; if (wn) G.wildSeen();
   ret.dataset.eggs = most || ''; ret.dataset.grown = grown[0] ? habitatOf(grown[0]) : ''; retGrown = grown.map(a => a.id);
   if (grown.length) code().then(() => import('./ui/thumbs.js')).then(({ figureThumb: f }) => ret.querySelectorAll('.minis > span').forEach((p, i) => { const a = grown[i], [b, c] = p.querySelectorAll('img');
@@ -270,10 +271,10 @@ function showRet() {
 }
 ret.onclick = async e => {
   const b = e.target.closest('button'), d = b?.dataset; if (!d) return;
-  if (d.go === 'attend') { const t = takeToday(retHome()), r = b.getBoundingClientRect(); b.disabled = true; b.querySelector('small').textContent = !t ? '받았어요' : t.endsWith('받았어요') ? t : `받았어요 · ${t}`; // 102: a full nest's line says it itself
+  if (d.go === 'attend') { const t = takeToday(retHome()), r = b.getBoundingClientRect(); b.disabled = true; b.querySelector('small').textContent = !t ? $t('받았어요') : t.endsWith($t('받았어요')) ? t : $t('받았어요 · {0}', t); // 102: a full nest's line says it itself
     for (let i = 0; i < 3; i++) setTimeout(() => heart(r.right - 30 + (i - 1) * 14, r.top + r.height / 2), i * 120); return; } // 76: no window; ♥ pops right there
   ret.hidden = true;
-  if (retAttend()) { const t = takeToday(retHome()); if (t) toast(`오늘 출석 · ${t}`, 2600); }
+  if (retAttend()) { const t = takeToday(retHome()); if (t) toast($t('오늘 출석 · {0}', t), 2600); }
   const first = retGrown[0]; if (retGrown.length) { G.grownSeen(retGrown); retGrown = []; }
   if (d.go == null) return;
   if (d.go === 'd2') { ret.dataset.eggs = Object.keys(G.S.nests).find(h => G.S.nests[h].eggs.some(e => e.now)) || ''; d.go = 'eggs'; } // taken above (retAttend)
@@ -308,54 +309,56 @@ if (backTo) nav.go(backTo);
 if (!SEE) { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
 
 // 21-1 설정: choices kept in this browser apart from the save (config.js PREFS); the habitat reads them every frame
-const PREF_ROWS = [['time', '시간', [['real', '실제 시간'], ['day', '항상 낮']]], ['weather', '날씨 효과', [[true, '켜기'], [false, '끄기']]], // 21-2: 끄기 = always clear (for slow phones)
-  ['mute', '소리', [[false, '켜기'], [true, '모두 끄기']]]]; // 26-2
-const VOLS = [['vAll', '전체'], ['vAmb', '배경 소리'], ['vFx', '효과음'], ['vAnimal', '동물 소리']];
+const PREF_ROWS = [['lang', $t('언어'), Object.entries(LANGS)], // 119: each language in its own name; a change reloads
+  ['time', $t('시간'), [['real', $t('실제 시간')], ['day', $t('항상 낮')]]], ['weather', $t('날씨 효과'), [[true, $t('켜기')], [false, $t('끄기')]]], // 21-2: 끄기 = always clear (for slow phones)
+  ['mute', $t('소리'), [[false, $t('켜기')], [true, $t('모두 끄기')]]]]; // 26-2
+const VOLS = [['vAll', $t('전체')], ['vAmb', $t('배경 소리')], ['vFx', $t('효과음')], ['vAnimal', $t('동물 소리')]];
 // 26-3: after the sound. 움직임 줄이기 shows the device's choice until one is picked; 진동 only where the browser can (Android)
 const PC = matchMedia('(pointer:fine)').matches; // 74: 책상 모드 is for a desk
-const LOOK_ROWS = [['gfx', '그래픽 품질', [['low', '낮음'], ['mid', '보통'], ['high', '높음']]], ['saver', '배터리 절약', [[false, '끄기'], [true, '켜기']]],
-  ...PC ? [['deskSound', '책상 모드 소리', [[false, '끄기'], [true, '배경 소리만']]], ...navigator.wakeLock ? [['deskWake', '책상 모드 화면 켜 두기', [[true, '켜기'], [false, '끄기']]]] : []] : [], // 16-3; 74: PC only
-  ['font', '글자 크기', [['s', '작게'], ['m', '보통'], ['l', '크게']]], ['calm', '움직임 줄이기', [[false, '끄기'], [true, '켜기']]], ['signs', '구역 팻말 보이기', [[true, '켜기'], [false, '끄기']]],
+const LOOK_ROWS = [['gfx', $t('그래픽 품질'), [['low', $t('낮음')], ['mid', $t('보통')], ['high', $t('높음')]]], ['saver', $t('배터리 절약'), [[false, $t('끄기')], [true, $t('켜기')]]],
+  ...PC ? [['deskSound', $t('책상 모드 소리'), [[false, $t('끄기')], [true, $t('배경 소리만')]]], ...navigator.wakeLock ? [['deskWake', $t('책상 모드 화면 켜 두기'), [[true, $t('켜기')], [false, $t('끄기')]]]] : []] : [], // 16-3; 74: PC only
+  ['font', $t('글자 크기'), [['s', $t('작게')], ['m', $t('보통')], ['l', $t('크게')]]], ['calm', $t('움직임 줄이기'), [[false, $t('끄기')], [true, $t('켜기')]]], ['signs', $t('구역 팻말 보이기'), [[true, $t('켜기')], [false, $t('끄기')]]],
   // 74: 성격·단짝 and 단짝 하트 끈 rows hidden (they stay on; flags.palOff and PREFS.palLine as saved)
-  ...navigator.vibrate && matchMedia('(pointer:coarse)').matches ? [['buzz', '진동', [[false, '끄기'], [true, '켜기']]]] : [],
-  ['art', '동물 작품 만들기', [[true, '켜기'], [false, '끄기']]], // 17-2 (flags.artOff: kept in the save)
-  ['wild', '정원이 자라요', [[true, '켜기'], [false, '끄기']]], // 17-3 (flags.wildOff: kept in the save; 끄기: nothing grows, none drawn)
-  ['stats', '이용 통계 보내기', [[true, '켜기'], [false, '끄기']]]]; // inbox 41 A (src/ui/stats.js)
-const segRow = ([k, name, opts]) => { const now = k === 'calm' ? calm() : k === 'pal' ? !G.S.flags.palOff : k === 'art' ? !G.S.flags.artOff : k === 'wild' ? !G.S.flags.wildOff : PREFS[k];
+  ...navigator.vibrate && matchMedia('(pointer:coarse)').matches ? [['buzz', $t('진동'), [[false, $t('끄기')], [true, $t('켜기')]]]] : [],
+  ['art', $t('동물 작품 만들기'), [[true, $t('켜기')], [false, $t('끄기')]]], // 17-2 (flags.artOff: kept in the save)
+  ['wild', $t('정원이 자라요'), [[true, $t('켜기')], [false, $t('끄기')]]], // 17-3 (flags.wildOff: kept in the save; 끄기: nothing grows, none drawn)
+  ['stats', $t('이용 통계 보내기'), [[true, $t('켜기')], [false, $t('끄기')]]]]; // inbox 41 A (src/ui/stats.js)
+const segRow = ([k, name, opts]) => { const now = k === 'lang' ? LANG : k === 'calm' ? calm() : k === 'pal' ? !G.S.flags.palOff : k === 'art' ? !G.S.flags.artOff : k === 'wild' ? !G.S.flags.wildOff : PREFS[k];
   return `<div class="row"><b>${name}</b><div class="seg">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}"${now === v ? ' class="on"' : ''}>${t}</button>`).join('')}</div></div>`; };
 const prefs = $('prefs'), rows = $('prefRows'), help = $('help');
 const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
   + VOLS.map(([k, name]) => `<label class="row vol"><b>${name}</b><input type="range" min="0" max="100" step="5" data-vol="${k}" value="${Math.round(PREFS[k] * 100)}"${PREFS.mute ? ' disabled' : ''}><output>${Math.round(PREFS[k] * 100)}%</output></label>`).join('')
   + LOOK_ROWS.map(segRow).join('')
-  + (cur && PC ? `<div class="row"><b>책상 모드</b><div class="seg"><button data-act="desk">켜기</button>${window.documentPictureInPicture ? '<button data-act="pip">항상 위 작은 창</button>' : ''}</div></div>` : '') // 16-3 (작은 창: PC Chrome only)
-  + `<div class="row"><b>내 저장 백업</b><div class="seg"><button data-act="backup"${BK.due() ? ' class="new"' : ''}>백업 · 불러오기</button></div></div>`
-  + `<div class="row"><b>처음 안내</b><div class="seg"><button data-act="help">도움말</button><button data-act="tips">안내 다시 보기</button></div></div>`
-  + (iosSafariTab(BK.DEV) ? `<div class="row"><b>홈 화면 안내</b><div class="seg"><button data-act="home">홈 화면 안내 다시 보기</button></div></div>` : '') // inbox 39
-  + `<div class="row"><b>정보</b><div class="seg"><button data-act="intro">베타 안내</button><button data-act="news">새 소식 다시 보기</button></div></div>` // inbox 43
-  + `<div class="row"><b>선물 코드</b><div class="seg"><button data-act="code">선물 코드 넣기</button></div></div>` // inbox 41 B
-  + (FEEDBACK_URL === 'TODO' ? '' : `<div class="row"><b>의견</b><div class="seg"><button data-act="fb">의견 보내기</button><button data-act="bug">문제 알리기</button></div></div>`); };
+  + (cur && PC ? $t('<div class="row"><b>책상 모드</b><div class="seg"><button data-act="desk">켜기</button>{0}</div></div>', window.documentPictureInPicture ? $t('<button data-act="pip">항상 위 작은 창</button>') : '') : '') // 16-3 (작은 창: PC Chrome only)
+  + $t('<div class="row"><b>내 저장 백업</b><div class="seg"><button data-act="backup"{0}>백업 · 불러오기</button></div></div>', BK.due() ? ' class="new"' : '')
+  + $t('<div class="row"><b>처음 안내</b><div class="seg"><button data-act="help">도움말</button><button data-act="tips">안내 다시 보기</button></div></div>')
+  + (iosSafariTab(BK.DEV) ? $t('<div class="row"><b>홈 화면 안내</b><div class="seg"><button data-act="home">홈 화면 안내 다시 보기</button></div></div>') : '') // inbox 39
+  + $t('<div class="row"><b>정보</b><div class="seg"><button data-act="intro">베타 안내</button><button data-act="news">새 소식 다시 보기</button></div></div>') // inbox 43
+  + $t('<div class="row"><b>선물 코드</b><div class="seg"><button data-act="code">선물 코드 넣기</button></div></div>') // inbox 41 B
+  + (FEEDBACK_URL === 'TODO' ? '' : $t('<div class="row"><b>의견</b><div class="seg"><button data-act="fb">의견 보내기</button><button data-act="bug">문제 알리기</button></div></div>')); };
 $('prefsBtn').onclick = () => { drawPrefs(); prefs.hidden = false; };
 const nagDot = () => $('prefsBtn').classList.toggle('new', BK.due()); nagDot(); G.on(nagDot); // inbox 21: 7 days without a backup
 $('prefsClose').onclick = () => { prefs.hidden = true; };
-const tipsAgain = () => { resetTips(); G.flag('nestTapped', false); prefs.hidden = help.hidden = true; toast('처음 안내를 다시 보여 줄게요', 2200, true); if (cur) tip('nest', '#nestBtn'); };
+const tipsAgain = () => { resetTips(); G.flag('nestTapped', false); prefs.hidden = help.hidden = true; toast($t('처음 안내를 다시 보여 줄게요'), 2200, true); if (cur) tip('nest', '#nestBtn'); };
 rows.onclick = e => {
   const d = e.target.closest('button')?.dataset; if (!d) return;
   if (d.act === 'tips') return tipsAgain();
   if (d.act === 'help') { prefs.hidden = true; return openHelp(); } // 74: was the 「?」 button
-  if (d.act === 'home') { G.flag('homeHintSeen', false); prefs.hidden = true; return toast(cur ? '홈 화면 안내를 다시 보여 줄게요' : '서식지에 들어가면 홈 화면 안내를 다시 보여 줄게요', 2200, true); } // play.js shows it
+  if (d.act === 'home') { G.flag('homeHintSeen', false); prefs.hidden = true; return toast(cur ? $t('홈 화면 안내를 다시 보여 줄게요') : $t('서식지에 들어가면 홈 화면 안내를 다시 보여 줄게요'), 2200, true); } // play.js shows it
   if (d.act === 'backup') return BK.open();
   if (d.act === 'news') { prefs.hidden = true; news.hidden = false; return; }
   if (d.act === 'intro') { prefs.hidden = true; intro.hidden = false; return; }
   if (d.act === 'code') { prefs.hidden = true; return openCode(); }
-  if (d.act === 'desk' || d.act === 'pip') { prefs.hidden = true; const a = api; if (!a) return toast('서식지를 그리는 중이에요 · 조금 뒤에 다시 눌러 주세요', 2200, true); return import('./ui/desk.js').then(m => d.act === 'pip' ? m.openPip(a) : m.deskOn(a)).catch(e => { console.warn('desk', e); toast('작은 창을 열지 못했어요', 2200, true); }); } // 16-3
+  if (d.act === 'desk' || d.act === 'pip') { prefs.hidden = true; const a = api; if (!a) return toast($t('서식지를 그리는 중이에요 · 조금 뒤에 다시 눌러 주세요'), 2200, true); return import('./ui/desk.js').then(m => d.act === 'pip' ? m.openPip(a) : m.deskOn(a)).catch(e => { console.warn('desk', e); toast($t('작은 창을 열지 못했어요'), 2200, true); }); } // 16-3
   if (d.act === 'fb') return void open(fbUrl(), '_blank', 'noopener');
   if (d.act === 'bug') { const ok = copyNow(reportText()); // copied at this tap; the player pastes it in the form
-    ask(ok === false ? '복사하지 못했어요.\n의견 양식에 겪은 일을 적어 주세요.' : '버전·기기·최근 오류를 복사했어요.\n의견 양식의 글칸에 붙여 넣고 겪은 일을 적어 주세요.', '양식 열기', '닫기');
+    ask(ok === false ? $t('복사하지 못했어요.\n의견 양식에 겪은 일을 적어 주세요.') : $t('버전·기기·최근 오류를 복사했어요.\n의견 양식의 글칸에 붙여 넣고 겪은 일을 적어 주세요.'), $t('양식 열기'), $t('닫기'));
     $('ask').querySelector('[data-ok]').addEventListener('click', () => open(fbUrl(), '_blank', 'noopener')); return; } // opened in the tap itself, not after a promise (popup blockers)
   if (!d.k) return;
   if (d.k === 'pal') { G.flag('palOff', d.v !== 'true'); return drawPrefs(); } // 17-1
   if (d.k === 'art') { G.flag('artOff', d.v !== 'true'); return drawPrefs(); } // 17-2
   if (d.k === 'wild') { G.flag('wildOff', d.v !== 'true'); return drawPrefs(); } // 17-3
+  if (d.k === 'lang') { if (d.v !== LANG) { PREFS.lang = d.v; savePrefs(); location.reload(); } return; } // 119
   const opt = [...PREF_ROWS, ...LOOK_ROWS].find(r => r[0] === d.k)[2].find(o => String(o[0]) === d.v), was = PREFS[d.k];
   PREFS[d.k] = opt[0]; savePrefs(); applyLook(); drawPrefs(); applySound();
   if (d.k === 'gfx' && was !== opt[0]) regfx(); // 26-3: the habitat is built again at the new quality
@@ -364,8 +367,7 @@ rows.oninput = e => { const k = e.target.dataset.vol; if (!k) return; PREFS[k] =
 rows.onchange = e => { if (e.target.dataset.vol) { savePrefs(); sfx('tap'); } }; // let go of the slider: keep it, and a tap to hear how loud
 // inbox 20 C3: every first-time tip in one place (74: from 설정 › 처음 안내)
 const openHelp = () => {
-  help.innerHTML = `<div><h2>도움말</h2><dl>${Object.values(TIPS).map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join('')}</dl>
-<div class="nbtns"><button class="sb" data-act="tips">안내 다시 보기</button><button class="go" data-close>닫기</button></div></div>`;
+  help.innerHTML = $t('<div><h2>도움말</h2><dl>{0}</dl>\n<div class="nbtns"><button class="sb" data-act="tips">안내 다시 보기</button><button class="go" data-close>닫기</button></div></div>', Object.values(TIPS).map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join(''));
   help.hidden = false;
 };
 help.onclick = e => { const d = e.target.closest('button')?.dataset; if (!d) return; if (d.act === 'tips') tipsAgain(); else if (d.close != null) help.hidden = true; };

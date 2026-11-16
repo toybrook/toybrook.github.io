@@ -12,6 +12,7 @@
 // guest: { id, k, hab, at, on: open-app ms left, off: shut-app ms left, w: [wish], b: 덤 | null, hit: wishes met once (bits),
 //   x, z (null till the world places it), from: 'stream' | 'path', pair?: shared id, tut?: step, ok?: when every wish held,
 //   big?: the 큰 소원 step it came for }
+import { $t } from '../i18n/i18n.js';
 import { GUEST as G, GUESTS, WISH, CLASH, GROUND, TAGS, GROUNDS, GUEST_PROPS, PROP_TAGS, TUTORIAL } from './guests-data.js';
 import { BALANCE as B, GIFT, PROPS } from './data.js';
 import { HAB, EGG, PROP, layEgg, needFor, outIn, colorsOf, fits } from './rules.js';
@@ -266,4 +267,4 @@ export function moveGuest(S, id, x, z) {
 // the shop's one tutorial prop (등불 at step 3, before its Lv) while that step's guest is here
 export const tutShop = S => { const Q = S.guests, st = Q && TUTORIAL[Q.tut]; return st?.shop && Q.list.some(g => g.tut === Q.tut) ? st.shop : null; };
 // 「오늘 밤 손님」: the night guest of an open habitat at this Lv, one a night (by the night's number)
-export const tonightGuest = (S, now) => { const L = GUESTS.filter(R => R.when === '밤' && R.lv <= (S.lv || 1) && S.unlocked.includes(R.hab)); return L.length ? L[nightNo(now) % L.length] : null; };
+export const tonightGuest = (S, now) => { const L = GUESTS.filter(R => R.when === $t('밤') && R.lv <= (S.lv || 1) && S.unlocked.includes(R.hab)); return L.length ? L[nightNo(now) % L.length] : null; };

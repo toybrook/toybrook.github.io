@@ -9,7 +9,11 @@
         "eggs": 1
       },
       "start": "2026-11-10",
-      "end": "2027-03-31"
+      "end": "2027-03-31",
+      "title_en": "Thanks for joining the open beta",
+      "body_en": "Thanks for coming to the Toybrook open beta. Here is a little gift. Take your time and look around!",
+      "title_ja": "オープンベータにきてくれてありがとう",
+      "body_ja": "トイブルックのオープンベータにきてくれてありがとうございます。小さなプレゼントをおくります。ゆっくり見てまわってくださいね！"
     }
   ],
   "codes": [
@@ -19,7 +23,9 @@
       "rewards": {
         "hearts": 20,
         "legendEggs": 1
-      }
+      },
+      "title_en": "Threads gift code",
+      "title_ja": "Threadsのギフトコード"
     },
     {
       "code": "THANKYOU",
@@ -27,7 +33,9 @@
       "rewards": {
         "hearts": 30,
         "eggs": 1
-      }
+      },
+      "title_en": "Thank-you gift code",
+      "title_ja": "ありがとうギフトコード"
     }
   ]
 }

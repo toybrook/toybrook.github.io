@@ -1,5 +1,6 @@
 // Stream + pond water. One stylised shader: sky reflection (fresnel), sun glints, flowing ripples,
 // soft foam at the banks and on the falls. No extra render passes, so it stays cheap on phones.
+import { $t } from '../../i18n/i18n.js';
 import * as THREE from 'three';
 import { R, SW, streamLine, pond, waterY, edgeRound, CLIFF_Z, WATER_Y } from './layout.js';
 import { toyMat, instanced, skyLit, nightGlow, rainNow, snowNow } from '../toyKit.js';
@@ -11,90 +12,7 @@ attribute float aFall; varying vec2 vUv; varying vec3 vW; varying float vFall;
 void main(){ vUv = uv; vFall = aFall; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; vec4 mvPosition = viewMatrix * w; // (P*V)*w as before 21-2; mvPosition only for the fog
 #include <fog_vertex>
 }`;
-export const frag = `
-uniform float uTime; uniform vec3 uSun; uniform vec3 uPond; uniform vec3 uLit; uniform float uNight; uniform float uRain; uniform float uIce;
-varying vec2 vUv; varying vec3 vW; varying float vFall;
-#include <fog_pars_fragment>
-float hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
-float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
-float hgt(vec2 a, vec2 b){ return vn(a) + vn(b) * 0.5; }
-void main(){
-#ifdef POND
-#ifdef BED
-  float edge = vFall; // a pond with its own bed (pond/water.js): 1 at the waterline, 0 where it is deep
-#else
-  float edge = length(vW.xz - uPond.xy) / uPond.z;
-#endif
-  vec2 a = vW.xz * 0.8 + vec2(uTime * 0.10, uTime * 0.06), b = vW.xz * 1.7 - vec2(uTime * 0.07, -uTime * 0.11);
-  float fall = 0.0;
-#else
-  float edge = abs(vUv.y), fall = vFall;
-  float sp = 0.8 + fall * 3.5;
-  vec2 a = vec2(vUv.x * 0.7 - uTime * sp, vUv.y * 1.4), b = vec2(vUv.x * 1.6 - uTime * sp * 1.4, vUv.y * 2.8 + 3.0);
-#endif
-  float e = 0.06, h0 = hgt(a, b);
-  vec3 n = normalize(vec3((h0 - hgt(a + vec2(e, 0.0), b + vec2(e, 0.0))) * 1.2, 1.0, (h0 - hgt(a + vec2(0.0, e), b + vec2(0.0, e))) * 1.2));
-  vec3 V = normalize(cameraPosition - vW);
-  float fres = pow(1.0 - max(dot(n, V), 0.0), 4.0);
-  vec3 R = reflect(-V, n);
-  vec3 sky = mix(vec3(1.0, 0.91, 0.80), vec3(0.66, 0.83, 1.0), clamp(R.y * 1.3, 0.0, 1.0));
-  float spec = pow(max(dot(R, uSun), 0.0), 160.0);
-  float depth = 1.0 - smoothstep(0.1, 0.95, edge);
-  vec3 col = mix(vec3(0.58, 0.88, 0.86), vec3(0.24, 0.62, 0.84), depth);
-#ifdef COLD
-  // 25-1 the snow's ice pond: colder, deeper blue-teal, and a white winter sky in it
-  col = mix(vec3(0.66, 0.86, 0.9), vec3(0.12, 0.4, 0.6), depth); sky = mix(vec3(0.94, 0.96, 1.0), vec3(0.72, 0.84, 0.98), clamp(R.y * 1.3, 0.0, 1.0));
-#endif
-  col = mix(col, sky, fres * 0.7 + 0.1);
-  col += spec * 1.6 * vec3(1.0, 0.96, 0.86);
-  float fn = vn(a * 2.3 + 11.0);
-#ifdef POND
-  float band = smoothstep(0.66, 0.72, h0 / 1.5) * (1.0 - smoothstep(0.72, 0.82, h0 / 1.5));
-  col += band * 0.22;
-  float foam = smoothstep(0.97, 1.07, edge + fn * 0.05) * 0.55; // thin, faint rim
-  float streak = 0.0;
-#else
-  // glints: short bright streaks stretched along the flow (long in u, narrow across v), drifting downstream
-  float gl = smoothstep(0.8, 0.93, vn(vec2(vUv.x * 0.9 - uTime * sp * 1.15, vUv.y * 7.0))) * (1.0 - fall);
-  col += gl * (0.25 + 0.35 * fres + spec) * vec3(1.0, 0.98, 0.92);
-  // falls: a band of falling white streaks over a paler sheet, not a solid white blanket
-  float streak = smoothstep(0.45, 0.8, vn(vec2(vUv.y * 9.0, vUv.x * 0.45 - uTime * sp * 0.55))) * smoothstep(0.15, 0.6, fall);
-  col = mix(col, vec3(0.8, 0.93, 0.98), smoothstep(0.1, 0.6, fall) * 0.5);
-  col = mix(col, vec3(0.98, 1.0, 1.0), streak * 0.75);
-  float foam = smoothstep(0.9, 1.06, edge + fn * 0.12) + smoothstep(0.75, 1.0, fall + fn * 0.3 - 0.15) * 0.6;
-#endif
-  foam = clamp(foam, 0.0, 1.0);
-  col = mix(col, vec3(0.97, 0.99, 1.0), foam * 0.85);
-  float alpha = max(max(mix(0.42, 0.8, depth), max(foam * 0.92, streak * 0.9)), fres * 0.75);
-#ifdef POND
-  // 15-2 첫눈: thin ice round the edge, a pale frosted rim with a few lighter cracks
-  float ice = uIce * smoothstep(0.6, 0.78, edge + (fn - 0.5) * 0.16);
-  col = mix(col, vec3(0.86, 0.93, 0.97) + 0.08 * smoothstep(0.55, 0.6, vn(vW.xz * 3.1)), ice * 0.85); alpha = mix(alpha, 0.92, ice);
-#endif
-#ifdef MURK
-  // inbox 34 the swamp's pools: dark olive water, hardly see-through
-  col = mix(col, vec3(0.19, 0.23, 0.12) * (0.85 + 0.5 * fres) + spec * 0.5, 0.78 - foam * 0.4); alpha = max(alpha, 0.9);
-#endif
-  col *= uLit; // 21-1: the hour's light (daylight.js); white by day
-#ifdef BED
-  // inbox 17: the pond's pale shallows (rim, round the islands) darken at night like the deep water: the night light once
-  // more on their colour, and a little less see-through (the pale sand under them showed through grey). uNight = 0 by day: unchanged
-  col *= mix(vec3(1.0), uLit, 0.6 * uNight * (1.0 - depth)); alpha = mix(alpha, max(alpha, 0.7), uNight * (1.0 - depth) * (1.0 - foam));
-#endif
-  // 21-1 night: small stars twinkling on the water, one per cell of a grid, each on its own beat
-  vec2 gq = vW.xz * 1.6, gi = floor(gq); float gh = hash(gi);
-  float tw = pow(max(0.0, sin(uTime * (1.2 + gh * 2.0) + gh * 40.0)), 10.0) * step(0.8, gh) * smoothstep(0.22, 0.0, length(fract(gq) - 0.5 - (vec2(hash(gi + 7.0), hash(gi + 3.0)) - 0.5) * 0.4));
-  col += uNight * tw * (1.0 - foam) * vec3(1.6, 1.65, 1.8);
-  // 21-2 rain: rings spreading where drops land, one per cell of two offset grids, each on its own beat (more cells as it rains harder)
-  if (uRain > 0.0) for (int j = 0; j < 2; j++) {
-    vec2 rq = vW.xz * 0.85 + float(j) * vec2(0.5, 0.37), ri = floor(rq) + float(j) * 31.0; float rh = hash(ri + 17.0), age = fract(uTime * (0.55 + rh * 0.35) + rh * 7.0);
-    float d = length(fract(rq) - 0.25 - vec2(hash(ri + 5.0), hash(ri + 9.0)) * 0.5), ring = smoothstep(0.045, 0.0, abs(d - age * 0.3)) * (1.0 - age);
-    col += step(1.0 - uRain * 0.85, hash(ri + 31.0)) * ring * (1.0 - foam) * 0.55 * uLit;
-  }
-  gl_FragColor = vec4(col, alpha);
-#include <fog_fragment>
-}`;
+export const frag = $t('\nuniform float uTime; uniform vec3 uSun; uniform vec3 uPond; uniform vec3 uLit; uniform float uNight; uniform float uRain; uniform float uIce;\nvarying vec2 vUv; varying vec3 vW; varying float vFall;\n#include <fog_pars_fragment>\nfloat hash(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }\nfloat vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);\n  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }\nfloat hgt(vec2 a, vec2 b){ return vn(a) + vn(b) * 0.5; }\nvoid main(){\n#ifdef POND\n#ifdef BED\n  float edge = vFall; // a pond with its own bed (pond/water.js): 1 at the waterline, 0 where it is deep\n#else\n  float edge = length(vW.xz - uPond.xy) / uPond.z;\n#endif\n  vec2 a = vW.xz * 0.8 + vec2(uTime * 0.10, uTime * 0.06), b = vW.xz * 1.7 - vec2(uTime * 0.07, -uTime * 0.11);\n  float fall = 0.0;\n#else\n  float edge = abs(vUv.y), fall = vFall;\n  float sp = 0.8 + fall * 3.5;\n  vec2 a = vec2(vUv.x * 0.7 - uTime * sp, vUv.y * 1.4), b = vec2(vUv.x * 1.6 - uTime * sp * 1.4, vUv.y * 2.8 + 3.0);\n#endif\n  float e = 0.06, h0 = hgt(a, b);\n  vec3 n = normalize(vec3((h0 - hgt(a + vec2(e, 0.0), b + vec2(e, 0.0))) * 1.2, 1.0, (h0 - hgt(a + vec2(0.0, e), b + vec2(0.0, e))) * 1.2));\n  vec3 V = normalize(cameraPosition - vW);\n  float fres = pow(1.0 - max(dot(n, V), 0.0), 4.0);\n  vec3 R = reflect(-V, n);\n  vec3 sky = mix(vec3(1.0, 0.91, 0.80), vec3(0.66, 0.83, 1.0), clamp(R.y * 1.3, 0.0, 1.0));\n  float spec = pow(max(dot(R, uSun), 0.0), 160.0);\n  float depth = 1.0 - smoothstep(0.1, 0.95, edge);\n  vec3 col = mix(vec3(0.58, 0.88, 0.86), vec3(0.24, 0.62, 0.84), depth);\n#ifdef COLD\n  // 25-1 the snow\'s ice pond: colder, deeper blue-teal, and a white winter sky in it\n  col = mix(vec3(0.66, 0.86, 0.9), vec3(0.12, 0.4, 0.6), depth); sky = mix(vec3(0.94, 0.96, 1.0), vec3(0.72, 0.84, 0.98), clamp(R.y * 1.3, 0.0, 1.0));\n#endif\n  col = mix(col, sky, fres * 0.7 + 0.1);\n  col += spec * 1.6 * vec3(1.0, 0.96, 0.86);\n  float fn = vn(a * 2.3 + 11.0);\n#ifdef POND\n  float band = smoothstep(0.66, 0.72, h0 / 1.5) * (1.0 - smoothstep(0.72, 0.82, h0 / 1.5));\n  col += band * 0.22;\n  float foam = smoothstep(0.97, 1.07, edge + fn * 0.05) * 0.55; // thin, faint rim\n  float streak = 0.0;\n#else\n  // glints: short bright streaks stretched along the flow (long in u, narrow across v), drifting downstream\n  float gl = smoothstep(0.8, 0.93, vn(vec2(vUv.x * 0.9 - uTime * sp * 1.15, vUv.y * 7.0))) * (1.0 - fall);\n  col += gl * (0.25 + 0.35 * fres + spec) * vec3(1.0, 0.98, 0.92);\n  // falls: a band of falling white streaks over a paler sheet, not a solid white blanket\n  float streak = smoothstep(0.45, 0.8, vn(vec2(vUv.y * 9.0, vUv.x * 0.45 - uTime * sp * 0.55))) * smoothstep(0.15, 0.6, fall);\n  col = mix(col, vec3(0.8, 0.93, 0.98), smoothstep(0.1, 0.6, fall) * 0.5);\n  col = mix(col, vec3(0.98, 1.0, 1.0), streak * 0.75);\n  float foam = smoothstep(0.9, 1.06, edge + fn * 0.12) + smoothstep(0.75, 1.0, fall + fn * 0.3 - 0.15) * 0.6;\n#endif\n  foam = clamp(foam, 0.0, 1.0);\n  col = mix(col, vec3(0.97, 0.99, 1.0), foam * 0.85);\n  float alpha = max(max(mix(0.42, 0.8, depth), max(foam * 0.92, streak * 0.9)), fres * 0.75);\n#ifdef POND\n  // 15-2 첫눈: thin ice round the edge, a pale frosted rim with a few lighter cracks\n  float ice = uIce * smoothstep(0.6, 0.78, edge + (fn - 0.5) * 0.16);\n  col = mix(col, vec3(0.86, 0.93, 0.97) + 0.08 * smoothstep(0.55, 0.6, vn(vW.xz * 3.1)), ice * 0.85); alpha = mix(alpha, 0.92, ice);\n#endif\n#ifdef MURK\n  // inbox 34 the swamp\'s pools: dark olive water, hardly see-through\n  col = mix(col, vec3(0.19, 0.23, 0.12) * (0.85 + 0.5 * fres) + spec * 0.5, 0.78 - foam * 0.4); alpha = max(alpha, 0.9);\n#endif\n  col *= uLit; // 21-1: the hour\'s light (daylight.js); white by day\n#ifdef BED\n  // inbox 17: the pond\'s pale shallows (rim, round the islands) darken at night like the deep water: the night light once\n  // more on their colour, and a little less see-through (the pale sand under them showed through grey). uNight = 0 by day: unchanged\n  col *= mix(vec3(1.0), uLit, 0.6 * uNight * (1.0 - depth)); alpha = mix(alpha, max(alpha, 0.7), uNight * (1.0 - depth) * (1.0 - foam));\n#endif\n  // 21-1 night: small stars twinkling on the water, one per cell of a grid, each on its own beat\n  vec2 gq = vW.xz * 1.6, gi = floor(gq); float gh = hash(gi);\n  float tw = pow(max(0.0, sin(uTime * (1.2 + gh * 2.0) + gh * 40.0)), 10.0) * step(0.8, gh) * smoothstep(0.22, 0.0, length(fract(gq) - 0.5 - (vec2(hash(gi + 7.0), hash(gi + 3.0)) - 0.5) * 0.4));\n  col += uNight * tw * (1.0 - foam) * vec3(1.6, 1.65, 1.8);\n  // 21-2 rain: rings spreading where drops land, one per cell of two offset grids, each on its own beat (more cells as it rains harder)\n  if (uRain > 0.0) for (int j = 0; j < 2; j++) {\n    vec2 rq = vW.xz * 0.85 + float(j) * vec2(0.5, 0.37), ri = floor(rq) + float(j) * 31.0; float rh = hash(ri + 17.0), age = fract(uTime * (0.55 + rh * 0.35) + rh * 7.0);\n    float d = length(fract(rq) - 0.25 - vec2(hash(ri + 5.0), hash(ri + 9.0)) * 0.5), ring = smoothstep(0.045, 0.0, abs(d - age * 0.3)) * (1.0 - age);\n    col += step(1.0 - uRain * 0.85, hash(ri + 31.0)) * ring * (1.0 - foam) * 0.55 * uLit;\n  }\n  gl_FragColor = vec4(col, alpha);\n#include <fog_fragment>\n}');
 
 export function buildWater(scene, sunDir) {
   const uTime = { value: 0 };
