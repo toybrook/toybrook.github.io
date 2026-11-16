@@ -63,7 +63,7 @@ const PAL = { hours: 20, per: 6 };
 const MYTH = { beta: { day: 1, nights: 1, guest: 3 }, release: { day: 3, nights: 3, guest: 7 } }; // release: it comes in about a week, settles in about two (check-eggs 14-1)
 export const PACE = {
   release: {
-    nest: { every: 60 * MIN, max: 8, start: 1, startRarity: 'common', early: { n: 0, every: 60 * MIN }, onUnlock: 0 },
+    nest: { every: 60 * MIN, max: 8, start: 1, startRarity: 'common', early: { n: 0, every: 60 * MIN }, onUnlock: 0, release: { common: 2, rare: 5, heroic: 15, legendary: 40 }, slotsByLevel: [[1, 2]], gifts: 5 },
     hatch: { common: 5 * MIN, rare: 30 * MIN, heroic: 120 * MIN, legendary: 480 * MIN },
     slots: 2,
     grow: { time: { common: 20 * MIN, rare: 40 * MIN, heroic: 90 * MIN, legendary: 180 * MIN }, pet: 0.02, feed: 0.1, feeds: 3 },
@@ -85,7 +85,8 @@ export const PACE = {
     pal: PAL,
   },
   beta: { // max 20: 10 h of eggs (the night between the last visit and the first); slots 3: with 2 the snow opened on day 4 (inbox-31.md)
-    nest: { every: 30 * MIN, max: 20, start: 3, startRarity: 'common', fast: [0, 10e3, 15e3], early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3 }, // 92-1: 3 eggs to start, the first three hatch in 0·10·15 s (fast); 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
+    nest: { every: 30 * MIN, max: 20, start: 3, startRarity: 'common', fast: [0, 10e3, 15e3], early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3,
+      release: { common: 2, rare: 5, heroic: 15, legendary: 40 }, slotsByLevel: [[1, 3], [6, 4], [12, 5]], gifts: 5 }, // 112: 놓아주기 hearts by rarity, hatch slots by garden level, gift eggs waiting over a full nest (then GIFT.eggHearts). 92-1: 3 eggs to start, the first three hatch in 0·10·15 s (fast); 41 D: eggs 1~6 2 min apart, 7~12 5 min (8 left a 6.8 min wait, report inbox-41 D)
     hatch: { common: 1 * MIN, rare: 3 * MIN, heroic: 8 * MIN, legendary: 20 * MIN },
     slots: 3,
     grow: { time: { common: 5 * MIN, rare: 10 * MIN, heroic: 20 * MIN, legendary: 40 * MIN }, pet: 0.02, feed: 0.1, feeds: 3 },
@@ -762,8 +763,10 @@ if (M89) {
   SPECIES.find(s => s.id === 'arcticFox').legendary.push({ id: 'gumiho89', name: '신수 구미호', mat: 'gumiho89' }, { id: 'gumiho89b', name: '신수 구미호(전신 옻칠)', mat: 'gumiho89b' }); // 97: A, B
   // 104 시범: the arctic fox adult remodelled toward the concept the user chose (tools/bake-pilot89.mjs bodies); the penguin's two
   // stages from 104 are public since 107 (MODELS.penguin, its colours above)
+  // 110: the head bigger with short muzzle and big ears; h stays 2.136 (the bake's top 2.268 is the ears: as the horse's inbox 10,
+  // the body keeps its size and the taller ears stand above it)
   MODELS.arcticFox.files.adult = 'assets/models/pilot89_arcticFox_adult.glb';
-  MODELS.arcticFox.adult = sized('arcticFox', 'adult', { h: 2.136, r: 0.483, seg: [-1.305, 0.837], legs: { hip: 0.6, x: [0.34, -0.42], z: 0.21 }, attach: { head: { p: [0.72, 1.86, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.54, 1.36, 0], r: [0, 0, -0.8], s: 1.15 }, back: { p: [-0.15, 1.56, 0], r: [0, 0, 0], s: 1 }, eye: { p: [0.78, 1.63, 0], r: [0, 0, 0], s: 0.9 } } });
+  MODELS.arcticFox.adult = sized('arcticFox', 'adult', { h: 2.136, r: 0.482, seg: [-1.306, 0.687], legs: { hip: 0.6, x: [0.34, -0.42], z: 0.21 }, attach: { head: { p: [0.69, 1.95, 0], r: [0, 0, -0.1], s: 0.88 }, neck: { p: [0.54, 1.36, 0], r: [0, 0, -0.8], s: 1.15 }, back: { p: [-0.15, 1.56, 0], r: [0, 0, 0], s: 1 }, eye: { p: [0.76, 1.69, 0], r: [0, 0, 0], s: 0.98 } } });
 }
 
 // inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the

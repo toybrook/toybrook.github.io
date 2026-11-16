@@ -71,6 +71,8 @@ const emit = ev => { for (const f of listeners) f(ev); };
 function act(fn) { const now = clock(), out = fn(now), ev = view ? [] : R.advance(S, now); save(); emit([...(out?.events || []), ...ev]); return out; }
 
 export const takeEgg = (hab, eggId) => act(now => R.takeEgg(S, hab, now, eggId));
+export const takeGift = () => act(now => R.takeGift(S, now)); // 112
+export const letGo = (hab, ids) => act(now => R.letGo(S, hab, ids, now)); // 112 놓아주기
 export const hatch = i => act(now => { // ?debug 「다음 알 시크릿」 (flags.forceSecret) is used up here; rules only take forced
   const f = !!S.flags.forceSecret, out = R.hatch(S, i, now, Math.random, f); if (out && f) delete S.flags.forceSecret; return out;
 });

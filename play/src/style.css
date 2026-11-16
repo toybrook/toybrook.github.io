@@ -141,6 +141,10 @@ html.calm .lbar::before{animation:none}
 .negg img:not([src]){visibility:hidden}
 .negg:active{transform:scale(.93)}
 .ngrid:empty{display:none}.ngrid:empty+.nnote{margin:auto}
+.ngift{display:flex;align-items:center;gap:6px;margin:0 12px 6px;padding:6px 10px;border-radius:14px;background:#fff6dc;border:1px solid #f0c35a}.ngift[hidden]{display:none} /* 112 선물 알 */
+.ngift b{font-size:calc(13px*var(--fs));white-space:nowrap}.ngift .negg{width:38px;flex:none}.ngift small{margin-left:auto;font-size:calc(11px*var(--fs));color:#8a6a4c;word-break:keep-all;text-align:right}
+.neggs.tidy .negg.keep{opacity:.35}.negg.sel{outline:3px solid #e8805f;outline-offset:-3px;position:relative}.negg.sel::after{content:'✓';position:absolute;right:4px;top:2px;color:#fff;background:#e8805f;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:18px;text-align:center}
+.ntidy{margin-top:6px}.ntidy button[disabled]{opacity:.45}.chead .back.on{background:#e8805f}.chead .back[hidden]{display:none}
 .nnote{margin:4px 0 0;text-align:center;font-size:calc(12px*var(--fs));color:#8a6a4c;word-break:keep-all}
 .nstage{position:absolute;inset:0}.nstage canvas{display:block;width:100%;height:100%}
 /* 69-1 예고 빛: one light in the colour of the rarity that came out (nest.js --gc = RARITIES shell, opacity = growth.js glowAt) */
@@ -170,6 +174,7 @@ html.calm .lbar::before{animation:none}
 body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visibility:hidden}
 .nslots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .nslots.n3{grid-template-columns:repeat(3,1fr);gap:6px}.nslots.n3 .nslot,.nslots.n3 .nslot.empty{flex-direction:column;justify-content:center;gap:2px;min-height:96px;padding:6px 4px;text-align:center}.nslots.n3 .nslot img{width:46px;height:46px}
+.nslots.n4{grid-template-columns:repeat(4,1fr);gap:5px}.nslots.n5{grid-template-columns:repeat(5,1fr);gap:4px}.nslots.n4 .nslot,.nslots.n4 .nslot.empty{padding:6px 2px}.nslots.n4 .nslot img{width:40px;height:40px}.nslots.n5 .nslot img{width:36px;height:36px}.nslots.n4 .nslot small{font-size:calc(11px*var(--fs))} /* 112 */
 .nslot{display:flex;align-items:center;gap:8px;min-height:70px;padding:5px 10px 5px 5px;border-radius:16px;border:1px solid #d6bb93;background:#fbf1e1;color:#4a3626;font:inherit;text-align:left;cursor:pointer}
 .nslot img{width:58px;height:58px;border-radius:12px;flex:none}
 .nslot img:not([src]){visibility:hidden}

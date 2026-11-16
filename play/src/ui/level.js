@@ -4,7 +4,7 @@
 // (shown under the level). A toast when one is done.
 import * as G from '../game/game.js';
 import { BALANCE as B, SETS, BRUSHES } from '../game/data.js';
-import { PROP, HAB, xpAt, unlocksBetween, growStage } from '../game/rules.js';
+import { PROP, HAB, xpAt, unlocksBetween, growStage, slotsAt } from '../game/rules.js';
 import { GUESTS } from '../game/guests-data.js';
 import { overlayOpen, topWindow, tip, toast, resting } from './hud.js';
 import { ACH, ACH_BY } from '../game/achieve.js';
@@ -88,6 +88,7 @@ export function initLevel(getApi) {
     // 66-2 명성 (this Lv): a 땅 넓히기 Lv also grows the habitats a step (habitat.js grow), and new guests start to come
     const grew = growStage(level) > growStage(from), news = GUESTS.filter(R => R.lv > from && R.lv <= level && !R.when && G.S.unlocked.includes(R.hab)).map(R => R.name);
     card.innerHTML = `<div><h2>레벨 ${level}!</h2>${unlocks.length ? `<p class="sub">새로 풀린 것</p><ul>${unlocks.map(k => row(k, true)).join('')}</ul>` : '<p class="sub">정원사 레벨이 올랐어요</p>'}${
+      slotsAt(level) > slotsAt(from) ? `<p class="sub">부화 칸 +${slotsAt(level) - slotsAt(from)}</p>` : ''}${ // 112
       grew ? '<p class="sub">소문이 나서 서식지에 들꽃 무더기와 오솔길이 생겼어요</p>' : ''}${news.length ? `<p class="sub">새 손님이 찾아오기 시작해요 · ${news.join(', ')}</p>` : ''}<button data-close>좋아요</button></div>`;
     thumbs(card);
     card.querySelector('[data-close]').onclick = () => { card.hidden = true; tip('level', '#lvPill'); };

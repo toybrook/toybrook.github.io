@@ -33,9 +33,10 @@ function draw() {
 }
 // what came (a mail, all of them, or a code); eggs that found every nest full are told as hearts
 function show(got) {
-  const extra = got.reduce((n, g) => n + g.extra, 0), wait = got.reduce((n, g) => n + (g.wait || 0), 0);
-  box.innerHTML = `<div><h2>받았어요</h2><ul>${got.map(g => `<li><i aria-hidden="true">🎁</i><span>${esc(g.title)}<small class="gift">${esc(gifts({ ...g, legendEggs: (g.legend || 0) + (g.wait || 0) }) || (g.extra ? `알 대신 ♥${g.extra * GIFT.eggHearts}` : ''))}</small></span></li>`).join('')}</ul>${
+  const row = got.reduce((n, g) => n + (g.row || 0), 0), extra = got.reduce((n, g) => n + g.extra, 0), wait = got.reduce((n, g) => n + (g.wait || 0), 0);
+  box.innerHTML = `<div><h2>받았어요</h2><ul>${got.map(g => `<li><i aria-hidden="true">🎁</i><span>${esc(g.title)}<small class="gift">${esc([gifts({ ...g, legendEggs: (g.legend || 0) + (g.wait || 0) }), g.row && `선물 알 ${g.row}개`].filter(Boolean).join(' · ') || (g.extra ? `알 대신 ♥${g.extra * GIFT.eggHearts}` : ''))}</small></span></li>`).join('')}</ul>${
     wait ? `<p class="note">둥지가 가득 차서 전설 알 ${wait}개는 우편함에 맡겨 뒀어요. 둥지에 자리가 생기면 우편함(✉)에서 받으세요</p>` : ''}${
+    row ? `<p class="note">둥지가 가득 차서 알 ${row}개는 둥지 위 「선물 알」 줄에서 기다려요</p>` : ''}${ // 112
     extra ? `<p class="note">둥지가 가득 차서 알 ${extra}개는 ♥${extra * GIFT.eggHearts}로 바꿨어요 (알 1개 = ♥${GIFT.eggHearts})</p>` : ''}
 <div class="nbtns"><button class="go" data-close>좋아요</button></div></div>`;
   box.hidden = false; sfx('grown'); dot();

@@ -24,6 +24,7 @@
 //            days, lights, roof } (counts for 도전 과제; lights, roof: the most the habitat on screen has seen, noteLive),
 //   candy (꼬마 사탕 owned, not in use), unlocked: [habitat ids], flags: {},
 //   since (when this game began, 41), mailGot: [mail ids received], codes: [gift codes used, codeKey],
+//   giftRow: [eggs given over a full nest, at most BALANCE.nest.gifts] (112 선물 알; stats.release: eggs let go, 놓아주기),
 //   attend: { day: the last 출석 (dayOf), at: its time, n: slots had in all } (41 C), first: { [첫날 할 일 id | 'all']: when done } (41 D),
 //   fossil: { at: when the last fossil was dug up (14-3 dig; 0: none yet) } }
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
@@ -70,7 +71,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   S.guests = guestsBlank(S); // 66-1
@@ -88,13 +89,14 @@ export function fromSave(raw, now) {
     for (const [k, v] of Object.entries(raw)) if (!(k in T) || T[k] === null || shape(v) === shape(T[k])) S[k] = v;
     S.animals = S.animals.filter(isObj); S.props = S.props.filter(isObj);
     for (const [h, n] of Object.entries(S.nests)) if (!isObj(n) || !Array.isArray(n.eggs)) delete S.nests[h]; else n.eggs = n.eggs.filter(isObj); // advance lays it again
-    S.slots = Array.from({ length: Math.max(B.slots, S.slots.length) }, (_, i) => isObj(S.slots[i]?.egg) ? S.slots[i] : null);
+    S.slots = Array.from({ length: Math.max(B.slots, Math.min(S.slots.length, B.nest.slotsByLevel.at(-1)[1])) }, (_, i) => isObj(S.slots[i]?.egg) ? S.slots[i] : null);
     for (let v = raw.schemaVersion + 1; v <= SCHEMA_VERSION; v++) MIGRATIONS[v]?.(S, now); // each step in order, oldest first
     for (const a of S.animals) { const n = cleanName(a.nm); if (n) a.nm = n; else delete a.nm; if (a.fav !== true) delete a.fav; if (!(Array.isArray(a.home) && a.home.length === 2 && a.home.every(v => Number.isFinite(v) && Math.abs(v) < 1e3))) delete a.home; if (a.wd != null && !GUESTS.some(R => R.k === a.wd)) delete a.wd; } // 26-4: a backup code is text from outside; 53 home; 66-2 wd
     tidy(S); // 28-5
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
     if (!Number.isFinite(raw.since)) S.since = Math.min(now, ...Object.values(S.codex).map(e => e?.at), ...S.animals.map(a => a.born)) || now; // 41: before 0.71, the first animal
     S.mailGot = S.mailGot.filter(x => typeof x === 'string'); S.codes = S.codes.filter(x => typeof x === 'string'); S.giftEggs = Math.min(99, Math.max(0, Math.floor(S.giftEggs) || 0)); // 44
+    S.giftRow = S.giftRow.filter(e => isObj(e) && Number.isInteger(e.id) && EGG[e.type] && B.hatch[e.rarity] != null).slice(0, B.nest.gifts); // 112
     { const A = S.attend; S.attend = { day: typeof A.day === 'string' ? A.day : '', at: Number.isFinite(A.at) ? A.at : 0, n: Number.isInteger(A.n) && A.n >= 0 ? A.n : 0 }; } // 41 C
     S.first = Object.fromEntries(Object.entries(S.first).filter(([, v]) => Number.isFinite(v))); // 41 D
     S.looks = Object.fromEntries(Object.entries(S.looks).filter(([k]) => Object.hasOwn(PROP, k)).map(([k, v]) => [k, (Array.isArray(v) ? v : []).filter(c => paletteOf(PROP[k])?.[c]?.[2])]).filter(([, v]) => v.length)); // 13-3
@@ -346,7 +348,7 @@ function register(S, a, at, gift) {
 }
 
 // inbox 31: the time between nest eggs. A new game's first BALANCE.nest.early.n eggs (hatched, in a slot or in a nest) come faster
-const had = S => (S.stats?.hatch || 0) + S.slots.filter(Boolean).length + Object.values(S.nests).reduce((s, n) => s + n.eggs.length, 0);
+const had = S => (S.stats?.hatch || 0) + (S.stats?.release || 0) + S.slots.filter(Boolean).length + Object.values(S.nests).reduce((s, n) => s + n.eggs.length, 0);
 export const eggGap = S => [].concat(B.nest.early).find(t => had(S) < t.n)?.every ?? B.nest.every; // early: one step or a list of them (41 D)
 // Catch up to `now`: nests lay, babies whose gauge is full grow up (their adult look goes in the codex),
 // storage keeps each habitat at maxVisible, habitats unlock. Returns what happened, for the UI.
@@ -382,6 +384,7 @@ export function advance(S, now, rng = Math.random) {
   artTick(S, now, ev); // 17-2
   wildTick(S, now, ev); // 17-3
   const L = gardenLevel(S.xp); if (L > S.lv) { ev.push({ type: 'level', from: S.lv, level: L, unlocks: unlocksBetween(S.lv, L) }); S.lv = L; }
+  while (S.slots.length < slotsAt(S.lv)) S.slots.push(null); // 112: a level's new hatch slot (a save keeps any it had)
   return ev;
 }
 
@@ -440,6 +443,24 @@ export function unlockInfo(S, habId) {
 // Player actions. Each returns something falsy when it can't happen.
 // An egg from the nest (that one, or the oldest) into the first empty hatch slot.
 export const firstEgg = S => !S.stats.hatch && !S.animals.length && S.slots.every(s => !s); // inbox 61 B: nothing hatched yet, nothing in a slot
+// 112: hatch slots at garden level L (BALANCE.nest.slotsByLevel)
+export const slotsAt = L => B.nest.slotsByLevel.filter(([l]) => L >= l).at(-1)[1];
+// 112 선물 알: the first egg of the gift row (eggs given over a full nest) straight into an empty slot
+export function takeGift(S, now) {
+  const i = S.slots.indexOf(null); if (i < 0 || !S.giftRow.length) return -1;
+  const e = S.giftRow.shift(); S.slots[i] = { egg: e, start: now, end: now + B.hatch[e.rarity] * (EGG[e.type]?.hatchScale ?? 1) }; return i;
+}
+// 112 놓아주기: nest eggs let go for hearts (BALANCE.nest.release). Never cracked, so the shard gauges don't count them; gifts stay
+export const canLetGo = e => !e.gift && !e.gv && !e.now;
+export function letGo(S, habId, ids, now) {
+  const n = S.nests[habId]; if (!n) return null;
+  const out = n.eggs.filter(e => ids.includes(e.id) && canLetGo(e)); if (!out.length) return null;
+  if (n.eggs.length >= B.nest.max) n.t = now; // as takeEgg: the wait for the next egg starts now
+  n.eggs = n.eggs.filter(e => !out.includes(e));
+  const hearts = out.reduce((s, e) => s + (B.nest.release[e.rarity] || 0), 0);
+  S.hearts += hearts; S.stats.release = (S.stats.release || 0) + out.length;
+  return { n: out.length, hearts };
+}
 export function takeEgg(S, habId, now, eggId) {
   const n = S.nests[habId], i = S.slots.indexOf(null), j = !n ? -1 : eggId == null ? 0 : n.eggs.findIndex(e => e.id === eggId);
   if (j < 0 || j >= n.eggs.length || i < 0) return -1;
@@ -897,7 +918,9 @@ export function give(S, rw, now, rng = Math.random, at = null) { // at: the habi
   const open = [...S.unlocked].reverse().map(id => HAB[id]).filter(h => h?.nest && h.ready);
   for (let i = n('eggs'); i > 0; i--) {
     const h = open.find(h => (S.nests[h.id]?.eggs.length ?? 0) < B.nest.max);
-    if (h) { (S.nests[h.id] ??= { t: now, eggs: [] }).eggs.push(layEgg(S, h.nest, rng)); got.eggs++; } else { S.hearts += GIFT.eggHearts; got.extra++; }
+    if (h) { (S.nests[h.id] ??= { t: now, eggs: [] }).eggs.push({ ...layEgg(S, h.nest, rng), gv: 1 }); got.eggs++; } // 112 gv: a gift, never let go
+    else if (open[0] && S.giftRow.length < B.nest.gifts) { S.giftRow.push({ ...layEgg(S, open[0].nest, rng), gv: 1 }); got.row = (got.row || 0) + 1; } // 112: waits in the 선물 알 row
+    else { S.hearts += GIFT.eggHearts; got.extra++; }
   }
   const now1 = layLegend(S, now, n('legendNow'), { now: 1 }); // 93-1: hatches at once, in even with the nest full (the day-2 gift: a night fills it)
   got.legend = layLegend(S, now, n('legendEggs')); got.wait = n('legendEggs') + n('legendNow') - got.legend - now1; got.legend += now1; S.giftEggs += got.wait;

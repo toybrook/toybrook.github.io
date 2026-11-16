@@ -5,8 +5,8 @@
 import * as THREE from 'three';
 import * as G from '../game/game.js';
 import { BALANCE as B, ACCESSORIES, HABITATS } from '../game/data.js';
-import { SP, RAR, HAB, EGG, RANK, pityOf, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap, kindName } from '../game/rules.js';
-import { toast, hideToast, heart, clock, span, josa, tip } from './hud.js';
+import { SP, RAR, HAB, EGG, RANK, pityOf, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap, kindName, canLetGo } from '../game/rules.js';
+import { toast, hideToast, heart, clock, span, josa, tip, ask } from './hud.js';
 import { eggThumb, studio } from './thumbs.js';
 import { makeEgg, HATCH, glowAt } from '../animals/growth.js';
 import { dress, loadModel, loadAcc } from '../animals/figure.js';
@@ -48,13 +48,14 @@ ${PIECES.map((p, i) => `<polygon points="${p.pts}" ${i < n ? `fill="hsl(${RAR[k]
 export function initNest(nav) {
   const el = $('nest'), btn = $('nestBtn'), badge = btn.querySelector('i');
   el.innerHTML = `<div class="nsheet" role="dialog" aria-label="둥지">
-  <div class="chead"><b>둥지</b><span id="ncount"></span><button class="back" data-close>닫기</button></div>
+  <div class="chead"><b>둥지</b><span id="ncount"></span><button class="back" data-tidy>정리</button><button class="back" data-close>닫기</button></div>
+  <div class="ngift" id="ngift" hidden></div>
   <div class="ctabs" id="ntabs"></div>
   <div class="ntop"><div class="neggs" id="neggs"></div><div class="nstage" id="nstage" hidden></div></div>
   <div class="nlow"><div class="ngauges" id="ngauges"></div><div class="nslots" id="nslots"></div><div class="ncard" id="ncard" hidden></div></div>
 </div>`;
-  const eggsEl = $('neggs'), stageEl = $('nstage'), gEl = $('ngauges'), slotsEl = $('nslots'), cardEl = $('ncard'), tabsEl = $('ntabs');
-  let habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {}, after = null, ready = null;
+  const eggsEl = $('neggs'), giftEl = $('ngift'), tidyBtn = el.querySelector('[data-tidy]'), stageEl = $('nstage'), gEl = $('ngauges'), slotsEl = $('nslots'), cardEl = $('ncard'), tabsEl = $('ntabs');
+  let sel = null, habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {}, after = null, ready = null;
   const nest = () => G.S.nests[habId] || { eggs: [], t: G.now() };
   const pending = () => G.S.animals.find(a => a.pending);
 
@@ -73,13 +74,27 @@ export function initNest(nav) {
     $('ncount').textContent = `알 ${n.eggs.length}/${B.nest.max}`;
     once('tabs', types.join() + tab, () => { tabsEl.innerHTML = types.map(t => `<button data-tab="${t}"${t === tab ? ' class="on"' : ''}>${EGG[t].name}</button>`).join(''); });
     const mine = n.eggs.filter(e => e.type === tab).sort((a, b) => !!b.now - !!a.now), d2 = G.S.flags.week1 && G.S.attend.n === 1 && habId === HABITATS[0].id; // 93-1: tomorrow's legendary egg, locked
-    once('eggs', mine.map(e => e.id).join() + tab + d2, () => {
-      eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => `<button class="negg" data-id="${e.id}" aria-label="${RAR[e.rarity].name} 알"><img alt=""></button>`).join('')}${d2 ? '<span class="negg lock" aria-label="전설 알 · 내일 열려요"><img alt=""><small>내일 열려요</small></span>' : ''}</div><p class="nnote"></p>`;
+    if (sel && !n.eggs.some(canLetGo)) sel = null;
+    tidyBtn.hidden = !n.eggs.some(canLetGo); tidyBtn.classList.toggle('on', !!sel); eggsEl.classList.toggle('tidy', !!sel);
+    once('eggs', mine.map(e => e.id).join() + tab + d2 + !!sel, () => {
+      eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => `<button class="negg${canLetGo(e) ? '' : ' keep'}" data-id="${e.id}" aria-label="${RAR[e.rarity].name} 알${canLetGo(e) ? '' : ' · 선물'}"><img alt=""></button>`).join('')}${d2 ? '<span class="negg lock" aria-label="전설 알 · 내일 열려요"><img alt=""><small>내일 열려요</small></span>' : ''}</div><p class="nnote"></p>${
+        sel ? '<div class="nbtns ntidy"><button class="sb" data-untidy>취소</button><button class="go" data-letgo>놓아주기</button></div>' : ''}`;
       eggsEl.querySelectorAll('img').forEach((img, i) => eggThumb(mine[i]?.rarity ?? 'legendary').then(u => { img.src = u; }));
     });
-    eggsEl.lastChild.textContent = (mine.length ? '알을 누르면 부화 칸에 들어가요 · ' : '알이 없어요 · ')
-      + (n.eggs.length >= B.nest.max ? '둥지가 가득 찼어요' : `다음 알까지 ${clock(n.t + eggGap(G.S) - now)}`) + (d2 ? ` · 금빛 알은 ${clock(new Date(now).setHours(24, 0, 0, 0) - now)} 뒤 열려요` : '');
-    drawGauges(); slotsEl.classList.toggle('n3', G.S.slots.length > 2); // inbox 31: three slots in one row
+    const note = eggsEl.querySelector('.nnote');
+    if (sel) { // 112 정리: tap eggs to pick, 놓아주기 lets them go for hearts (gifts can't be picked)
+      const P = n.eggs.filter(e => sel.has(e.id)), h = P.reduce((s, e) => s + (B.nest.release[e.rarity] || 0), 0);
+      eggsEl.querySelectorAll('.negg[data-id]').forEach(b => b.classList.toggle('sel', sel.has(+b.dataset.id)));
+      note.textContent = P.length ? `알 ${P.length}개 · ♥+${h}` : '놓아줄 알을 골라요 · 선물 알은 빼고요'; eggsEl.querySelector('[data-letgo]').disabled = !P.length;
+    } else note.textContent = (mine.length ? '알을 누르면 부화 칸에 들어가요 · ' : '알이 없어요 · ')
+      + (n.eggs.length >= B.nest.max ? '둥지가 가득 찼어요 · 깨우거나 놓아줘요' : `다음 알까지 ${clock(n.t + eggGap(G.S) - now)}`) + (d2 ? ` · 금빛 알은 ${clock(new Date(now).setHours(24, 0, 0, 0) - now)} 뒤 열려요` : '');
+    const gr = G.S.giftRow, free = G.S.slots.includes(null); giftEl.hidden = !gr.length; // 112 선물 알: given over a full nest, the first one into a free slot
+    once('gift', gr.map(e => e.id).join(), () => {
+      giftEl.innerHTML = `<b>선물 알</b>${gr.map((e, i) => `<button class="negg" data-gift aria-label="선물 ${RAR[e.rarity].name} 알"><img alt=""></button>`).join('')}<small></small>`;
+      giftEl.querySelectorAll('img').forEach((img, i) => eggThumb(gr[i].rarity).then(u => { img.src = u; }));
+    });
+    if (gr.length) giftEl.lastChild.textContent = free ? '누르면 부화 칸에 들어가요' : '부화 칸이 비면 넣을 수 있어요';
+    drawGauges(); slotsEl.classList.toggle('n3', G.S.slots.length > 2); slotsEl.classList.toggle('n4', G.S.slots.length > 3); slotsEl.classList.toggle('n5', G.S.slots.length > 4); // inbox 31: three slots in one row (112: four, five)
     G.S.slots.forEach((s, i) => { const was = sig['slot' + i]; once('slot' + i, s ? `${s.egg.id}` : '-', () => {
       const b = slotsEl.children[i] || slotsEl.appendChild(Object.assign(document.createElement('button'), { className: 'nslot', innerHTML: '<img alt=""><span><b></b><small></small></span>' }));
       b.dataset.i = i; b.classList.toggle('empty', !s); b.classList.remove('fresh'); const img = b.firstChild;
@@ -245,7 +260,7 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     if (!G.S.flags.nestTapped) { hideToast(); G.flag('nestTapped'); }
     draw(); resume();
   }
-  function close() { run++; busy = false; shown = null; cardEl.hidden = true; if (st) stageOff(); el.hidden = true; drawBtn(); if (after) { const f = after; after = null; f(); } }
+  function close() { sel = null; run++; busy = false; shown = null; cardEl.hidden = true; if (st) stageOff(); el.hidden = true; drawBtn(); if (after) { const f = after; after = null; f(); } }
 
   btn.onclick = open;
   el.addEventListener('click', e => {
@@ -258,6 +273,10 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
     else if (b.dataset.back != null) answer(false, e);
     else if (busy) return;
     else if (b.dataset.tab) { tab = b.dataset.tab; draw(); }
+    else if (b.dataset.tidy != null || b.dataset.untidy != null) { sel = sel || b.dataset.untidy != null ? null : new Set(); draw(); }
+    else if (b.dataset.letgo != null) letGo(e);
+    else if (b.dataset.gift != null) { if (G.takeGift() < 0) toast('부화 칸이 가득 찼어요 · 알을 깨우면 넣을 수 있어요'); else sfx('egg'); }
+    else if (sel && b.dataset.id) { const id = +b.dataset.id, x = nest().eggs.find(x => x.id === id); if (x && canLetGo(x)) { sel.has(id) ? sel.delete(id) : sel.add(id); draw(); } else toast('선물 알은 놓아줄 수 없어요'); }
     else if (b.dataset.id) { if (G.takeEgg(habId, +b.dataset.id) < 0) toast('부화 칸이 가득 찼어요'); else { sfx('egg'); tip('hatch', '#nslots'); } }
     else if (b.dataset.i != null) {
       const s = G.S.slots[+b.dataset.i], now = G.now();
@@ -266,6 +285,14 @@ ${away ? `<p class="nwhy away">${!open ? `${H.name}${josa(H.name, '이', '가')}
       else hatchSlot(+b.dataset.i);
     }
   });
+  // 112 놓아주기: one question when a heroic or better egg is among them
+  async function letGo(e) {
+    const P = nest().eggs.filter(x => sel?.has(x.id)), [x, y] = [e.clientX, e.clientY], big = P.filter(x => RANK[x.rarity] >= RANK.heroic); if (!P.length) return;
+    if (big.length && !await ask(`${[...new Set(big.map(x => RAR[x.rarity].name))].join('·')} 알이 들어 있어요.
+놓아준 알은 돌아오지 않아요. 놓아줄까요?`, '놓아주기')) return;
+    const r = G.letGo(habId, P.map(x => x.id)); sel = null; draw(); if (!r) return;
+    heart(x, y); sfx('grown'); toast(`알 ${r.n}개를 놓아줬어요 · ♥+${r.hearts}`);
+  }
   // 69-1: an egg still waiting, tapped (톡), answers from inside a moment later: two little rocks and 톡톡 (the same for every rarity)
   function knock(b) { sfx('tap'); sfx('tok', 0.28); sfx('tok', 0.42); b.classList.remove('knock'); void b.offsetWidth; b.classList.add('knock'); }
   G.on(ev => { if (ev.some(e => e.type === 'reset')) close(); draw(); });
