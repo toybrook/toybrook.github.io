@@ -115,7 +115,7 @@ export function initPlay(nav) {
     }
     hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], growStage(G.S.lv)); hab?.sync(G.withGuests()); // 16-1: and the guests; inbox 42 B: the props first, so no one comes out inside one
     hab?.syncWild?.(G.S.flags.wildOff ? null : G.S.wild.h[habId] ?? null, G.S.wild.d); // 17-3 정원이 숨 쉬어요
-    hab?.setPals(G.S.flags.palOff ? null : new Map(G.S.pals.list.flatMap(p => [[p.a, p.b], [p.b, p.a]]))); // 17-1 성격·단짝 (walk.js)
+    hab?.setPals(G.S.flags.palOff ? null : new Map(G.S.pals.list.flatMap(p => [[p.a, p.b], [p.b, p.a]])), new Map(G.S.pals.list.flatMap(p => [[p.a, p.prop], [p.b, p.prop]]))); // 17-1 성격·단짝 (walk.js); 113 the prop each pair likes
   }
 
   function onTap(kind, rec, x, y, pt) {
@@ -252,7 +252,7 @@ export function initPlay(nav) {
     if (busy()) { clearTimeout(later); later = setTimeout(cards, 800); return; }
     if (pal) { // 17-1 "○○와 ○○가 단짝이 되었어요!" (after the grown cards)
       const [a, b] = [pal.a, pal.b].map(id => G.S.animals.find(x => x.id === id)), na = nameOf(a), nb = nameOf(b);
-      card.innerHTML = `<div><h2>${na}${josa(na, '과', '와')} ${nb}${josa(nb, '이', '가')} 단짝이 되었어요!</h2><p class="pair"><img alt="${na}"><span>♥</span><img alt="${nb}"></p><p class="sub">${PE[a.pe].name} · ${PE[b.pe].name} · 나란히 걷고, 같이 낮잠 자고, 시소도 같이 타요</p><button data-close>좋아요</button></div>`;
+      card.innerHTML = `<div><h2>${na}${josa(na, '과', '와')} ${nb}${josa(nb, '이', '가')} 단짝이 되었어요!</h2><p class="pair"><img alt="${na}"><span>♥</span><img alt="${nb}"></p><p class="sub">${PE[a.pe].name} · ${PE[b.pe].name} · 나란히 걷고, 같이 낮잠 자고, 시소도 같이 타요</p>${PROP[pal.prop] ? `<p class="sub">둘 다 ${PROP[pal.prop].name}${josa(PROP[pal.prop].name, '을', '를')} 좋아해요</p>` : ''}<button data-close>좋아요</button></div>`;
       card.querySelectorAll('.pair img').forEach((m, i) => { const x = [a, b][i]; figureThumb(x.species, x.variant, x.color, x.acc, x.stage).then(u => { m.src = u; }); });
       card.querySelector('button').onclick = () => { card.hidden = true; G.palSeen(); };
       card.hidden = false; sfx('grown'); return;
@@ -324,8 +324,13 @@ export function initPlay(nav) {
   }
   const onLetGo = r => { if (held && bubbleFor === r) bubbleUntil = Date.now() + 2500; held = false; };
 
+  // 113 단짝 놀이 (habitat.js ctx.onDuo): the two together on the prop they like: the hearts (the first time ♥20, then a few once a day)
+  function duo(a, b, kind) {
+    const h = G.palPlay(a, b); if (!h || !hab) return; const [na, nb] = [a, b].map(id => nameOf(G.S.animals.find(r => r.id === id))), P = PROP[kind]?.name ?? '';
+    toast(`${na}${josa(na, '과', '와')} ${nb}${josa(nb, '이', '가')} ${P}에서 함께 놀아요 ♥+${h}`, 2800, true); fly(hab.where(a), h);
+  }
   return {
-    onTap, events, scene, onPropTap, onEdit, onPaint, onSweep, onCarry, onLetGo,
+    onTap, events, scene, duo, onPropTap, onEdit, onPaint, onSweep, onCarry, onLetGo,
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
     attach(api, id) { hab = api; habId = id; nest.attach(api, id);
       G.guestWorld({ look: (h, x, z, r) => h === habId && hab ? hab.guestLook(x, z, r) : {}, entry: (h, from, rng, want, show) => covered() || !hab ? null : hab.guestEntry(from, rng, want, show), pos: id => hab?.guestPos(id) }, () => hab ? hab.guestEnv() : {}); // 66-1

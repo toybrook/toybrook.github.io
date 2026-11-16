@@ -8,7 +8,7 @@ import { DROP, dropPose, dropFrom, held as heldPose } from './growth.js';
 import { free, blocked } from './crowd.js';
 import { MODELS } from '../game/data.js';
 import { SP } from '../game/rules.js';
-import { choose, start, pose as playPose, leave, due } from './play.js';
+import { choose, start, pose as playPose, leave, due, duo } from './play.js';
 
 const ripGeo = new THREE.RingGeometry(0.55, 0.65, 40); ripGeo.rotateX(-Math.PI / 2);
 
@@ -53,6 +53,8 @@ export function createActor(ctx, rec) {
     spin(d) { if (held) root.rotation.y += d; }, // 69-1: held up, turned round by the finger
     use(st) { const q = land && choose({ play: [st], night: ctx.night }, api, { ...me(), T: now }, land.x, land.z, 99); if (q) land.q = q; return q ? [land.x, land.z] : null; },
     poke() { poke = 0.6; },
+    toProp(st, d) { if (api.hold || held || land || play) return false; const q = choose({ play: [st], night: ctx.night }, api, { ...me(), T: now, duo: d }, root.position.x, root.position.z, 40); // 113: to its 단짝 on the fountain
+      if (q) play = { q, x: root.position.x, z: root.position.z, t: 0, dur: Math.max(0.6, Math.hypot(q.ax - root.position.x, q.az - root.position.z) / 3.2) }; return !!q; },
     pat(z) { if (z === 'dislike' && !held) { snub = 1.1; side = Math.random() < 0.5 ? 1 : -1; } else poke = 0.6; }, // 69-2 쓰다듬기: 싫은 곳은 고개 돌림
     // on the camera's line to the followed animal (habitat.js; n: the line's side normal, d: how far off it, signed): swim on
     // faster for a while and slide to the lane that takes it further off that side
@@ -69,7 +71,7 @@ export function createActor(ctx, rec) {
         const { q } = play; play.t += dt; let o;
         if (!q.A) { const k = Math.min(1, play.t / play.dur), hops = Math.max(2, Math.round(play.dur / 0.32)), x = play.x + (q.ax - play.x) * k, z = play.z + (q.az - play.z) * k;
           o = { x, z, y: Math.max(ctx.heightAt(x, z), water) + Math.sin(((k * hops) % 1) * Math.PI) * 0.45, yaw: Math.atan2(-(q.az - play.z), q.ax - play.x), sq: 1, rot: 0, gait: 'still', ph: 0 };
-          if (k >= 1) { start(q, x, z, o.yaw, t); ctx.onPlay?.(q); play.t = 0; } } // 13-2: on it (habitat.js -> ui 놀이 장면)
+          if (k >= 1) { start(q, x, z, o.yaw, t); ctx.onPlay?.(q); duo(ctx, q); play.t = 0; } } // 13-2: on it (habitat.js -> ui 놀이 장면)
         else o = playPose(q, play.t, t);
         root.position.set(o.x, o.y ?? ctx.heightAt(o.x, o.z) + (o.lift || 0), o.z); root.rotation.set(0, o.yaw, 0); look.fig.pose(o);
         Object.assign(body, { x: o.x, z: o.z, yaw: o.yaw }); fit();
@@ -113,5 +115,6 @@ export function createActor(ctx, rec) {
     body,
     dispose() { unplay(); ctx.crowd.delete(body); scene.remove(root); for (const rp of ripples) { scene.remove(rp.m); rp.m.material.dispose(); } },
   };
+  body.duo = api; // 113 (play.js duo)
   return api;
 }

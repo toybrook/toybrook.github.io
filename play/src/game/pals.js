@@ -4,9 +4,10 @@
 // same place whose 성격 go together (the same one, or one in `good`) add up time there (real time, the app shut too); at
 // BALANCE.pal.hours they are 단짝: one new pair a day, a place one pair per `per` friends out (1 at least), a friend in one pair.
 // A pair stays (a friend sent back: it goes). S.flags.palOff (설정 「성격·단짝」 끔): no time adds up, no pair, the view does none of it.
-// S.pals: { at: the last tick, t: { 'a-b': ms together (a < b) }, list: [{ a, b, at, new }] } (new: its card not seen yet)
-import { BALANCE as B, HABITATS } from './data.js';
-import { outIn } from './rules.js';
+// S.pals: { at: the last tick, t: { 'a-b': ms together (a < b) }, list: [{ a, b, at, new, prop, played, pd }] } (new: its card not seen yet;
+// 113 prop: its 단짝 놀이 prop kind, played / pd: palPlay)
+import { BALANCE as B, HABITATS, DUO, USES, PROPS } from './data.js';
+import { outIn, habitatOf } from './rules.js';
 import { hash } from './sky.js';
 import { dayOf } from './clock.js';
 
@@ -25,6 +26,17 @@ export const peOf = (id, born) => PERSONAS[Math.floor(hash(+id || 0, +born || 0,
 export const match = (x, y) => x === y || !!PE[x]?.good.includes(y);
 export const mateOf = (S, id) => { const p = S.pals.list.find(p => p.a === id || p.b === id); return p && (p.a === id ? p.b : p.a); };
 
+// 113 단짝 놀이: the pair's prop, a DUO kind both species use (USES) that their place can have, picked by the two ids; none: the campfire
+export function duoOf(S, a, b) {
+  const [x, y] = [a, b].map(id => S.animals.find(r => r.id === id)), hab = x && habitatOf(x), U = sp => (USES[sp] || '').split(' ');
+  const ok = x && y ? DUO.kinds.filter(k => U(x.species).includes(k) && U(y.species).includes(k) && [undefined, hab].includes(PROPS.find(p => p.id === k)?.habitat)) : [];
+  return ok.length ? ok[Math.floor(hash(a, b, 113) * ok.length)] : 'campfire';
+}
+// the two on it together (habitat.js, walk.js / swim.js): the first time ♥DUO.first (played: when), after that ♥DUO.hearts once a day (pd: its day)
+export function palPlay(S, a, b, now) {
+  const p = !S.flags.palOff && S.pals.list.find(p => p.a === a && p.b === b || p.a === b && p.b === a), d = dayOf(now); if (!p) return 0;
+  const h = p.played ? p.pd === d ? 0 : DUO.hearts : DUO.first; p.played ??= now; p.pd = d; S.hearts += h; return h;
+}
 export const blank = () => ({ at: 0, t: {}, list: [] });
 const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 export function tidyPals(S) { // fromSave
@@ -33,7 +45,8 @@ export function tidyPals(S) { // fromSave
   S.pals = { at: Number.isFinite(P.at) ? P.at : 0,
     t: isObj(P.t) ? Object.fromEntries(Object.entries(P.t).filter(([k, v]) => /^\d+-\d+$/.test(k) && Number.isFinite(v) && v >= 0)) : {},
     list: (Array.isArray(P.list) ? P.list : []).filter(p => isObj(p) && p.a !== p.b && ids.has(p.a) && ids.has(p.b) && Number.isFinite(p.at) && !used.has(p.a) && !used.has(p.b) && used.add(p.a).add(p.b))
-      .map(p => ({ a: p.a, b: p.b, at: p.at, ...p.new === true && { new: true } })) };
+      .map(p => ({ a: p.a, b: p.b, at: p.at, ...p.new === true && { new: true }, prop: DUO.kinds.includes(p.prop) ? p.prop : duoOf(S, p.a, p.b), // 113: a 0.79.11 pair gets its prop here
+        ...Number.isFinite(p.played) && { played: p.played }, ...typeof p.pd === 'string' && { pd: p.pd } })) };
 }
 
 export function palTick(S, now, ev) { // advance
@@ -54,5 +67,5 @@ export function palTick(S, now, ev) { // advance
   }
   P.t = t;
   if (!best) return;
-  delete t[best.k]; P.list.push({ a: best.a, b: best.b, at: now, new: true }); ev.push({ type: 'pal', a: best.a, b: best.b });
+  delete t[best.k]; P.list.push({ a: best.a, b: best.b, at: now, new: true, prop: duoOf(S, best.a, best.b) }); ev.push({ type: 'pal', a: best.a, b: best.b });
 }

@@ -108,6 +108,7 @@ const ui = {
   tag: (text, rec) => { play.tag(text, rec); snap.followed(); }, // ui/play.js: a baby's tag shows its growth; 26-4 사진 모드's 따라가기 shows who
   onTap: (...a) => { if (!snap.on()) play.onTap(...a); }, // 24-1 사진 모드: no hearts or bubbles (a tap still follows the animal)
   scene: e => play?.scene(e, snap.on()), // 13-2 놀이 장면 (ui/play.js)
+  duo: (a, b, kind) => play?.duo(a, b, kind), // 113 단짝 놀이
   onPropTap: uid => play.onPropTap(uid), onEdit: ok => play.onEdit(ok), onPaint: (c, b) => play.onPaint(c, b), onSweep: u => play.onSweep(u), // decorate mode (ui/decor.js)
   note: (k, n) => { if (!snap.on()) G.note(k, n); }, // 23-2 도전 과제 (not while 사진 모드 can hold the night or the rain)
   onHome: (id, home) => G.setHome(id, home), // inbox 53 울타리 안 자리

@@ -60,6 +60,9 @@ const SKY = { meteor: 0.25, aurora: 0.2, auroraSnow: 0.4, red: 0.05, comet: 0.07
 // 17-1 단짝 (game/pals.js, 가안): two friends whose 성격 go together, out in the same place `hours` in all (real time, the app shut
 // too) -> 단짝; one new pair a day, a place one pair per `per` friends out (1 at least)
 const PAL = { hours: 20, per: 6 };
+// 113 단짝 놀이 (game/pals.js duoOf, animals/play.js): each pair's prop (a play prop kind both species use, that its place can have;
+// none: the campfire), the two on it together: ♥first the first time, ♥hearts at most once a day after; max pairs at it at once a place
+export const DUO = { kinds: ['seesaw', 'swing', 'fountain', 'campfire', 'feeder'], first: 20, hearts: 3, max: 2 };
 const MYTH = { beta: { day: 1, nights: 1, guest: 3 }, release: { day: 3, nights: 3, guest: 7 } }; // release: it comes in about a week, settles in about two (check-eggs 14-1)
 export const PACE = {
   release: {

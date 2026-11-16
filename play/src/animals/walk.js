@@ -8,7 +8,7 @@ import { free, blocked } from './crowd.js';
 import { MODELS, UNIT, GROW_ACTS } from '../game/data.js';
 import { SP, gauge } from '../game/rules.js';
 import { now as clock } from '../game/clock.js';
-import { choose, start, pose as playPose, leave, due } from './play.js';
+import { choose, start, pose as playPose, leave, due, duo } from './play.js';
 
 // inbox 63: a little darker (0.55 -> 0.68 in the middle, 0.42 half way out) so they stand out on the wide board
 const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(40,40,10,0.68)'); gr.addColorStop(0.55, 'rgba(40,40,10,0.42)'); gr.addColorStop(1, 'rgba(40,40,10,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
@@ -90,6 +90,7 @@ export function createActor(ctx, rec) {
     if ((!(ctx.rain > 0.3) || ctx.snowy) && Math.random() < (pe() === 'prank' ? 0.16 : 0.07) && startSocial()) return; // inbox 42 C 동물끼리 (15-2: on snow, snowing too: 눈싸움)
     if ((pe() === 'curious' || ctx.cheer > performance.now()) && ctx.fresh?.length && peek()) return; // 17-1 호기심쟁이; 92-3 everyone, the first prop
     if (h.atSet) { const k = h.atSet === 'perch' ? 2.5 : 1; h.atSet = false; h.state = Math.random() < 0.6 * k ? 'graze' : 'idle'; h.t = 0; h.dur = (3 + Math.random() * 4) * k; return; } // 23-2: got there: stays a while
+    const dk = ctx.duo?.get(rec.id); if (dk && ctx.play?.length && Math.random() < 0.08 && mate() && toPlay({ play: ctx.play.filter(st => st.kind === dk), night: ctx.night })) return; // 113 단짝 놀이: with its 단짝 near, to the prop the two like (play.js duo calls it over)
     if (ctx.play?.length) { const m = me(); if (Math.random() < (due(ctx, h.now, m, st => !m.can || m.can(st.x, st.z)) ? 0.7 : 0.2) + 0.15 * (ctx.night || 0) && toPlay()) return; } // 28-2 소품 쓰기 (more by night: the campfire); inbox 42 C: 7 -> 20%, 70% while one of its kind waits (due)
     if (ctx.sets?.length && Math.random() < 0.3 && toSet()) return; // 23-2 세트 보너스: likes to play by a whole set
     if (ctx.spots?.length && Math.random() < (pe() === 'collector' ? 0.24 : 0.12)) { // 28-1: to a spot of a zone (zones.js: a bench, the hot spring, the sled hill's top) within 20
@@ -204,8 +205,8 @@ export function createActor(ctx, rec) {
   // 28-2: to a play prop its species uses and it fits (play.js choose: the seat is kept for it); false: none, or no way there
   const me = () => { const S = M[look.stage], R = land(), lab = (x, z) => { const k = R.id(x, z); return k >= 0 && R.area(k) >= ROOM ? k : R.near(x, z, (a, b, L) => R.area(L) >= ROOM, 6)?.[2] ?? -1; }, mine = R && lab(h.x, h.z); return { T: h.now, can: R && ((x, z) => lab(x, z) === mine), lab: R && lab, mine, // inbox 42 C: this side of a bridge (toward walks one land, walk.js crosses by itself; a seat in a prop's kept-off ring, or it standing in one, or a pocket too small to stand in: the land 3 m round)
      sp: rec.species, W, swim: false, s: S.s, reach: body.seg[1] + body.r, back: body.r - body.seg[0], w: 2 * body.r, L: body.seg[1] - body.seg[0] + 2 * body.r, h: S.h * S.s, fig: look.fig, pe: pe() }; }; // 17-1 pe: play.js choose (먹보)
-  function toPlay(c = ctx, far) { // 17-1: c, far: api.toProp
-    const q = choose(c, api, me(), h.x, h.z, far); if (!q) return false; if (far) q.late = true; // 17-1: to its 단짝: runs
+  function toPlay(c = ctx, far, d) { // 17-1: c, far: api.toProp
+    const q = choose(c, api, { ...me(), duo: d }, h.x, h.z, far); if (!q) return false; if (far) q.late = true; // 17-1: to its 단짝: runs
     h.goal = { x: q.ax, z: q.az, act: 'play', q, n: 6, fast: q.late, done: ok => ok || leave(q) }; if (toward()) return true; // inbox 42 C: to one left waiting: runs
     h.goal = null; leave(q); return false;
   }
@@ -308,7 +309,7 @@ export function createActor(ctx, rec) {
   }
   function arrive(g) {
     const T = (a, b) => a + Math.random() * (b - a);
-    if (g.act === 'play') { h.play = start(g.q, h.x, h.z, h.yaw, h.now); ctx.onPlay?.(g.q); h.state = 'play'; h.t = 0; h.pk = 0; if (g.q.st.kind === 'seesaw' && !g.q.st.seats[1 - g.q.i] && ctx.bf?.has(rec.id)) [...ctx.crowd].find(b => b.pal?.rec.id === ctx.bf.get(rec.id))?.pal.toProp(g.q.st); return true; } // 28-2: on it (update's play); 17-1: its 단짝 to the seesaw's other end (not mate(): the seat is off its land)
+    if (g.act === 'play') { h.play = start(g.q, h.x, h.z, h.yaw, h.now); ctx.onPlay?.(g.q); h.state = 'play'; h.t = 0; h.pk = 0; if (!duo(ctx, g.q) && g.q.st.kind === 'seesaw' && !g.q.st.seats[1 - g.q.i] && ctx.bf?.has(rec.id)) [...ctx.crowd].find(b => b.pal?.rec.id === ctx.bf.get(rec.id))?.pal.toProp(g.q.st); return true; } // 28-2: on it (update's play); 17-1: its 단짝 to the seesaw's other end (not mate(): the seat is off its land)
     if (g.act === 'look') { const o = g.o; h.face = Math.atan2(-(o.z - h.z), o.x - h.x); h.state = 'nuzzle'; h.t = 0; h.dur = 2.4; return true; } // 17-1 호기심쟁이: sniffs at the new prop
     if (g.act === 'hide') { h.state = 'sleep'; h.t = 0; h.dur = T(5, 8); h.tuck = false; return true; } // 17-1 겁쟁이: by the bush
     if (g.act === 'slide' && g.to && W.slide) { go('walk', g.to[0], g.to[1], 2.4 / W.pace); h.slide = true; return true; }
@@ -398,7 +399,10 @@ export function createActor(ctx, rec) {
       h.goal = { x, z, act, to, fast, done, q, yaw, dur, n: 6 }; if (!toward()) { h.state = 'idle'; h.t = 0; h.dur = 0.4; } return true;
     },
     busy: () => !!h.goal || !!h.after || !!h.play,
-    toProp: st => api.free() && toPlay({ play: [st], night: ctx.night }, 40), // 17-1: to the seesaw its 단짝 is on
+    toProp(st, d) { // 17-1: to the seesaw its 단짝 is on (113 d: me.duo, play.js; called by it, it leaves a walk or hop, as send)
+      if (d && !api.hold && !h.play && !h.then && !h.shel && ctx.onBridge !== h && ['idle', 'graze', 'walk', 'hop'].includes(h.state)) { h.goal?.done?.(false); h.goal = h.after = h.soc = null; h.state = 'idle'; }
+      return api.free() && toPlay({ play: [st], night: ctx.night }, 40, d);
+    },
     // inbox 42 C: free to join another (social): not held, sent, on a prop, with another, asleep or on the bridge
     free: () => !api.hold && !h.goal && !h.after && !h.play && !h.soc && !h.shel && !h.then && ctx.onBridge !== h && ['idle', 'graze', 'walk'].includes(h.state),
     join(s) { if (!api.free()) return false; h.soc = s; h.stuck = false; h.state = 'idle'; h.t = 0; h.dur = 0; return true; }, // its part, from its next pick
@@ -457,10 +461,10 @@ export function createActor(ctx, rec) {
         if (h.t >= h.dur) pick(); }
       else if (h.state === 'sleep') { sq = 0.95 - Math.sin(t * 1.4 + h.ph) * 0.015; if (h.tuck) tuck = Math.min(1, h.t / 0.5, (h.dur - h.t) / 0.5); if (h.t >= h.dur) pick(); if (Math.random() < dt * 0.5) ctx.onSleepTick(root); }
       else if (h.state === 'play') { const o = playPose(h.play, h.t, t); // 28-2 소품 쓰기 (play.js poses it: where, how high, how)
-        h.x = o.x; h.z = o.z; h.yaw = h.face = o.yaw; py = o.y ?? null; lift = o.lift || 0; ({ sq, rot, gait, ph } = o); lie = o.lie || 0; shut = !!o.shut;
+        h.x = o.x; h.z = o.z; h.yaw = h.face = o.yaw; py = o.y ?? null; lift = o.lift || 0; ({ sq, rot, gait, ph } = o); roll = o.roll || 0; lie = o.lie || 0; shut = !!o.shut;
         if (h.pk > 0) { h.pk -= dt; const b = Math.sin(Math.max(0, h.pk) / 0.5 * Math.PI) * 0.3; if (py != null) py += b; else lift += b; }
         if (o.zz && Math.random() < dt * 0.5) ctx.onSleepTick(root);
-        if (o.end || h.play.st.gone) endPlay(); }
+        if (o.end || h.play.st.gone) { const q = o.swap && h.play; endPlay(); if (q) api.toProp(q.st, { id: q.me.duo.id, seat: 0, n: 1 }); } } // 113: pushed, now its turn on the swing
       else if (h.state === 'nuzzle') { const k = Math.min(1, h.t / h.dur); rot = -0.12 * Math.sin(k * Math.PI * 3) ** 2; sq = 1 + 0.025 * Math.sin(k * Math.PI * 2); // inbox 42 C 코 맞대기: three little nose dips
         if (k >= 1) { h.state = 'idle'; h.t = 0; h.dur = 0.8 + Math.random(); } }
       else if (h.state === 'shake' || h.state === 'splash') { const k = Math.min(1, h.t / h.dur); // inbox 42 D 비 즐기기
@@ -503,6 +507,6 @@ export function createActor(ctx, rec) {
     body,
     dispose() { endPlay(); h.soc = null; for (const m of drops) { scene.remove(m); m.material.dispose(); } if (h.goal?.q) leave(h.goal.q); scene.remove(root); blob.free(); if (ctx.onBridge === h) ctx.onBridge = null; ctx.crowd.delete(body); },
   };
-  pick(); body.pal = api; // inbox 42 C: others find it in ctx.crowd (its first pick once api is made: toPlay hands it on)
+  pick(); body.pal = api; body.duo = api; // inbox 42 C: others find it in ctx.crowd (its first pick once api is made: toPlay hands it on)
   return api;
 }

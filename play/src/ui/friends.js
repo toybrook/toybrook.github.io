@@ -80,7 +80,7 @@ el.addEventListener('click', e => {
 function more(id) {
   const a = G.S.animals.find(x => x.id === id); if (!a) return;
   const nm = callName(a), home = SP[a.species].habitat, guest = habitatOf(a) !== home;
-  const m = G.S.animals.find(x => x.id === mateOf(G.S, a.id)), pe = G.S.flags.palOff || !PE[a.pe] ? '' : `<p class="sub pe">${PE[a.pe].name} · ${PE[a.pe].line}${m ? `<br>단짝: ${callName(m)}` : ''}</p>`; // 17-1 성격과 단짝
+  const m = G.S.animals.find(x => x.id === mateOf(G.S, a.id)), pe = G.S.flags.palOff || !PE[a.pe] ? '' : `<p class="sub pe">${PE[a.pe].name} · ${PE[a.pe].line}${m ? `<br>단짝: ${callName(m)}${G.S.pals.list.find(p => (p.a === a.id || p.b === a.id) && p.played) ? '<small> · 함께 논 소품 ✓</small>' : ''}` : ''}</p>`; // 17-1 성격과 단짝
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
   menu.innerHTML = `<div><h2>${star(a)}${nm}</h2>${a.nm ? `<p class="sub">${kindName(a)}</p>` : ''}${pe}<div class="col"><button data-do="go">보러 가기</button>
 <button data-do="fav" aria-pressed="${!!a.fav}">${a.fav ? '★ 별 떼기' : '☆ 아끼는 친구로'}</button><button data-do="name">${a.nm ? '이름 바꾸기' : '이름 짓기'}</button>

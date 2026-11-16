@@ -6,7 +6,7 @@
 // start and pose every frame until pose says end. Poses: x, z, yaw and y (world; none: on the ground, lift above it),
 // rot (nose up +), sq, gait, ph as walk.js's own, zz: dozing (the zzz)
 import * as THREE from 'three';
-import { USES } from '../game/data.js';
+import { USES, DUO } from '../game/data.js';
 import { calm } from '../config.js';
 import { nightGlow } from '../habitat/toyKit.js';
 import { CARS } from '../habitat/train.js';
@@ -51,6 +51,8 @@ function onOff(q, t, s, E, end) {
   const k = (t - q.off.t) / 0.55; return k >= 1 ? { ...still, ...E, end: true } : jump(q.off, E, k, 0.7);
 }
 const out = (st, me, d = 0.15) => st.r + Math.max(me.reach, me.back) + d; // a spot clear of its footprint
+// 113: where the swing's pusher (me) stands, its nose just at the rider's back with the swing back by A (the rider: seat 0's me)
+const back = (st, me, A) => -(G.swing.rope * Math.sin(A) + (st.q[0]?.me.back ?? 0.5) + me.reach + 0.05);
 const ring = (n, st, i, me, d) => { const a = i / n * Math.PI * 2, R = st.r + me.reach + d; return W(st, Math.cos(a) * R, Math.sin(a) * R); };
 
 // 42 F-2: along a path in the prop's own frame (pts [x, y, z, o], y over its foot: o.hop a hop up to it, o.slide down to it fast,
@@ -84,9 +86,13 @@ const onLand = (me, p) => !me.can || me.can(p[0], p[1]);
 
 // each kind: n seats; spot(st, i, me, x, z): where it walks to (world); dur(q); pose(q, t, T): t since it got there, T the clock
 const K = {
-  swing: { n: 1, dur: () => 4.5 + Math.random() * 2,
-    spot: (st, i, me) => W(st, 0, -out(st, me)), // behind it: hops on facing the front, off forward
+  swing: { n: 2, duo: 1, dur: () => 4.5 + Math.random() * 2, // 113: seat 1 is the 단짝's who pushes (only one sent there: choose)
+    spot: (st, i, me) => i ? W(st, 0, back(st, me, 0.5) - 0.3) : W(st, 0, -out(st, me)), // behind it: hops on facing the front, off forward
     pose(q, t) { const { st, me } = q, g = G.swing, a = st.ang || 0;
+      if (q.i) { const A = st.amp || 0.5, k = Math.max(0, a / A) ** 3, z = back(st, me, A) - 0.3 * (1 - k), p = st.seats[0], f = yawOf(st, 0, 1), e = smooth(Math.min(1, t / 0.6)); // 113 밀어 주기: its nose meets the rider's back as the swing comes back
+        st.on[1] = true; const s = at(st, 0, 0, z, q.A.yaw + turn(q.A.yaw, f) * e, { rot: -0.14 * k, gait: 'walk', ph: 0.12 * k });
+        if (e < 1) { s.x = lerp(q.A.x, s.x, e); s.z = lerp(q.A.z, s.z, e); }
+        return p !== q.mate?.who || t > 40 ? { ...s, end: true, swap: !q.me.duo?.n } : s; } // the rider got off: its turn (once)
       const s = at(st, 0, g.pivot - g.rope * Math.cos(a), -g.rope * Math.sin(a), yawOf(st, 0, 1), { rot: -a }); // the seat's front dips at the back of the swing
       return onOff(q, t, s, at(st, 0, 0, out(st, me, 0.1), s.yaw), q.D); } },
   slide: { n: 1, dur: () => 3.3,
@@ -220,6 +226,8 @@ function sit(q, t, T) {
   if (st.kind === 'feeder') o.rot = (me.W?.rest === 'peck' ? -(0.08 + 0.35 * Math.pow(Math.max(0, Math.sin(T * 8 + q.ph)), 6)) : -(0.16 + Math.sin(T * 3 + q.ph) * 0.03)) * g;
   else if (q.doze && t > q.D * 0.4) Object.assign(o, { sq: 0.95 - Math.sin(T * 1.4 + q.ph) * 0.015, zz: true });
   else { const up = me.W?.rest === 'sit'; o.rot = (up ? 0.08 : 0.03 + 0.02 * Math.sin(T * 0.9 + q.ph)) * g; o.sq = 1 + (up ? 0.05 : 0) * g; }
+  const m = q.mate; if (st.kind === 'campfire' && m && st.q[m.i] === m && !o.zz) { // 113: by its 단짝 at the fire, leans on it
+    const s = Math.sign(Math.cos(o.yaw) * (m.A.z - A.z) + Math.sin(o.yaw) * (m.A.x - A.x)); o.roll = LEAN * s * g * smooth(Math.min(1, Math.max(0, T - Math.max(q.T0, m.T0) - 0.6))); }
   return o;
 }
 
@@ -231,29 +239,48 @@ export const newPlay = (kind, parts) => ({ kind, parts, seats: Array(K[kind].n).
 // inbox 42 C: me.T the clock. A prop nobody has used for a while (st.last: its last use, or when it was first looked at) draws
 // them more and more, and after LATE (30 s) from anywhere on its land (a walker; a swimmer's hop from twice as far), the longest waiting before any other, so each one is used every
 // few minutes on the 1.5 times board
+// 113: me.duo { id: its 단짝 on the prop, seat: the one it is sent to, n: a second round } (walk.js, swim.js toProp)
+const okSeat = (st, i, me) => me.duo?.seat != null ? i === me.duo.seat : i !== K[st.kind].duo; // the swing's pusher's place: only for a 단짝 sent there
 export function choose(ctx, who, me, x, z, far = 22) {
   const kinds = USE[me.sp] ?? [], n = ctx.night || 0, list = [], T = me.T ?? 0;
   for (const st of ctx.play ?? []) {
     const idle = T - (st.last ??= T), late = idle > LATE;
-    if (st.gone || !kinds.includes(st.kind) || !fits(st.kind, me) || Math.hypot(st.x - x, st.z - z) > (late ? (me.swim ? 2 * far : Infinity) : far) || !st.seats.includes(null)) continue;
-    if (me.can && !st.seats.some((s, i) => { const p = !s && K[st.kind].spot(st, i, me, x, z); return p && me.can(p[0], p[1]); })) continue; // inbox 42 B: a seat on its own land (not past a closed fence; round a ring, any one)
+    if (st.gone || !kinds.includes(st.kind) || !fits(st.kind, me) || Math.hypot(st.x - x, st.z - z) > (late ? (me.swim ? 2 * far : Infinity) : far) || !st.seats.some((s, i) => !s && okSeat(st, i, me))) continue;
+    if (me.can && !st.seats.some((s, i) => { const p = !s && okSeat(st, i, me) && K[st.kind].spot(st, i, me, x, z); return p && me.can(p[0], p[1]); })) continue; // inbox 42 B: a seat on its own land (not past a closed fence; round a ring, any one)
     const used = st.seats.filter(Boolean).length;
     list.push([st, (1 + Math.max(0, idle - 30) / 6) * (st.kind === 'campfire' ? (n > 0.3 ? 4 : 0.3) * (1 + used) : st.kind === 'feeder' ? (1 + 2 * used) * (me.pe === 'glutton' ? 3 : 1) : st.kind === 'seesaw' ? (used ? 8 : 1) : st.kind === 'hammock' && n > 0.3 ? 0.4 : st.kind === 'train' ? 0.6 : 1), late]);
   }
   const wait = list.filter(f => f[2]).sort((a, b) => a[0].last - b[0].last); // one that has waited LATE goes first: the longest waiting
   let r = Math.random() * list.reduce((s, [, w]) => s + w, 0); const pick = wait[0]?.[0] ?? list.find(([, w]) => (r -= w) < 0)?.[0];
   if (!pick) return null;
-  const k = K[pick.kind], free = pick.seats.map((s, i) => s ? null : i).filter(i => i != null).map(i => [i, k.spot(pick, i, me, x, z)]).filter(f => f[1] && (!me.can || me.can(f[1][0], f[1][1]))); // 28-4: the train's spot may be none
+  const k = K[pick.kind], free = pick.seats.map((s, i) => s || !okSeat(pick, i, me) ? null : i).filter(i => i != null).map(i => [i, k.spot(pick, i, me, x, z)]).filter(f => f[1] && (!me.can || me.can(f[1][0], f[1][1]))); // 28-4: the train's spot may be none
   if (!free.length) return null;
-  const [i, [ax, az, at]] = k.ring ? free.sort((a, b) => Math.hypot(a[1][0] - x, a[1][1] - z) - Math.hypot(b[1][0] - x, b[1][1] - z))[0] : free[0]; // round a ring: the seat on its side
-  pick.seats[i] = who; return { st: pick, i, who, me, ax, az, at, night: n, late: T - pick.last > LATE };
+  const j = me.duo ? pick.seats.findIndex(s => s?.rec?.id === me.duo.id) : -1, N = pick.seats.length, gap = i => j < 0 ? 0 : Math.min((i - j + N) % N, (j - i + N) % N); // 113: round a ring, beside its 단짝
+  const [i, [ax, az, at]] = k.ring ? free.sort((a, b) => gap(a[0]) - gap(b[0]) || Math.hypot(a[1][0] - x, a[1][1] - z) - Math.hypot(b[1][0] - x, b[1][1] - z))[0] : free[0]; // round a ring: the seat on its side
+  pick.seats[i] = who; const q = { st: pick, i, who, me, ax, az, at, night: n, late: T - pick.last > LATE }; if (me.duo) pick.q[i] = q; return q; // 113: counted (pairs) on its way there
+}
+// 113 단짝 놀이 (ctx.bf: id -> its 단짝; ctx.duo: id -> the prop the two like, game/pals.js duoOf). Just got on q (walk.js,
+// swim.js): sent to its 단짝 (q.me.duo) and that one still on: the two go on together as long, in step (the splash, the pecks),
+// and ctx.onDuo(a, b, kind) (the hearts: ui/play.js). Else, on its pair's prop: its 단짝 near by (within 22, as choose) comes
+// to the seat beside it (the swing: behind it, to push), while fewer than DUO.max pairs play on this board. true: one of these
+const LEAN = 0.1; // how far one leans on the other at the fire (walk.js roll)
+const pairs = ctx => new Set((ctx.play ?? []).flatMap(st => st.q.filter(q => q?.me.duo).map(q => Math.min(q.who.rec.id, q.me.duo.id)))).size;
+export function duo(ctx, q) {
+  const { st, who, me } = q, id = who.rec?.id, d = me.duo, m = ctx.bf?.get(id); if (id == null) return false;
+  const p = d && st.q.find(p => p && p !== q && p.who.rec?.id === d.id);
+  if (p) { const left = Math.max(6 + Math.random() * 3, p.D - (q.T0 - p.T0)); p.D = q.T0 - p.T0 + left; q.D = left; q.ph = p.ph; p.mate = q; q.mate = p; // ends with the other
+    if (!d.n) ctx.onDuo?.(id, d.id, st.kind); return true; }
+  if (m == null || ctx.duo?.get(id) !== st.kind || d?.id == null && pairs(ctx) >= DUO.max) return false; // d without id: not sent by it
+  const o = [...ctx.crowd].find(b => b.duo?.rec.id === m && Math.hypot(b.x - st.x, b.z - st.z) < 22)?.duo;
+  if (!o?.toProp(st, { id, seat: st.kind === 'swing' ? 1 : null, n: d?.id == null ? 0 : 1 })) return false;
+  q.D += 15; return true; // waits for it
 }
 // inbox 42 C: a play prop of its kind nobody has used for LATE s (walk.js, swim.js: then it goes to play far more often)
 const LATE = 30;
 export const due = (ctx, T, me, at) => (ctx.play ?? []).some(st => !st.gone && T - (st.last ?? T) > LATE && USE[me.sp]?.includes(st.kind) && fits(st.kind, me) && (!at || at(st))); // at(st): only those (walk.js: on its land, or over the bridge)
 // got to (ax, az): x, z, yaw where it stands now, T the clock
 export function start(q, x, z, yaw, T) {
-  const k = K[q.st.kind]; q.st.last = T; Object.assign(q, { A: { x, z, y: q.st.y, yaw }, T0: T, ph: Math.random() * 6, dir: Math.random() < 0.5 ? 1 : -1, doze: q.night > 0.6 && Math.random() < 0.5, off: null });
+  const k = K[q.st.kind]; q.st.last = T; q.st.q[q.i] = q; Object.assign(q, { A: { x, z, y: q.st.y, yaw }, T0: T, ph: Math.random() * 6, dir: Math.random() < 0.5 ? 1 : -1, doze: q.night > 0.6 && Math.random() < 0.5, off: null });
   k.start?.(q); q.D = k.dur(q) * (q.st.kind === 'feeder' && q.me?.pe === 'glutton' ? 2 : 1); return q; // 17-1 먹보: at the feeder twice as long
 }
 export const pose = (q, t, T) => K[q.st.kind].pose(q, t, T);
@@ -281,7 +308,7 @@ function give(st) {
 }
 export function propTick(st, t) {
   const dt = Math.min(0.1, Math.max(0, t - (st.t ?? t))), P = st.parts, ease = (v, to, k) => lerp(v, to, Math.min(1, dt * k)); st.t = t;
-  if (st.kind === 'swing') { st.amp = ease(st.amp ?? 0.12, st.on[0] ? 0.42 : 0.12, 1.2); st.w = (st.w || 0) + dt * 1.9; P.seat.rotation.x = st.ang = st.amp * Math.sin(st.w); }
+  if (st.kind === 'swing') { st.amp = ease(st.amp ?? 0.12, st.on[0] ? st.on[1] ? 0.5 : 0.42 : 0.12, 1.2); st.w = (st.w || 0) + dt * 1.9; P.seat.rotation.x = st.ang = st.amp * Math.sin(st.w); }
   else if (st.kind === 'hammock') { st.amp = ease(st.amp ?? 0.04, st.on[0] ? 0.1 : 0.04, 1); st.w = (st.w || 0) + dt * 1.1; P.sling.rotation.x = st.sw = st.amp * Math.sin(st.w); give(st); }
   else if (st.kind === 'seesaw') {
     const g = G.seesaw, both = st.on[0] && st.on[1];

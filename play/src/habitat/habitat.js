@@ -185,7 +185,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   habitat.ctx.crowd = new Set(); // every animal's body capsule, so they keep apart (crowd.js)
   const bugs = butterflies(scene); habitat.ctx.sets = []; habitat.ctx.play = [];
   // 13-2 놀이 장면: a friend got on a play prop (walk.js, swim.js) / friends did something together (walk.js): to ui/play.js
-  habitat.ctx.onPlay = q => ui.scene?.({ prop: q.st.kind, sp: [q.who.rec.species], n: q.st.seats.filter(Boolean).length, night: q.night, who: [q.who] });
+  habitat.ctx.onPlay = q => q.st.kind === 'swing' && q.i || ui.scene?.({ prop: q.st.kind, sp: [q.who.rec.species], n: q.st.seats.filter(Boolean).length, night: q.night, who: [q.who] });
+  habitat.ctx.onDuo = (a, b, kind) => ui.duo?.(a, b, kind); // 113 단짝 놀이 (play.js duo; the swing's pusher (seat 1) is no 놀이 장면)
   habitat.ctx.onSocial = (social, who) => ui.scene?.({ social, night: habitat.ctx.night, who }); // 23-2 세트 보너스: butterflies, and animals wander to a whole set (walk.js); 28-2: the play props placed (play.js)
 
   // the player's animals: one actor per saved record that lives here and isn't in storage
@@ -1371,7 +1372,7 @@ GPU ${gpu}`; }
   if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus, fx, artView, overview });
   return {
     resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, artSpot, // 17-2
-    artView, syncWild, showZone, topView, setPals: m => { habitat.ctx.bf = m; }, // 17-1
+    artView, syncWild, showZone, topView, setPals: (m, d) => { habitat.ctx.bf = m; habitat.ctx.duo = d; }, // 17-1; 113 d: id -> the prop the two like
     myth, pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw

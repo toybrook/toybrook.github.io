@@ -3,6 +3,7 @@
 import * as V from './visit.js'; // 16-1
 import * as K from './sky.js'; // 16-2
 import * as R from './rules.js';
+import * as P from './pals.js'; // 113
 import * as GU from './guests.js'; import { guestWear } from './guests-data.js'; // 66-1, 86-3마
 import * as A from './art.js'; // 17-2
 import * as W from './wild.js'; // 17-3
@@ -181,6 +182,7 @@ export const skySeen = (n, slots) => act(now => K.seenNight(S, n, slots, now));
 export const skyBit = () => act(() => K.skyBit(S));
 export const skyMark = (k, v) => act(() => { S.sky[k] = v; });
 export const palSeen = () => act(() => { for (const p of S.pals.list) delete p.new; }); // 17-1 단짝 card seen
+export const palPlay = (a, b) => act(now => P.palPlay(S, a, b, now)); // 113 단짝 놀이: ♥ it gave
 // 17-2 동물 작품 (art.js, ui/art.js)
 export const artHere = () => { if (S && !view) S.art.here = clock(); }; // a tap or a key: the player is here (kept with the next save)
 export const artAt = (uid, x, z) => act(() => A.artAt(S, uid, x, z));
