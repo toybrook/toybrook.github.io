@@ -24,7 +24,7 @@ export const DEBUG = false; // release build
 
 // 20-1 open beta. VERSION goes to the feedback form; FEEDBACK_URL is the same form as site/config.js ('TODO' = no button).
 // RATING: the rating mark (an image under assets/) and number on the start screen; both empty = hidden (until rated).
-export const VERSION = '0.79.11';
+export const VERSION = '0.79.12';
 export { EDITION } from './game/data.js'; // inbox 22/31: set in data.js, next to the PACE table it picks
 export const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeHXV6tlH6IS3tlu7Xb71qeh1fvIbkzNHUoUHnSY3j_u7dcpA/viewform';
 export const FEEDBACK_FIELD = 'entry.2112099919'; // the form's "game info" box, filled in for the player
