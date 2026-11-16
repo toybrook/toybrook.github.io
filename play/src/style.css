@@ -166,6 +166,8 @@ html.calm .lbar::before{animation:none}
 @keyframes bump{40%{transform:scale(1.18)}}
 .flyg{position:fixed;z-index:3000;pointer-events:none;filter:drop-shadow(0 0 8px rgba(255,200,60,1))}
 .shell{position:fixed;z-index:3000;width:16px;height:14px;pointer-events:none;clip-path:polygon(50% 0,100% 85%,8% 100%);background:#f6e2bd}
+/* inbox 109: hearts and shell pieces still flying when a card comes up (레벨 5 창) go under it, not over its buttons; the friend menu's own pat hearts stay */
+body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visibility:hidden}
 .nslots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .nslots.n3{grid-template-columns:repeat(3,1fr);gap:6px}.nslots.n3 .nslot,.nslots.n3 .nslot.empty{flex-direction:column;justify-content:center;gap:2px;min-height:96px;padding:6px 4px;text-align:center}.nslots.n3 .nslot img{width:46px;height:46px}
 .nslot{display:flex;align-items:center;gap:8px;min-height:70px;padding:5px 10px 5px 5px;border-radius:16px;border:1px solid #d6bb93;background:#fbf1e1;color:#4a3626;font:inherit;text-align:left;cursor:pointer}

@@ -59,7 +59,7 @@ export function ask(text, ok = '확인', no = '취소') {
 const TOPS = ['#desk', '#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#artCard', '#story', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#visit', '#skySheet', '#event', '#prefs', '#help', '#habMenu', '#ret', '#myth', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
 const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden') && !el.closest('[data-lock]'); // 64-A: ui/first.js locks
-export const topWindow = () => { for (const q of TOPS) { const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };
+export const topWindow = (skip) => { for (const q of TOPS) { if (q === skip) continue; const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };
 export function closeTop() {
   const el = topWindow(); if (el) { el.querySelector(SHUT).click(); return true; }
   const b = document.getElementById('bubble'); if (!b.hidden) { b.hidden = true; return true; }
@@ -79,7 +79,7 @@ const NOTES = '#news,#event,#ret,#lvup,#zoneCard,#artCard,#grown,#homeHint', CAR
 // inbox 102: in any game, a first-time tip waits a minute after the last card (돌아왔어요 · 단짝 · 레벨 …) went: four came in a row on a visit
 const noted = () => { if ([...document.querySelectorAll(NOTES)].some(shown)) noteAt = Date.now(); return Date.now() - noteAt < 60e3; };
 export const resting = () => { if ([...document.querySelectorAll(CARDS)].some(shown)) upAt = Date.now(); return !!G.S && G.now() - G.S.since < 600e3 && Date.now() - upAt < 40e3; };
-setInterval(() => { noted(); if (tipEl && !shown(tipFor)) { waiting.unshift({ k: tipEl.dataset.k, anchor: tipFor }); tipEl.remove(); tipEl = null; } if (tipEl) dodge(); else if (!resting()) nextTip(); }, 250); // 74: its anchor went away (a window closed without a tap): the tip waits for it again (66-1 r04)
+setInterval(() => { noted(); const o = tipEl && topWindow('.tip'); if (tipEl && (!shown(tipFor) || o && !o.contains(tipFor))) { waiting.unshift({ k: tipEl.dataset.k, anchor: tipFor }); tipEl.remove(); tipEl = null; } if (tipEl) dodge(); else if (!resting()) nextTip(); }, 250); // 74: its anchor went away (a window closed without a tap): the tip waits for it again (66-1 r04); 109: or a card came up over it (레벨 5 창): the whole tip, tail too, waits under it
 export function tip(k, anchor) { // anchor: an element or a selector; shown once it is on screen and no other tip is up
   if (G.S.flags.tipsOff || G.S.flags['tip_' + k] || waiting.some(w => w.k === k) || tipEl?.dataset.k === k) return;
   waiting.push({ k, anchor }); nextTip();
