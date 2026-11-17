@@ -766,6 +766,73 @@ add120('rabbit', [['mint115', 'heroic', $t('박하사탕'), true], ['firefly115'
 add120('sheep', [['cloud115', 'rare', $t('뭉게구름'), true], ['nightsky115', 'heroic', $t('밤하늘')]]);
 // 125-A: nothing behind ?m89 now: the arctic fox adult (104·110) went public above; 구미호 116·121 and the 117 dinosaurs dropped (user
 // 11/17; files and looks kept: pilot89_gumiho*.glb, materials.js gumiho*)
+if (M89) {
+  // 125-B 티라노 (pilot): tools/bake-trex125.mjs. &trex=1 안1 (chunky, simple; the default) | &trex=2 안2 (more detail);
+  // &rexsize=1.05 (default) | 1.30: its height against the horse (public 0.80); the brachiosaurus 1.60 here (a proposal;
+  // public 1.30), &brachio=<n> to compare. Commons (solid) wear materials.js rex125: stripes, the mouth, scale detail.
+  const q = new URLSearchParams(location.search), v = q.get('trex') === '2' ? 'b' : 'a', grow = (id, f) => { for (const st of ['adult', 'baby']) { const S = MODELS[id][st]; Object.assign(S, { s: S.s * f, sink: S.sink * f, r: S.r * f, seg: S.seg.map(x => x * f) }); } };
+  const br = +(q.get('brachio') || 1.6); grow('brachiosaurus', br / SIZE.brachiosaurus); SIZE.brachiosaurus = br;
+  SIZE.tRex = +(q.get('rexsize') || 1.05);
+  const D = { a: { adult: { h: 2.268, r: 0.571, seg: [-1.877, 1.233], legs: { hip: 0.82, x: [0], z: 0.3 }, attach: { head: { p: [1.02, 2.27, 0], r: [0, 0, -0.1], s: 1.17 }, neck: { p: [0.64, 1.67, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.84, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.16, 2.04, 0], r: [0, 0, 0], s: 1.22 } } },
+      baby: { h: 2.112, r: 0.571, seg: [-1.625, 1.375], legs: { hip: 0.6, x: [0], z: 0.3 }, attach: { head: { p: [1.02, 2.11, 0], r: [0, 0, -0.1], s: 1.38 }, neck: { p: [0.57, 1.4, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.61, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.18, 1.84, 0], r: [0, 0, 0], s: 1.44 } } } },
+    b: { adult: { h: 2.268, r: 0.571, seg: [-2.075, 1.309], legs: { hip: 0.82, x: [0], z: 0.3 }, attach: { head: { p: [1.06, 2.27, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.7, 1.7, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.8, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.19, 2.05, 0], r: [0, 0, 0], s: 1.15 } } },
+      baby: { h: 2.108, r: 0.57, seg: [-1.799, 1.455], legs: { hip: 0.6, x: [0], z: 0.3 }, attach: { head: { p: [1.06, 2.11, 0], r: [0, 0, -0.1], s: 1.3 }, neck: { p: [0.64, 1.44, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.61, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.21, 1.85, 0], r: [0, 0, 0], s: 1.36 } } } } }[v];
+  Object.assign(MODELS.tRex, { files: { baby: `assets/models/pilot89_trex125${v}_baby.glb`, adult: `assets/models/pilot89_trex125${v}_adult.glb` }, paints: ['belly', 'mouth', 'stripe'],
+    baby: sized('tRex', 'baby', D.baby), adult: sized('tRex', 'adult', D.adult), m89: { solid: 'rex125' } });
+  const c = SPECIES.find(s => s.id === 'tRex').colors; Object.assign(c, { nostril: '#f7f0de', paint: { ...c.paint, mouth: '#3b2c26' } }); // the teeth and the eyes' glints (bake-trex125: one 'nostril' mesh) ivory, the mouth line dark
+}
+if (M89) {
+  // 125-D 구미호 (pilot): two new arctic fox legendary slots on one legend file (tools/bake-pilot89.mjs gumiho125; materials.js
+  // 125-D): 안1 gumiho125a (red cord and gold bell on the three outer tails), 안2 gumiho125b (none). &g121: 121 again in their
+  // place, for the comparison photos only
+  const G121 = /[?&]g121\b/.test(location.search), f = G121 ? 'gumiho121' : 'gumiho125';
+  MODELS.arcticFox.legend = { baby: `assets/models/pilot89_${f}_baby.glb`, adult: `assets/models/pilot89_${f}_adult.glb` };
+  SPECIES.find(s => s.id === 'arcticFox').legendary.push(...G121 ? [{ id: 'gumiho121', name: $t('신수 구미호'), mat: 'gumiho121' }]
+    : [{ id: 'gumiho125a', name: $t('신수 구미호'), mat: 'gumiho125a' }, { id: 'gumiho125b', name: $t('신수 구미호') + ' 2', mat: 'gumiho125b' }]);
+}
+// 128 전설 2번째 (?m89 시범): the meadow's second legendary set, a new slot after the first (tiers.md: only the parts the
+// animal has change, nothing added). Looks: materials.js 128; seeds / leaves / butterflies: figure.js FX (colours as parameters,
+// for the 2nd / 3rd sets). check-eggs pushes the same entries to test the 69-1 guard with two slots.
+export const LEGEND128 = {
+  horse: { id: 'carousel', name: $t('회전목마 말'), mat: 'carousel128', effect: 'twinkle' },
+  sheep: { id: 'dandelion', name: $t('민들레 홀씨 양'), mat: 'dandelion128', effect: 'seeds' },
+  rabbit: { id: 'sakura', name: $t('벚꽃 토끼'), mat: 'sakura128', effect: 'petals' },
+  pig: { id: 'topiary', name: $t('토피어리 돼지'), mat: 'topiary128', effect: 'leaves' },
+  cow: { id: 'flowercow', name: $t('꽃밭 얼룩소'), mat: 'flowercow128', effect: 'butterflies' },
+  chicken: { id: 'vane', name: $t('풍향계 닭'), mat: 'vane128', effect: 'sparks' },
+};
+// inbox 131 (user 11/17 13:01): only the vane chicken stays (?m89). The carousel horse is kept as the base of a later 신수 unicorn;
+// the pig, sheep, rabbit and cow are dropped. All six stay in this table and in materials.js (kept, and check-eggs' 69-1 test).
+if (M89) for (const sp of ['chicken']) SPECIES.find(s => s.id === sp).legendary.push(LEGEND128[sp]);
+// 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
+// <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
+export const WAVE127 = 0;
+const c3 = (a, b, c) => [a, b, { ...c, seldom: true }];
+export const SHARED127 = [
+  { id: 'wood', rarity: 'rare', tier: 'normal', wave: 1, name: $t('원목'), colors: c3(
+    { id: 'maple', name: $t('메이플'), body: '#e8c48e', grain: '#b8834a' }, { id: 'walnut', name: $t('호두'), body: '#9a6a44', grain: '#4e3020' }, { id: 'cherry', name: $t('체리'), body: '#c87a52', grain: '#87402a' }) },
+  { id: 'chrome', rarity: 'rare', tier: 'seldom', wave: 2, name: $t('크롬'), colors: c3(
+    { id: 'silver', name: $t('은'), body: '#eef2f6' }, { id: 'blue', name: $t('블루 크롬'), body: '#8fb4ee' }, { id: 'black', name: $t('블랙 크롬'), body: '#4a4c56' }) },
+  { id: 'velvet', rarity: 'rare', tier: 'normal', wave: 1, name: $t('플로킹'), colors: c3(
+    { id: 'cream', name: $t('크림'), body: '#eadbbd' }, { id: 'pink', name: $t('연분홍'), body: '#eeb2c0' }, { id: 'sky', name: $t('하늘'), body: '#a6cbe8' }) },
+  { id: 'marble', rarity: 'rare', tier: 'normal', wave: 1, name: $t('대리석'), colors: c3(
+    { id: 'ivory', name: $t('상아'), body: '#efe7d8', vein: '#5e534a' }, { id: 'bluegray', name: $t('회청'), body: '#c3ccd4', vein: '#34404e' }, { id: 'pink', name: $t('분홍'), body: '#f0d2cc', vein: '#8a4e50' }) },
+  { id: 'dew', rarity: 'rare', tier: 'normal', wave: 2, name: $t('이슬 코팅'), colors: c3(
+    { id: 'mint', name: $t('민트'), body: '#aee6d0' }, { id: 'lavender', name: $t('라벤더'), body: '#cbb8ee' }, { id: 'lemon', name: $t('레몬'), body: '#f2e48a' }) },
+  { id: 'buncheong', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('분청사기'), colors: c3(
+    { id: 'brush', name: $t('귀얄'), body: '#7e766a', ink: '#3a3530' }, { id: 'inlay', name: $t('상감'), body: '#6e7870', ink: '#24282a' }, { id: 'iron', name: $t('철화'), body: '#857560', ink: '#6a3216' }) },
+  { id: 'carved', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('목각'), colors: c3(
+    { id: 'walnut', name: $t('호두'), body: '#8e603c', grain: '#4a2c1c' }, { id: 'maple', name: $t('메이플'), body: '#e2bc84', grain: '#b07a40' }, { id: 'ebony', name: $t('흑단'), body: '#3a2e28', grain: '#16100c' }) },
+  { id: 'embroidery', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('자수'), colors: c3(
+    { id: 'cotton', name: $t('무명'), body: '#f1e8d6', t1: '#e0465a', t2: '#f6a8b8' }, { id: 'indigo', name: $t('쪽빛'), body: '#2e3f78', t1: '#f4f0e4', t2: '#f2c84a' }, { id: 'crimson', name: $t('홍'), body: '#b4283a', t1: '#f2c84a', t2: '#f6f0e0' }) },
+  { id: 'hanji', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('꽃잎 한지'), colors: c3(
+    { id: 'natural', name: $t('생지'), body: '#f1e9d6', p1: '#ef9ab0', p2: '#f2c45a' }, { id: 'mugwort', name: $t('쑥'), body: '#c9d4a8', p1: '#fbf6ee', p2: '#ee9cb4' }, { id: 'gardenia', name: $t('치자'), body: '#f0d07e', p1: '#e0503a', p2: '#f6f0e0' }) },
+  { id: 'copper', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('동판 부조'), colors: c3(
+    { id: 'copper', name: $t('구리'), body: '#d07a4c', pat: 0.3 }, { id: 'bronze', name: $t('청동'), body: '#b48c50', pat: 0.35 }, { id: 'verdigris', name: $t('녹청'), body: '#c87048', pat: 0.85 }) },
+  { id: 'cloisonne', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('칠보'), colors: c3(
+    { id: 'jade', name: $t('비취'), body: '#2fa08c', f1: '#f06a58', f2: '#fbf4e4' }, { id: 'lapis', name: $t('청금'), body: '#22398a', f1: '#e8424a', f2: '#5cc8c8' }, { id: 'coral', name: $t('산호'), body: '#e2603e', f1: '#2a58b8', f2: '#fbf4e4' }) },
+];
+for (const v of SHARED127) if (M89 || v.wave <= WAVE127) SHARED_VARIANTS.splice(SHARED_VARIANTS.findLastIndex(x => x.rarity === v.rarity) + 1, 0, v);
 
 // inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the
 // world is UNIT times that (the first board 54 x 87, step 6 102 x 111)

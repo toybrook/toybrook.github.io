@@ -849,6 +849,97 @@ const bead116 = parts116(b => {
 const plain116 = parts116(() => []); // just the plain fox's body out
 // the body material twice: on the tails (swaying) and on the legs (still: their _thickness is the wall's, not a tail's)
 const gumiho116 = (mk, accent, more) => ({ body: sway116(hab89(mk()), true), g116body: sway116(hab89(mk())), g116cord: sway116(hab89(mk())), accent, g116accent: sway116(accent.clone()), beak: toyMat('#2a2628'), ...more });
+// ---- 125-D 신수 구미호 다시 (?m89, inbox 125 D; 116·121 dropped). MODELS legend pilot89_gumiho125 (tools/bake-pilot89.mjs
+// gumiho125: nine long flame-brush tails in three layers). 안1 gumiho125a: red cord and gold bell on the three outer tails;
+// 안2 gumiho125b: none. Both: 1.25x the fox (a wrapper round the body: pose() still scales the body itself), a red flick from
+// each eye's corner up toward the ear and a flame on the brow (painted in model space: each body file its own material, the
+// eye from G.eye), gold eyes with a slit, red-rose inner ears, the tips white -> lilac -> blue and lit (more by night), a soft
+// glow on each tip, three blue foxfires circling the body and a faint ring of light at the feet
+const SWAY125 = `vec3 sway125(float ti, float t) { float w = pow(smoothstep(0.06, 1.0, t), 1.5), ph = uTime * (0.62 + 0.08 * ti) + ti * 2.3 - t * 2.4;
+  return w * (vec3(0.0, 0.09, 0.0) * sin(ph) + vec3(0.04, 0.0, 0.12) * sin(ph * 0.83 + ti * 1.1)); }\n`; // a slow wave running out along each tail, its own beat
+const sway125 = (m, still) => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.uniforms.uTime = windTime;
+    sh.vertexShader = (sh.vertexShader.includes('uniform float uTime;') ? '' : 'uniform float uTime;\n') + 'attribute float _thickness;\nvarying float vTail;\n' + SWAY125 + sh.vertexShader.replace('#include <begin_vertex>',
+      `#include <begin_vertex>\n{ float ti = floor(_thickness * 0.5); vTail = _thickness - 2.0 * ti;${still ? ' vTail = 0.0;' : ' transformed += sway125(ti, vTail);'} }`);
+    sh.fragmentShader = 'varying float vTail;\n' + sh.fragmentShader; };
+  m.customProgramCacheKey = () => k + (still ? '-still125' : '-sway125'); return m; };
+// the tips: white to lilac from half way, blue at the very end, lit a little by day and more by night; codex: 116's film and frost
+const TAIL125 = GLITTER116 + `float tl = smoothstep(0.5, 1.0, vTail), vt = smoothstep(0.76, 1.0, vTail);
+  vec3 tip = mix(vec3(0.62, 0.48, 1.0), vec3(0.22, 0.46, 1.0), vt);
+  diffuseColor.rgb = mix(diffuseColor.rgb, tip, tl * 0.88);
+  totalEmissiveRadiance += tip * pow(tl, 1.5) * (0.2 + 0.75 * uNight);
+  if (uHab < 0.5) { vec3 film = 0.5 + 0.5 * cos(6.2832 * (nv * 1.6 + p.y * 0.8 + vec3(0.0, 0.33, 0.67)));
+    totalEmissiveRadiance += film * pow(1.0 - nv, 2.0) * tl * 0.2; GLITTER116(90.0, vec3(0.85, 0.92, 1.0), 3.0 * tl) }`;
+// the face (model space q; uEye = the +z eye's centre, uFace = H, cx, scale): a red flick from above the eye's front, along its
+// top and up and back toward the ear, tapering to a point; a three-tongued flame on the brow. Crisp edges (fwidth)
+const FACE125 = `{ vec3 q = vec3(p.x * uFace.x + uFace.y, p.y * uFace.x, abs(p.z) * uFace.x), E = uEye; float s = uFace.z, mk = 0.0;
+  vec2 d = (q.xy - E.xy) / s - vec2(0.035, 0.055), dir = normalize(vec2(-0.97, 0.24));
+  float u = dot(d, dir), v = dot(d, vec2(dir.y, -dir.x)) - 1.9 * max(u, 0.0) * max(u, 0.0), L = 0.2;
+  float w = u < 0.0 ? 0.026 * sqrt(max(0.0, 1.0 - u * u / 0.0007)) : 0.026 * pow(max(0.0, 1.0 - u / L), 0.8);
+  float dd = abs(v) - w + 0.003; mk = max(mk, (1.0 - smoothstep(-fwidth(dd), fwidth(dd), dd)) * smoothstep(0.25, 0.4, abs(on.z)));
+  float fu = (q.y - E.y) / s - 0.05, fz = q.z / s, h = 0.2;
+  float u1 = fu / h, w1 = u1 < 0.0 ? 0.048 * sqrt(max(0.0, 1.0 - u1 * u1 / 0.09)) : 0.048 * pow(max(0.0, 1.0 - u1), 1.1);
+  float u2 = (fu - 0.02) / (h * 0.5), w2 = u2 < 0.0 ? 0.0 : 0.022 * pow(max(0.0, 1.0 - u2), 1.1) * sqrt(min(1.0, u2 * 4.0));
+  float f = min(fz - w1, abs(fz - 0.052 - 0.04 * max(u2, 0.0)) - w2) + 0.003; // + 0.003: no hairline where a width runs out to 0
+  mk = max(mk, (1.0 - smoothstep(-fwidth(f), fwidth(f), f)) * step(E.x - 0.25 * s, q.x) * smoothstep(0.1, 0.3, on.x + on.y));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.03, 0.04), mk); totalEmissiveRadiance *= 1.0 - mk; totalEmissiveRadiance += vec3(0.5, 0.02, 0.03) * mk * 0.25 * uNight; }`;
+const tail125 = face => sway125(hab89(look(pale116(phys('#fafaf7', { roughness: 0.55 })), face ? 'face125' : 'tail125', TAIL125 + (face ? FACE125 : ''), face || {})), !face && face !== undefined);
+// gold eyes, a dark slit standing in each (from the eye's own normal: no pattern space on the bead)
+const EYE125 = (() => { const m = phys('#e9a826', { roughness: 0.12, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.03 });
+  m.onBeforeCompile = sh => { sh.vertexShader = 'varying vec3 vOn;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvOn = normal;');
+    sh.fragmentShader = 'varying vec3 vOn;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{ vec3 on = normalize(vOn), f = normalize(vec3(0.44, 0.3, 0.85 * sign(on.z))), sd = normalize(cross(vec3(0.0, 1.0, 0.0), f)), up = cross(f, sd);
+  float a = dot(on, sd), b = dot(on, up), e = (a * a) / 0.012 + (b * b) / 0.3, k = (1.0 - smoothstep(1.0 - fwidth(e), 1.0 + fwidth(e), e)) * step(0.0, dot(on, f));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.03, 0.015, 0.01), k); }`); };
+  m.customProgramCacheKey = () => 'eye125'; return m; })();
+// three foxfires (116's flames) circling the body slowly, a little up and down (an ellipse round the body's middle)
+const ORBIT125 = `uniform float uTime, uR, uK; attribute vec3 aC; attribute float aT;
+vec3 drift116(float i) { float t = uTime * 0.32 + i * 2.0944; return aC + vec3(cos(t) * uR * 1.3, 0.3 * sin(t * 1.3 + i * 1.7) * uK, sin(t) * uR); }\n`;
+const orbit125 = (m, R) => { if (m.vertexShader.startsWith(DRIFT116)) m.vertexShader = ORBIT125 + m.vertexShader.slice(DRIFT116.length); m.uniforms.uR.value = R; return m; };
+// a soft glow on each tail tip, swaying with it
+const tipMat125 = k => new THREE.ShaderMaterial({ uniforms: { uTime: windTime, uK: { value: k }, uNight: nightGlow }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: 'uniform float uTime, uK; attribute vec3 aC; attribute float aT; varying vec2 vUv; varying float vI;\n' + SWAY125 +
+    'void main() { vec4 mv = modelViewMatrix * vec4(aC + sway125(aT, 1.0), 1.0); mv.xy += position.xy * uK; vUv = uv; vI = aT; gl_Position = projectionMatrix * mv; }',
+  fragmentShader: `uniform float uTime, uNight; varying vec2 vUv; varying float vI;
+    void main() { float r = length(vUv - 0.5) * 2.0, a = pow(max(0.0, 1.0 - r), 2.4) * (0.3 + 0.7 * uNight) * (0.85 + 0.15 * sin(uTime * 1.7 + vI * 2.3));
+      gl_FragColor = vec4(vec3(0.5, 0.6, 1.0) * a, 1.0); }` });
+// the ring at the feet: lies on the ground (outside the body: it does not squash or lie down); blue tint by day, light by night
+const ringMat125 = R => new THREE.ShaderMaterial({ uniforms: { uTime: windTime, uR: { value: R }, uNight: nightGlow }, transparent: true, depthWrite: false,
+  blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+  vertexShader: 'uniform float uR; varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position.x * uR, 0.0, -position.y * uR, 1.0); }',
+  fragmentShader: `uniform float uTime, uNight; varying vec2 vUv;
+    void main() { float r = length(vUv - 0.5) * 2.0, a = exp(-pow((r - 0.86) / 0.06, 2.0)) + 0.35 * exp(-pow((r - 0.62) / 0.035, 2.0)) + 0.12 * (1.0 - smoothstep(0.0, 0.86, r));
+      a *= 0.85 + 0.15 * sin(uTime * 1.2 - r * 6.0);
+      gl_FragColor = vec4(vec3(0.42, 0.6, 1.0) * a * (0.22 + 0.9 * uNight), a * 0.3 * (1.0 - 0.7 * uNight)); }` }); // faint by day
+// per body file: its face material, the effect meshes ([geometry, material, renderOrder]) and the ring
+const made125 = new WeakMap();
+const make125 = (geo, G, S) => {
+  const b = G.body.boundingBox, H = b.max.y, cx = (b.min.x + b.max.x) / 2, e = G.eye.attributes.position, E = [0, 0, 0]; let n = 0;
+  for (let i = 0; i < e.count; i++) if (e.getZ(i) > 0) { E[0] += e.getX(i); E[1] += e.getY(i); E[2] += e.getZ(i); n++; }
+  const face = tail125({ uEye: new THREE.Color().setRGB(E[0] / n, E[1] / n, E[2] / n), uFace: new THREE.Color().setRGB(H, cx, 1) });
+  const th = geo.attributes._thickness, pos = geo.attributes.position, tip = [];
+  for (let i = 0; i < th.count; i++) { const v = th.getX(i), ti = Math.floor(v / 2), t = v - 2 * ti; if (t > 0 && (!tip[ti] || t > tip[ti][1])) tip[ti] = [[pos.getX(i), pos.getY(i), pos.getZ(i)], t]; }
+  const k = 0.12 * H, mid = [(b.min.x + b.max.x) / 2 - 0.05 * H, 0.47 * H, 0], fires = mk => mergeGeometries([0, 1, 2].map(i => tag116(mk(), mid, i)));
+  const fx = [[fires(() => new THREE.PlaneGeometry(1, 1)), glow116(ORBIT125, k, ['drift116(aT) + vec3(0.0, 0.35 * uK, 0.0)', '2.6'], '0.35, 0.5, 1.0'), 5],
+    [fires(() => new THREE.LatheGeometry(FLAME116, 16)), flameMat116(false, k), 5], [fires(() => new THREE.LatheGeometry(FLAME116, 12)), flameMat116(true, k), 5],
+    [mergeGeometries(tip.map(([c], i) => tag116(new THREE.PlaneGeometry(1, 1), c, i))), tipMat125(0.45 * k), 5]];
+  for (const [, m] of fx) if (m.uniforms.uR) orbit125(m, 0.42 * H);
+  return { face, fx, ring: [new THREE.PlaneGeometry(2, 2), ringMat125(0.62 * H), 5] };
+};
+const parts125 = (body, G, S) => {
+  for (const o of [...body.children]) if (o.geometry === G.body || o.geometry === G.accent) body.remove(o);
+  const geo = G.legend.g125body; if (!geo) return;
+  if (!made125.has(geo)) made125.set(geo, make125(geo, G, S));
+  const X = made125.get(geo);
+  for (const o of body.children) { if (o.geometry === geo) o.material = X.face; if (o.geometry === G.eye) o.material = EYE125; }
+  const g = new THREE.Group(); for (const [gg, mat, ord] of X.fx) { const o = wear(new THREE.Mesh(gg, mat), ord); o.frustumCulled = false; g.add(o); } body.add(g);
+  const root = body.parent, w = new THREE.Group(); w.scale.setScalar(1.25); root.remove(body); w.add(body); root.add(w); // 1.25x the fox
+  const ring = wear(new THREE.Mesh(X.ring[0], X.ring[1]), X.ring[2]); ring.frustumCulled = false; ring.scale.setScalar(S.s); ring.position.y = 0.012; w.add(ring);
+};
+const gumiho125 = bell => { const tail = tail125(), ear = phys('#e26a72', { roughness: 0.5 });
+  return { body: tail125(false), hoof: tail125(false), g125body: tail, g125cord: bell ? sway125(hab89(phys('#c0141e', { roughness: 0.5, sheen: 0.5, sheenColor: new THREE.Color('#ff6070') }))) : tail,
+    accent: ear, g125accent: ear, beak: toyMat('#2a2628'), parts: parts125,
+    ...bell && { g125bell: sway125(hab89(look(phys('#e8b030', { roughness: 0.22, metalness: 1 }), 'bell116', BELL116, {}, { studio: 0.7 }))) } }; };
 const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ...)
   solid: c => plain(toyBody(c.body), c),
   twotone: c => plain(look(toyBody(c.body), 'twotone', TWOTONE, { uSecond: c.second }), c),
@@ -951,7 +1042,21 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
   gumiho121: () => { const L = LOOKS.gumiho116a(), B = LOOKS.gumiho116b(); return { ...L, g116cord: B.g116cord, g116bell: B.g116bell }; },
   gumiho116c: () => { const L = gumiho116(() => look(pale116(phys('#fbf8f4', { roughness: 0.42, sheen: 0.5, sheenRoughness: 0.4, sheenColor: new THREE.Color('#ffe6f2') })), 'pearl116', PEARL116), phys('#f2d0dc', { roughness: 0.45 }));
     return { ...L, hoof: L.body, parts: bead116 }; },
+  // 125-D 신수 구미호 안1 (cord and bell on the three outer tails) / 안2 (none) (?m89): data.js M89, MODELS legend pilot89_gumiho125
+  gumiho125a: () => gumiho125(true),
+  gumiho125b: () => gumiho125(false),
 };
+// ---- 125-B 티라노 (?m89 시범; data.js M89: MODELS.tRex.m89 = { solid: 'rex125' }, the commons only): the commons' plain vinyl
+// + its 'stripe' paint (the body colour darker, so the orange and purple commons get their own) and the 'mouth' paint; in the
+// codex and close up (uHab 0) small round scales pressed into the vinyl (cells: raised a little, a groove between), gone
+// before they would shimmer; finer on the belly. The habitat sees the plain vinyl.
+const REX125 = BUMP115 + `if (uHab < 0.5) { vec3 sc = cells(p * uScale); float fade = 1.0 - smoothstep(0.1, 0.3, fwidth(p.y) * uScale);
+  float h = smoothstep(0.0, 0.45, sc.y - sc.x);
+  BUMP115(h, uDepth * fade)
+  diffuseColor.rgb *= 1.0 - 0.05 * (1.0 - h) * fade; }`;
+const rex125 = (hex, scale) => hab89(look(toyBody(hex), 'rex125', REX125, { uScale: scale, uDepth: 0.0045 }));
+LOOKS.rex125 = c => { const L = plain(rex125(c.body, 46), c);
+  return { ...L, stripe: rex125('#' + new THREE.Color(c.body).lerp(new THREE.Color('#1e1a12'), 0.42).getHexString(), 46), ...c.paint?.belly && { belly: rex125(c.paint.belly, 64) } }; };
 
 // 황금 복돼지 relief: cloud curls (a scalloped cloud with a curl at each end) as a height map in the red channel, lines
 // blurred into soft ridges. Tiles: everything is drawn at 9 offsets. Canvas only, no image files.
@@ -1097,3 +1202,310 @@ export function patternTex(S = 1024, lacq = false) {
   const t = new THREE.CanvasTexture(out); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = THREE.NoColorSpace;
   return texCache[key] = t;
 }
+
+// ---- 128 전설 2번째 (?m89 시범; data.js LEGEND128): the meadow's second legendary set. Only the parts each animal has change
+// (tiers.md). hab89: the habitat (uHab 1) drops the fine detail; fn128 adds the shared GLSL below.
+// fl128: the nearest of points scattered through space (dimple, GLSL3) as an offset in the plane of the surface (n: its
+// normal) from that point, and a random number for it. petals128: a flower of np petals, radius R, > 0 inside; notch: the
+// cleft at each petal's tip (cherry blossom)
+const FN128 = `vec3 fl128(vec3 q, vec3 n) { vec3 d = dimple(q), t1 = normalize(cross(n, abs(n.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0))), t2 = cross(n, t1);
+  return vec3(-dot(d, t1), -dot(d, t2), h31(floor(q + d))); }
+// fe128: fl128 and the height of a heap of round puffs, one round each point (the highest wins: no seam, a crease between)
+vec4 fe128(vec3 q, vec3 n) { vec3 i = floor(q), f = fract(q), d = vec3(9.0); float h = 0.0;
+  for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec3 o = vec3(x, y, z), r = o + h33(i + o) * 0.8 + 0.1 - f; float e = dot(r, r); if (e < dot(d, d)) d = r; h = max(h, sqrt(max(0.0, 1.0 - e / 0.5))); }
+  vec3 t1 = normalize(cross(n, abs(n.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0))), t2 = cross(n, t1);
+  return vec4(-dot(d, t1), -dot(d, t2), h31(floor(q + d)), h); }
+float petals128(vec2 v, float R, float np, float notch, float rot) { float a = atan(v.y, v.x) + rot, f = fract(a * np / 6.2832) - 0.5;
+  return R * (0.45 + 0.55 * sqrt(max(0.0, 1.0 - 4.0 * f * f)) - notch * (1.0 - smoothstep(0.0, 0.09, abs(f)))) - length(v); }
+`;
+const fn128 = m => { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.fragmentShader = sh.fragmentShader.replace('void main() {', FN128 + 'void main() {'); }; return m; };
+const L128 = (m, key, body, u = {}, o = {}) => fn128(hab89(look(m, key, body, u, o)));
+// 회전목마 말: cream enamel, glossy. A rose-pink saddle cloth over the back with a scalloped hem, a gold border and pinstripe, a red
+// seat edged in gold on top and a painted rose on each flank; small gold bulbs at the hem's points that light up at night; a sky-blue
+// ribbon round the base of the neck edged in gold; close up, small painted flowers on the rump and the shoulder
+const CAROUSEL128 = SH89 + GILD89 + '#define AA(v, t) smoothstep((t) - fwidth(v) - 1e-4, (t) + fwidth(v) + 1e-4, v)\n' + `float az = abs(p.z);
+  vec3 col = mix(vec3(0.99, 0.96, 0.91), vec3(1.0, 0.9, 0.93), 0.5 * smoothstep(0.3, 0.9, 1.0 - nv));
+  float sx = (p.x + 0.12) / 0.2, u = (p.x + 0.32) / 0.4 * 5.0, f = fract(u) * 2.0 - 1.0, hem = 0.47 - 0.045 * sqrt(max(0.0, 1.0 - f * f));
+  float e = min((1.0 - abs(sx)) * 0.2, p.y - hem), cloth = AA(e, 0.0), st = min(on.y - 0.55, (0.72 - abs(sx)) * 0.4), seat = cloth * AA(st, 0.0);
+  col = mix(col, mix(vec3(0.97, 0.6, 0.7), vec3(0.75, 0.1, 0.18), seat), cloth);
+  float gold = cloth * max(1.0 - AA(e, 0.016), AA(e, 0.027) * (1.0 - AA(e, 0.034)));
+  gold = max(gold, cloth * AA(st, -0.035) * (1.0 - AA(st, 0.0)));
+  vec2 rc = (p.xy - vec2(-0.12, 0.585)) / 0.052; float rr = length(rc), ra = atan(rc.y, rc.x), side = AA(az, 0.1);
+  float rose = (1.0 - SH(rr, 1.0)) * side, swirl = 0.5 + 0.5 * sin(ra * 2.0 + rr * 13.0);
+  col = mix(col, mix(vec3(0.82, 0.16, 0.36), vec3(1.0, 0.62, 0.72), swirl * smoothstep(1.0, 0.3, rr)), rose);
+  float lv = (1.0 - SH(length((rc - vec2(1.25, -0.45)) / vec2(0.75, 0.35)), 1.0)) + (1.0 - SH(length((rc - vec2(-1.25, -0.45)) / vec2(0.75, 0.35)), 1.0));
+  col = mix(col, vec3(0.3, 0.62, 0.36), min(lv, 1.0) * side * (1.0 - rose));
+  vec2 bq = vec2((fract(u + 0.5) - 0.5) * 0.08, p.y - 0.47); float bulb = (1.0 - AA(length(bq), 0.013)) * step(abs(sx), 1.05) * step(0.02, az);
+  vec2 n2 = normalize(vec2(0.6, 0.8)); float s = dot(p.xy - vec2(0.13, 0.66), n2) - 0.025 * az / 0.15, rib = (1.0 - AA(abs(s), 0.032)) * step(0.0, p.x);
+  col = mix(col, vec3(0.55, 0.78, 0.97), rib); gold = max(gold, rib * AA(abs(s), 0.024));
+  float ring = (1.0 - AA(abs(p.y - 0.13), 0.012)) * step(p.y, 0.4); gold = max(gold, ring);
+  if (uHab < 0.5) {
+    float m = max(1.0 - SH(length((p.xy - vec2(-0.4, 0.56)) / vec2(0.1, 0.09)), 1.0), 1.0 - SH(length((p.xy - vec2(0.08, 0.47)) / vec2(0.07, 0.06)), 1.0)) * side * (1.0 - cloth);
+    vec3 fq = fl128(p * 34.0, on); float fp = AA(petals128(fq.xy, 0.36, 5.0, 0.0, fq.z * 6.28), 0.0) * m * step(0.2, fq.z), fr = length(fq.xy);
+    vec3 fc = fq.z < 0.47 ? vec3(1.0, 0.62, 0.76) : fq.z < 0.74 ? vec3(0.72, 0.62, 0.98) : vec3(1.0, 0.86, 0.4);
+    col = mix(col, mix(fc, vec3(1.0, 0.78, 0.25), 1.0 - AA(fr, 0.09)), fp);
+    vec3 rq = fl128(p * 60.0 + 4.0, on); float rf = AA(petals128(rq.xy, 0.36, 5.0, 0.0, rq.z * 6.28), 0.0) * rib * step(0.45, rq.z);
+    col = mix(col, rq.z < 0.72 ? vec3(1.0, 0.7, 0.8) : vec3(1.0, 0.95, 0.6), rf);
+  }
+  diffuseColor.rgb = col; gold = max(gold, bulb);
+  GILD(gold * (1.0 - bulb * uNight));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.9, 0.6), bulb * uNight);
+  totalEmissiveRadiance += vec3(1.0, 0.78, 0.4) * bulb * (0.1 + uNight * 2.5);`;
+// its mane and tail: gold leaf carved in curls (a spiral groove round each; gone where it would shimmer), the gold leaf's fine
+// crackle close up
+const CURL128 = GILD89 + BUMP115 + `float fade = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 16.0);
+  vec3 f = fl128(p * 16.0, on); float r = length(f.xy), an = atan(f.y, f.x);
+  float h = mix(0.3, 0.5 + 0.5 * cos(6.2832 * (r * 4.0 - an / 6.2832 + f.z)), 1.0 - smoothstep(0.35, 0.5, r));
+  BUMP115(h, 0.006 * fade)
+  GILD(1.0); diffuseColor.rgb *= mix(1.0, 0.5 + 0.5 * h, fade);
+  if (uHab < 0.5) { vec3 c = cells(p * 70.0); diffuseColor.rgb *= 1.0 - 0.15 * fade * (1.0 - smoothstep(0.0, 0.06, c.y - c.x)); }`;
+// 민들레 홀씨 양: the wool a dandelion clock: round seed heads packed together (each a dome, warm grey between them), silver sheen, a
+// faint light of its own (brighter at night); close up each head's fine pappus rays round a small brown seed, a second finer layer
+// between; a ring of green bracts along the wool's lower edge
+const DANDELION128 = SH89 + BUMP115 + `float fade = 1.0 - smoothstep(0.15, 0.5, fwidth(p.y) * 10.0);
+  vec4 f = fe128(p * 10.0, on); float r = length(f.xy), an = atan(f.y, f.x), dome = f.w, seam = smoothstep(0.1, 0.35, f.w);
+  vec3 col = mix(vec3(0.9, 0.91, 0.86), vec3(1.0, 1.0, 0.98), mix(1.0, smoothstep(0.0, 0.6, dome), fade));
+  BUMP115(dome, 0.035 * fade)
+  if (uHab < 0.5) {
+    float ray = pow(abs(cos(an * 8.0 + f.z * 9.0)), 24.0) * smoothstep(0.5, 0.1, r) * smoothstep(0.02, 0.08, r) * seam;
+    vec4 g = fe128(p * 26.0 + 3.0, on); float rg = length(g.xy), ray2 = pow(abs(cos(atan(g.y, g.x) * 7.0 + g.z * 9.0)), 20.0) * smoothstep(0.45, 0.08, rg) * smoothstep(0.02, 0.06, rg) * smoothstep(0.1, 0.35, g.w) * seam;
+    col = mix(col, vec3(1.0), max(ray, ray2 * 0.7) * fade);
+    col *= 1.0 - 0.16 * (1.0 - max(ray, ray2)) * smoothstep(0.1, 0.4, r) * fade;
+    col = mix(col, vec3(0.55, 0.4, 0.22), (1.0 - smoothstep(0.03, 0.05, r)) * fade * seam);
+  }
+  float bu = fract(atan(p.z, p.x + 0.05) * 2.2) * 2.0 - 1.0, br = SH(0.31 + 0.1 * (1.0 - abs(bu)) - p.y, 0.0);
+  diffuseColor.rgb = mix(col, vec3(0.5, 0.68, 0.34), br); totalEmissiveRadiance += vec3(0.07, 0.07, 0.065) * (0.6 + 0.4 * dome) * (1.0 - br) * (1.0 + uNight * 3.0);`;
+// 벚꽃 토끼: white at the belly into pale cherry pink up the back; the ears a flowering branch: dark bark (streaked lengthwise) with
+// five-petal blossoms (a cleft at each tip, deeper pink at the heart, yellow stamens), dense on the ears (the accent: uAcc 1; the nose
+// under the ears stays pink); the tail a ball of blossoms; close up, a few fallen petals on the body
+const SAKURA128 = SH89 + BUMP115 + `float ear = smoothstep(0.75, 0.79, p.y), tail = smoothstep(-0.3, -0.34, p.x) * (1.0 - ear);
+  vec3 col = mix(vec3(1.0, 0.96, 0.97), vec3(0.96, 0.62, 0.74), smoothstep(0.05, 0.6, p.y + 0.15 * on.y));
+  col = mix(col, mix(vec3(0.3, 0.16, 0.1), vec3(0.52, 0.3, 0.2), fbm3(p * vec3(34.0, 5.0, 34.0))), ear);
+  vec3 f = fl128(p * 24.0, on); float r = length(f.xy), bl = SH(petals128(f.xy, 0.48, 5.0, 0.07, f.z * 6.28), 0.0) * max(ear * step(f.z, 0.93), tail);
+  vec3 pc = mix(vec3(1.0, 0.82, 0.9), vec3(0.93, 0.45, 0.62), 1.0 - smoothstep(0.0, 0.24, r));
+  pc = mix(pc, vec3(1.0, 0.86, 0.35), (1.0 - SH(abs(r - 0.13), 0.022)) * step(0.6, fract((atan(f.y, f.x) + f.z * 6.28) * 0.7958)));
+  col = mix(col, pc, bl);
+  col = mix(col, vec3(0.95, 0.55, 0.66), uAcc * (1.0 - ear));
+  BUMP115(bl * (0.6 + 0.4 * smoothstep(0.44, 0.1, r)), 0.005)
+  { vec3 g = fl128(p * 8.0 + 5.0, on); float a = g.z * 6.28; vec2 v = mat2(cos(a), sin(a), -sin(a), cos(a)) * g.xy;
+    float pt = (1.0 - SH(length(v / vec2(0.13, 0.19)), 1.0)) * (1.0 - SH(length((v - vec2(0.0, 0.17)) / vec2(0.05, 0.06)), 1.0) * 0.0) * step(g.z, 0.55) * (1.0 - ear) * (1.0 - tail) * (1.0 - uAcc);
+    col = mix(col, mix(vec3(1.0, 0.97, 0.98), vec3(0.9, 0.36, 0.56), smoothstep(-0.04, 0.16, v.y + 0.08)), pt); BUMP115(pt, 0.003) }
+  diffuseColor.rgb = col;`;
+// 토피어리 돼지: a clipped hedge: small pointed leaves packed in every direction (two layers close up, one in the habitat), each its own
+// green with a lighter midrib, dark gaps between; small white, pink and yellow flowers here and there. uAcc 1 (the snout's disc): a
+// lighter green, finer, no flowers
+const TOPIARY128 = SH89 + BUMP115 + `float fade = 1.0 - smoothstep(0.15, 0.5, fwidth(p.y) * uS);
+  #define LEAF128(F, H, ID, MR) { float a_ = F.z * 6.2832; vec2 v_ = mat2(cos(a_), sin(a_), -sin(a_), cos(a_)) * F.xy; float w_ = 0.2 * (1.0 - v_.y * v_.y / 0.2025); \
+    float l_ = step(abs(v_.y), 0.45) * (1.0 - abs(v_.x) / max(w_, 1e-3)); if (l_ > 0.0 && 0.4 + 0.6 * l_ > H) { H = 0.4 + 0.6 * l_; ID = F.z; MR = 1.0 - smoothstep(0.0, 0.025, abs(v_.x)); } }
+  float h = 0.0, id = 0.0, mr = 0.0; vec3 f = fl128(p * uS, on); LEAF128(f, h, id, mr)
+  if (uHab < 0.5) { vec3 g = fl128(p * uS + 17.3, on); LEAF128(g, h, id, mr) }
+  vec3 col = mix(vec3(0.16, 0.4, 0.13), vec3(0.44, 0.68, 0.24), fract(id * 7.13)) * mix(1.0, 0.6 + 0.4 * h, fade);
+  col = mix(col, vec3(0.04, 0.12, 0.05), (1.0 - step(0.01, h)) * fade);
+  col = mix(col, col * 1.35 + 0.05, mr * fade * step(0.01, h) * 0.6);
+  col = mix(col, vec3(0.55, 0.78, 0.4), uAcc * 0.5);
+  float hb = h;
+  if (uAcc < 0.5) { vec3 q = fl128(p * 7.0 + 9.0, on); float fp = SH(petals128(q.xy, 0.2, 5.0, 0.0, q.z * 6.28), 0.0) * step(0.6, q.z), fr = length(q.xy);
+    float c = fract(q.z * 13.7); col = mix(col, mix(c < 0.4 ? vec3(1.0, 0.98, 0.95) : c < 0.75 ? vec3(1.0, 0.68, 0.8) : vec3(1.0, 0.86, 0.3), vec3(1.0, 0.75, 0.2), 1.0 - SH(fr, 0.05)), fp);
+    hb = max(hb * fade, fp * 1.2); }
+  BUMP115(hb, 0.012)
+  diffuseColor.rgb = col;`;
+// 꽃밭 얼룩소: glossy white; the patches (밀키 오팔's places and outline, COWOPAL) a wildflower meadow: green grass streaked with
+// blades, packed with flowers: white daisies, yellow buttercups, pink, violet and sky-blue ones (a second smaller layer close
+// up). The ears and the tail tuft too (uAcc 1, there by position)
+const FLOWERCOW128 = SH89 + BUMP115 + `vec3 q = vec3(p.x, p.y, abs(p.z)); float wob = 0.4 * (vn3(p * 4.5 + 2.0) - 0.5) + 0.08 * (vn3(p * 11.0) - 0.5);
+  #define BLOB(v, c, r) (1.0 - length((v - c) / r))
+  float bl = max(max(BLOB(p, vec3(0.06, 0.6, 0.25), vec3(0.17, 0.18, 0.15)), BLOB(p, vec3(-0.41, 0.63, 0.2), vec3(0.15, 0.15, 0.15))),
+                 max(BLOB(p, vec3(-0.17, 0.6, -0.25), vec3(0.21, 0.17, 0.15)), BLOB(q, vec3(0.25, 0.87, 0.15), vec3(0.11, 0.12, 0.12)))) + wob + 0.12;
+  bl = max(bl, max(BLOB(p, vec3(0.24, 0.56, 0.27), vec3(0.12, 0.12, 0.15)), BLOB(p, vec3(-0.12, 0.8, 0.0), vec3(0.16, 0.08, 0.14))) + wob + 0.05);
+  float ear = uAcc * max(step(0.2, abs(p.z)) * step(0.75, p.y), step(p.y, 0.42) * step(p.x, -0.48));
+  float gt = 0.07 + 0.08 * vn3(vec3(p.x * 150.0, 0.0, p.z * 150.0)), grass = (1.0 - uAcc) * (1.0 - SH(p.y, gt)) * step(p.y, 0.3);
+  bl = max(bl, grass * 2.0 - 1.0);
+  float k = max(SH(bl, 0.0), ear), rim = (1.0 - k) * SH(bl, -0.09);
+  vec3 gr = mix(vec3(0.16, 0.42, 0.12), vec3(0.4, 0.66, 0.2), vn3(p * vec3(90.0, 14.0, 90.0)));
+  float sc = uHab < 0.5 ? 20.0 : 14.0; vec3 f = fl128(p * sc, on); float r = length(f.xy), c = fract(f.z * 11.3);
+  float fp = SH(petals128(f.xy, 0.4, c < 0.3 ? 9.0 : 5.0, 0.0, f.z * 6.28), 0.0) * step(0.18, f.z);
+  vec3 fc = c < 0.3 ? vec3(1.0, 0.99, 0.96) : c < 0.5 ? vec3(1.0, 0.84, 0.18) : c < 0.68 ? vec3(1.0, 0.56, 0.74) : c < 0.84 ? vec3(0.66, 0.5, 0.95) : vec3(0.5, 0.74, 1.0);
+  fc = mix(fc, c < 0.3 ? vec3(1.0, 0.78, 0.15) : vec3(1.0, 0.95, 0.7), 1.0 - SH(r, 0.1));
+  vec3 m = mix(gr, fc, fp); float hh = fp;
+  if (uHab < 0.5) { vec3 g = fl128(p * 40.0 + 7.0, on); float c2 = fract(g.z * 5.7), fp2 = SH(petals128(g.xy, 0.36, 5.0, 0.0, g.z * 6.28), 0.0) * step(0.35, g.z) * (1.0 - fp);
+    m = mix(m, c2 < 0.5 ? vec3(1.0, 0.98, 0.95) : c2 < 0.75 ? vec3(1.0, 0.88, 0.3) : vec3(1.0, 0.64, 0.8), fp2); hh = max(hh, fp2 * 0.6); }
+  vec3 dq = fl128(p * 26.0 + 11.0, on); float dr = length(dq.xy), dz = SH(petals128(dq.xy, 0.42, 10.0, 0.0, dq.z * 6.28), 0.0) * rim * step(0.3, dq.z);
+  vec3 sq = fl128(p * 9.0 + 3.0, on); float sr = length(sq.xy), sd = SH(petals128(sq.xy, 0.3, 8.0, 0.0, sq.z * 6.28), 0.0) * (1.0 - k) * (1.0 - rim) * step(0.82, sq.z);
+  if (sd > dz) { dz = sd; dr = sr * 1.4; }
+  float hk = max(hh * k, dz * 0.8); BUMP115(hk, 0.006)
+  diffuseColor.rgb = mix(mix(diffuseColor.rgb, m, k), mix(vec3(1.0), vec3(1.0, 0.8, 0.2), 1.0 - SH(dr, 0.12)), dz); roughnessFactor = mix(roughnessFactor, 0.45, k);`;
+// 풍향계 닭: weathervane brass, polished (the studio's reflection): feathers engraved in rows of rounded ends toward the tail, each
+// with a shaft line, a green-brown patina in the grooves; larger on the wings (uS)
+const VANE128 = BUMP115 + `float fade = 1.0 - smoothstep(0.12, 0.4, fwidth(p.y) * uS);
+  vec2 g = vec2(-p.x * 1.1 + 0.2 * p.y, p.y) * uS; float row = floor(g.y); g.x += 0.5 * mod(row, 2.0); vec2 c = vec2(fract(g.x) - 0.5, fract(g.y));
+  float arc = 0.15 + 0.6 * sqrt(max(0.0, 1.0 - 4.0 * c.x * c.x)), gv = 1.0 - smoothstep(0.02, 0.12, abs(c.y - arc));
+  gv = max(gv, (1.0 - smoothstep(0.0, 0.035, abs(c.x))) * step(arc, c.y) * 0.7);
+  float head = smoothstep(0.12, 0.2, p.x) * smoothstep(0.72, 0.8, p.y); gv *= (1.0 - head) * fade;
+  float ng = -gv; BUMP115(ng, 0.004)
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.32, 0.36, 0.22), gv * 0.75); roughnessFactor = mix(roughnessFactor, 0.6, gv);
+  diffuseColor.rgb *= 0.92 + 0.12 * vn3(p * 9.0);`;
+// its comb (and wattle, the accent): copper, cut as an arrow's fletching: barbs slanting back from a shaft along the middle
+const FLETCH128 = BUMP115 + `float fade = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 60.0);
+  float b = abs(fract(p.x * 55.0 + abs(p.z) * 75.0) - 0.5) * 2.0, gv = (1.0 - smoothstep(0.0, 0.25, b)) * fade, shf = 1.0 - smoothstep(0.004, 0.008, abs(p.z));
+  gv = max(gv, shf); float ng = -gv; BUMP115(ng, 0.003)
+  diffuseColor.rgb *= 1.0 - 0.45 * gv;`;
+Object.assign(NIGHT_LOOK, { dandelion128: 1.5 });
+// ---- 127 새 공유 재질 11개 (?m89 시범; data.js SHARED127, wave 1|2|3). Triplanar-free: all in pattern space p, no UVs.
+// Each comes in two levels like 128 (hab89 uHab: 1 in the habitat drops the fine detail, 0 = the codex close-up, 118).
+// uAcc 1: the accent (beak, hooves) keeps the material but drops the motifs. WET127: the rain (habitat.js sets it round
+// its render), more dew drops in the rain.
+export const WET127 = { value: 0 };
+const wet127 = m => { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.uniforms.uWet = WET127; sh.fragmentShader = 'uniform float uWet;\n' + sh.fragmentShader; }; return m; };
+// fl127: fl128 plus how far the point is off the surface (.w). A point far off it still throws a motif onto the surface, but
+// cut by its neighbours' cells (half flowers): the motifs below show only for points near the surface
+const FN127 = `vec4 fl127(vec3 q, vec3 n) { vec3 d = dimple(q), t1 = normalize(cross(n, abs(n.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0))), t2 = cross(n, t1);
+  return vec4(-dot(d, t1), -dot(d, t2), h31(floor(q + d)), abs(dot(d, n))); }
+`;
+const L127 = (m, key, body, u = {}, o = {}) => { const r = L128(m, key, body, u, o), prev = r.onBeforeCompile;
+  r.onBeforeCompile = (sh, x) => { prev.call(r, sh, x); sh.fragmentShader = sh.fragmentShader.replace('void main() {', FN127 + 'void main() {'); }; return r; };
+const dk = (h, k) => '#' + new THREE.Color(h).multiplyScalar(k).getHexString();
+const AA127 = '#define AA(v, t) smoothstep((t) - fwidth(v) - 1e-4, (t) + fwidth(v) + 1e-4, v)\n';
+// wood grain: growth rings round the x axis (long grain down the body, the rings' ends on the chest and the rump), the
+// latewood band in uGrain; close up, fibres along the grain and open pores
+const GRAIN127 = `float gfade = 1.0 - smoothstep(0.3, 0.8, fwidth(p.y) * 40.0);
+  float gr = length(vec2(p.y - 0.42, p.z * 1.3)) * 14.0 + fbm3(p * vec3(1.2, 5.0, 5.0) + 3.0) * 2.4 + 0.4 * sin(p.x * 3.0), ring = fract(gr);
+  float late = mix(0.35, smoothstep(0.5, 0.78, ring) * (1.0 - smoothstep(0.9, 1.0, ring)), gfade);
+  vec3 wood = mix(diffuseColor.rgb, uGrain, late * 0.8);
+  if (uHab < 0.5) { wood *= mix(1.0, 0.9 + 0.16 * vn3(p * vec3(3.0, 140.0, 140.0)), gfade);
+    wood = mix(wood, uGrain * 0.7, step(0.84, vn3(p * vec3(18.0, 220.0, 220.0) + 9.0)) * 0.35 * gfade); }`;
+const WOOD127 = GRAIN127 + `diffuseColor.rgb = wood;`;
+// 목각: the wood, carved: five-petal flowers and leaf pairs stand up from a cut-back ground; the cut's walls dark; close up,
+// a groove down each petal
+const CARVED127 = BUMP115 + AA127 + GRAIN127 + `float fade = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 14.0);
+  vec4 f = fl127(p * 5.0, on); float fr = length(f.xy), pet = petals128(f.xy, 0.32, 5.0, 0.0, f.z * 6.28);
+  float flower = smoothstep(-0.03, 0.02, pet) * step(0.3, f.z) * step(f.w, 0.3) * (1.0 - uAcc), cen = 1.0 - smoothstep(0.06, 0.1, fr);
+  vec4 g = fl127(p * 7.0 + 11.0, on); float ga = g.z * 6.28; vec2 la = mat2(cos(ga), -sin(ga), sin(ga), cos(ga)) * g.xy;
+  float leaf = max(1.0 - smoothstep(0.85, 1.0, length((la - vec2(0.2, 0.0)) / vec2(0.18, 0.08))), 1.0 - smoothstep(0.85, 1.0, length((la + vec2(0.2, 0.0)) / vec2(0.18, 0.08))));
+  leaf *= step(0.3, g.z) * step(g.w, 0.3) * (1.0 - flower) * (1.0 - uAcc);
+  float h = max(flower * (0.8 + 0.4 * cen), leaf * 0.8), wall = 4.0 * h * (1.0 - h);
+  float vein = 0.0; if (uHab < 0.5) vein = (1.0 - smoothstep(0.0, 0.06, abs(fract((atan(f.y, f.x) + f.z * 6.28) * 5.0 / 6.2832) - 0.5))) * flower * (1.0 - cen) * step(0.12, fr);
+  float hh = h - 0.3 * vein; BUMP115(hh, 0.012 * fade)
+  wood = mix(wood, mix(diffuseColor.rgb, uGrain, 0.25), h * 0.6);
+  wood *= mix(1.0, mix(0.62, 1.12, min(h * 2.0, 1.0)) * (1.0 - 0.45 * wall) * (1.0 - 0.3 * vein), fade * (1.0 - uAcc));
+  diffuseColor.rgb = wood;`;
+// 플로킹: flocked fuzz: no shine, a pale downy glow toward the edges, the middle a touch darker; close up, the fuzz grain
+const VELVET127 = `float rim = pow(1.0 - nv, 2.2);
+  vec3 c = mix(diffuseColor.rgb * 0.86, mix(diffuseColor.rgb, vec3(1.0), 0.75), smoothstep(0.0, 0.8, rim));
+  if (uHab < 0.5) c *= 0.93 + 0.12 * vn3(p * 260.0);
+  diffuseColor.rgb = c; roughnessFactor = 1.0;`;
+// 대리석: the kept 16-2 marble, in this colour; close up, a fine crystal sparkle in the stone
+const MARBLE127 = `float n = fbm3(p * 1.8 + 7.0), v = abs(sin((p.x * 1.2 + p.y * 2.0 - p.z * 0.5 + n * 3.6) * 3.14159));
+  float n2 = fbm3(p * 4.5 + 2.0), v2 = abs(sin((p.y * 2.6 - p.x * 1.5 + n2 * 4.5) * 3.14159));
+  float vein = pow(1.0 - smoothstep(0.0, 0.22 + fwidth(v), v), 2.0), fine = pow(1.0 - smoothstep(0.0, 0.08 + fwidth(v2), v2), 2.0);
+  vec3 ground = diffuseColor.rgb * (0.93 + 0.1 * fbm3(p * 3.0 + 1.0));
+  diffuseColor.rgb = mix(ground, uVein, max(vein * 0.75, fine * 0.16));
+  if (uHab < 0.5) { vec3 cg = cells(p * 90.0); diffuseColor.rgb *= 0.97 + 0.06 * cg.z; }`;
+// 이슬 코팅: glossy candy body with small clear water drops sitting on it (a domed bump, a bright glint, a darker rim);
+// more drops in the rain (uWet)
+const DEW127 = BUMP115 + `float S = uHab > 0.5 ? 6.5 : 13.0; vec4 d = fl127(p * S, on); float r = length(d.xy);
+  float R = 0.14 + 0.16 * fract(d.z * 7.0), drop = (1.0 - smoothstep(R - 0.02 - fwidth(r), R, r)) * step(1.0 - (0.22 + 0.13 * uHab + 0.5 * uWet), d.z) * step(d.w, 0.3) * (1.0 - uAcc);
+  float hh = sqrt(max(0.0, 1.0 - r * r / (R * R))) * drop; BUMP115(hh, 0.12 / S)
+  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * mix(1.15, 0.7, smoothstep(0.55 * R, R, r)), drop);
+  roughnessFactor = mix(roughnessFactor, 0.02, drop);
+  totalEmissiveRadiance += vec3(1.0) * drop * (1.0 - smoothstep(0.0, 0.3 * R, length(d.xy - vec2(-0.35, 0.4) * R))) * 1.4;`;
+// 분청사기: grey clay under a white slip laid on with a broad brush (ragged band edges, bristle streaks close up) and
+// inlaid flowers: white petals with a dark outline and heart. uSlip: how much of the body the brush covers (귀얄 most)
+const BUN127 = SH89 + `float fade = 1.0 - smoothstep(0.3, 0.7, fwidth(p.y) * 20.0);
+  vec2 b = mat2(0.8, -0.6, 0.6, 0.8) * vec2(p.x, p.y + 0.3 * p.z); float e = fbm3(vec3(b.x * 30.0, b.y * 3.0, p.z * 4.0)) - 0.5;
+  float band = fract(b.y * 3.2 + 0.3 * fbm3(p * 3.0)), w = 0.25 * uSlip;
+  float slip = smoothstep(0.55 - w, 0.6 - w, band + 0.2 * e) * (1.0 - smoothstep(0.9, 0.95, band + 0.12 * e));
+  slip *= mix(0.88, 0.5 + 0.6 * vn3(vec3(b.x * 3.0, b.y * 140.0, p.z * 10.0)), fade * (1.0 - uHab));
+  vec3 slipc = vec3(0.93, 0.9, 0.84), col = mix(diffuseColor.rgb, slipc, clamp(slip, 0.0, 1.0));
+  vec4 f = fl127(p * 4.0 + 5.0, on); float fr = length(f.xy), pet = petals128(f.xy, 0.3, 5.0, 0.0, f.z * 6.28), fo = step(0.4, f.z) * step(f.w, 0.3) * (1.0 - uAcc);
+  col = mix(col, slipc, SH(pet, 0.0) * fo);
+  col = mix(col, uInk, max(1.0 - SH(abs(pet), 0.012), 1.0 - SH(fr, 0.04)) * fo * 0.85);
+  diffuseColor.rgb = col;`;
+// 자수: cloth (a fine weave close up) with embroidered flowers in two threads (uT1 heart side, uT2 tips), satin stitches
+// running out from the heart, a French-knot heart, leaf pairs in green thread; the threads raised and a little shiny
+const EMB127 = BUMP115 + SH89 + `float fade = 1.0 - smoothstep(0.3, 0.7, fwidth(p.y) * 40.0), det = (1.0 - uHab) * fade;
+  vec3 col = diffuseColor.rgb; vec2 w = vec2(p.x + 0.5 * p.z, p.y) * 160.0;
+  col *= mix(1.0, 0.9 + 0.12 * (0.5 + 0.5 * sin(w.x * 3.14159) * sin(w.y * 3.14159)), det);
+  vec4 f = fl127(p * 4.5, on); float fr = length(f.xy), a = atan(f.y, f.x) + f.z * 6.28, pet = petals128(f.xy, 0.38, 5.0, 0.0, f.z * 6.28);
+  float fo = step(0.2, f.z) * step(f.w, 0.3) * (1.0 - uAcc), fl = SH(pet, 0.0) * fo, kn = (1.0 - SH(fr, 0.09)) * fo;
+  float sat = mix(1.0, 0.75 + 0.35 * (0.5 + 0.5 * sin(a * 70.0)), det);
+  vec4 g = fl127(p * 6.0 + 7.0, on); float ga = g.z * 6.28; vec2 la = mat2(cos(ga), -sin(ga), sin(ga), cos(ga)) * g.xy;
+  float leaf = max(1.0 - SH(length((la - vec2(0.2, 0.0)) / vec2(0.18, 0.08)), 1.0), 1.0 - SH(length((la + vec2(0.2, 0.0)) / vec2(0.18, 0.08)), 1.0)) * step(0.4, g.z) * step(g.w, 0.3) * (1.0 - fl) * (1.0 - uAcc);
+  float lst = mix(1.0, 0.78 + 0.3 * (0.5 + 0.5 * sin((la.x + abs(la.y) * 1.4) * 180.0)), det);
+  col = mix(col, mix(uT1, uT2, smoothstep(0.1, 0.3, fr)) * sat, fl);
+  col = mix(col, vec3(0.22, 0.48, 0.24) * lst, leaf);
+  col = mix(col, vec3(0.95, 0.72, 0.18) * mix(1.0, 0.7 + 0.5 * vn3(p * 300.0), det), kn);
+  float th = max(fl * sat, leaf * lst); float hh = th + kn * 0.4; BUMP115(hh, 0.003 * fade)
+  diffuseColor.rgb = col; roughnessFactor = mix(roughnessFactor, 0.45, max(th, kn));`;
+// 꽃잎 한지: mottled paper (wavy fibres close up), pressed five-petal flowers (uP1) with a faded heart (uP2), and single
+// petals or faded leaves pressed in between
+const HANJI127 = SH89 + `float fade = 1.0 - smoothstep(0.3, 0.7, fwidth(p.y) * 30.0);
+  vec3 col = diffuseColor.rgb * (0.94 + 0.1 * fbm3(p * 6.0));
+  if (uHab < 0.5) { float fb = fbm3(p * 22.0 + 4.0); col = mix(col, vec3(1.0, 0.99, 0.96), (1.0 - smoothstep(0.0, 0.03, abs(fract(fb * 7.0) - 0.5))) * 0.4 * fade); }
+  vec4 f = fl127(p * 4.2 + 3.0, on); float fr = length(f.xy), pet = petals128(f.xy, 0.36, 5.0, 0.0, f.z * 6.28), fo = step(0.32, f.z) * step(f.w, 0.3) * (1.0 - uAcc);
+  float fl = SH(pet, 0.0) * fo * (0.62 + 0.25 * smoothstep(0.0, 0.12, pet));
+  col = mix(col, uP1, fl); col = mix(col, uP2, (1.0 - SH(fr, 0.07)) * fo * 0.85);
+  vec4 g = fl127(p * 6.5 + 8.0, on); float ga = g.z * 6.28; vec2 la = mat2(cos(ga), -sin(ga), sin(ga), cos(ga)) * g.xy;
+  float one = (1.0 - SH(length(la / vec2(0.22, 0.1)), 1.0)) * step(0.45, g.z) * step(g.w, 0.3) * (1.0 - SH(pet, 0.0) * fo) * (1.0 - uAcc);
+  col = mix(col, g.z < 0.8 ? uP2 : vec3(0.5, 0.62, 0.38), one * 0.7);
+  diffuseColor.rgb = col; roughnessFactor = 0.9;`;
+// 동판 부조: copper beaten up into spirals and leaf pairs; green patina (verdigris) caught in the low ground round them,
+// uPat how much; close up, a hammered mottle
+const COPPER127 = BUMP115 + `float fade = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 14.0);
+  vec4 f = fl127(p * 4.0 + 1.0, on); float r = length(f.xy), an = atan(f.y, f.x) + f.z * 6.28;
+  float sp = fract(r * 7.0 - an / 6.2832), ridge = (1.0 - smoothstep(0.12, 0.32, abs(sp - 0.5))) * (1.0 - smoothstep(0.28, 0.34, r)) * step(0.3, f.z) * step(f.w, 0.3);
+  vec4 g = fl127(p * 6.0 + 9.0, on); float ga = g.z * 6.28; vec2 la = mat2(cos(ga), -sin(ga), sin(ga), cos(ga)) * g.xy;
+  float leaf = max(1.0 - smoothstep(0.8, 1.0, length((la - vec2(0.2, 0.0)) / vec2(0.18, 0.08))), 1.0 - smoothstep(0.8, 1.0, length((la + vec2(0.2, 0.0)) / vec2(0.18, 0.08)))) * step(0.35, g.z) * step(g.w, 0.3) * (1.0 - ridge);
+  float h = max(ridge, leaf) * (1.0 - uAcc); BUMP115(h, 0.005 * fade)
+  float groove = (1.0 - smoothstep(0.2, 0.3, r)) * step(0.3, f.z) * step(f.w, 0.3), pat = (1.0 - h) * max(groove * 0.85, smoothstep(0.74 - 0.6 * uPat, 0.9 - 0.6 * uPat, fbm3(p * 7.0))) * (1.0 - uAcc);
+  vec3 col = diffuseColor.rgb * mix(1.0, 0.72, (1.0 - h) * fade * (1.0 - uAcc));
+  if (uHab < 0.5) col *= 0.9 + 0.16 * vn3(p * 55.0);
+  diffuseColor.rgb = mix(col, vec3(0.32, 0.64, 0.54), pat);
+  metalnessFactor = mix(metalnessFactor, 0.0, pat); roughnessFactor = mix(roughnessFactor, 0.75, pat); lookStudio *= 1.0 - pat;`;
+// 칠보: opaque enamel ground with enamel flowers (uF2 heart, uF1 tips) walled in fine gold wire: the petals' outlines, the
+// petal partitions and a heart ring; small gold scrolls (three-quarter rings) on the ground between (close up)
+const CLOIS127 = SH89 + GILD89 + AA127 + `vec3 col = diffuseColor.rgb;
+  vec4 f = fl127(p * 4.2 + 2.0, on); float fr = length(f.xy), a = atan(f.y, f.x) + f.z * 6.28, pet = petals128(f.xy, 0.31, 5.0, 0.0, f.z * 6.28), fo = step(0.2, f.z) * step(f.w, 0.3) * (1.0 - uAcc);
+  float fill = AA(pet, 0.0) * fo; col = mix(col, mix(uF2, uF1, smoothstep(0.1, 0.28, fr)), fill);
+  float wire = 1.0 - AA(abs(pet), 0.02);
+  wire = max(wire, (1.0 - AA(abs(fr - 0.08), 0.016)));
+  wire = max(wire, (1.0 - AA(0.5 - abs(fract(a * 5.0 / 6.2832) - 0.5), 0.025)) * step(0.08, fr) * fill);
+  wire *= fo;
+  if (uHab < 0.5) { vec4 s = fl127(p * 9.0 + 4.0, on); float sr = length(s.xy), sa = fract((atan(s.y, s.x) + s.z * 6.28) / 6.2832);
+    wire = max(wire, (1.0 - AA(abs(sr - 0.2), 0.012)) * step(sa, 0.75) * step(0.3, s.z) * step(s.w, 0.3) * (1.0 - fill) * (1.0 - uAcc)); }
+  diffuseColor.rgb = col; GILD(wire)`;
+Object.assign(LOOKS, {
+  wood: c => { const w = (b, g) => L127(phys(b, { roughness: 0.38, clearcoat: 0.5, clearcoatRoughness: 0.12 }), 'wood127', WOOD127, { uGrain: g }), accent = w(dk(c.body, 0.82), dk(c.grain, 0.82));
+    return { body: w(c.body, c.grain), accent, hoof: accent }; },
+  chrome: c => same(shine(c.body, 0.04)),
+  velvet: c => { const v = b => L127(phys(b, { roughness: 1, sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color('#ffffff') }), 'velvet127', VELVET127), accent = v(dk(c.body, 0.85));
+    return { body: v(c.body), accent, hoof: accent }; },
+  marble: c => same(L127(phys(c.body ?? '#efe7d8', { roughness: 0.18, clearcoat: 0.7, clearcoatRoughness: 0.08 }), 'marble127', MARBLE127, { uVein: c.vein ?? '#5e534a' })),
+  dew: c => { const d = (b, a) => wet127(L127(phys(b, { roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.03 }), 'dew127', DEW127, { uAcc: a })), accent = d(dk(c.body, 0.85), 1);
+    return { body: d(c.body, 0), accent, hoof: accent }; },
+  buncheong: c => { const b = (col, a) => L127(phys(col, { roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.1 }), 'bun127', BUN127, { uInk: c.ink, uSlip: { brush: 1, inlay: 0.35, iron: 0.7 }[c.id] ?? 1, uAcc: a }), accent = b(dk(c.body, 0.9), 1);
+    return { body: b(c.body, 0), accent, hoof: accent }; },
+  carved: c => { const w = (b, g, a) => L127(phys(b, { roughness: 0.45, clearcoat: 0.35, clearcoatRoughness: 0.2 }), 'carved127', CARVED127, { uGrain: g, uAcc: a }), accent = w(dk(c.body, 0.82), dk(c.grain, 0.82), 1);
+    return { body: w(c.body, c.grain, 0), accent, hoof: accent }; },
+  embroidery: c => { const e = (b, a) => L127(phys(b, { roughness: 0.85, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffffff') }), 'emb127', EMB127, { uT1: c.t1, uT2: c.t2, uAcc: a }), accent = e(dk(c.body, 0.85), 1);
+    return { body: e(c.body, 0), accent, hoof: accent }; },
+  hanji: c => { const h = (b, a) => L127(phys(b, { roughness: 0.9 }), 'hanji127', HANJI127, { uP1: c.p1, uP2: c.p2, uAcc: a }), accent = h(dk(c.body, 0.88), 1);
+    return { body: h(c.body, 0), accent, hoof: accent }; },
+  copper: c => { const k = (b, a) => L127(phys(b, { roughness: 0.28, metalness: 1 }), 'copper127', COPPER127, { uPat: c.pat ?? 0.3, uAcc: a }, { studio: 0.6 }), accent = k(dk(c.body, 0.85), 1);
+    return { body: k(c.body, 0), accent, hoof: accent }; },
+  cloisonne: c => { const g = shine('#e8b04a', 0.2);
+    return { body: L127(phys(c.body, { roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.03 }), 'clois127', CLOIS127, { uF1: c.f1, uF2: c.f2, uAcc: 0 }, { studio: 0 }), accent: g, hoof: g }; },
+});
+Object.assign(LOOKS, {
+  carousel128: () => ({ body: L127(phys('#fdf6ec', { roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.03 }), 'carousel128', CAROUSEL128, {}, { studio: 0.2 }),
+    accent: L127(phys('#ffc75a', { roughness: 0.2, metalness: 1 }), 'curl128', CURL128, {}, { studio: 0.85 }), hoof: shine('#ffc75a') }),
+  dandelion128: () => ({ body: L127(phys('#ffffff', { roughness: 0.75, sheen: 1, sheenRoughness: 0.4, sheenColor: new THREE.Color('#f4f8ff') }), 'dandelion128', DANDELION128),
+    accent: phys('#f5dc7a', { roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.15 }), hoof: phys('#6a9450', { roughness: 0.4 }) }),
+  sakura128: () => { const s = acc => L127(phys('#ffffff', { roughness: 0.45, clearcoat: 0.3, clearcoatRoughness: 0.2 }), 'sakura128', SAKURA128, { uAcc: acc });
+    const body = s(0); return { body, accent: s(1), hoof: body }; },
+  topiary128: () => { const t = (acc, s) => L127(phys('#4a8a3a', { roughness: 0.7, sheen: 0.4, sheenColor: new THREE.Color('#c8f0a0') }), 'topiary128', TOPIARY128, { uAcc: acc, uS: s });
+    return { body: t(0, 26), accent: t(1, 40), beak: phys('#1e3418', { roughness: 0.6 }), hoof: phys('#c0643a', { roughness: 0.55 }) }; },
+  flowercow128: () => { const c = acc => L127(phys('#fbf8f2', { roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.04 }), 'flowercow128', FLOWERCOW128, { uAcc: acc });
+    return { body: c(0), accent: c(1), beak: phys('#f4a8b0', { roughness: 0.3, clearcoat: 0.6 }), nostril: phys('#3a2a2c', { roughness: 0.2 }), horn: phys('#9cc87a', { roughness: 0.25, clearcoat: 0.8 }), hoof: phys('#a8683e', { roughness: 0.35, clearcoat: 0.5 }) }; },
+  vane128: () => { const b = s => L127(phys('#d6a048', { roughness: 0.3, metalness: 1 }), 'vane128', VANE128, { uS: s }, { studio: 0.85 });
+    return { body: b(22), wing: b(15), accent: L127(phys('#d8603a', { roughness: 0.28, metalness: 1 }), 'fletch128', FLETCH128, {}, { studio: 0.85 }), beak: shine('#e8b858', 0.22), hoof: shine('#b07a38', 0.3) }; },
+});

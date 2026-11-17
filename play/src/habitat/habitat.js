@@ -13,7 +13,7 @@ import { windTime, toyMat, snowNow } from './toyKit.js';
 import { daylight, fireflies, hourNow } from './daylight.js';
 import { butterflies } from './butterflies.js';
 import { weather, weatherNow } from './weather.js';
-import { glassLite, RIM, HAB89 } from '../animals/materials.js';
+import { glassLite, RIM, HAB89, WET127 } from '../animals/materials.js';
 import { natureLayer, grassMask } from './nature.js';
 import { free, gapTo, partAt } from '../animals/crowd.js';
 import { stamps, bump } from './stamps.js';
@@ -1306,7 +1306,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     camUi();
     guard(); rEnd = real.distanceTo(controls.target); clearView(); fadeProps(dt);
     if (t > skyAt) { skyAt = t + 1; skyT = ui.skyNow?.(habId) ?? null; } fx.draw(t, dt, skyT, L, w.gray); sky.draw(t, w, L, !!skyT?.bow2); // 16-2
-    RIM.value = snapOn ? 0 : 0.2 * THREE.MathUtils.clamp((rEnd - 90) / 90, 0, 1); HAB89.value = snapOn ? 0 : 1; renderer.render(scene, camera); RIM.value = 0; HAB89.value = 0; // inbox 63: faint rim only far out; 97: the ?m89 looks' habitat level
+    RIM.value = snapOn ? 0 : 0.2 * THREE.MathUtils.clamp((rEnd - 90) / 90, 0, 1); HAB89.value = snapOn ? 0 : 1; WET127.value = w.rain; renderer.render(scene, camera); RIM.value = 0; HAB89.value = 0; WET127.value = 0; // inbox 63: faint rim only far out; 97: the ?m89 looks' habitat level
     perf(raw);
   }
   // 16-3 책상 모드: every 25 s (움직임 줄이기 40 s) another friend on show, seen from 3x its nearest a little from the side, the view slowly going round it

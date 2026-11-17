@@ -134,6 +134,26 @@ const FX = {
       if (r > 1.0 && leaf > 1.0) discard;
       gl_FragColor = vec4(r <= 1.0 ? mix(vec3(0.93, 0.62, 0.08), vec3(1.0, 0.86, 0.3), smoothstep(1.0, 0.2, length(d - vec2(-0.25, 0.15)) / 0.8)) : vec3(0.35, 0.62, 0.2), 1.0);` },
 };
+// 128: kinds made with their colours as parameters, so the later legendary sets (단풍, 파인애플, ...) reuse them recoloured.
+// leaves: small leaves tumbling down (a darker midrib); seeds: dandelion seeds drifting up (a fan of fine rays on a stalk, a
+// small brown seed); butterflies: wings flapping as they wander (two colour pairs, half each)
+const rgb = hex => `vec3(${[1, 3, 5].map(i => (parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(3)).join(', ')})`;
+const leafFX = (a, b) => ({ n: 7, size: 0.34, solid: true, fall: true, sp: 0.5, frag: `float an = vT * 0.9 + vS * 6.0, w = abs(cos(vT * 1.3)); vec2 q = mat2(cos(an), sin(an), -sin(an), cos(an)) * d; q.x /= max(w, 0.2);
+      if (abs(q.y) > 0.92 || abs(q.x) > 0.42 * (1.0 - q.y * q.y)) discard;
+      gl_FragColor = vec4(mix(${rgb(a)}, ${rgb(b)}, vS) * (0.7 + 0.3 * w) * (1.0 - 0.3 * (1.0 - smoothstep(0.0, 0.07, abs(q.x)))), 1.0);` });
+const seedFX = (c, seed) => ({ n: 8, size: 0.5, soft: true, rise: true, sp: 0.35, frag: `vec2 q = vec2(d.x, -d.y - 0.15); float r = length(q), an = atan(q.x, q.y);
+      float ray = (1.0 - smoothstep(0.0, 0.05, abs(sin(an * 6.0)) * r)) * step(abs(an), 1.3) * (1.0 - smoothstep(0.62, 0.8, r)) * step(0.04, r);
+      float tip = (1.0 - smoothstep(0.08, 0.16, abs(r - 0.7))) * step(abs(an), 1.3) * 0.35, stalk = (1.0 - smoothstep(0.015, 0.04, abs(q.x))) * step(q.y, 0.0) * step(-0.55, q.y);
+      float sd = 1.0 - smoothstep(0.8, 1.0, length(vec2(q.x / 0.07, (q.y + 0.65) / 0.13)));
+      float a = clamp(max(max(ray, tip), max(stalk * 0.8, sd)), 0.0, 1.0) * vA; if (a < 0.01) discard;
+      gl_FragColor = vec4(mix(${rgb(c)}, ${rgb(seed)}, sd), a);` });
+const butterflyFX = (a1, b1, a2, b2) => ({ n: 4, size: 0.42, solid: true, sp: 0.5, frag: `float w = 0.2 + 0.8 * abs(sin(vT * 5.0)); vec2 q = vec2(abs(d.x) / w, d.y);
+      float up = length((q - vec2(0.45, -0.22)) / vec2(0.46, 0.44)), lo = length((q - vec2(0.33, 0.34)) / vec2(0.3, 0.3)), bd = length(vec2(d.x / 0.08, d.y / 0.55));
+      if (min(min(up, lo), bd) > 1.0) discard;
+      vec3 A = vS < 0.5 ? ${rgb(a1)} : ${rgb(a2)}, B = vS < 0.5 ? ${rgb(b1)} : ${rgb(b2)}, c = mix(A, B, smoothstep(0.6, 0.9, min(up, lo)));
+      c = mix(c, vec3(1.0), 1.0 - smoothstep(0.1, 0.16, length((q - vec2(0.62, -0.3)) / 0.8)));
+      gl_FragColor = vec4(bd <= 1.0 ? vec3(0.2, 0.15, 0.12) : c * (0.75 + 0.25 * w), 1.0);` });
+Object.assign(FX, { leaves: leafFX('#3f8a2e', '#86c04e'), seeds: seedFX('#ffffff', '#7a5a34'), butterflies: butterflyFX('#ffc04a', '#e0602a', '#9ad0ff', '#4a6ad8') });
 const fxMats = {};
 const fxMat = kind => fxMats[kind] ??= new THREE.ShaderMaterial({
   uniforms: { uTime: windTime, uPx: { value: 800 } }, transparent: true, depthWrite: FX[kind].solid || false, blending: FX[kind].solid || FX[kind].soft ? THREE.NormalBlending : THREE.AdditiveBlending,
