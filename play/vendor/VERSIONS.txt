@@ -1,0 +1,9 @@
+# vendor/ 파일의 출처·버전·sha256 (143 C, 135 감사 「낮음」). 파일을 바꾸면 이 표도 같이 고칩니다.
+# node tools/check-eggs.mjs 가 아래 sha256과 실제 파일을 대조합니다. 출처·라이선스는 docs/assets.md.
+# sha256                                                            파일                          출처 / 버전
+3e690ac7d180b0aadf0891bea39eec643e29e2d3e75c99b18689518665f69ba6  three.module.min.js            three.js r160 build/three.module.min.js
+5a44a9e86a2a0fb11933eed69bc2cd33c76a496854c1aed6ed776efa87d7b064  OrbitControls.js               three.js r160 examples/jsm/controls (import 경로만 'three')
+8db7f41209ab9d6ffe3fd8f9568ea5b1b15a423ef3ca20189f358981143e1097  GLTFLoader.js                  three.js r160 examples/jsm/loaders (import 경로만 ./utils/)
+9be041e96308775d00e2695cc607645b9a9b64fd7c0e759dd8f7c00a8d92becb  utils/BufferGeometryUtils.js   three.js r160 examples/jsm/utils
+01f48524f4bac6141eaba07e94cc36e7ee56f311796fa6117c159842941b0468  meshopt_decoder.module.js      three.js r160 examples/jsm/libs (meshoptimizer 0.18)
+ea91d7118a5395289170da848b7c6758b996163bfbccf312591ab65a4911b7c0  qrcode.js                      qrcode-generator 2.0.4 (npm)

@@ -174,6 +174,9 @@ Object.assign(FX, {
 // 141 B (?m89): goldsparks: the sparks (chicken) in gold dust colours (the kintsugi sheep)
 FX.goldsparks = { ...FX.sparks, frag: FX.sparks.frag.replace('vS < 0.34 ? vec3(1.0, 0.55, 0.18) : vS < 0.67 ? vec3(1.0, 0.42, 0.62) : vec3(0.72, 0.42, 1.0)',
   'vS < 0.5 ? vec3(1.0, 0.72, 0.22) : vec3(1.0, 0.86, 0.45)') };
+// 144 B (?m89): clearglints: the twinkle (cow) in clear glass colours, white and the palest sky (the crystal horse: no colours outside it)
+FX.clearglints = { ...FX.twinkle, frag: FX.twinkle.frag.replace('vS < 0.34 ? vec3(0.45, 0.75, 1.0) : vS < 0.67 ? vec3(0.5, 1.0, 0.7) : vec3(1.0, 0.72, 0.45)',
+  'vS < 0.5 ? vec3(0.8, 0.92, 1.0) : vec3(1.0)') };
 const fxMats = {};
 const fxMat = kind => fxMats[kind] ??= new THREE.ShaderMaterial({
   uniforms: { uTime: windTime, uPx: { value: 800 } }, transparent: true, depthWrite: FX[kind].solid || false, blending: FX[kind].solid || FX[kind].soft ? THREE.NormalBlending : THREE.AdditiveBlending,

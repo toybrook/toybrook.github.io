@@ -1612,6 +1612,122 @@ const BEADS138 = PL138 + AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.25, 
   float tw = step(0.93, h31(vec3(cl, row, F + 0.5))) * pow(max(0.0, sin(dot(normal, vec3(11.0, 8.0, 6.0)) + h31(vec3(row, cl, 3.0)) * 50.0)), 8.0);
   totalEmissiveRadiance += vec3(1.0) * (hl * 0.25 + tw * hl * mix(3.0, 1.5, uHab));
   roughnessFactor = mix(0.5, roughnessFactor, bead);`;
+// ---- 146 (inbox 146): two raised craft looks in place of 분청 물고기 and 마블링 종이 (retired: data.js RETIRED146; their GLSL
+// above stays). Both are things you could run a finger over, not pictures (inbox 146: the passed four are all raised).
+// fn146: put GLSL functions before main (as fn128)
+const fn146 = (m, code) => { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.fragmentShader = sh.fragmentShader.replace('void main() {', code + 'void main() {'); }; return m; };
+// coil146: the paper coils near q (coil cells; J: how far each centre may stray per axis, 0 in y keeps them in rows), each a
+// strip of paper rolled up and stood on its edge on the card (round, or pinched to a teardrop toward a random tip), height H,
+// radius about 0.6 cells (rs: a scale; overlapping coils meet flat, as packed coils press together).
+// D: the eye's slide across the surface per unit of height (parallax), L: the light's. The coil the eye meets first wins (the
+// highest hit: its top, else its outer wall); between coils the card, in the coils' cast shadows.
+// a: x = the hit's height / H (-1: the card), y = how far out on the coil (0 middle, 1 rim), z = the angle round it, w = the
+// wall's light. b: x = the coil's random number, y = the card's shadow, z = the card's gap to the nearest coil, w = cluster
+const QFN146 = `void coil146(vec3 q, vec3 n, vec3 D, vec3 L, vec3 J, float cs, float rs, out vec4 a, out vec4 b) {
+  vec3 qi = floor(q), qf = fract(q); float best = -1.0, sh = 0.0, gap = 9.0; a = vec4(-1.0, 1.0, 0.0, 1.0); b = vec4(0.0, 0.0, 9.0, 0.5);
+  for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+    vec3 o = vec3(x, y, z), ci = qi + o, cp = o + 0.5 + (h33(ci) - 0.5) * J, r = qf - cp; float w = dot(r, n); r -= n * w;
+    float id = h31(ci + 0.37), R = (0.56 + 0.08 * h31(ci + 5.1)) * rs, R2 = R * R - 0.3 * w * w; if (R2 < 0.03 || abs(w) > 0.62) continue;
+    float Re = sqrt(R2), H = 0.22 + 0.06 * h31(ci + 9.7), tear = step(0.62, id) * 0.45;
+    vec3 tp = h33(ci + 2.3) - 0.5 + n.yzx * 0.01; tp = normalize(tp - n * dot(tp, n) + 1e-5); vec3 bt = cross(n, tp);
+    vec3 dl = L * H; float t = clamp(-dot(r, dl) / max(dot(dl, dl), 1e-5), 0.0, 1.0); sh = max(sh, 1.0 - smoothstep(Re - 0.12, Re + 0.03, length(r + dl * t)));
+    gap = min(gap, length(r) - Re);
+    vec3 dh = D * H, yy = r + dh; float al = dot(yy, tp), ac = dot(yy, bt), al2 = al > 0.0 ? al / (1.0 + tear) : al, u2 = clamp(al2 / Re, 0.0, 1.0);
+    float rho = length(vec2(al2, ac / (1.0 - 0.8 * tear * u2 * u2))) / Re, ht = -1.0;
+    if (rho < 1.0) ht = H;
+    else { float A = dot(dh, dh), B = dot(r, dh), C = dot(r, r) - Re * Re, dsc = B * B - A * C;
+      if (dsc >= 0.0 && A > 1e-5) { float u = (-B + sqrt(dsc)) / max(A, 1e-5); if (u >= 0.0 && u <= 1.0) { ht = u * H * 0.999; yy = r + dh * u; al = dot(yy, tp); ac = dot(yy, bt); rho = 1.0; } } }
+    float sc = ht < H ? ht : H + 0.5 * (1.0 - rho); // tops over walls; two tops: the nearer middle (packed coils press flat)
+    if (sc > best) { best = sc; float wl = dot(yy, L) / (Re * max(length(L), 0.35));
+      a = vec4(ht / H, rho, atan(ac, al), ht < H ? 0.55 + 0.45 * clamp(wl, -1.0, 1.0) : 1.0); b.x = id; b.w = vn3((qi + cp) * cs) + 0.3 * (id - 0.5); } }
+  b.y = sh; b.z = gap; }
+`;
+// 페이퍼 퀼링: the body covered in paper quilling on a card (the material's colour): coils of strip stood on edge, packed close
+// (11 to the body height on the torso, round ones and teardrops, a little uneven in height), small ones in rows round the legs
+// (20 to the height, below a strip run round on edge at y 0.27). Each coil's top the strip's spiral (a dark gap between the
+// turns, a hole in the middle), its outer wall where the eye sees past it (lit on the light's side), and a shadow cast on the
+// card. Colours in clusters over the body: uQ1..uQ3 (uRain 1: pastel rainbow; uGold 1: gold foil strips, metal). The accent
+// (mane, hooves, beak) all in uQA
+const QUILL146 = AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.2, 0.5, fwidth(p.y) * 9.0), dx = fade * (1.0 - 0.7 * uHab);
+  vec3 vo = normalize(vdir * normalMatrix), lo = normalize(normalize(vec3(-0.35, 0.8, 0.55)) * normalMatrix);
+  float vn = max(dot(vo, on), 0.45), ln = max(dot(lo, on), 0.35); vec3 D = (vo - on * dot(vo, on)) / vn, L = (lo - on * dot(lo, on)) / ln;
+  float y0 = 0.27, band = 1.0 - AA(abs(p.y - y0), 0.009), leg = step(p.y, y0); vec4 a, b;
+  if (leg > 0.5) coil146(p * 20.0, on, D, L, vec3(0.3, 0.0, 0.3), 0.0, 0.85, a, b); else coil146(p * 11.0, on, D, L, vec3(0.45), 0.1, 1.0, a, b);
+  float coil = step(0.0, a.x), k = b.w + 0.25 * (b.x - 0.5);
+  vec3 sc = k < 0.42 ? uQ1 : k < 0.62 ? uQ2 : uQ3;
+  if (uRain > 0.5) sc = mix(rainbow(b.w * 1.6 + 0.2 * b.x), vec3(1.0), 0.22);
+  if (uAcc > 0.5) sc = uQA * (0.92 + 0.16 * b.x);
+  vec3 card = uAcc > 0.5 ? uQA * 0.45 : diffuseColor.rgb;
+  float fw = fwidth(a.y), nt = clamp(0.2 / max(fw, 1e-4), 2.0, mix(7.0, 5.0, leg)); // far off fewer, wider turns (the coil still reads)
+  float s = a.y * nt + a.z / 6.2832, sf = 1.0 - smoothstep(0.35, 0.6, fw * nt);
+  float turn = abs(fract(s) - 0.5) * 2.0, gp = (1.0 - AA(1.0 - turn, 0.1)) * step(0.14, a.y) * sf * dx, hole = 1.0 - AA(a.y, 0.12);
+  float topf = step(0.999, a.x), ridge = 1.0 - AA(turn, 0.4);
+  vec3 col = sc * mix(1.0, mix(0.62, 1.06, ridge), dx * topf * sf * step(0.14, a.y));
+  col *= 1.0 - topf * max(gp * 0.4, hole * 0.6);
+  col *= mix(1.0, a.w, 1.0 - topf);
+  col *= mix(1.0, 0.82, (1.0 - topf) * (1.0 - smoothstep(0.0, 0.25, a.x)));
+  col *= 1.0 - 0.18 * topf * smoothstep(0.85, 1.0, a.y);
+  vec3 bg = card * (1.0 - 0.6 * b.y) * mix(0.3, 0.9, smoothstep(0.0, 0.2, b.z));
+  col = mix(bg, col, coil);
+  col = mix(col, (uAcc > 0.5 ? uQA : uQ1) * mix(0.8, 1.1, AA(p.y, y0 + 0.002)), band);
+  diffuseColor.rgb = col;
+  float hh = mix(mix(0.0, a.x - 0.25 * gp - 0.5 * hole * topf, coil), 1.0, band); BUMP115(hh, 0.0015 * dx)
+  float met = uGold * max(coil, band); metalnessFactor = met; roughnessFactor = mix(roughnessFactor, 0.3, met); lookStudio = 0.75 * met;`;
+// 가죽 공예: a toy sewn from leather panels (the material's colour, each panel a shade off): a seam along the spine, one round
+// the neck (x 0.22), a cuff round the legs and lower body (y 0.22), an oval panel laid on each flank. Every seam a lap seam: the
+// upper panel's cut edge stands up (its thickness a dark burnished band, uEdge) and throws a shadow on the lower one; beside it
+// a groove and a saddle stitch, raised slanted stitches every 0.02 (uThread; uGold 1: gold thread), a hole at each end. In the
+// oval: a pressed double border, a basketweave stamp and a round medallion with an eight-point compass star. All over a fine
+// pebble grain and a few soft creases; a soft sheen. The accent (mane, hooves, beak) plain leather a shade darker, no seams
+const LEATHER146 = AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.2, 0.55, fwidth(p.y) * 30.0), dx = fade * (1.0 - 0.6 * uHab);
+  float tight = smoothstep(11.0, 15.0, length(fwidth(on)) / max(length(fwidth(p)), 1e-5)), ds = 9.0, ph = 0.0, stamp = 0.0, hh = 0.0, thr = 0.0;
+  vec3 col = diffuseColor.rgb;
+  if (uAcc < 0.5) {
+    if (on.y > 0.35 && p.x < 0.22 && p.y > 0.3) { ds = p.z; ph = p.x; }
+    float d2 = p.x - 0.22; if (p.y > 0.3 && abs(d2) < abs(ds)) { ds = -d2; ph = abs(on.z) > abs(on.y) ? p.y : p.z; }
+    float d3 = p.y - 0.22; if (abs(d3) < abs(ds)) { ds = d3; ph = abs(on.z) > abs(on.x) ? p.x : p.z; }
+    vec2 v = vec2(p.x + 0.02, p.y - 0.53), rr = vec2(0.22, 0.13); float sd = (length(v / rr) - 1.0) * 0.13, side = step(0.55, abs(on.z)) * (1.0 - step(0.5, tight)) * step(0.3, p.y);
+    if (side > 0.5 && abs(sd) < abs(ds)) { ds = -sd; ph = atan(v.y / rr.y, v.x / rr.x) * 0.175; }
+    float pnl = (p.z > 0.0 ? 1.0 : 2.0) + (p.x > 0.22 ? 3.0 : 0.0) + (p.y < 0.22 ? 5.0 : 0.0) + (side > 0.5 && sd < 0.0 ? 7.0 : 0.0);
+    col *= 0.93 + 0.14 * h31(vec3(pnl, 1.0, 2.0));
+    // the lap: ds > 0 the upper panel (its edge at 0), < 0 the lower
+    float up = AA(ds, 0.0), edge = up * (1.0 - AA(ds, mix(0.0045, 0.006, uHab))), shd = (1.0 - up) * (1.0 - smoothstep(0.0, 0.012, -ds));
+    col *= 1.0 - 0.18 * (1.0 - smoothstep(0.0, 0.03, abs(ds)));
+    col = mix(col, uEdge, edge); col *= 1.0 - 0.45 * shd;
+    float gv = (1.0 - AA(abs(ds - 0.017), mix(0.0018, 0.003, uHab))) * dx; col *= 1.0 - 0.3 * gv;
+    // saddle stitch: one every 0.02 along the seam, slanted, raised, a hole at each end
+    float u = fract(ph / 0.02) - 0.5, inrow = step(abs(ds - 0.017), 0.012); vec2 st = mat2(0.906, 0.423, -0.423, 0.906) * vec2(u, (ds - 0.017) / 0.02);
+    thr = (1.0 - AA(length(vec2(max(abs(st.x) - 0.26, 0.0), st.y)), mix(0.11, 0.16, uHab))) * inrow; float tr = sqrt(max(0.0, 1.0 - st.y * st.y / 0.0121));
+    float hol = (1.0 - AA(length(vec2(abs(st.x) - 0.36, st.y)), 0.07)) * dx * inrow * (1.0 - thr);
+    col *= 1.0 - 0.6 * hol;
+    col = mix(col, uThread * mix(1.0, 0.7 + 0.3 * tr, dx) * (0.9 + 0.1 * sin(st.x * 40.0 + st.y * 20.0)), thr);
+    hh = 0.6 * up + thr * (0.8 + 0.6 * tr) - 0.4 * gv - 0.5 * hol;
+    // the oval's stamp: a pressed double border, basketweave, the medallion and its star
+    { // no branch round it: AA's fwidth needs the whole 2x2 quad (the mask is the last factor)
+      float bl = max(1.0 - AA(abs(sd + 0.035), 0.003), 1.0 - AA(abs(sd + 0.043), 0.0015));
+      vec2 g = v / 0.032, gc = floor(g), gf = fract(g); float ck = mod(gc.x + gc.y, 2.0), lu = ck > 0.5 ? gf.x : gf.y, lv = ck > 0.5 ? gf.y : gf.x;
+      float bw = (1.0 - smoothstep(0.1, 0.25, abs(fract(lu * 3.0) - 0.5))) * smoothstep(0.03, 0.12, lv) * (1.0 - smoothstep(0.88, 0.97, lv));
+      float mr = length(v), ma = atan(v.y, v.x), med = AA(mr, 0.062), ring = max(1.0 - AA(abs(mr - 0.062), 0.003), 1.0 - AA(abs(mr - 0.052), 0.0015));
+      float sa = abs(mod(ma + 0.3927, 0.7854) - 0.3927), sr = mix(0.045, 0.016, smoothstep(0.0, 0.3927, sa)) * mix(1.0, 0.7, step(0.5, mod(floor((ma + 0.3927) / 0.7854), 2.0)));
+      float star = 1.0 - AA(mr, sr);
+      stamp = max(bl, max(bw * AA(sd, -0.035) * med * 0.8 * dx, max(ring * 0.9, star * 0.75))) * (1.0 - AA(sd, -0.008)) * side * step(sd, -0.004);
+      col *= 1.0 - 0.38 * stamp; hh -= 0.7 * stamp; }
+  } else col *= 0.92;
+  // grain and creases
+  vec3 cg = cells(p * 160.0); float peb = smoothstep(0.0, 0.5, cg.y - cg.x), cr = 1.0 - abs(vn3(p * vec3(14.0, 34.0, 14.0)) * 2.0 - 1.0);
+  float crease = smoothstep(0.93, 0.99, cr) * smoothstep(0.45, 0.8, vn3(p * 5.0));
+  col *= mix(1.0, (0.94 + 0.08 * peb) * (1.0 - 0.1 * crease), dx);
+  diffuseColor.rgb = col;
+  float bh = hh * 0.004 + (peb * 0.0012 - crease * 0.0015) * dx; BUMP115(bh, 1.0)
+  roughnessFactor = mix(roughnessFactor, 0.62, stamp); metalnessFactor = uGold * thr; roughnessFactor = mix(roughnessFactor, 0.3, uGold * thr); lookStudio = 0.7 * uGold * thr;`;
+Object.assign(LOOKS, {
+  quilling: c => { const q = (b, a) => fn146(L127(phys(b, { roughness: 0.82, sheen: 0.3, sheenRoughness: 0.6, sheenColor: new THREE.Color('#ffffff') }), 'quill146', QUILL146,
+      { uQ1: c.q1, uQ2: c.q2, uQ3: c.q3, uQA: c.acc, uRain: c.rain ?? 0, uGold: c.gold ?? 0, uAcc: a }, { studio: 0 }), QFN146), accent = q(c.acc, 1);
+    return { body: q(c.body, 0), accent, hoof: accent }; },
+  leather: c => { const l = (b, a) => L127(phys(b, { roughness: 0.48, clearcoat: 0.25, clearcoatRoughness: 0.35 }), 'leather146', LEATHER146,
+      { uThread: c.thread, uEdge: c.edge, uGold: c.gold ?? 0, uAcc: a }, { studio: 0 }), accent = l(dk(c.body, 0.85), 1);
+    return { body: l(c.body, 0), accent, hoof: accent }; },
+});
 Object.assign(LOOKS, {
   wood: c => { const w = (b, g) => L127(phys(b, { roughness: 0.38, clearcoat: 0.5, clearcoatRoughness: 0.12 }), 'wood127', WOOD127, { uGrain: g }), accent = w(dk(c.body, 0.82), dk(c.grain, 0.82));
     return { body: w(c.body, c.grain), accent, hoof: accent }; },
@@ -1832,3 +1948,53 @@ Object.assign(LOOKS, {
   lapis141: () => { const c = acc => L127(phys('#1a3a9a', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03 }), 'lapis141', LAPIS141, { uAcc: acc }, { studio: 0.35 }), g = shine('#ffc75a');
     return { body: c(0), accent: c(1), beak: c(0), nostril: phys('#060a1c', { roughness: 0.1, clearcoat: 1 }), horn: g, hoof: g }; },
 });
+
+// ---- 145 A 수정 유리 말 3차 (?m89 시범; data.js LEGEND141.horse). 144 B read as milky ice with a mane of broken shards, grey-blue
+// by night. One clear crystal: the body and the legs cut like the ruby (the normal snapped to facet141's 24 directions: the scene
+// behind breaks into shifted pieces, a facet flashes white when it meets the light, hairline white edges), the scene seen through
+// keeping its colour (a faint sky tint only where it is thick), tiny spectral sparks deep in the facets; the mane and the tail
+// smooth glass ribbons (the lumps' ups and downs smoothed out along the strand: one long soft sheen running down it, no dark band,
+// no white outline, the ends clearer still); the hooves clear with a gold rim (the only gold). By night a soft moonlight rising
+// inside and small stars twinkling there. One program for the three parts (key crystal145): uPart 0 body, 1 mane and tail, 2 hooves.
+// AX145: the strand's run (the tail hangs back and down, p.x < -0.15; the mane runs up the neck)
+const AX145 = P => `(${P}.x < -0.15 ? vec3(0.5, 0.866, 0.0) : vec3(0.66, 0.751, 0.0))`;
+const O145 = { key: 'crystal145', tint: '#d4eaff', absorb: 1.3, inner: '#a8d0f4', dark: 0.3, rough: 0.03, neutral: 0.3, bend: 0.14, rimK: 0.35 };
+const CRYSTAL145_NRM = `vec3 n_ = normalize(normal * normalMatrix), v_ = normalize(vViewPosition);
+  if (uPart < 0.5) { float id_, e_; vec3 sn = normalize(normalMatrix * facet141(n_, id_, e_)); normal = normalize(sn + v_ * max(0.0, 0.25 - dot(sn, v_))); }
+  else if (uPart < 1.5) { vec3 a_ = ${AX145('vOp')}; normal = normalize(normalMatrix * normalize(n_ - a_ * dot(n_, a_) * 0.9)); }`;
+// the strand ends (the tail's lower end, the mane's free upper back edge) clearer: no tint
+const CRYSTAL145_PRE = `float tp145 = abs(uPart - 1.0) < 0.5 ? (p.x < -0.15 ? 1.0 - smoothstep(0.15, 0.3, p.y) : smoothstep(0.55, 0.95, dot(normalize(normalize(vNormal) * normalMatrix), vec3(-0.751, 0.66, 0.0)))) : 0.0;
+      tint = mix(tint, vec3(1.0), tp145);`;
+const CRYSTAL145 = `vec3 v145 = normalize(vViewPosition), n145 = normalize(vNormal), spk145 = vec3(0.0); float tw145 = 0.0;
+      float nv145 = abs(dot(n145, v145)), sil145 = 1.0 - smoothstep(0.0, 1.5 * fwidth(nv145) + 1e-4, nv145);
+      float fl145 = pow(max(dot(reflect(-v145, vn), normalize(vec3(-0.45, 0.75, 0.5))), 0.0), 12.0); // the key light's glint (view space, as the ruby)
+      if (uPart < 0.5) { // facets: each shows the scene behind shifted its own way (a cut stone breaks it into pieces), a shade lighter
+        // or deeper; a facet flashes white as it meets a light; tiny spectral sparks at two depths; small stars (twinkling by night)
+        float fid, fe; vec3 fd = facet141(normalize(n145 * normalMatrix), fid, fe);
+        float lum = 0.5 + 0.5 * sin(dot(fd, -rd) * 7.0 + h31(vec3(fid * 13.7 + 3.0)) * 6.2832), few = fwidth(fe);
+        vec4 b2 = texture2D(uScreen, clamp(suv + (vec2(h31(vec3(fid * 7.1 + 1.0)), h31(vec3(fid * 3.3 + 9.0))) - 0.5) * vRefr * 0.3, 0.0, 1.0));
+        b2.rgb += (1.0 - b2.a) * ${SKY}; b2.rgb = mix(b2.rgb, vec3(dot(b2.rgb, vec3(0.3, 0.59, 0.11))) * vec3(0.97, 1.0, 1.05), ${O145.neutral.toFixed(2)});
+        vec3 see2 = (b2.rgb * pass + inner * (1.0 - pass)) * (1.0 - ${O145.dark} * dark) * (1.0 - fr);
+        float ed = (1.0 - smoothstep(0.0, 1.5 * few + 1e-4, fe)) * (1.0 - smoothstep(0.08, 0.2, few));
+        float fl2 = pow(max(dot(reflect(-v145, vn), normalize(vec3(0.7, 0.35, 0.6))), 0.0), 16.0);
+        vec3 rs = reflect(-v145, n145); // the light's shape across a lit facet (the smooth normal): a window of white, not the whole face
+        fl145 *= 0.15 + 0.85 * smoothstep(0.72, 0.96, dot(rs, normalize(vec3(-0.45, 0.75, 0.5)))); fl2 *= 0.15 + 0.85 * smoothstep(0.72, 0.96, dot(rs, normalize(vec3(0.7, 0.35, 0.6))));
+        float sc = mix(30.0, 15.0, uHab); vec3 c1 = cells((p + rd * 0.05) * sc), c2 = cells((p + rd * 0.12) * sc * 0.8 + 5.3);
+        float r1 = max(0.2, 1.5 * fwidth(c1.x)), r2 = max(0.2, 1.5 * fwidth(c2.x)); // a point: never under a pixel or two (no shimmer far off)
+        float k1 = step(0.25, c1.z) * (1.0 - smoothstep(0.3 * r1, r1, c1.x)) * pow(max(0.0, sin(dot(rd, vec3(7.0, 5.0, 9.0)) * 1.5 + c1.z * 40.0 + uTime * 0.6)), 2.0);
+        float k2 = step(0.3, c2.z) * (1.0 - smoothstep(0.3 * r2, r2, c2.x)) * pow(max(0.0, sin(dot(rd, vec3(-6.0, 8.0, 5.0)) * 1.5 + c2.z * 50.0 + uTime * 0.5)), 2.0);
+        float fd145 = (1.0 - smoothstep(0.6, 0.9, s)) * (1.0 - fr), ka = max(k1, k2 * 0.8) * fd145; // spectral: the colour itself, not added onto a light ground
+        spk145 = (clamp((rainbow(c1.z * 5.0 + dot(rd, vec3(1.3, 0.7, 1.1))) - 0.2) * 1.5, 0.0, 1.0) * k1 + clamp((rainbow(c2.z * 7.0 - dot(rd, vec3(0.9, 1.2, 0.6))) - 0.2) * 1.5, 0.0, 1.0) * k2 * 0.8) * fd145;
+        tw145 = step(0.3, c2.z) * (1.0 - smoothstep(0.0, 0.1, c2.x)) * pow(max(0.0, sin(uTime * (1.2 + c2.z) + c2.z * 60.0)), 8.0) * (1.0 - fr);
+        gl_FragColor.rgb += see2 * mix(0.8, 1.15, lum) - see + vec3(1.0, 0.99, 0.97) * ((fl145 + fl2 * 0.55) * (1.0 - 0.4 * uNight) + ed * (0.12 + 0.05 * uNight) + sil145 * 0.15);
+        gl_FragColor.rgb = gl_FragColor.rgb * (1.0 - 0.85 * ka) + spk145 * 1.3 + ka * 0.15; }
+      else if (uPart < 1.5) // ribbons: the dark band and the white outline taken back off, a soft sheen down the strand
+        gl_FragColor.rgb += see * (1.0 / (1.0 - ${O145.dark} * dark) - 1.0) - vec3(1.0, 0.98, 0.94) * ${O145.rimK} * rim * 0.7
+          + vec3(1.0, 0.99, 0.97) * (pow(max(dot(reflect(-v145, vn), normalize(vec3(-0.45, 0.75, 0.5))), 0.0), 5.0) * 0.3 + fl145 * 0.35) * (1.0 - 0.6 * tp145);
+      else { // the hooves: a rim of polished gold round the top
+        float w = max(0.005, 0.75 * fwidth(p.y)), gr = 1.0 - smoothstep(w, w + fwidth(p.y) + 1e-4, abs(p.y - 0.045));
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, gold141(vn, v145), gr); }`;
+NIGHT_CLEAR.crystal145 = `if (uNight > 0.001) { float mr = fbm3(p * 3.0 - vec3(0.0, uTime * 0.15, 0.0)); // wisps of moonlight drifting up inside
+        gl_FragColor.rgb += uNight * (vec3(0.72, 0.82, 1.0) * (0.08 + 0.22 * smoothstep(0.2, 0.9, vThick) + step(0.5, uPart) * step(uPart, 1.5) * 0.08 + 0.18 * pow(nv, 1.5) + 0.3 * smoothstep(0.45, 0.8, mr)) * (1.0 - fr) + spk145 * 0.8 + vec3(0.85, 0.93, 1.0) * tw145 * 1.4); }`;
+LOOKS.crystal145 = () => { const c = part => fn141(C141({ ...O145, nrm: CRYSTAL145_NRM, pre: CRYSTAL145_PRE, post: CRYSTAL145, uniforms: { uPart: part } }));
+  return { body: c(0), accent: c(1), hoof: c(2) }; };

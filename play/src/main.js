@@ -5,6 +5,7 @@ import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
 import { BALANCE, HABITATS, ZONES, PROPS } from './game/data.js';
 import { initWorldMap } from './worldmap/worldmap.js';
+import { Z143 } from './habitat/zones.js'; // 145 B: the new zone cards under ?z143
 import { zzz, heart, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
 import { loadBar, codeAsked } from './ui/loadbar.js';
 import { initLevel } from './ui/level.js';
@@ -174,7 +175,7 @@ const rebuild = (id, ex) => { // ex: the 땅 넓히기 that asks for it (the mis
 // 28-1: 「새 구역: 과수원」 and what one can see there, in a line (ZONES)
 function zoneCard(id, L, free) {
   const z = ZONES[id]?.[L - 1], el = document.createElement('section'); el.id = 'zoneCard'; el.className = 'intro pop lvup'; el.setAttribute('aria-label', $t('새 구역'));
-  el.innerHTML = $t('<div><h2>새 구역: {0}</h2><p class="sub">{1}</p><p class="sub">땅 넓히기 {2}단계 · {3}</p><button data-close>좋아요</button></div>', z.name, z.line, L, free ? $t('모으기 선물로 무료') : `♥-${BALANCE.expand.price[L - 1]}`);
+  el.innerHTML = $t('<div><h2>새 구역: {0}</h2><p class="sub">{1}</p><p class="sub">땅 넓히기 {2}단계 · {3}</p><button data-close>좋아요</button></div>', z.name, Z143 && z.line143 || z.line, L, free ? $t('모으기 선물로 무료') : `♥-${BALANCE.expand.price[L - 1]}`);
   el.querySelector('[data-close]').onclick = () => el.remove(); $('habitat').append(el); sfx('level');
 }
 G.on(ev => {

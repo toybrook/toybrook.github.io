@@ -826,13 +826,13 @@ export const LEGEND134 = {
 // 141 B 전설 2번째 「빛 재질」 (?m89 시범; inbox 141 B): the first legendaries' language (clear, lit from inside, gem, gold, sparkle),
 // no painted pattern, colour and material apart from each one's first. With the vane chicken the meadow's second set. Looks: materials.js 141
 export const LEGEND141 = {
-  horse: { id: 'crystalglass', name: $t('수정 유리 말'), mat: 'crystal141', effect: 'twinkle' },
+  horse: { id: 'crystalglass', name: $t('수정 유리 말'), mat: 'crystal145', effect: 'clearglints' }, // 145 A: clear cut crystal (144 B crystal144, 141 crystal141 + twinkle)
   sheep: { id: 'kintsugi', name: $t('금 이음 양'), mat: 'kintsugi141', effect: 'goldsparks' },
   rabbit: { id: 'rubygem', name: $t('루비 토끼'), mat: 'ruby141', effect: 'twinkle' },
   pig: { id: 'piggybank', name: $t('유리 저금통 돼지'), mat: 'piggy141', effect: 'coins' },
   cow: { id: 'lapis', name: $t('청금석 소'), mat: 'lapis141', effect: 'twinkle' },
 };
-for (const [sp, L] of Object.entries(LEGEND141)) if (M89 || sp !== 'horse') SPECIES.find(s => s.id === sp).legendary.push(L); // 144 A: public; the crystal horse stays ?m89 (144 B remake)
+for (const [sp, L] of Object.entries(LEGEND141)) SPECIES.find(s => s.id === sp).legendary.push(L); // 144 A: public; 149: the crystal horse (145 A) too
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
 export const WAVE127 = 0;
@@ -849,21 +849,36 @@ export const SHARED127 = [
   { id: 'dew', rarity: 'rare', tier: 'normal', wave: 2, name: $t('이슬 코팅'), colors: c3(
     { id: 'mint', name: $t('민트'), body: '#aee6d0' }, { id: 'lavender', name: $t('라벤더'), body: '#cbb8ee' }, { id: 'lemon', name: $t('레몬'), body: '#f2e48a' }) },
   // 138 B (inbox 138, 사용자: 「꽃무늬 남발, 더 기발하게」): the six heroic looks redone in place, no flowers (same slot, tier, wave)
-  { id: 'bunfish', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('분청 물고기'), colors: c3(
-    // 141 C: white slip, one big iron-painted fish on each side (clay: the unglazed foot and the dry-brush gaps)
-    { id: 'iron', name: $t('철화'), body: '#f1ebdf', ink: '#3d2817', clay: '#8c7b68' }, { id: 'cream', name: $t('미색'), body: '#eadcc2', ink: '#4b2e1b', clay: '#957d62' }, { id: 'copper', name: $t('진사'), body: '#f2ede4', ink: '#9e2b25', clay: '#8a7a6a' }) },
+  // 146 (inbox 146, 사용자 11/18: 「분청 물고기·마블링 너무 별로, 아예 다른 걸로」): two raised craft looks in the retired two's slots
+  // (rarity, tier, wave kept). 페이퍼 퀼링: coils of paper strip on edge (q1..q3 the strips, body the backing card; rain 1: pastel
+  // rainbow strips; gold 1: gold foil strips); acc: the accent's (mane, hooves, beak) one strip colour
+  { id: 'quilling', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('페이퍼 퀼링'), colors: c3(
+    { id: 'pastel', name: $t('무지개 파스텔'), body: '#f6f1e6', q1: '#f4b6c8', q2: '#a8d8f0', q3: '#fbe7a4', acc: '#c4a6e2', rain: 1 },
+    { id: 'sea', name: $t('바다'), body: '#eef5f4', q1: '#7cc2ee', q2: '#8edcc0', q3: '#fafcfb', acc: '#4f96c6' },
+    { id: 'gold', name: $t('금박지'), body: '#1f2238', q1: '#e2bb52', q2: '#c9973a', q3: '#f2dc96', acc: '#b07f2c', gold: 1 }) },
   { id: 'marquetry', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('쪽매 나무'), colors: c3(
     { id: 'maple', name: $t('메이플·호두'), light: '#e6c48e', dark: '#6e4528' }, { id: 'cherry', name: $t('체리·흑단'), light: '#c47a50', dark: '#2e221c' }, { id: 'birch', name: $t('자작·청록 물들임'), light: '#efe2c4', dark: '#2f7c78' }) },
   { id: 'xstitch', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('십자수'), colors: c3(
     // 142: a sampler on aida (t1 heart and zigzag, t2 border rows and checks, t3 diamonds and stars; gold: metal thread)
     { id: 'sampler', name: $t('샘플러'), body: '#efe6d2', t1: '#c3262f', t2: '#1f2c66', t3: '#3b62b0' }, { id: 'pastel', name: $t('파스텔'), body: '#f4efe6', t1: '#f08aa8', t2: '#7cc0e8', t3: '#86d4b4' }, { id: 'gold', name: $t('금실'), body: '#1e1c1f', t1: '#e6b84a', t2: '#c9962e', t3: '#f2d68a', gold: 1 }) },
-  { id: 'marbled', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('마블링 종이'), colors: c3(
-    // 141 C: comb-pattern marbling in harmonious colours
-    { id: 'indigo', name: $t('쪽빛'), body: '#efe4cc', c1: '#2a4478', c2: '#c4903e', c3: '#7d93b4' }, { id: 'ochre', name: $t('황토'), body: '#f1e6cf', c1: '#b8742e', c2: '#5d6e4a', c3: '#e0c48a' }, { id: 'inkgold', name: $t('먹·금'), body: '#efe9dc', c1: '#1d1d22', c2: '#c9a24a', c3: '#7c7e84' }) },
+  // 146: 가죽 공예: joined leather panels (body), the cut edges (edge), a raised saddle stitch on every seam (thread; gold 1: gold thread)
+  { id: 'leather', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('가죽 공예'), colors: c3(
+    { id: 'caramel', name: $t('캐러멜'), body: '#c4862f', thread: '#f2e9d2', edge: '#5e3412' },
+    { id: 'burgundy', name: $t('버건디'), body: '#6c1c28', thread: '#efe1bf', edge: '#33090f' },
+    { id: 'black', name: $t('검정'), body: '#24201f', thread: '#dcaa44', edge: '#0b0909', gold: 1 }) },
   { id: 'hammered', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('두드린 동판'), colors: c3(
     { id: 'copper', name: $t('구리'), body: '#d07a4c', pat: 0.3 }, { id: 'bronze', name: $t('청동'), body: '#b48c50', pat: 0.38 }, { id: 'verdigris', name: $t('녹청'), body: '#c87048', pat: 0.9 }) },
   { id: 'beads', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('비즈 공예'), colors: c3(
     { id: 'rainbow', name: $t('무지개'), b1: '#e8505a', body: '#f6f2ea', b2: '#3a8ad8', b3: '#1e2a6a', rain: 1 }, { id: 'pearl', name: $t('진주'), body: '#f2ece4', b1: '#c8963a', b2: '#d87890', b3: '#6a78a8' }, { id: 'ruby', name: $t('루비'), body: '#b0122a', b1: '#f2c050', b2: '#1a1418', b3: '#f6f0e6' }) },
+];
+// 146: retired (user 11/18 「너무 별로」): kept here, not pushed anywhere (not even ?m89); their looks stay in materials.js
+export const RETIRED146 = [
+  { id: 'bunfish', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('분청 물고기'), colors: c3(
+    // 141 C: white slip, one big iron-painted fish on each side (clay: the unglazed foot and the dry-brush gaps)
+    { id: 'iron', name: $t('철화'), body: '#f1ebdf', ink: '#3d2817', clay: '#8c7b68' }, { id: 'cream', name: $t('미색'), body: '#eadcc2', ink: '#4b2e1b', clay: '#957d62' }, { id: 'copper', name: $t('진사'), body: '#f2ede4', ink: '#9e2b25', clay: '#8a7a6a' }) },
+  { id: 'marbled', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('마블링 종이'), colors: c3(
+    // 141 C: comb-pattern marbling in harmonious colours
+    { id: 'indigo', name: $t('쪽빛'), body: '#efe4cc', c1: '#2a4478', c2: '#c4903e', c3: '#7d93b4' }, { id: 'ochre', name: $t('황토'), body: '#f1e6cf', c1: '#b8742e', c2: '#5d6e4a', c3: '#e0c48a' }, { id: 'inkgold', name: $t('먹·금'), body: '#efe9dc', c1: '#1d1d22', c2: '#c9a24a', c3: '#7c7e84' }) },
 ];
 for (const v of SHARED127) if (M89 || v.wave <= WAVE127) SHARED_VARIANTS.splice(SHARED_VARIANTS.findLastIndex(x => x.rarity === v.rarity) + 1, 0, v);
 
@@ -876,9 +891,9 @@ export const UNIT = 1.5;
 // game really does there)
 export const ZONES = {
   meadow: [
-    { id: 'flowerhill', name: $t('꽃 언덕'), side: '+x', w: 8, line: $t('꽃이 가득한 언덕이에요. 동물들이 언덕 위에 올라와 쉬어요.') },
+    { id: 'flowerhill', name: $t('꽃 언덕'), side: '+x', w: 8, line: $t('꽃이 가득한 언덕이에요. 동물들이 언덕 위에 올라와 쉬어요.'), line143: $t('꽃이 가득한 언덕이에요. 동물들이 꽃 냄새를 맡고 언덕을 굴러 내려와요.') }, // 145 B: line143 = the card under ?z143 (main.js zoneCard)
     { id: 'grove', name: $t('작은 숲'), side: '-x', w: 8, line: $t('나무가 모여 선 작은 숲이에요. 동물들이 나무 그늘에서 쉬어요.') },
-    { id: 'fork', name: $t('개울 갈래와 징검다리'), side: '+z', w: 8, line: $t('넓어진 개울에 징검다리와 작은 물레방아가 있어요. 동물들이 물가에 와서 쉬어요.') },
+    { id: 'fork', name: $t('개울 갈래와 징검다리'), side: '+z', w: 8, line: $t('넓어진 개울에 징검다리와 작은 물레방아가 있어요. 동물들이 물가에 와서 쉬어요.'), line143: $t('개울이 두 갈래로 갈라지고 가운데에 오두막과 큰 물레방아가 있어요. 동물들이 징검다리를 건너고 물을 마셔요.') },
     { id: 'orchard', name: $t('과수원'), side: '+x', w: 8, line: $t('열매가 가끔 떨어지면 가까이 있던 동물이 와서 먹어요.') },
     { id: 'lookout', name: $t('전망 언덕'), side: '-x', w: 8, line: $t('높은 언덕 꼭대기 정자와 망원경 옆에 동물들이 올라와 쉬어요.') },
     { id: 'mushroom', name: $t('버섯 숲길'), side: '+z', w: 8, line: $t('숲길의 버섯이 밤이면 은은하게 빛나요. 동물들이 길가에서 쉬어요.') },

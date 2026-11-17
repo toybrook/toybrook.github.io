@@ -56,8 +56,8 @@ export function createActor(ctx, rec) {
   root.rotation.y = h.yaw; root.rotation.order = 'YXZ';
   const pose = { sq: 1, rot: 0, gait: 'still', ph: 0 };
   // inbox 42 D 첨벙: a ring of water on the ground where it lands, spreading and fading (as a swimmer's ripples)
-  const drops = [], splash = () => { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#dff1ff', transparent: true, opacity: 0.7, depthWrite: false }));
-    m.position.set(h.x, heightAt(h.x, h.z) + 0.07, h.z); m.renderOrder = 2; m.userData.s = M[look.stage].s; scene.add(m); drops.push(m); };
+  const drops = [], splash = y => { const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: '#dff1ff', transparent: true, opacity: 0.7, depthWrite: false }));
+    m.position.set(h.x, y ?? heightAt(h.x, h.z) + 0.07, h.z); m.renderOrder = 2; m.userData.s = M[look.stage].s; scene.add(m); drops.push(m); };
   const rings = dt => { for (let i = drops.length - 1; i >= 0; i--) { const m = drops[i], k = (m.userData.t = (m.userData.t || 0) + dt) / 0.9;
     m.scale.setScalar((0.6 + 1.6 * k) * m.userData.s); m.material.opacity = 0.7 * (1 - k); if (k >= 1) { scene.remove(m); m.material.dispose(); drops.splice(i, 1); } } };
 
@@ -68,7 +68,7 @@ export function createActor(ctx, rec) {
   // 17-1 성격 (game/pals.js) and 단짝: only while 설정 「성격·단짝」 is on (ctx.bf: the pairs, habitat.js setPals); a guest has none.
   // mate: its 단짝 when free near by (pals below)
   const pe = () => ctx.bf ? rec.pe : null, mate = () => { const id = ctx.bf?.get(rec.id); return id == null ? null : pals().find(o => o.rec.id === id) ?? null; };
-  const go = (state, tx, tz, speed) => { if (state === 'walk' && speed < 2 && pe() === 'easy') speed *= 0.8; if (state === 'cross') h.at = h.now; h.ghost = false; h.nw = 0; h.state = state; h.sp = speed; h.wait = 0; h.cut = h.stuck = null; h.slide = false; h.sx = h.x; h.sz = h.z; h.tx = tx; h.tz = tz; h.t = 0; h.dur = Math.max(1, Math.hypot(tx - h.x, tz - h.z) / (state === 'hop' ? speed : speed * W.pace)); }; // W.pace: a slow walker (the cow)
+  const go = (state, tx, tz, speed) => { if (state === 'walk' && speed < 2 && pe() === 'easy') speed *= 0.8; if (state === 'cross') h.at = h.now; h.ghost = false; h.tum = null; h.nw = 0; h.state = state; h.sp = speed; h.wait = 0; h.cut = h.stuck = null; h.slide = false; h.sx = h.x; h.sz = h.z; h.tx = tx; h.tz = tz; h.t = 0; h.dur = Math.max(1, Math.hypot(tx - h.x, tz - h.z) / (state === 'hop' ? speed : speed * W.pace)); }; // W.pace: a slow walker (the cow)
   function pick() {
     const r = Math.random();
     if (h.after) { const f = h.after; h.after = null; f(true); } // 28-1: done what it was sent for (the orchard's fruit: eaten)
@@ -95,7 +95,7 @@ export function createActor(ctx, rec) {
     if (ctx.play?.length) { const m = me(); if (Math.random() < (due(ctx, h.now, m, st => !m.can || m.can(st.x, st.z)) ? 0.7 : 0.2) + 0.15 * (ctx.night || 0) && toPlay()) return; } // 28-2 소품 쓰기 (more by night: the campfire); inbox 42 C: 7 -> 20%, 70% while one of its kind waits (due)
     if (ctx.sets?.length && Math.random() < 0.3 && toSet()) return; // 23-2 세트 보너스: likes to play by a whole set
     if (ctx.spots?.length && Math.random() < (pe() === 'collector' ? 0.24 : 0.12)) { // 28-1: to a spot of a zone (zones.js: a bench, the hot spring, the sled hill's top) within 20
-      const q = ctx.spots.filter(s => Math.hypot(s.x - h.x, s.z - h.z) < 20 && home(s.x, s.z) && (s.act !== 'slide' || W.slide || Math.random() < 0.3) && (s.act !== 'dig' || Math.random() < 3 * (W.dig || 0)) && Math.random() < (s.w ?? 1) && (!s.who || s.who.includes(rec.species) && SOAK.size < 4)); // 14-3: the fossil site's dig spots by walk.dig; 129: who soaks
+      const q = ctx.spots.filter(s => Math.hypot(s.x - h.x, s.z - h.z) < 20 && home(s.x, s.z) && (s.act !== 'slide' || W.slide || Math.random() < 0.3) && (s.act !== 'dig' || Math.random() < 3 * (W.dig || 0)) && Math.random() < (s.w ?? 1) && (!s.who || s.who.includes(rec.species) && SOAK.size < (s.soak?.cap ?? 4))); // 14-3: the fossil site's dig spots by walk.dig; 129: who soaks (144 C cap: ?s129=4's wide spring, 6 at once; else 4)
       if (q.length) { const s = q[Math.floor(Math.random() * q.length)], a = Math.random() * 6.28, d = Math.random() * s.r;
         h.goal = { x: s.x + Math.cos(a) * d, z: s.z + Math.sin(a) * d, act: s.act, to: s.to, soak: s.soak, n: 4 }; if (toward()) return; }
     }
@@ -323,6 +323,16 @@ export function createActor(ctx, rec) {
       if (o.soc?.kind === 'wait' && o.soc.o === api && Math.hypot(b.x - h.x, b.z - h.z) < g.D + 1) { h.face = Math.atan2(-(b.z - h.z), b.x - h.x); h.state = 'nuzzle'; h.dur = 1.8; o.nuzzle(h.x, h.z); say('greet', [o]); }
       else if (o.soc?.o === api) o.soc = null; return true; }
     if (g.act === 'shake') { h.state = 'shake'; h.t = 0; h.dur = 1.3; return true; } // 129: out of the spring: shakes the water off
+    if (g.act === 'sniff') { if (g.to) h.face = Math.atan2(-(g.to[1] - h.z), g.to[0] - h.x); h.sn = 1; h.state = 'graze'; h.t = 0; h.dur = T(6, 9); g.done?.(true); return true; } // 143 꽃 언덕: lies down at the flowers, sniffing them
+    if (g.act === 'ford' && g.to) { const F = ctx.spots.find(s => s.act === 'ford' && s.to === g.to)?.ford; // 143 개울 갈래: over the stepping stones to the other bank, a hop a stone
+      if (F?.every(p => p[2] != null)) { h.fp = [[h.x, h.z, heightAt(h.x, h.z), 0], ...F, [g.to[0], g.to[1], heightAt(...g.to), 0]]; h.fi = 0; h.state = 'ford'; h.t = 0; g.done?.(true); return true; } } // its stones' tops (zoneprops.js); none: stays as at a rest
+    if (g.act === 'drink' && g.to) { h.face = Math.atan2(-(g.to[1] - h.z), g.to[0] - h.x); h.dr = 1; h.state = 'graze'; h.t = 0; h.dur = T(5, 8); g.done?.(true); return true; } // 143: at the water's edge, head down to it, lapping
+    if (g.act === 'tumble' && g.to) { go('walk', g.to[0], g.to[1], 2.2); h.tum = { n: Math.max(2, Math.round(Math.hypot(g.to[0] - h.x, g.to[1] - h.z) / 1.8)) }; h.ghost = true; return true; } // 143: rolls down the hill's lane, side over side (through the others), then shakes
+    if (g.act === 'shade' && g.to) { const a = Math.atan2(h.z - g.to[1], h.x - g.to[0]) + (Math.random() < 0.5 ? 0 : Math.PI); h.face = Math.atan2(-Math.cos(a), -Math.sin(a)); // 143 작은 숲: lies down in the old tree's shade, side on round its trunk (a ring from afar)
+      h.nap = 1; h.tuck = false; h.state = 'sleep'; h.t = 0; h.dur = g.dur ?? T(16, 24); g.done?.(true);
+      if (g.dur == null) { const S = ctx.spots.filter(s => s.act === 'shade' && s.to?.[0] === g.to[0] && s.to[1] === g.to[1] && Math.hypot(s.x - h.x, s.z - h.z) > 1.5), used = []; // and calls two or three near by to the others (they come for a while: they call no more)
+        for (const f of pals().slice(0, 3)) { const q = S.find(s => !used.includes(s) && free(ctx.crowd, f.body, s.x, s.z)); if (q && f.send(q.x, q.z, 'shade', { to: g.to, dur: T(14, 20) })) used.push(q); } }
+      return true; }
     h.soak = g.act === 'bath' && g.soak || null; // 129: in to its chin, eyes shut (sleep; how deep: below)
     if (h.soak && g.yaw == null) { const P = h.soak.pool, dx = h.x - P.x, dz = h.z - P.z; if (Math.hypot(dx, dz) > 0.8) h.face = h.soak.in ? Math.atan2(dz, -dx) : Math.atan2(-dz, dx); } // chin to the rim, its body out in the pool (139-3 in: back to the rim, face to the pool)
     if (g.yaw != null) h.face = g.yaw; // inbox 42 C 모여서 낮잠: side by side, facing as the first one does
@@ -399,7 +409,7 @@ export function createActor(ctx, rec) {
     // (28-2 act 'play': q, the seat play.js choose kept for it)
     send(x, z, act, { fast = false, done, to, q, yaw, dur, soak } = {}) {
       if (api.hold || !['idle', 'graze', 'sleep', 'walk', 'hop'].includes(h.state)) return false;
-      if (h.then) { h.then = null; ctx.onBridge = null; } h.goal?.done?.(false); h.after = null; h.soc = null;
+      if (h.then) { h.then = null; ctx.onBridge = null; } h.goal?.done?.(false); h.after = null; h.soc = null; h.nap = 0; // 143: sent off from the shade (even to a sleep again at once)
       h.goal = { x, z, act, to, fast, done, q, yaw, dur, soak, n: 6 }; if (!toward()) { h.state = 'idle'; h.t = 0; h.dur = 0.4; } return true;
     },
     busy: () => !!h.goal || !!h.after || !!h.play,
@@ -414,15 +424,15 @@ export function createActor(ctx, rec) {
     get state() { return h.state; }, // 13-0: what it is doing (sound.js: steps, breath asleep, bites grazing)
     nuzzle(x, z) { h.soc = null; h.face = Math.atan2(-(z - h.z), x - h.x); h.state = 'nuzzle'; h.t = 0; h.dur = 1.8; },
     // 69-2 쓰다듬기: z 'like' (habitat.js: the tap on its 좋아하는 곳) jumps with a twirl; 'dislike' turns its head away (no jump)
-    pat(z) { if (z !== 'dislike' || h.play || h.state === 'cross' || h.then) { api.poke(); if (z === 'like') h.joy = Math.random() < 0.5 ? 1 : -1; return; }
+    pat(z) { if (h.state === 'ford') return; if (z !== 'dislike' || h.play || h.state === 'cross' || h.then) { api.poke(); if (z === 'like') h.joy = Math.random() < 0.5 ? 1 : -1; return; }
       if (h.state === 'carry') return; h.state = 'snub'; h.t = 0; h.dur = 1.1; h.side = Math.random() < 0.5 ? 1 : -1; },
-    poke() { h.joy = 0; if (h.play) { h.pk = 0.5; return; } // 28-2: on a prop, a little bounce (it stays on)
+    poke() { if (h.state === 'ford') return; h.joy = 0; if (h.play) { h.pk = 0.5; return; } // 28-2: on a prop, a little bounce (it stays on)
       if (h.state === 'cross') h.back = { t: h.t, dur: h.dur }; else if (h.then) { h.then = null; ctx.onBridge = null; } h.state = 'jump'; h.t = 0; h.dur = 0.55; }, // on the bridge it carries on after the jump; on the way there it gives up
     update(dt, t) {
       look.update(dt);
-      let lift = 0, sq = 1, rot = 0, gait = 'still', ph = 0, tuck = 0, py = null, lie = 0, shut = false, roll = 0, spin = 0; // py: 28-2 on a prop, its height (world); spin: 69-2 a turn on top of its yaw
+      let lift = 0, sq = 1, rot = 0, gait = 'still', ph = 0, tuck = 0, py = null, lie = 0, shut = false, roll = 0, spin = 0, ox = 0, oz = 0; // py: 28-2 on a prop, its height (world); spin: 69-2 a turn on top of its yaw
       if (api.hold) { endPlay(); h.soc = h.shel = null; h.state = 'idle'; h.t = 0; h.then = null; if (ctx.onBridge === h) ctx.onBridge = null; }
-      h.t += dt; h.now = t;
+      h.t += dt; h.now = t; if (h.state !== 'graze') h.sn = h.dr = 0; if (h.state !== 'sleep') h.nap = 0; // 143: sniffing only while it grazes there, lying in the shade only while it sleeps there
       // inbox 42 B: what unstick watches. On the go (walk, hop, idle) the time since it was last 1.5 from a spot (a rest pauses it);
       // every 2 s: standing in a prop or wall, or on a pocket of land too small for a walk (ROOM)
       if (h.ax == null || Math.hypot(h.x - h.ax, h.z - h.az) > 1.5) { h.ax = h.x; h.az = h.z; h.lost = 0; }
@@ -447,7 +457,10 @@ export function createActor(ctx, rec) {
           else if (W.lope && !(heightAt(h.x, h.z) < ctx.water - 0.06)) { const s = Math.sin(h.t * f * 0.5); lift = Math.abs(s) * 0.06 * S.s; rot = s * 0.06; sq = 1 - Math.abs(s) * 0.03; gait = 'walk'; } // the seal humps along on land
           else if (W.hop < 1) { sq = 1 + Math.abs(Math.sin(h.t * f)) * 0.02; rot = Math.sin(h.t * f) * 0.02; gait = 'walk'; ph = h.t * f / (2 * Math.PI); // one stride per two bobs
             if (W.stride) { const a = 0.38 * Math.sin(h.t * f); lift = -S.s * sq * Math.max(0, S.legs.hip * (1 - Math.cos(a)) - S.legs.foot * Math.abs(Math.sin(a))); } } // a long leg swung out rises off the ground: sink the body until the hoof's low edge touches
+          if (h.tum) { const e = smooth(Math.max(0, Math.min(1, h.t / 0.35, (h.dur - h.t) / 0.35))), th = 2 * Math.PI * h.tum.n * k, yc = 0.32 * S.h * S.s, a = h.yaw + Math.PI / 2 * e; // 143: side over side about its length (crosswise), round its middle
+            spin = Math.PI / 2 * e; roll = th; lie = e; gait = 'still'; sq = 1; rot = 0; lift = yc * (1 - Math.cos(th)); ox = -yc * Math.sin(th) * Math.sin(a); oz = -yc * Math.sin(th) * Math.cos(a); }
           if (k >= 1 && h.then) { go('cross', h.then.x, h.then.z, 1.3); h.then = null; }
+          else if (k >= 1 && h.tum) { h.tum = null; h.ghost = false; h.state = 'shake'; h.t = 0; h.dur = 1.3; } // at the foot: shakes it off
           else if (k >= 1) {
             h.fail = 0; h.state = 'idle'; h.t = 0; h.dur = h.goal?.fast || h.soc ? 0.05 : 1 + Math.random() * 1.5; // 28-1: running to a new zone: on at once (inbox 42 C: with another, too)
             if (ctx.onBridge === h) { // off the bridge: walk on a few steps so the landing is clear for the next one
@@ -457,14 +470,17 @@ export function createActor(ctx, rec) {
           }
         } }
       else if (h.state === 'graze') { const g = Math.sin(Math.min(1, h.t / 0.5) * Math.PI / 2) * (h.t > h.dur - 0.5 ? (h.dur - h.t) / 0.5 : 1);
-        if (h.tuck) tuck = g; // stands still on one leg, head up
+        if (h.sn) { lie = g; rot = -(0.1 + 0.06 * Math.max(0, Math.sin(t * 9 + h.ph)) ** 4) * g; } // 143: lying down, nose to the flowers, sniffing
+        else if (h.dr) rot = -(0.26 + 0.06 * Math.max(0, Math.sin(t * 6 + h.ph)) ** 3) * g; // 143: drinking, head down, lapping
+        else if (h.tuck) tuck = g; // stands still on one leg, head up
         else if (h.low > 0.05) rot = 0.04 * g; // lying in the water: chin up
         else if (W.rest === 'sit') { rot = 0.08 * g; sq = 1 + 0.05 * g; } // sits up tall (leans back: rotation.z + is nose up)
         else if (W.rest === 'peck') rot = -(0.08 + 0.35 * Math.pow(Math.max(0, Math.sin(t * 8 + h.ph)), 6)) * g; // quick pecks at the ground
         else rot = -(0.16 + Math.sin(t * 3 + h.ph) * 0.03) * g;
-        if (h.t >= h.dur) pick(); }
+        if (h.t >= h.dur) { h.sn = h.dr = 0; pick(); } } // 143: a plain graze picked next is not a sniff
       else if (h.state === 'sleep') { sq = 0.95 - Math.sin(t * 1.4 + h.ph) * 0.015; if (h.tuck) tuck = Math.min(1, h.t / 0.5, (h.dur - h.t) / 0.5); if (h.soak) { shut = true; if (h.soak.rot) rot = h.soak.rot * smooth(Math.min(1, h.t / 1.5, Math.max(0, h.dur - h.t) / 1.5)); } // 139-3: leans back, head and shoulders out
-        if (h.t >= h.dur) { const o = h.soak?.out; h.soak = null; if (o) { h.goal = { x: o[0], z: o[1], act: 'shake', n: 4 }; if (!toward()) pick(); } else pick(); } if (Math.random() < dt * 0.5) ctx.onSleepTick(root); }
+        if (h.nap) { lie = smooth(Math.max(0, Math.min(1, h.t / 0.6, (h.dur - h.t) / 0.6))); shut = lie > 0.5; } // 143: lies down, eyes shut, gets up at the end
+        if (h.t >= h.dur) { const o = h.soak?.out; h.soak = null; h.nap = 0; if (o) { h.goal = { x: o[0], z: o[1], act: 'shake', n: 4 }; if (!toward()) pick(); } else pick(); } if (Math.random() < dt * 0.5) ctx.onSleepTick(root); }
       else if (h.state === 'play') { const o = playPose(h.play, h.t, t); // 28-2 소품 쓰기 (play.js poses it: where, how high, how)
         h.x = o.x; h.z = o.z; h.yaw = h.face = o.yaw; py = o.y ?? null; lift = o.lift || 0; ({ sq, rot, gait, ph } = o); roll = o.roll || 0; lie = o.lie || 0; shut = !!o.shut;
         if (h.pk > 0) { h.pk -= dt; const b = Math.sin(Math.max(0, h.pk) / 0.5 * Math.PI) * 0.3; if (py != null) py += b; else lift += b; }
@@ -490,6 +506,11 @@ export function createActor(ctx, rec) {
         else { const hp = (h.t / 0.45) % 1; lift = Math.sin(hp * Math.PI) * 0.22 * M[look.stage].s; sq = hp < 0.15 || hp > 0.85 ? 0.95 : 1.02; gait = 'jump'; ph = hp * 0.999; } // 통통: three little hops
         if (k >= 1) { h.state = 'idle'; h.t = 0; h.dur = 0.8 + Math.random(); } }
       else if (h.state === 'jump') { const k = Math.min(1, h.t / h.dur); lift = Math.sin(k * Math.PI) * 1.1; rot = Math.sin(k * Math.PI * 2) * 0.1; gait = 'jump'; ph = k * 0.999; if (h.joy) spin = h.joy * smooth(k) * Math.PI * 2; /* 69-2: a twirl in the air */ if (k >= 1) { if (h.back) { h.state = 'cross'; h.t = h.back.t; h.dur = h.back.dur; h.back = null; } else { h.state = 'idle'; h.t = 0; h.dur = 1 + Math.random(); } } }
+      else if (h.state === 'ford') { const P = h.fp, n = P.length - 1, k = Math.min(n, h.t / 0.55), i = Math.min(n - 1, Math.floor(k)), f = k - i, a = P[i], b = P[i + 1]; // 143: stone to stone (0.55 s a hop)
+        if (i !== h.fi) { h.fi = i; if (a[3]) splash(a[2] - 0.16); } // lands on a stone in the water: a ring on it
+        h.x = a[0] + (b[0] - a[0]) * f; h.z = a[1] + (b[1] - a[1]) * f; h.face = Math.atan2(-(b[1] - a[1]), b[0] - a[0]);
+        py = a[2] + (b[2] - a[2]) * f + Math.sin(f * Math.PI) * 0.35; gait = 'jump'; ph = f * 0.999; sq = f < 0.12 || f > 0.88 ? 0.95 : 1.02;
+        if (k >= n) { h.fp = null; h.state = 'idle'; h.t = 0; h.dur = 0.8 + Math.random(); } }
       else { sq = 1 + Math.sin(t * 2 + h.ph) * 0.012; rot = Math.sin(t * 0.9 + h.ph) * 0.02; if (h.t >= h.dur && !api.hold) (h.stuck ? detour : pick)(); }
       const d = Math.atan2(Math.sin(h.face - h.yaw), Math.cos(h.face - h.yaw)), yaw = h.yaw + d * Math.min(1, dt * 7);
       if (!blocked(ctx.crowd, body, h.x, h.z, yaw)) h.yaw = yaw; // turn the short way, eased, but not into someone
@@ -504,7 +525,7 @@ export function createActor(ctx, rec) {
       { const S = M[look.stage]; const k = h.soak; if (k) k.lv ??= Math.min(...Array.from({ length: 32 }, (_, i) => { const [x, z] = poolAt(k.pool, i / 32, k.pool.r - 0.7); return heightAt(x, z); })) + 0.02; // 129: the pool's level (as water.js)
         h.sd = (h.sd || 0) + ((k ? Math.max(0, gy + lift - k.lv + (k.d[rec.species] ?? 0.7) * S.h * S.s) : 0) - (h.sd || 0)) * Math.min(1, dt * 1.2); // sunk to d of it under the water, eased
         if (h.soak) { const hd = body.seg[1] * Math.cos(rot); SOAK.set(rec.id, { x: h.x + Math.cos(h.yaw) * hd, y: gy + lift - h.sd + S.h * S.s + Math.sin(rot) * body.seg[1], z: h.z - Math.sin(h.yaw) * hd }); } else SOAK.delete(rec.id); } // (139-3: where the head is, leaned back)
-      root.position.set(h.x, gy + lift - h.sd, h.z);
+      root.position.set(h.x + ox, gy + lift - h.sd, h.z + oz);
       root.rotation.y = h.yaw + spin; root.rotation.x = roll; // roll: about its length (YXZ)
       rings(dt);
       Object.assign(pose, { sq, rot, gait, ph, tuck, lie, shut }); look.fig.pose(pose);

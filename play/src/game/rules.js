@@ -42,7 +42,7 @@ import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVE
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
-import { BOARD0, rectAt, inRect, zoneSet } from '../habitat/zones.js';
+import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, Z143, spring149off, S129 } from '../habitat/zones.js';
 import { newlyDone } from './achieve.js';
 
 const byId = list => Object.fromEntries(list.map(x => [x.id, x]));
@@ -73,7 +73,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: {}, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: { s149spring: 1 }, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   S.guests = guestsBlank(S); // 66-1
@@ -102,6 +102,10 @@ export function fromSave(raw, now) {
     for (const [h, n] of Object.entries(S.nests)) if (!isObj(n) || !Array.isArray(n.eggs)) delete S.nests[h]; else n.eggs = n.eggs.filter(isObj); // advance lays it again
     S.slots = Array.from({ length: Math.max(B.slots, Math.min(S.slots.length, B.nest.slotsByLevel.at(-1)[1])) }, (_, i) => isObj(S.slots[i]?.egg) ? S.slots[i] : null);
     for (let v = raw.schemaVersion + 1; v <= SCHEMA_VERSION; v++) MIGRATIONS[v]?.(S, now); // each step in order, oldest first
+    { const num = (v, lo, hi) => Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo; // 143 C (135 audit): outside numbers in range; a save the game wrote keeps its own
+      S.hearts = num(S.hearts, 0, 1e9); S.xp = num(S.xp, 0, 1e9); S.lv = Math.floor(num(S.lv, 1, 1e6));
+      let top = 0; const ids = v => { if (Array.isArray(v)) v.forEach(ids); else if (isObj(v)) for (const [k, x] of Object.entries(v)) if ((k === 'id' || k === 'uid') && Number.isInteger(x)) top = Math.max(top, x); else ids(x); };
+      ids(S); S.nextId = Math.max(Math.floor(num(S.nextId, 1, Number.MAX_SAFE_INTEGER)), top + 1); } // never hands out an id that is already used
     for (const a of S.animals) { const n = cleanName(a.nm); if (n) a.nm = n; else delete a.nm; if (a.fav !== true) delete a.fav; if (!(Array.isArray(a.home) && a.home.length === 2 && a.home.every(v => Number.isFinite(v) && Math.abs(v) < 1e3))) delete a.home; if (a.wd != null && !GUESTS.some(R => R.k === a.wd)) delete a.wd; } // 26-4: a backup code is text from outside; 53 home; 66-2 wd
     tidy(S); // 28-5
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
@@ -125,6 +129,8 @@ export function fromSave(raw, now) {
       for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
     S.accs = Object.fromEntries(Object.entries(S.accs).filter(([k, n]) => ACCESSORIES[k] && Number.isInteger(n) && n > 0)); // 95: kept secret accessories, by name
     tidyVisit(S); tidySky(S); tidyPals(S); tidyGuests(S); tidyArt(S); tidyWild(S); // 16-1, 16-2, 17-1, 66-1, 17-2, 17-3
+    if (Z143) clear143(S); // 145 B
+    if (S129 === 4) clear149(S); // 149
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -304,11 +310,13 @@ export function sureRarity(S, type) {
 
 // Crack an egg: its rarity (raised to the guaranteed one when a gauge is full), the variant, its colour, the gauges, the secret accessory.
 // A guaranteed rarity picks evenly among that rarity's variants nobody has yet (all of them if none is missing); tiers don't count there.
+// 149: a guaranteed or gift legendary is rolled as an ordinary legendary egg instead (rollHatch: the 69-1 guard, species first).
 // Gauges: +1 each, except a gauge whose rarity (or better) came out, which empties. Every egg counts, the first one too.
 export function crack(S, e, now, rng = Math.random, forced = false) { // forced: a secret for sure (?debug 다음 알 시크릿, game.hatch)
   const top = e.gift ? null : sureRarity(S, e.type), sure = !!top && RANK[top] >= RANK[e.rarity], rarity = sure ? top : e.rarity; // 44: a gift egg leaves the gauges alone
   let r;
-  if (sure || e.gift) { // 93-1: a gift egg (no pity) also picks one not owned yet first
+  if ((sure || e.gift) && rarity === 'legendary') r = rollHatch(S, { ...e, rarity }, rng); // 149: as an ordinary legendary egg (its 69-1 guard: missing first, species first; a horse with two legends is not 2 in 7)
+  else if (sure || e.gift) { // 93-1: a gift egg (no pity) also picks one not owned yet first
     const all = hatchPool(e.type, rarity).flatMap(({ sp, vs }) => vs.map(v => ({ species: sp.id, variant: v.id })));
     const miss = all.filter(p => !owned(S, key(p.species, p.variant))), from = miss.length ? miss : all;
     r = from[Math.floor(rng() * from.length)];
@@ -690,6 +698,18 @@ export function addNatives(S, habId, list, rings) {
   for (const n of add) S.props.push({ uid: S.nextId++, prop: n.prop, hab: habId, placed: true, x: +n.x.toFixed(2), z: +n.z.toFixed(2), rot: 0, nat: 1, s: +n.s.toFixed(2), v: n.v });
   S.natives = { ...S.natives, [habId]: rings }; return add.length;
 }
+// 145 B (143's flower hill, once per save): the old natives (nat: 1, addNatives) standing on the new hill, its flower bands or its
+// lane go; a player's own things (not nat) and stored ones stay. 143 B the fork the same (zones.js fork143off: in its new water, a
+// tree, bush or rock in its middle, a strewn rock in its strip), once under its own flag. How many went
+const clearOld = (S, f, hab, off) => { if (S.flags[f]) return; S.flags[f] = 1;
+  S.props = S.props.filter(p => !(p.nat && p.placed && p.hab === hab && NAT[p.prop] && off(p.x * UNIT, p.z * UNIT, NAT[p.prop].r * (p.s || 1), p.prop))); };
+export function clear143(S) {
+  const n = S.props.length; clearOld(S, 'z143hill', 'meadow', hill143()); clearOld(S, 'z143fork', 'meadow', fork143off());
+  return n - S.props.length;
+}
+// 149 (the wide spring, 144 C, released): a save that opened the hot spring before has its old natives where the new pools, deck
+// and falls are (zones.js spring149off); they go once (a new game starts with the flag: newGame). A player's own things and stored ones stay. How many went
+export function clear149(S) { const n = S.props.length; clearOld(S, 's149spring', 'snow', spring149off()); return n - S.props.length; }
 // 22-1 땅 칠하기: cell i, j (the grid of the first board's units) of a habitat to brush b (BRUSHES index), or null: bare again
 export function paintCell(S, habId, i, j, b) {
   const P = S.paint[habId] ??= {}, k = `${i},${j}`;
@@ -834,7 +854,7 @@ export function saveLay(S, habId, k, name, now) {
   L[k] = { n: cleanName(name) || LAY_NAMES[k], c: encode(S, habId), at: now }; S.lays = { ...S.lays, [habId]: L }; return L[k];
 }
 // 26-4 아끼는 친구 and names. A name: up to 8 letters, without < > & " ' ` (names go into the windows' HTML) or control characters
-export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'` -]/g, '').trim()].slice(0, 8).join('').trim() : '';
+export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'`\u0000-\u001f\u007f]/g, '').trim()].slice(0, 8).join('').trim() : '';
 // inbox 58: a variant whose name has the species in it already (황금 복돼지) is not called 황금 복돼지 돼지
 // 124: a name as shown: English Title Case per word (Sky Blue Two-Tone Flamingo, Mother-of-Pearl: small words stay low),
 // Japanese グラデーション shortened to グラデ inside a name only (the cells keep two lines)
