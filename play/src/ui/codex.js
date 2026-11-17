@@ -17,7 +17,7 @@ import { makeFigure, loadModel } from '../animals/figure.js';
 import * as G from '../game/game.js';
 import { HABITATS, RARITIES, ACCESSORIES, SPECIES, SCENES, BALANCE, MYTHIC, HOLD, COMPLETE, ZONES } from '../game/data.js';
 import { GUEST, guestWear } from '../game/guests-data.js';
-import { codexCells, habitatOf, known, colorsOf, SP, HAB, RAR, EARNED, displayColor, unlockInfo, lookName, variantsOf, wholeOf, wanderersOf, PROP, levelOf } from '../game/rules.js';
+import { codexCells, habitatOf, known, colorsOf, SP, HAB, RAR, EARNED, displayColor, unlockInfo, lookName, variantsOf, wholeOf, wanderersOf, PROP, levelOf, nameCase } from '../game/rules.js';
 import { toast, tip, lockText, josa } from './hud.js';
 import { DEBUG, calm } from '../config.js';
 import { figureThumb, silhouetteThumb, propThumb, artThumb, studio, nightLights, mythThumb } from './thumbs.js';
@@ -53,7 +53,7 @@ el.addEventListener('click', e => {
 // a cell, tapped. Found: the 3D view (below). Not found: the silhouette. Both: where it comes from and where it lives.
 el.addEventListener('click', e => {
   const d = e.target.closest('.cell[data-k]'); if (!d || tab === 'album') return;
-  const c = codexCells(tab).find(c => c.key === d.dataset.k);
+  const c = codexCells(tab, G.S).find(c => c.key === d.dataset.k);
   if (G.S.codex[c.key]) return detail(c);
   const box = document.createElement('div'); box.className = 'cdet pop';
   box.innerHTML = $t('<div><b>아직 못 찾은 {0} 변종</b><p class="pair"><span><img alt="{1} 실루엣"><small>?</small></span></p>{2}<br><button class="back" data-shut>닫기</button></div>', RAR[c.rarity].name, c.species.name, from(c));
@@ -91,7 +91,7 @@ function stage3d() {
   V = { ...s, cam, ctl, fig: null, box: null }; if (DEBUG) window.__c3d = V; return V;
 }
 function detail(c) {
-  const v = stage3d(), mats = codexCells(tab).filter(x => x.species === c.species && G.S.codex[x.key]); // the materials it has
+  const v = stage3d(), mats = codexCells(tab, G.S).filter(x => x.species === c.species && G.S.codex[x.key]); // the materials it has
   let stage = G.S.codex[c.key].adult != null ? 'adult' : 'baby', fresh = true;
   const box = document.createElement('div'); box.className = 'cdet pop c3dbox';
   box.innerHTML = $t('<div><b></b><div class="c3d" role="img"></div><p class="sub">끌어서 돌리고, 두 손가락으로 크게 봐요</p>\n<span class="seg"><button data-st="baby">새끼</button><button data-st="adult">성체</button></span>{0}\n<p class="crec"></p>{1}<br><button class="back" data-shut>닫기</button></div>', mats.length > 1 ? `<div class="cmat">${mats.map(x => `<button data-m="${x.key}">${x.variant.name}</button>`).join('')}</div>` : '', from(c));
@@ -184,14 +184,14 @@ const nightBtn = () => `<button class="back" data-night>${night ? $t('낮에 보
 function draw() {
   shown = sig(); el.classList.toggle('night', night);
   if (tab === 'album') return drawAlbum();
-  const cells = codexCells(tab), got = c => !!G.S.codex[c.key];
+  const vis = codexCells(tab, G.S), cells = vis.filter(c => !c.variant.gone), got = c => !!G.S.codex[c.key]; // 125-A: a gone look shows, uncounted
   const stored = G.S.animals.filter(a => a.stored && known(a) && habitatOf(a) === tab).length;
   const seen = c => G.S.colors[c.key] || [];
   const dots = c => { const cs = colorsOf(c.species.id, c.variant.id); return got(c) && cs.length ? $t('<b class="dots" aria-label="색 {0}/{1}">{2}</b>', cs.filter(x => seen(c).includes(x.id)).length, cs.length, cs.map(x => `<u${seen(c).includes(x.id) ? ' class="on"' : ''}></u>`).join('')) : ''; };
-  const cell = c => `<div class="cell${got(c) ? '' : ' unk'}" role="button" data-k="${c.key}"><img alt="${got(c) ? lookName(c.species.id, c.variant.id, displayColor(G.S, c.key)) : $t('아직 못 찾은 변종')}">${!isNew(c.key) ? '' : got(c) ? '<i>NEW</i>' : $t('<i class="slot">새 칸</i>')}<span>${got(c) ? c.variant.name : '?'}</span>${dots(c)}</div>`;
+  const cell = c => `<div class="cell${got(c) ? '' : ' unk'}" role="button" data-k="${c.key}"><img alt="${got(c) ? lookName(c.species.id, c.variant.id, displayColor(G.S, c.key)) : $t('아직 못 찾은 변종')}">${!isNew(c.key) ? '' : got(c) ? '<i>NEW</i>' : $t('<i class="slot">새 칸</i>')}<span>${got(c) ? nameCase(c.variant.name) : '?'}</span>${dots(c)}</div>`;
   const groups = RARITIES.map(r => {
-    const cs = cells.filter(c => c.rarity === r.id); if (!cs.length) return '';
-    const rows = [...new Set(cs.map(c => c.species))].map(sp => `<div class="crow">${cs.filter(c => c.species === sp).map(cell).join('')}</div>`);
+    const cs = cells.filter(c => c.rarity === r.id), ss = vis.filter(c => c.rarity === r.id); if (!ss.length) return '';
+    const rows = [...new Set(ss.map(c => c.species))].map(sp => `<div class="crow">${ss.filter(c => c.species === sp).map(cell).join('')}</div>`);
     return `<h3>${r.name} <small>${cs.filter(got).length}/${cs.length}</small></h3>${rows.join('')}`;
   }).join('');
   const egg = groups && $t('<h2 class="ctier">알 친구 <small>{0}/{1}</small></h2>', cells.filter(got).length, cells.length);
@@ -203,10 +203,10 @@ function draw() {
     (d.classList.contains('unk') ? silhouetteThumb(R.sp, acc, night) : figureThumb(R.sp, 'solid', colorsOf(R.sp, 'solid')[0]?.id ?? null, acc, 'adult', night)).then(u => { d.firstChild.src = u; }, () => {}); }
   const mi = el.querySelector('.cell.myth img'); if (mi) mythThumb(!G.S.myth?.here, night).then(u => { mi.src = u; }, () => {});
   for (const d of el.querySelectorAll('.cell[data-k]')) {
-    const c = cells.find(c => c.key === d.dataset.k), img = d.firstChild;
+    const c = vis.find(c => c.key === d.dataset.k), img = d.firstChild;
     const stage = G.S.codex[c.key]?.adult == null ? 'baby' : 'adult'; // registered, not seen grown up yet: its baby
     (got(c) ? figureThumb(c.species.id, c.variant.id, displayColor(G.S, c.key), null, stage, night) : silhouetteThumb(c.species.id, null, night)).then(u => { img.src = u; }); // the colour picked in the cabinet (else the first found)
   }
-  const fresh = cells.filter(c => isNew(c.key)).map(c => c.key);
+  const fresh = vis.filter(c => isNew(c.key)).map(c => c.key);
   if (fresh.length) G.markSeen(fresh); // badges stay on screen until the codex is opened again
 }

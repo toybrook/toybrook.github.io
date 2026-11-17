@@ -34,7 +34,7 @@ const clip = [new THREE.Plane(new THREE.Vector3(-1, 0, 0), W / 2), new THREE.Pla
 let night = false; // 21-1 밤에 보기: this screen only, off each time it opens
 let st = null, tab = HABITATS[0].id, hab = null, live = false, sel = null, built = '', figs = [], fx = [], star = null, bounds = null, shelves = [], topOf = null;
 const offs = {}; // how far each shelf is slid (tab + row), kept while the game runs
-const sig = () => JSON.stringify([tab, codexCells(tab).map(c => G.S.codex[c.key] ? (displayColor(G.S, c.key) ?? 1) + (G.S.codex[c.key].adult == null ? 'b' : '') : 0)]);
+const sig = () => JSON.stringify([tab, codexCells(tab, G.S).map(c => G.S.codex[c.key] ? (displayColor(G.S, c.key) ?? 1) + (G.S.codex[c.key].adult == null ? 'b' : '') : 0)]);
 
 export function openCabinet(habId, api) {
   tab = habId || tab; hab = api; sel = null; el.hidden = false; hab?.setActive(false);
@@ -97,7 +97,7 @@ function figure(c, sil) {
 }
 async function build() {
   const want = sig(); if (want === built) return; built = want;
-  const cells = codexCells(tab), sps = [...new Set(cells.map(c => c.species))];
+  const cells = codexCells(tab, G.S), sps = [...new Set(cells.map(c => c.species))];
   await Promise.all(sps.map(s => loadModel(s.model))); if (want !== sig()) return;
   st.root.clear(); figs = []; fx = []; star = null; shelves = [];
   const rows = sps.length;

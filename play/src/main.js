@@ -1,6 +1,6 @@
 // Screen flow: world map <-> habitats. The game (game/game.js) runs underneath either way.
 import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // first: it listens for errors before the rest runs
-import { $t, LANG, LANGS, localize, ko } from './i18n/i18n.js';
+import { $t, LANG, LANGS, localize, ko, SEP } from './i18n/i18n.js';
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
 import { BALANCE, HABITATS, ZONES, PROPS } from './game/data.js';
@@ -257,7 +257,7 @@ function showRet() {
   const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
   const d2 = att && att[2], wk = att && weekOn(); // 93-1: the second day's legendary egg, the card's top row (a tap: into the nest, then the nest)
-  const rows = [d2 && ['🥚', $t('이틀째 선물 · 전설 알이 왔어요'), $t('누르면 둥지로 · 기다림 없이 바로 깨요'), 'd2'], top && ['📰', $t('새 소식 {0}', VERSION), top, 'news'], myth && ['🔥', $t('밤사이 제단에 불갈기 천리마가 내려왔어요'), $t('다시 보기'), 'myth'], sk && ['🌌', sk.text, $t('다시 보기'), 'sky'], back.length && ['🐾', $t('산책에서 돌아왔어요'), $t('{0}{1} · 엽서 {2}장 보기', names.slice(0, 2).join(', '), names.length > 2 ? $t(' 외 {0}', names.length - 2) : '', back.length), 'cards'], !d2 && att && ['📅', wk ? $t('첫 주 선물 {0}일째', att[0]) : $t('{0}일째 출석', att[0]), att[1], 'attend'], ar, wr, n && ['🥚', $t('알 {0}개', n), `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? $t('둥지가 가득 찼어요') : $t('둥지에 생겼어요{0}', full.length ? $t(' · {0} 가득', full.map(h => HAB[h].name).join('·')) : '')}`, 'eggs'],
+  const rows = [d2 && ['🥚', $t('이틀째 선물 · 전설 알이 왔어요'), $t('누르면 둥지로 · 기다림 없이 바로 깨요'), 'd2'], top && ['📰', $t('새 소식 {0}', VERSION), top, 'news'], myth && ['🔥', $t('밤사이 제단에 불갈기 천리마가 내려왔어요'), $t('다시 보기'), 'myth'], sk && ['🌌', sk.text, $t('다시 보기'), 'sky'], back.length && ['🐾', $t('산책에서 돌아왔어요'), $t('{0}{1} · 엽서 {2}장 보기', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : '', back.length), 'cards'], !d2 && att && ['📅', wk ? $t('첫 주 선물 {0}일째', att[0]) : $t('{0}일째 출석', att[0]), att[1], 'attend'], ar, wr, n && ['🥚', $t('알 {0}개', n), `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? $t('둥지가 가득 찼어요') : $t('둥지에 생겼어요{0}', full.length ? $t(' · {0} 가득', full.map(h => HAB[h].name).join('·')) : '')}`, 'eggs'],
     grown.length && ['🌱', $t('다 자란 친구 {0}', grown.length), $t('보러 가요'), 'grown'], ready && ['✨', $t('부화 끝난 알 {0}', ready), $t('깨우러 가요'), 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', $t('백업해 두면 기기를 바꿔도 이어서 할 수 있어요'), $t('설정 › 내 저장 백업'), 'backup']); G.flag('backupNag', today); }

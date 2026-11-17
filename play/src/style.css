@@ -241,6 +241,7 @@ body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visi
 .cell img{display:block;width:100%;aspect-ratio:1;border-radius:10px}
 .cell img:not([src]){visibility:hidden}
 .cell.unk span{color:#b39878;font-weight:700}
+.cell[data-k]>span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.25;height:2.5em;overflow:hidden;overflow-wrap:anywhere} /* 124: a name in two lines at most, every cell as tall */
 .cell i{position:absolute;left:4px;top:4px;font-family:inherit;font-weight:700;font-size:calc(10px*var(--fs));line-height:1;font-style:normal;background:#ff6b7d;color:#fff;border-radius:6px;padding:3px 5px}
 .cell i.slot{background:#4fa8e8}
 .cell .dots{display:flex;justify-content:center;gap:4px;margin-top:4px}
@@ -499,7 +500,7 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .fmenu .sub{margin:-4px 0 10px;font-size:calc(12.5px*var(--fs));color:#8a6a4c}
 .fname{display:block;width:100%;box-sizing:border-box;min-height:48px;margin:0 0 12px;padding:0 12px;border:1px solid #d6bb93;border-radius:12px;background:#fffaf0;color:#4a3626;font:inherit;font-size:max(16px,calc(17px*var(--fs)))}
 .frow img{width:48px;height:48px;border-radius:10px;flex:none}.frow img:not([src]){visibility:hidden}
-.frow div{flex:1;min-width:0}.frow b{display:block;font-size:calc(14px*var(--fs));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow div{flex:1;min-width:0}.frow b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;font-size:calc(14px*var(--fs));line-height:1.25;height:2.5em;overflow:hidden;overflow-wrap:anywhere}
 .frow small{font-size:calc(12px*var(--fs));color:#8a6a4c}.frow small.hold{color:#5f7d93;font-weight:700}
 .frow em{font-style:normal;font-size:calc(11px*var(--fs));font-weight:700;color:#fff;border-radius:999px;padding:2px 8px;flex:none}
 .frow.card{border-color:#f0c35a;background:#fff6dc}

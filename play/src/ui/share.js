@@ -4,7 +4,7 @@
 // A code holds only where things stand; no animals, hearts, eggs, names or anything about the player.
 // 69-4: what goes out is the 구경 링크 (ui/visit.js: the layout + the friends out there, opened to look at only), its QR and
 // 사진 모드's 구경 그림; a link pasted or read from a QR loads like a code. TG1 codes still load (and the 배치 저장 칸 keep them).
-import { $t } from '../i18n/i18n.js';
+import { $t, SEP } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { HABITATS, PROPS } from '../game/data.js';
 import { levelOf, LAY_NAMES } from '../game/rules.js';
@@ -68,7 +68,7 @@ function summary(n, d) {
   const t = [n.placed ? $t('소품 {0}개를 그 자리에 놓았어요', n.placed) : $t('가진 소품 중엔 놓을 게 없었어요')];
   if (n.trees) t.push($t('나무·덤불·바위·꽃 {0}개도 코드 자리로', n.trees));
   if (n.ghost) { const c = {}; for (const g of G.S.ghost?.[habId] || []) c[g.prop] = (c[g.prop] || 0) + 1; // 28-5: which ones are missing
-    t.push($t('모자란 소품 {0}개({1})는 반투명 미리보기예요(레벨·하트로 얻으면 그 자리에서 시작해요)', n.ghost, Object.entries(c).map(([id, k]) => `${PROPS.find(P => P.id === id)?.name ?? id}${k > 1 ? ` ${k}` : ''}`).join(', '))); }
+    t.push($t('모자란 소품 {0}개({1})는 반투명 미리보기예요(레벨·하트로 얻으면 그 자리에서 시작해요)', n.ghost, Object.entries(c).map(([id, k]) => `${PROPS.find(P => P.id === id)?.name ?? id}${k > 1 ? ` ${k}` : ''}`).join(SEP))); }
   if (n.off || n.cellOff) t.push($t('자리가 안 맞아 {0}는 빠졌어요{1}', [n.off && $t('{0}개', n.off), n.cellOff && $t('칠한 칸 {0}', n.cellOff)].filter(Boolean).join($t('와 ')), d.step > levelOf(G.S, habId) ? $t('(땅을 넓히면 더 들어가요)') : ''));
   if (n.full) t.push($t('소품 칸이 모자라 {0}개는 빠졌어요', n.full));
   if (n.nat) t.push($t('나무·덤불·바위·꽃이 모자라 {0}개는 빠졌어요', n.nat));

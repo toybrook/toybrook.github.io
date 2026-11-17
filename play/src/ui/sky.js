@@ -3,7 +3,7 @@
 // 하늘 기록 slot, ♥), the falling stars caught (별 조각), (74: no pill, no telescope; the sky counts as seen in the habitat
 // itself; last night's again from 돌아왔어요), the 하늘 기록 sheet (도감's bottom row) with the odds, the line on the 돌아왔어요 card, and a confirmed
 // night said once a day (a real peak or the 놓침 보장; a random sky is never said ahead). Nothing leaves the device.
-import { $t } from '../i18n/i18n.js';
+import { $t, SEP } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import * as K from '../game/sky.js';
 import { BALANCE as B } from '../game/data.js';
@@ -40,7 +40,7 @@ const slotName = k => K.SLOTS.find(s => s.id === k).name;
 function seen() {
   const w = shown(); if (!w || !w.slots.length || document.body.classList.contains('see')) return; // 69-4: 구경 중엔 기록·♥ 없음
   const r = G.skySeen(w.n, w.slots); if (!r?.fresh.length) return;
-  sfx('grown'); toast($t('하늘 기록 · {0} ♥{1}', r.fresh.map(slotName).join(', '), r.hearts), 3000);
+  sfx('grown'); toast($t('하늘 기록 · {0} ♥{1}', r.fresh.map(slotName).join(SEP), r.hearts), 3000);
 }
 function barText() {
   const h = cur(), T = over ? over.T : G.skyTonight(h), ev = over ? over.v.ev : K.skyTime(hour()), s = A()?.skyState();

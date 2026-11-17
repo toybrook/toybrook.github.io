@@ -21,9 +21,10 @@ export const $t = (s, ...a) => {
   let last = '';
   return r.replace(/\{(\d+)\}|\{([가-힣])\/([가-힣])\}/g, (m, i, x, y) => i != null ? (last = a[i] ?? '') : josa(last, x, y));
 };
+export const SEP = LANG === 'ja' ? '、' : ', '; // 124: a list of names (Japanese 「、」)
 // back to the Korean (이용 통계 keeps one name per habitat / accessory in every language)
 let RD = null;
-export const ko = s => LANG === 'ko' ? s : (RD ||= Object.fromEntries(Object.entries(D).map(([k, v]) => [v, k])))[s] || s;
+export const ko = s => LANG === 'ko' ? s : (RD ||= Object.fromEntries(Object.entries(D).reverse().map(([k, v]) => [v, k])))[s] || s; // 124: one word, two keys (흰색·하양 = White): the first key wins
 if (typeof document !== 'undefined') {
   document.documentElement.lang = LANG;
   if (LANG === 'ja') document.documentElement.classList.add('ja'); // style.css: Japanese fonts first

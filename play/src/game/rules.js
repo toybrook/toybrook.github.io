@@ -30,7 +30,7 @@
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
-import { $t, ko } from '../i18n/i18n.js';
+import { $t, ko, LANG } from '../i18n/i18n.js';
 import { blank, tidyVisit, visitTick } from './visit.js'; // 16-1
 import { blank as skyBlank, tidySky } from './sky.js'; // 16-2
 import { blank as palBlank, tidyPals, palTick, peOf } from './pals.js'; // 17-1
@@ -64,9 +64,10 @@ const settle = S => {
   for (const p of S.props) { const h = PROP[p.prop]?.habitat; if (h && h !== p.hab && S.unlocked.includes(h)) { p.hab = h; p.placed = false; } }
 };
 export const known = a => !!variantOf(a.species, a.variant);
-// codex cells of a habitat: every variant of every species living there, grouped by rarity in RARITIES order
-export const codexCells = habId => RARITIES.flatMap(r => SPECIES.filter(s => s.habitat === habId)
-  .flatMap(s => variantsOf(s).filter(v => v.rarity === r.id).map(v => ({ key: key(s.id, v.id), species: s, variant: v, rarity: r.id }))));
+// codex cells of a habitat: every variant of every species living there, grouped by rarity in RARITIES order. A gone look (125-A)
+// only with S and only if S has it in the codex (the windows show it, the counts leave it out: c.variant.gone)
+export const codexCells = (habId, S) => RARITIES.flatMap(r => SPECIES.filter(s => s.habitat === habId)
+  .flatMap(s => variantsOf(s).filter(v => v.rarity === r.id && (!v.gone || S?.codex[key(s.id, v.id)])).map(v => ({ key: key(s.id, v.id), species: s, variant: v, rarity: r.id }))));
 const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
@@ -240,11 +241,11 @@ const spWeight = (w, sp) => w[sp.id] ?? 1;
 // Who can come out of an egg of this type and rarity: species by weight (even without props), then variants by tier weight within the species.
 // A species with no variant of that rarity (e.g. no legendary yet) sits it out; if nobody has one, any variant.
 function hatchPool(type, rarity) {
-  const pool = EGG[type].species.map(id => SP[id]).filter(Boolean);
-  const has = pool.filter(sp => variantsOf(sp).some(v => v.rarity === rarity));
+  const pool = EGG[type].species.map(id => SP[id]).filter(Boolean), live = sp => variantsOf(sp).filter(v => !v.gone); // 125-A: gone looks never hatch
+  const has = pool.filter(sp => live(sp).some(v => v.rarity === rarity));
   return (has.length ? has : pool).map(sp => {
-    const vs = variantsOf(sp).filter(v => v.rarity === rarity);
-    return { sp, vs: vs.length ? vs : variantsOf(sp) };
+    const vs = live(sp).filter(v => v.rarity === rarity);
+    return { sp, vs: vs.length ? vs : live(sp) };
   });
 }
 const owned = (S, k) => !!S.codex[k] || S.animals.some(a => key(a.species, a.variant) === k);
@@ -826,7 +827,11 @@ export function saveLay(S, habId, k, name, now) {
 // 26-4 아끼는 친구 and names. A name: up to 8 letters, without < > & " ' ` (names go into the windows' HTML) or control characters
 export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'` -]/g, '').trim()].slice(0, 8).join('').trim() : '';
 // inbox 58: a variant whose name has the species in it already (황금 복돼지) is not called 황금 복돼지 돼지
-export const twoName = (v = '', s = '') => (!v ? s : !s || v.toLowerCase().includes(s.toLowerCase()) ? v : `${v} ${s}`); // 123: Duck / duck
+// 124: a name as shown: English Title Case per word (Sky Blue Two-Tone Flamingo, Mother-of-Pearl: small words stay low),
+// Japanese グラデーション shortened to グラデ inside a name only (the cells keep two lines)
+export const nameCase = s => LANG === 'en' ? s.replace(/(^|[\s-])([a-z]+)/g, (m, p, w, i) => p + (i && /^(of|and|the|a|an|in|on|with)$/.test(w) ? w : w[0].toUpperCase() + w.slice(1)))
+  : LANG === 'ja' ? s.replace('グラデーション', 'グラデ') : s;
+export const twoName = (v = '', s = '') => nameCase(!v ? s : !s || v.toLowerCase().includes(s.toLowerCase()) ? v : `${v} ${s}`); // 123: Duck / duck
 // 86-3라: a common is called by its colour, 단색 left out: 「흰 닭」 (not 「단색 닭 흰색」), 「갈색 점박이 말」, 「깨점 닭」 (the colour names
 // the dots already). cId undefined: not known (a postcard keeps no colour): 「닭」, 「점박이 닭」. Names only: ids and saves as they were
 // 123: the tests run on the Korean names (ko()), so they hold in English and Japanese too (not 「Inky Spotted Cow」, 「Boar Striped Pig」)
@@ -835,7 +840,7 @@ export const lookName = (sp, v, cId) => { const V = variantOf(sp, v), s = SP[sp]
   if (V?.rarity !== 'common') return twoName(V?.name, s);
   const c = cId !== undefined && colorOf(sp, v, cId), ck = c ? ko(c.name) : '', dots = V.id === 'spots' && /점$|얼룩/.test(ck);
   const n = c ? ADJ[ck]?.[0] ?? c.name : '', nk = c ? ADJ[ck]?.[1] ?? ck : '', p = V.id === 'solid' || dots ? '' : V.name; // a colour that names the species (멧돼지): 「줄무늬 멧돼지」
-  return (nk.includes(sk) ? [p, n] : [sk.startsWith(nk) ? '' : n, p, s]).filter(Boolean).join(' '); }; // 흰 + 흰올빼미: 「흰올빼미」
+  return nameCase((nk.includes(sk) ? [p, n] : [sk.startsWith(nk) ? '' : n, p, s]).filter(Boolean).join(' ')); }; // 흰 + 흰올빼미: 「흰올빼미」
 export const kindName = a => (a.wd && GUESTS.find(R => R.k === a.wd)?.name) || lookName(a.species, a.variant, a.color); // 66-2: a settled guest keeps its name
 export const tierOf = a => a.wd ? EARNED.wanderer : RAR[variantOf(a.species, a.variant)?.rarity]; // 66-2: 떠돌이 tier, never sold
 export const growStage = lv => [2, 3, 4, 5, 6].filter(n => lv >= needFor('expand:' + n)).length; // 68-3: 명성 steps = the 땅 넓히기 levels (3/8/11/14/18)

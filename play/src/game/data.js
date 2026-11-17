@@ -410,9 +410,9 @@ export const MODELS = {
   },
   arcticFox: {
     move: 'walk', walk: { hop: 0.1, trot: 1.8, pace: 1.1, roam: 0.6 },
-    files: { baby: 'assets/models/arcticFox_baby.glb', adult: 'assets/models/arcticFox_adult.glb' },
+    files: { baby: 'assets/models/arcticFox_baby.glb', adult: 'assets/models/arcticFox125_adult.glb' }, // 125-A: the 110 adult (bigger head, short muzzle, the 110 ears) public: tools/bake-pilot89.mjs, copied from pilot89_arcticFox_adult.glb; arcticFox_adult.glb kept, unused
     baby: sized('arcticFox', 'baby', { h: 1.818, r: 0.44, seg: [-0.805, 0.542], legs: { hip: 0.36, x: [0.22, -0.34], z: 0.19 }, attach: { head: { p: [0.44, 1.54, 0], r: [0, 0, -0.1], s: 1.02 }, neck: { p: [0.28, 0.92, 0], r: [0, 0, -0.9], s: 1.2 }, back: { p: [-0.1, 1.02, 0], r: [0, 0, 0], s: 0.8 }, eye: { p: [0.53, 1.26, 0], r: [0, 0, 0], s: 1.14 } } }),
-    adult: sized('arcticFox', 'adult', { h: 1.951, r: 0.442, seg: [-0.926, 0.863], legs: { hip: 0.62, x: [0.32, -0.36], z: 0.19 }, attach: { head: { p: [0.76, 1.8, 0], r: [0, 0, -0.1], s: 0.75 }, neck: { p: [0.56, 1.32, 0], r: [0, 0, -0.8], s: 1.0 }, back: { p: [-0.15, 1.41, 0], r: [0, 0, 0], s: 1 }, eye: { p: [0.83, 1.6, 0], r: [0, 0, 0], s: 0.84 } } }),
+    adult: sized('arcticFox', 'adult', { h: 2.136, r: 0.482, seg: [-1.306, 0.687], legs: { hip: 0.6, x: [0.34, -0.42], z: 0.21 }, attach: { head: { p: [0.69, 1.95, 0], r: [0, 0, -0.1], s: 0.88 }, neck: { p: [0.54, 1.36, 0], r: [0, 0, -0.8], s: 1.15 }, back: { p: [-0.15, 1.56, 0], r: [0, 0, 0], s: 1 }, eye: { p: [0.76, 1.69, 0], r: [0, 0, 0], s: 0.98 } } }),
   },
   reindeer: {
     move: 'walk', walk: { stride: true, hop: 0, pace: 0.8 }, // foot: the hoof's half length (as the cow's)
@@ -759,21 +759,13 @@ export const SPECIES = [
 export const M89 = false; // release build: the 89-4·90 trial looks stay off (89-2)
 // 120 (public since 123): new slots for the rabbit and the sheep, looks made from code (materials.js 115); the old variants stay
 // as they are. tier 'often' (inbox 120: 「흔함」 쪽 가중치). mono: one colour only (the shader paints it), so no colour list (check-eggs). 솜사탕 (candy115) and 뜨개 니트 (knit115) dropped: their looks are kept, no slot
-const add120 = (id, list) => (SPECIES.find(s => s.id === id).extra ??= []).push(...list.map(([v, rarity, name]) => ({ id: v, rarity, tier: 'often', name, mono: true })));
-add120('rabbit', [['mint115', 'heroic', $t('박하사탕')], ['firefly115', 'heroic', $t('반딧불')]]);
-add120('sheep', [['cloud115', 'rare', $t('뭉게구름')], ['nightsky115', 'heroic', $t('밤하늘')]]);
-if (M89) {
-  // 104 시범: the arctic fox adult remodelled toward the concept the user chose (tools/bake-pilot89.mjs bodies); the penguin's two
-  // stages from 104 are public since 107 (MODELS.penguin, its colours above)
-  // 110: the head bigger with short muzzle and big ears; h stays 2.136 (the bake's top 2.268 is the ears: as the horse's inbox 10,
-  // the body keeps its size and the taller ears stand above it)
-  MODELS.arcticFox.files.adult = 'assets/models/pilot89_arcticFox_adult.glb';
-  MODELS.arcticFox.adult = sized('arcticFox', 'adult', { h: 2.136, r: 0.482, seg: [-1.306, 0.687], legs: { hip: 0.6, x: [0.34, -0.42], z: 0.21 }, attach: { head: { p: [0.69, 1.95, 0], r: [0, 0, -0.1], s: 0.88 }, neck: { p: [0.54, 1.36, 0], r: [0, 0, -0.8], s: 1.15 }, back: { p: [-0.15, 1.56, 0], r: [0, 0, 0], s: 1 }, eye: { p: [0.76, 1.69, 0], r: [0, 0, 0], s: 0.98 } } });
-  // 121 신수 구미호 (①+② 섞기, the user's pick of 116's three): the nine tails gathered behind the body, a cord 1/3 from each tip
-  // (tools/bake-pilot89.mjs gumiho121; 116's files and looks kept, not worn)
-  MODELS.arcticFox.legend = { baby: 'assets/models/pilot89_gumiho121_baby.glb', adult: 'assets/models/pilot89_gumiho121_adult.glb' };
-  SPECIES.find(s => s.id === 'arcticFox').legendary.push({ id: 'gumiho121', name: $t('신수 구미호'), mat: 'gumiho121' });
-}
+// 125-A: 박하사탕·반딧불·뭉게구름 gone (user 11/17: only 밤하늘 stays): no egg hatches them, the codex shows one only to a player who has
+// it and never counts it (rules: hatchPool, codexCells); the friends already hatched stay, the materials stay in materials.js
+const add120 = (id, list) => (SPECIES.find(s => s.id === id).extra ??= []).push(...list.map(([v, rarity, name, gone]) => ({ id: v, rarity, tier: 'often', name, mono: true, ...gone && { gone } })));
+add120('rabbit', [['mint115', 'heroic', $t('박하사탕'), true], ['firefly115', 'heroic', $t('반딧불'), true]]);
+add120('sheep', [['cloud115', 'rare', $t('뭉게구름'), true], ['nightsky115', 'heroic', $t('밤하늘')]]);
+// 125-A: nothing behind ?m89 now: the arctic fox adult (104·110) went public above; 구미호 116·121 and the 117 dinosaurs dropped (user
+// 11/17; files and looks kept: pilot89_gumiho*.glb, materials.js gumiho*)
 
 // inbox 42 A: the board's size. Saved x, z (props, paint cells, ZONES w) are in the units of the board before inbox 42; the
 // world is UNIT times that (the first board 54 x 87, step 6 102 x 111)
