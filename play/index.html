@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.80.2-55517f98">
+<meta name="build" content="toybrook-0.80.3-c80f6bc2">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -28,7 +28,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="1110519" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="1111535" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>

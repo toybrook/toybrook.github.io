@@ -132,7 +132,7 @@ export function initNest(nav) {
     if (!live) { live = true; last = performance.now(); requestAnimationFrame(frame); }
   }
   function stageOff() {
-    if (cur) { st.scene.remove(cur.look.obj); if (cur.egg) st.scene.remove(cur.egg.group); cur = null; }
+    if (cur) { st.scene.remove(cur.look.obj); cur.look.dispose(); if (cur.egg) st.scene.remove(cur.egg.group); cur = null; }
     live = false; stageEl.hidden = true; eggsEl.hidden = false; stageEl.classList.remove('secret'); st.glow.style.opacity = 0;
   }
   function show(a, egg = null) { // the figure (hidden until it pops out of the egg), framed to its size

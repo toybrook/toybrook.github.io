@@ -113,7 +113,7 @@ export function createActor(ctx, rec) {
       }
     },
     body,
-    dispose() { unplay(); ctx.crowd.delete(body); scene.remove(root); for (const rp of ripples) { scene.remove(rp.m); rp.m.material.dispose(); } },
+    dispose() { unplay(); ctx.crowd.delete(body); scene.remove(root); look.dispose(); for (const rp of ripples) { scene.remove(rp.m); rp.m.material.dispose(); } },
   };
   body.duo = api; // 113 (play.js duo)
   return api;

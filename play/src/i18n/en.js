@@ -1859,6 +1859,12 @@ export default {
  "토피어리 돼지": "Topiary Pig",
  "꽃밭 얼룩소": "Flower Meadow Cow",
  "풍향계 닭": "Weathervane Rooster",
+ // 134 전설 2번째 다시 (?m89)
+ "삼채 도자 말": "Sancai Glaze Horse",
+ "수국 양": "Hydrangea Sheep",
+ "색동 토끼": "Saekdong Rabbit",
+ "수박 돼지": "Watermelon Pig",
+ "딸기우유 소": "Strawberry Milk Cow",
  // 127 새 공유 재질 (?m89)
  "원목": "Wood",
  "메이플": "Maple",

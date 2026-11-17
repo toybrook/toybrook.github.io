@@ -3,7 +3,7 @@
 // read: data.js dates). The rules (coins, the 보상 길, the shop, the album, the end's hearts) are rules.js evTick; this file
 // shows them: the coin button atop the right column (곧 끝나요 near the end), the window (상점 / 보상 길 / 앨범), its start and end cards (they wait
 // like attend.js for a quiet screen), a toast per 보상 길 step, a 새 소식 row and its weather (config WEATHER.ev).
-import { $t } from '../i18n/i18n.js';
+import { $t, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { PROP, HAB, SP, habitatOf } from '../game/rules.js';
 import { BALANCE, EVENTS, EV_ACC } from '../game/data.js';
@@ -17,7 +17,6 @@ try { const c = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(c)) G.s
 const load = () => navigator.onLine && fetch('events.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(d => {
   if (!Array.isArray(d?.events)) return; try { localStorage.setItem(KEY, JSON.stringify(d.events)); } catch { /* full */ } G.setCal(d.events); }).catch(() => {});
 
-const esc = t => String(t ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const rew = s => [s.hearts && `♥${s.hearts}`, s.candy && $t('꼬마 사탕 {0}개', s.candy), PROP[s.prop] && $t('소품 「{0}」', PROP[s.prop].name)].filter(Boolean).join(' · ');
 const soon = R => R.end - G.now() < BALANCE.event.soon * DAY;
 const left = R => { const ms = R.end - G.now(); return ms >= DAY ? $t('{0}일 남음', Math.floor(ms / DAY)) : $t('{0}시간 남음', Math.max(1, Math.ceil(ms / 3600e3))); };
@@ -88,9 +87,9 @@ function tick() { // after every game tick: the pill, the weather, the 새 소�
   const k = L ? `${L.e.icon}|${soon(L.R)}` : ''; // 74: no coin count on screen (♥ and Lv only)
   if (k !== pillWas) {
     pillWas = k; btn.hidden = !L;
-    if (L) { btn.innerHTML = `<span aria-hidden="true">${L.e.icon}</span>${soon(L.R) ? $t('<small>곧 끝나요</small>') : ''}`; btn.setAttribute('aria-label', $t('{0} 이벤트', L.e.name)); }
+    if (L) { btn.innerHTML = `<span aria-hidden="true">${esc(L.e.icon)}</span>${soon(L.R) ? $t('<small>곧 끝나요</small>') : ''}`; btn.setAttribute('aria-label', $t('{0} 이벤트', L.e.name)); }
     const ul = document.querySelector('#news ul'), li = ul?.querySelector('[data-ev]');
-    if (L && ul && !li) (ul.querySelector('[data-upd]') ?? ul).insertAdjacentHTML(ul.querySelector('[data-upd]') ? 'afterend' : 'afterbegin', $t('<li data-ev><i aria-hidden="true">{0}</i><span>{1} ({2}까지)</span></li>', L.e.icon, esc(L.e.news), md(L.R.end - 1)));
+    if (L && ul && !li) (ul.querySelector('[data-upd]') ?? ul).insertAdjacentHTML(ul.querySelector('[data-upd]') ? 'afterend' : 'afterbegin', $t('<li data-ev><i aria-hidden="true">{0}</i><span>{1} ({2}까지)</span></li>', esc(L.e.icon), esc(L.e.news), md(L.R.end - 1)));
     if (!L) li?.remove();
   }
   if (L) { const was = stepWas[L.key]; stepWas[L.key] = L.R.step;

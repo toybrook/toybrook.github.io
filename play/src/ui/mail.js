@@ -3,7 +3,7 @@
 // gifts, overflow eggs as hearts) are in rules.js; this file shows the mailbox (the top bar's ✉, a red dot while one waits),
 // the 선물 코드 넣기 card (설정) and what came.
 // Beta: the list and the received ids live on the phone, so a player who edits them can take a gift again (release: a server).
-import { $t, LANG } from '../i18n/i18n.js';
+import { $t, LANG, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { mailOpen, legendRoom, PROP, kindName } from '../game/rules.js';
 import { GIFT, BALANCE } from '../game/data.js';
@@ -12,7 +12,6 @@ import { dayOf } from '../game/clock.js';
 import { sfx } from './sound.js';
 
 const $ = id => document.getElementById(id), box = $('mail'), btn = $('mailBtn');
-const esc = t => String(t ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 let list = null; // { mail: [...], codes: [...] } once read
 const load = () => navigator.onLine ? fetch('mail.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null)
   .then(d => { if (d && typeof d === 'object') { list = tr(d); dot(); } }, () => {}).catch(() => {}) : Promise.resolve();

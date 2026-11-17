@@ -1,6 +1,6 @@
 // Screen flow: world map <-> habitats. The game (game/game.js) runs underneath either way.
 import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // first: it listens for errors before the rest runs
-import { $t, LANG, LANGS, localize, ko, SEP } from './i18n/i18n.js';
+import { $t, LANG, LANGS, localize, ko, SEP, esc } from './i18n/i18n.js';
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
 import { BALANCE, HABITATS, ZONES, PROPS } from './game/data.js';
@@ -248,20 +248,20 @@ function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
 function showRet() {
   const eggs = retEggs, now = G.now(), ready = G.S.slots.filter(s => s && now >= s.end).length, grown = G.S.animals.filter(a => a.card), att = retAttend() && todayRow();
   const n = Object.values(eggs).reduce((a, b) => a + b, 0), most = Object.keys(eggs).sort((a, b) => eggs[b] - eggs[a])[0];
-  const back = G.S.cards.filter(c => c.new), names = [...new Set(back.map(c => c.nm))]; // 13-1: postcards not seen, at the top
+  const back = G.S.cards.filter(c => c.new), names = [...new Set(back.map(c => esc(c.nm)))]; // 13-1: postcards not seen, at the top (137 A: escaped, they go into ret.innerHTML)
   const myth = mythDue(); // 14-1: it came to the altar while away: the top row (its coming seen from there, 다시 보기)
   const sk = retSky(); // 16-2: last night's sky not seen (망원경으로 다시 보기)
   const ar = artRow(retHome()); // 17-2 「밤사이 먹보 양 몽실이가 작품을 만들었어요」 (after the 출석, before the rest)
   const wn = wildNews(G.S), wr = wn && ['🌼', wn.text, wn.sub, 'wild']; // 17-3: one row, the most interesting change (a tap: the camera there)
   if (!n && !grown.length && !att && !back.length && !myth && !sk && !newsDue && !ar && !wr) return;
-  const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line
+  const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line (137 A: escaped where it goes in, below)
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
   const d2 = att && att[2], wk = att && weekOn(); // 93-1: the second day's legendary egg, the card's top row (a tap: into the nest, then the nest)
   const rows = [d2 && ['🥚', $t('이틀째 선물 · 전설 알이 왔어요'), $t('누르면 둥지로 · 기다림 없이 바로 깨요'), 'd2'], myth && ['🔥', $t('밤사이 제단에 불갈기 천리마가 내려왔어요'), $t('다시 보기'), 'myth'], sk && ['🌌', sk.text, $t('다시 보기'), 'sky'], back.length && ['🐾', $t('산책에서 돌아왔어요'), $t('{0}{1} · 엽서 {2}장 보기', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : '', back.length), 'cards'], !d2 && att && ['📅', wk ? $t('첫 주 선물 {0}일째', att[0]) : $t('{0}일째 출석', att[0]), att[1], 'attend'], ar, wr, n && ['🥚', $t('알 {0}개', n), `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? $t('둥지가 가득 찼어요') : $t('둥지에 생겼어요{0}', full.length ? $t(' · {0} 가득', full.map(h => HAB[h].name).join('·')) : '')}`, 'eggs'],
     grown.length && ['🌱', $t('다 자란 친구 {0}', grown.length), $t('보러 가요'), 'grown'], ready && ['✨', $t('부화 끝난 알 {0}', ready), $t('깨우러 가요'), 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', $t('백업해 두면 기기를 바꿔도 이어서 할 수 있어요'), $t('설정 › 내 저장 백업'), 'backup']); G.flag('backupNag', today); }
-  if (top) rows.push(['📰', $t('새 소식 {0}', VERSION), top, 'news']); // 133: last. Opened on the older build, the new one reloads in (offline.js fresh) and this row is the only new one: the rows above stay put
+  if (top) rows.push(['📰', $t('새 소식 {0}', VERSION), esc(top), 'news']); // 133: last. Opened on the older build, the new one reloads in (offline.js fresh) and this row is the only new one: the rows above stay put
   ret.innerHTML = $t('<div><h2>돌아왔어요</h2><ul>{0}</ul>\n<div class="nbtns"><button class="go" data-close>확인</button></div></div>', rows.map(([i, t, sub, k]) => `<li><button data-go="${k}"${k === 'attend' ? ` class="take" data-take="${$t('받기')}"` : ''}><i aria-hidden="true">${i}</i><span>${t}<small>${sub}</small></span></button>${
     (k === 'attend' || k === 'd2') && wk ? weekCells() : k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => $t('<span><img class="b" alt="새끼"><b>→</b><img alt="성체"></span>')).join('')}</p>` : ''}</li>`).join(''));
   ret.dataset.wild = wn ? JSON.stringify([wn.hab, wn.at]) : ''; if (wn) G.wildSeen();

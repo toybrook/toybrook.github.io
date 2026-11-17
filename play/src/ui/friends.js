@@ -3,7 +3,7 @@
 // adult and its growth. Tap (26-4 보러 가기): the sheet goes down and the camera follows that animal, turned to its face,
 // until the screen is touched. ⋯ or a long press (or right click): 보러 가기 / 아끼는 친구 (★) / 이름 짓기 / 쓰다듬기 /
 // 보관함으로 / 다른 서식지로.
-import { $t, ko } from '../i18n/i18n.js';
+import { $t, ko, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B, RARITIES, ACCESSORIES } from '../game/data.js';
 import { track } from './stats.js';
@@ -73,9 +73,9 @@ el.addEventListener('click', e => {
 function more(id) {
   const a = G.S.animals.find(x => x.id === id); if (!a) return;
   const nm = callName(a), home = SP[a.species].habitat, guest = habitatOf(a) !== home;
-  const m = G.S.animals.find(x => x.id === mateOf(G.S, a.id)), pe = G.S.flags.palOff || !PE[a.pe] ? '' : `<p class="sub pe">${PE[a.pe].name} · ${PE[a.pe].line}${m ? $t('<br>단짝: {0}{1}', callName(m), G.S.pals.list.find(p => (p.a === a.id || p.b === a.id) && p.played) ? $t('<small> · 함께 논 소품 ✓</small>') : '') : ''}</p>`; // 17-1 성격과 단짝
+  const m = G.S.animals.find(x => x.id === mateOf(G.S, a.id)), pe = G.S.flags.palOff || !PE[a.pe] ? '' : `<p class="sub pe">${PE[a.pe].name} · ${PE[a.pe].line}${m ? $t('<br>단짝: {0}{1}', esc(callName(m)), G.S.pals.list.find(p => (p.a === a.id || p.b === a.id) && p.played) ? $t('<small> · 함께 논 소품 ✓</small>') : '') : ''}</p>`; // 17-1 성격과 단짝
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
-  menu.innerHTML = $t('<div><h2>{0}{1}</h2>{2}{3}<div class="col"><button data-do="go">보러 가기</button>\n<button data-do="fav" aria-pressed="{4}">{5}</button><button data-do="name">{6}</button>\n<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button>{7}<button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>', star(a), nm, a.nm ? `<p class="sub">${kindName(a)}</p>` : '', pe, !!a.fav, a.fav ? $t('★ 별 떼기') : $t('☆ 아끼는 친구로'), a.nm ? $t('이름 바꾸기') : $t('이름 짓기'), a.acc ? $t('<button data-do="accoff">치장 떼기 · {0}</button>', ACCESSORIES[a.acc]?.name) : Object.keys(G.S.accs).length ? $t('<button data-do="accon">치장 끼우기</button>') : '');
+  menu.innerHTML = $t('<div><h2>{0}{1}</h2>{2}{3}<div class="col"><button data-do="go">보러 가기</button>\n<button data-do="fav" aria-pressed="{4}">{5}</button><button data-do="name">{6}</button>\n<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button>{7}<button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>', star(a), esc(nm), a.nm ? `<p class="sub">${kindName(a)}</p>` : '', pe, !!a.fav, a.fav ? $t('★ 별 떼기') : $t('☆ 아끼는 친구로'), a.nm ? $t('이름 바꾸기') : $t('이름 짓기'), a.acc ? $t('<button data-do="accoff">치장 떼기 · {0}</button>', ACCESSORIES[a.acc]?.name) : Object.keys(G.S.accs).length ? $t('<button data-do="accon">치장 끼우기</button>') : '');
   menu.onclick = e => {
     const d = e.target.closest('button')?.dataset; if (!d) return;
     if (d.do === 'go') return go(a.id);
@@ -96,7 +96,7 @@ function more(id) {
 export function dressUp(a, done = () => { menu?.remove(); menu = null; }) {
   if (!menu) { menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu'; (el.closest('#habitat') || document.body).append(menu); }
   const nm = callName(a);
-  menu.innerHTML = $t('<div><h2>치장 끼우기</h2><p class="sub">{0} · 하나 고르면 바로 끼워요</p><div class="col">{1}<button class="sb" data-shut>닫기</button></div></div>', nm, Object.entries(G.S.accs).map(([k, n]) => `<button data-k="${k}">${ACCESSORIES[k].name} ×${n}</button>`).join(''));
+  menu.innerHTML = $t('<div><h2>치장 끼우기</h2><p class="sub">{0} · 하나 고르면 바로 끼워요</p><div class="col">{1}<button class="sb" data-shut>닫기</button></div></div>', esc(nm), Object.entries(G.S.accs).map(([k, n]) => `<button data-k="${k}">${ACCESSORIES[k].name} ×${n}</button>`).join(''));
   menu.onclick = e => { const k = e.target.closest('button')?.dataset.k;
     if (k && G.accOn(a.id, k)) { track('acc_on', { v: ko(ACCESSORIES[k].name) }, 'acc_on:' + k); toast($t('{0}{이/가} 「{1}」{을/를} 했어요', nm, ACCESSORIES[k].name)); }
     if (e.target.closest('button')) done(); };

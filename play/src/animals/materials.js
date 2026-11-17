@@ -1551,3 +1551,82 @@ Object.assign(LOOKS, {
   vane128: () => { const b = s => L127(phys('#d6a048', { roughness: 0.3, metalness: 1 }), 'vane128', VANE128, { uS: s }, { studio: 0.85 });
     return { body: b(22), wing: b(15), accent: L127(phys('#d8603a', { roughness: 0.28, metalness: 1 }), 'fletch128', FLETCH128, {}, { studio: 0.85 }), beak: shine('#e8b858', 0.22), hoof: shine('#b07a38', 0.3) }; },
 });
+
+// ---- 134 A 전설 2번째 다시 (?m89 시범; data.js LEGEND134): the whole body turns into another thing, its colours far from the
+// animal's own and from its first legendary. Two levels like 128 (uHab 1, the habitat: the fine detail goes).
+// 삼채 도자 말: an old three-colour glaze (green, amber, cream) run down from the back in streaks, darker where it pooled (the runs'
+// grooves, the drip ends); below the drips the bare buff clay of the lower legs, matte; close up, the glaze's fine crackle
+const SANCAI134 = SH89 + `float st = vn3(vec3(p.x * 26.0, p.y * 1.4, p.z * 26.0)), st2 = vn3(vec3(p.x * 11.0, p.y * 0.7 + 3.0, p.z * 11.0));
+  float g = fbm3(vec3(p.x * 2.4, p.y * 0.55, p.z * 2.4) + 9.0) + 0.24 * (st - 0.5) + 0.1 * (st2 - 0.5);
+  float wg = SH(0.4 - g, 0.0), wa = SH(g - 0.5, 0.0);
+  vec3 col = vec3(0.95, 0.88, 0.7) * (1.0 - wg - wa) + vec3(0.1, 0.42, 0.17) * wg + vec3(0.74, 0.37, 0.05) * wa;
+  float fr = 0.3 + 0.08 * (st2 - 0.5) - 0.13 * pow(st, 3.0), e = p.y - fr, gz = SH(e, 0.0), pool = gz * (1.0 - smoothstep(0.0, 0.045, e));
+  col *= 1.0 - 0.2 * (1.0 - st) - 0.35 * pool;
+  if (uHab < 0.5) { vec3 c = cells(p * 55.0); col *= 1.0 - 0.2 * (1.0 - smoothstep(0.0, 0.04, c.y - c.x)) * gz; }
+  diffuseColor.rgb = mix(vec3(0.84, 0.66, 0.48), col, gz); roughnessFactor = mix(0.8, 0.07, gz); lookStudio = 0.5 * gz; // glaze glints, bare clay feet stay dull`;
+// its mane and tail: carved in parallel grooves across the crest, amber glaze pooled dark in them
+const SANMANE134 = BUMP115 + `float fade = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 30.0);
+  float h = 0.5 + 0.5 * cos(6.2832 * (dot(p.xy, vec2(0.64, 0.77)) * 30.0 + 1.5 * vn3(p * 7.0)));
+  BUMP115(h, 0.012 * fade)
+  diffuseColor.rgb = mix(vec3(0.72, 0.38, 0.07), vec3(0.32, 0.13, 0.02), (1.0 - h) * mix(0.4, 0.9, fade));`;
+// 수국 양: the wool hydrangea heads packed together, blue on one side shading to violet and pink on the other (a little apart per
+// head), dark leaves in the gaps; close up each head small four-petal florets, darker between them, a pale eye in each
+const HYDRANGEA134 = SH89 + BUMP115 + `float fade = 1.0 - smoothstep(0.15, 0.5, fwidth(p.y) * 7.0);
+  vec4 f = fe128(p * 7.0, on); float seam = smoothstep(0.08, 0.3, f.w), t = clamp(vn3(p * 2.2 + 1.0) * 1.6 - 0.3 + 0.8 * (f.z - 0.5), 0.0, 1.0);
+  vec3 col = t < 0.5 ? mix(vec3(0.32, 0.5, 0.95), vec3(0.6, 0.44, 0.9), t * 2.0) : mix(vec3(0.6, 0.44, 0.9), vec3(0.97, 0.6, 0.8), t * 2.0 - 1.0);
+  col *= mix(1.0, 0.78 + 0.22 * smoothstep(0.1, 0.8, f.w), fade); float h = f.w;
+  if (uHab < 0.5) {
+    vec4 g = fl127(p * 44.0, on); float rg = length(g.xy), fp = SH(petals128(g.xy, 0.5, 4.0, 0.03, g.z * 6.28), 0.0) * step(g.w, 0.3) * seam;
+    col = mix(col * 0.62, col * (0.92 + 0.16 * g.z) + 0.12 * (1.0 - smoothstep(0.0, 0.3, rg)), fp);
+    col = mix(col, vec3(0.98, 0.96, 0.8), (1.0 - SH(rg, 0.045)) * fp * 0.6); h += fp * 0.25;
+  }
+  col = mix(vec3(0.14, 0.34, 0.13), col, seam); BUMP115(h, 0.03 * fade)
+  diffuseColor.rgb = col;`;
+// 색동 토끼: 색동 bands (red, yellow, green, blue, pink) wound round the body and the ears, a gold line between each, glossy lacquer
+const SAEKDONG134 = GILD89 + `float b = p.y * 14.0 + 0.3, i = mod(floor(b), 5.0), fb = fract(b), fw = max(fwidth(p.y), 1e-4);
+  vec3 col = i < 0.5 ? vec3(0.72, 0.03, 0.08) : i < 1.5 ? vec3(0.98, 0.68, 0.03) : i < 2.5 ? vec3(0.03, 0.46, 0.22) : i < 3.5 ? vec3(0.06, 0.22, 0.7) : vec3(0.95, 0.36, 0.56);
+  float e = min(fb, 1.0 - fb) / 14.0, gl = mix(1.0 - smoothstep(0.004 - fw, 0.004 + fw, e), 0.11, smoothstep(0.003, 0.012, fw));
+  diffuseColor.rgb = col; roughnessFactor = 0.12; GILD(gl)`;
+// 수박 돼지: watermelon rind, jagged dark green stripes on light green running nose to tail; the ears' insides and the snout (uAcc 1:
+// its disc) cut flesh, red with black seeds, a white rind ring round the disc's face and green on its rim
+const MELON134 = SH89 + `#define SEEDS(S) { vec4 sd = fl127(p * S, on); float a_ = sd.z * 6.28; vec2 v_ = mat2(cos(a_), sin(a_), -sin(a_), cos(a_)) * sd.xy; \\
+    float s_ = (1.0 - SH(length(vec2(v_.x / (0.09 + 0.05 * smoothstep(-0.16, 0.16, v_.y)), v_.y / 0.17)), 1.0)) * step(sd.w, 0.3) * step(0.25, sd.z); \\
+    flesh = mix(flesh, vec3(0.06, 0.04, 0.04), s_); }
+  float a = atan(p.z, p.y - 0.36) / 6.2832, w = 0.05 * sin(p.x * 28.0 + a * 60.0) + 0.06 * (vn3(p * 30.0) - 0.5) + 0.14 * (fbm3(p * vec3(1.5, 4.0, 4.0)) - 0.5);
+  float s = abs(fract(a * 11.0 + w) - 0.5) * 2.0, dark = SH(0.5 - s, 0.0);
+  vec3 col = mix(vec3(0.58, 0.77, 0.34), vec3(0.07, 0.29, 0.11), dark) * (0.9 + 0.14 * vn3(p * vec3(14.0, 50.0, 50.0)));
+  vec3 flesh = mix(vec3(0.96, 0.22, 0.27), vec3(0.98, 0.45, 0.45), smoothstep(0.3, 0.9, vn3(p * 12.0)) * 0.5); SEEDS(30.0)
+  float face = uAcc * SH(on.x, 0.72), white = uAcc * SH(on.x, 0.52) * (1.0 - face);
+  float ear = (1.0 - uAcc) * step(0.8, p.y) * SH(abs(p.z), 0.1) * SH(on.x, 0.15); // the ears' front faces (the crown between them stays rind)
+  col = mix(col, vec3(0.95, 0.96, 0.84), white); col = mix(col, flesh, max(face, ear));
+  diffuseColor.rgb = col; roughnessFactor = mix(0.22, 0.35, max(face, ear));`;
+// 딸기우유 소: pale strawberry-milk pink, glossy, a milky sheen; where its patches go, strawberries (rounder at the top, a point
+// below): red, lighter toward the calyx, yellow seeds set in small pits, a green calyx of five sepals on top. The ears and the
+// tail tuft (uAcc 1) small strawberries
+const BERRYCOW134 = SH89 + BUMP115 + `float wob = 0.05 * (vn3(p * 9.0 + 2.0) - 0.5), k = -9.0, cal = 0.0, top = 0.0;
+  #define BERRY(C, R) { vec3 d_ = p - C; float h_ = R * 1.2, y_ = d_.y / h_, w_ = R * (0.55 + 0.45 * smoothstep(-1.0, 0.5, y_)); \\
+    float b_ = 1.0 - length(vec2(d_.x / w_, y_)) + wob - 9.0 * step(0.22, abs(d_.z)); if (b_ > k) { k = b_; top = y_; \\
+      vec2 v_ = vec2(d_.x, d_.y - h_ * 0.78) / R; float r_ = length(v_), an_ = atan(v_.x, -v_.y); \\
+      cal = max(step(r_, 0.52 * pow(abs(cos(an_ * 2.5)), 2.0) + 0.1) * step(-0.25, -v_.y + 0.4), (1.0 - step(0.06, abs(v_.x))) * step(0.0, v_.y) * step(v_.y, 0.22)); } }
+  BERRY(vec3(0.06, 0.58, 0.26), 0.17) BERRY(vec3(-0.4, 0.6, 0.22), 0.15) BERRY(vec3(-0.17, 0.58, -0.26), 0.2) BERRY(vec3(0.3, 0.62, -0.25), 0.12)
+  float ear = uAcc * max(step(0.2, abs(p.z)) * step(0.75, p.y), step(p.y, 0.42) * step(p.x, -0.48));
+  float m = max(SH(k, 0.0), ear); cal *= SH(k, 0.0) * (1.0 - ear);
+  vec4 sd = fl127(p * 34.0, on); float sr = length(sd.xy), seed = (1.0 - SH(sr / 0.11, 1.0)) * step(sd.w, 0.3) * (1.0 - cal), pit = (1.0 - SH(sr / 0.2, 1.0)) * step(sd.w, 0.3) * (1.0 - cal);
+  vec3 berry = mix(vec3(0.82, 0.06, 0.12), vec3(0.97, 0.36, 0.36), smoothstep(0.2, 0.9, top) * (1.0 - ear) * 0.6);
+  berry = mix(berry * (1.0 - 0.3 * pit), vec3(1.0, 0.85, 0.3), seed);
+  berry = mix(berry, mix(vec3(0.2, 0.55, 0.18), vec3(0.38, 0.72, 0.3), smoothstep(0.0, 0.6, on.y)), cal);
+  BUMP115((seed - pit) * m * 0.4 + cal * 0.6 * m, 0.004)
+  vec3 milk = mix(vec3(0.93, 0.52, 0.6), vec3(0.88, 0.38, 0.48), smoothstep(0.7, 0.15, p.y) * 0.7); // linear (sRGB ~ #f7c0cc to #f0a6b6)
+  diffuseColor.rgb = mix(milk, berry, m); roughnessFactor = mix(0.22, 0.12, m);`;
+Object.assign(LOOKS, {
+  sancai134: () => ({ body: L127(phys('#f1e3c0', { roughness: 0.07 }), 'sancai134', SANCAI134, {}, { studio: 0 }),
+    accent: L127(phys('#b86a14', { roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.05 }), 'sanmane134', SANMANE134), hoof: phys('#dcbf98', { roughness: 0.85 }) }),
+  hydrangea134: () => ({ body: L127(phys('#9a8ae8', { roughness: 0.55, sheen: 0.6, sheenRoughness: 0.4, sheenColor: new THREE.Color('#ffffff') }), 'hydrangea134', HYDRANGEA134),
+    accent: phys('#8cc66a', { roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.12 }), hoof: phys('#3e6a34', { roughness: 0.35, clearcoat: 0.5 }) }),
+  saekdong134: () => { const b = L127(phys('#e04050', { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.03 }), 'saekdong134', SAEKDONG134, {}, { studio: 0 });
+    return { body: b, accent: shine('#ffc75a', 0.18), hoof: b }; },
+  watermelon134: () => { const w = acc => L127(phys('#5a9a40', { roughness: 0.22, clearcoat: 0.6, clearcoatRoughness: 0.08 }), 'watermelon134', MELON134, { uAcc: acc });
+    return { body: w(0), accent: w(1), beak: phys('#14100e', { roughness: 0.2, clearcoat: 0.8 }), hoof: phys('#1e3a1a', { roughness: 0.3, clearcoat: 0.5 }) }; },
+  berrycow134: () => { const c = acc => L127(phys('#ffd8e2', { roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.05, sheen: 0.7, sheenRoughness: 0.35, sheenColor: new THREE.Color('#ffffff') }), 'berrycow134', BERRYCOW134, { uAcc: acc });
+    return { body: c(0), accent: c(1), beak: phys('#f79ab2', { roughness: 0.25, clearcoat: 0.8 }), nostril: phys('#8a3048', { roughness: 0.3 }), horn: phys('#f8ecd2', { roughness: 0.2, clearcoat: 1 }), hoof: phys('#c8304a', { roughness: 0.2, clearcoat: 0.8 }) }; },
+});

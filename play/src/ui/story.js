@@ -2,14 +2,14 @@
 // codex's 신수 row (no picture saved, no code to copy or paste; game/story.js still makes the codes, for old ones). Given at
 // the moment (ui/myth.js its coming, its settling; ui/nest.js a legendary's first one): a toast pointing there, no window.
 // #story is in hud.js TOPS, so level / 돌아왔어요 cards wait for it.
-import { $t } from '../i18n/i18n.js';
+import { $t, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { HAB } from '../game/rules.js';
 import { storyCards, cardTitle, cardLines } from '../game/story.js';
 import { toast } from './hud.js';
 import { sfx } from './sound.js';
 
-const el = document.getElementById('story'), esc = t => String(t).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const el = document.getElementById('story');
 let list = null; // the habitat whose cards it came from (back to them)
 const mark = c => c.k === 'l' ? $t('전설 이야기 카드') : $t('신수 이야기 카드');
 

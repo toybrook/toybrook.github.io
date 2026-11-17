@@ -10,7 +10,7 @@
 // 26-5: a found cell opens its figure in 3D (drag to turn, pinch or wheel to zoom; it turns slowly till touched), baby or
 // adult (the adult once one has grown up), in any material of that species the codex has; under it, the day the first
 // one came out and the habitat whose nest it hatched from (recorded since 0.60: older cells say 기록 없음).
-import { $t, LOC } from '../i18n/i18n.js';
+import { $t, LOC, esc } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { makeFigure, loadModel } from '../animals/figure.js';
@@ -149,7 +149,7 @@ let sceneOpen = false; // 66-3: the fold stays as the player left it while the c
 let artOpen = false;
 const artBook = () => G.S.art.book.filter(b => b.hab === tab).reverse();
 const artHtml = () => { const L = artBook();
-  return $t('<details class="cscenes cart"{0}><summary>작품집 <small>{1}</small></summary>{2}\n<p class="cnote">친구가 만든 작품을 「그대로 두기」나 「기록만 남기고 치우기」로 고르면 담겨요 · 도감 수에는 들어가지 않아요</p></details>', artOpen ? ' open' : '', L.length, L.length ? `<div class="crow ab">${L.map(b => `<div class="cell art"><img alt="${PROP[b.prop]?.name}"><span>${PROP[b.prop]?.name}</span><small>${b.who}<br>${new Date(b.at).toLocaleDateString(LOC)}</small></div>`).join('')}</div>` : ''); };
+  return $t('<details class="cscenes cart"{0}><summary>작품집 <small>{1}</small></summary>{2}\n<p class="cnote">친구가 만든 작품을 「그대로 두기」나 「기록만 남기고 치우기」로 고르면 담겨요 · 도감 수에는 들어가지 않아요</p></details>', artOpen ? ' open' : '', L.length, L.length ? `<div class="crow ab">${L.map(b => `<div class="cell art"><img alt="${PROP[b.prop]?.name}"><span>${PROP[b.prop]?.name}</span><small>${esc(b.who)}<br>${new Date(b.at).toLocaleDateString(LOC)}</small></div>`).join('')}</div>` : ''); };
 const fillArt = () => { const L = artBook(); el.querySelectorAll('.cell.art img').forEach((img, i) => { if (hab?.decor) artThumb(L[i].prop, hab.decor.model, night).then(u => { img.src = u; }, () => {}); }); };
 // 17-3 들꽃 도감: the colours of the 들꽃 that spread by themselves (game/wild.js), one cell each: the flower (its petals and middle),
 // the name, the day it first bloomed; not yet: ? and how it comes (the two colours mixed, or where the colour is). The garden's

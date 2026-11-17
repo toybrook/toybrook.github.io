@@ -2,7 +2,7 @@
 // shows the guest's arrival card when the screen is quiet (a new player: on the intro card first, the guest after the first
 // friend), the 친구네 놀러 가기 sheet (산책, stroll.js), the postcard a host picks when a guest leaves, and the 방명록.
 // Links go out with the share sheet, else copied. Counts only to stats (visit_sent / visit_got).
-import { $t } from '../i18n/i18n.js';
+import { $t, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
 import { HAB, kindName, callName, firstEgg, outIn } from '../game/rules.js';
@@ -12,7 +12,6 @@ import { copyNow } from './report.js';
 import { track } from './stats.js';
 
 const $ = id => document.getElementById(id), box = $('visit');
-const esc = t => String(t ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const H = Math.round(B.visit.stay / 3600e3);
 let nav = null, wait = null, quiet = 0, fresh = false; // wait: a guest read from the link, not let in yet; fresh: it came with a new player
 const thumb = (img, a) => img && import('./thumbs.js').then(t => t.figureThumb(a.species, a.variant, a.color, a.acc, 'adult')).then(u => { img.src = u; }, () => {}); // three.js: not on the first screen (26-1)

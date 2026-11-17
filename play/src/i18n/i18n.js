@@ -21,6 +21,8 @@ export const $t = (s, ...a) => {
   let last = '';
   return r.replace(/\{(\d+)\}|\{([가-힣])\/([가-힣])\}/g, (m, i, x, y) => i != null ? (last = a[i] ?? '') : josa(last, x, y));
 };
+// 135·137 A: text from outside (a save, a backup, mail.json, events.json) put into innerHTML goes through this one escape
+export const esc = t => String(t ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 export const SEP = LANG === 'ja' ? '、' : ', '; // 124: a list of names (Japanese 「、」)
 // back to the Korean (이용 통계 keeps one name per habitat / accessory in every language)
 let RD = null;

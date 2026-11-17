@@ -4,7 +4,7 @@
 // A code holds only where things stand; no animals, hearts, eggs, names or anything about the player.
 // 69-4: what goes out is the 구경 링크 (ui/visit.js: the layout + the friends out there, opened to look at only), its QR and
 // 사진 모드's 구경 그림; a link pasted or read from a QR loads like a code. TG1 codes still load (and the 배치 저장 칸 keep them).
-import { $t, SEP } from '../i18n/i18n.js';
+import { $t, SEP, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { HABITATS, PROPS } from '../game/data.js';
 import { levelOf, LAY_NAMES } from '../game/rules.js';
@@ -16,7 +16,6 @@ import { track } from './stats.js';
 
 const $ = id => document.getElementById(id), el = $('share'), LIST = 'gardens/gardens.json';
 const habName = id => HABITATS.find(h => h.id === id)?.name ?? id;
-const esc = t => String(t).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 // an entry of gardens.json the game will show: a title, a habitat it knows, a code that reads, a photo in gardens/ (nothing elsewhere)
 const okGarden = g => g && typeof g.title === 'string' && g.title.length <= 40 && HABITATS.some(h => h.id === g.hab) && typeof g.code === 'string'
   && !decode(g.code).error && decode(g.code).hab === g.hab && /^gardens\/[\w-]+\.(jpg|png|webp)$/.test(g.photo);

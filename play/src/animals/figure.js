@@ -155,6 +155,22 @@ const butterflyFX = (a1, b1, a2, b2) => ({ n: 4, size: 0.42, solid: true, sp: 0.
       c = mix(c, vec3(1.0), 1.0 - smoothstep(0.1, 0.16, length((q - vec2(0.62, -0.3)) / 0.8)));
       gl_FragColor = vec4(bd <= 1.0 ? vec3(0.2, 0.15, 0.12) : c * (0.75 + 0.25 * w), 1.0);` });
 Object.assign(FX, { leaves: leafFX('#3f8a2e', '#86c04e'), seeds: seedFX('#ffffff', '#7a5a34'), butterflies: butterflyFX('#ffc04a', '#e0602a', '#9ad0ff', '#4a6ad8') });
+// 134 A (?m89): florets: small four-petal hydrangea flowers (blue, violet, pink) tumbling down; confetti: 색동 paper slips
+// turning as they fall; drops: water drops falling, pale and clear with a highlight. The solid ones grow in and shrink out
+// (vA) rather than pop at the ends of their fall
+Object.assign(FX, {
+  florets: { n: 7, size: 0.34, solid: true, fall: true, sp: 0.5, frag: `float an = vT * 0.7 + vS * 6.0, w = abs(cos(vT * 1.1)); vec2 q = mat2(cos(an), sin(an), -sin(an), cos(an)) * d / max(sqrt(vA), 0.05); q.x /= max(w, 0.25);
+      float r = length(q), f = fract(atan(q.y, q.x) * 0.6366 + 0.5) - 0.5; if (r > 0.9 * (0.45 + 0.55 * sqrt(max(0.0, 1.0 - 4.0 * f * f)))) discard;
+      vec3 c = vS < 0.34 ? vec3(0.4, 0.58, 0.97) : vS < 0.67 ? vec3(0.66, 0.5, 0.94) : vec3(0.98, 0.64, 0.82);
+      gl_FragColor = vec4(mix(c * (0.75 + 0.25 * w), vec3(1.0, 0.97, 0.82), 1.0 - smoothstep(0.1, 0.18, r)), 1.0);` },
+  confetti: { n: 10, size: 0.3, solid: true, fall: true, sp: 0.6, frag: `float an = vT * 1.1 + vS * 6.0, w = abs(cos(vT * 1.7)); vec2 q = mat2(cos(an), sin(an), -sin(an), cos(an)) * d / max(sqrt(vA), 0.05); q.y /= max(w, 0.15);
+      if (abs(q.x) > 0.55 || abs(q.y) > 0.3) discard; float i = floor(fract(vS * 3.7) * 5.0);
+      vec3 c = i < 0.5 ? vec3(0.86, 0.1, 0.16) : i < 1.5 ? vec3(0.99, 0.76, 0.1) : i < 2.5 ? vec3(0.1, 0.58, 0.3) : i < 3.5 ? vec3(0.13, 0.34, 0.82) : vec3(0.98, 0.48, 0.66);
+      gl_FragColor = vec4(c * (0.7 + 0.3 * w), 1.0);` },
+  drops: { n: 6, size: 0.36, soft: true, fall: true, sp: 0.9, frag: `float y = d.y, wd = y > 0.3 ? sqrt(max(0.0, 0.3025 - (y - 0.3) * (y - 0.3))) : 0.55 * pow(clamp((y + 0.85) / 1.15, 0.0, 1.0), 1.4);
+      if (abs(d.x) > wd) discard; float e = abs(d.x) / max(wd, 0.01), hl = 1.0 - smoothstep(0.06, 0.13, length(vec2((d.x + 0.2) / 0.6, d.y - 0.2)));
+      gl_FragColor = vec4(mix(vec3(0.62, 0.86, 1.0), vec3(1.0), max(hl, 0.35 * e * e)), min(1.0, 0.5 + 0.3 * e * e + 0.5 * hl) * vA);` },
+});
 const fxMats = {};
 const fxMat = kind => fxMats[kind] ??= new THREE.ShaderMaterial({
   uniforms: { uTime: windTime, uPx: { value: 800 } }, transparent: true, depthWrite: FX[kind].solid || false, blending: FX[kind].solid || FX[kind].soft ? THREE.NormalBlending : THREE.AdditiveBlending,
@@ -197,7 +213,7 @@ const haloMat = (hex, w = 0.16) => haloMats[hex + w] ??= new THREE.ShaderMateria
 // SkinnedMesh whose bones are the body, the legs and the wings (rigid: each vertex follows one), so pose() moves them as
 // before. Left as they were: glass (it copies the screen and casts its view ray per mesh), parts with a glow child, the
 // accessory, effects, and a model's legs that fold (oneLeg: a squashed bone would shade its normals wrong).
-// ponytail: a figure thrown away without dress() (codex, cabinet) keeps its 1 KB bone texture until the renderer goes.
+// ponytail: a figure thrown away without dress() (codex, cabinet) keeps its 1 KB bone texture until the renderer goes; dress().dispose() frees it (137 A).
 const mergedGeo = new Map(), glassy = m => m.customProgramCacheKey().startsWith('clear-');
 function merge(body, joints) {
   const bones = [body, ...joints], sets = new Map();
@@ -367,6 +383,7 @@ export function dress(rec) {
   return {
     obj, get fig() { return fig; }, get stage() { return stage; },
     appear() { pop = 0; obj.scale.setScalar(0.01); }, // out of the egg
+    dispose() { fig.skeleton?.dispose(); if (fx) { fx.next.skeleton?.dispose(); for (const s of fx.g.children) s.material.dispose(); } }, // 137 A: the bone texture, when the animal leaves the scene
     update(dt) {
       if (grow < 0 && key() !== worn) set(stage); // 26-1: an accessory came after it; 15-2: wear put on or taken off
       if (rec.stage !== stage && grow < 0) start();

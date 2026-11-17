@@ -505,7 +505,7 @@ export function createActor(ctx, rec) {
       blob.set(sh, root.visible && !wet ? Math.max(0.25, 1 - lift * 0.8) : 0);
     },
     body,
-    dispose() { endPlay(); h.soc = null; for (const m of drops) { scene.remove(m); m.material.dispose(); } if (h.goal?.q) leave(h.goal.q); scene.remove(root); blob.free(); if (ctx.onBridge === h) ctx.onBridge = null; ctx.crowd.delete(body); },
+    dispose() { endPlay(); h.soc = null; for (const m of drops) { scene.remove(m); m.material.dispose(); } if (h.goal?.q) leave(h.goal.q); scene.remove(root); look.dispose(); blob.free(); if (ctx.onBridge === h) ctx.onBridge = null; ctx.crowd.delete(body); },
   };
   pick(); body.pal = api; body.duo = api; // inbox 42 C: others find it in ctx.crowd (its first pick once api is made: toPlay hands it on)
   return api;
