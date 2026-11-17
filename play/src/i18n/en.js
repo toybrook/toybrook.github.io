@@ -1845,6 +1845,7 @@ export default {
  "단짝 놀이: 단짝 둘이 좋아하는 소품 곁에 있으면 함께 놀아요(처음엔 ♥+20)": "Buddy play: Best buddies near their favorite decor play together (♥+20 the first time)",
  "첫 주 선물: 새로 시작하면 이틀째에 전설 알, 6일째에 영웅 알, 7일째에 신수 단서를 받아요": "First-week gifts: New players get a Legendary egg on day 2, an Epic egg on day 6 and a Mythic clue on day 7",
  "12월 5일부터 2주 동안 첫눈 이벤트: 눈 덮인 초원에서 눈더미를 모아 눈사람을 만들고, 친구에게 털모자를 씌워요": "First Snow event for 2 weeks from 12/5: Gather snow piles in the snowy Meadow to build a snowman, and give friends knit hats",
+ "옥토끼 비취가 더 빛나요: 귀 끝·발끝 금테, 은은한 속빛": "The Jade Moon Rabbit shines brighter: gold tips on its ears and toes, a soft inner glow",
  "양에 「밤하늘」 모습이 새로 생겼어요": "A new look for the sheep: Night Sky",
  "English·日本語로도 할 수 있어요(설정 › 언어)": "You can also play in English and Japanese (Settings › Language)",
  "베타 기간의 데이터는 정식 출시 때 초기화돼요.": "Beta data will be reset at the official launch.",

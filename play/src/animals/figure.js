@@ -92,12 +92,13 @@ const accMat = (id, name, c = AC(id).colors[name] || '#ffffff') => (accMats[id +
 // sparks rising (chicken); puffs: little pastel clouds drifting (sheep); twinkle: a few small stars in opal fire colours
 // (cow). Pond: bubbles rising (turtle), silver fireflies (otter), snowflakes falling (swan), pink petals turning
 // (flamingo), steam rising and yuzus bobbing (capybara). inbox 10: few and slow. sp: speed (1 = the first five's);
-// rise / fall: they climb / sink through the body's height, fading in and out.
+// rise / fall: they climb / sink through the body's height, fading in and out. min (134): the smallest a sprite gets, a share of
+// the screen height (the jade rabbit's moondust stays a visible sparkle at home distance).
 const FX = {
   motes: { n: 16, size: 0.6, frag: `float star = max(1.0 - smoothstep(0.0, 0.18, d.y) - d.x, 1.0 - smoothstep(0.0, 0.18, d.x) - d.y), core = 1.0 - smoothstep(0.0, 0.35, length(d));
       float a = clamp(max(star, core), 0.0, 1.0) * vA; if (a < 0.01) discard;
       gl_FragColor = vec4(mix(vec3(1.0, 0.82, 0.35), vec3(1.0, 1.0, 0.95), core), a);` },
-  moondust: { n: 40, size: 0.42, frag: `float r = length(d), core = 1.0 - smoothstep(0.0, 0.3, r), a = min(1.0, (pow(max(0.0, 1.0 - r), 2.0) * 0.8 + core) * vA); if (a < 0.01) discard;
+  moondust: { n: 40, size: 0.42, min: 0.014, frag: `float r = length(d), core = 1.0 - smoothstep(0.0, 0.3, r), a = min(1.0, (pow(max(0.0, 1.0 - r), 2.0) * 0.8 + core) * vA); if (a < 0.01) discard;
       gl_FragColor = vec4(mix(vec3(0.72, 0.82, 1.0), vec3(1.0), core), a);` },
   coins: { n: 4, size: 0.6, solid: true, sp: 0.5, frag: `float w = abs(cos(vT * 1.4)), ww = max(w, 0.12); vec2 q = d / 0.7, ad = abs(d); float r = length(vec2(q.x / ww, q.y));
       bool coin = r <= 1.0 && max(abs(q.x) / ww, abs(q.y)) >= 0.3;
@@ -163,7 +164,7 @@ const fxMat = kind => fxMats[kind] ??= new THREE.ShaderMaterial({
       ${FX[kind].rise ? 'float k = fract(T * 0.2 + seed * 7.3); p.y += k * 1.0 - 0.35; vA = sin(k * 3.1416);'
         : FX[kind].fall ? 'float k = fract(T * 0.2 + seed * 7.3); p.y += 0.75 - k * 1.2; vA = sin(k * 3.1416);' : 'vA = smoothstep(-0.2, 1.0, sin(t * 2.3 + seed * 9.0));'}
       vS = seed; vT = t; vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * mv;
-      gl_PointSize = ${FX[kind].size} * projectionMatrix[1][1] * uPx / -mv.z; }`,
+      gl_PointSize = max(${FX[kind].size} * projectionMatrix[1][1] * uPx / -mv.z, ${(FX[kind].min || 0).toFixed(3)} * uPx); }`,
   fragmentShader: `varying float vA, vS, vT; void main() { vec2 d = abs(gl_PointCoord - 0.5) * 2.0;
       ${FX[kind].solid || FX[kind].soft ? 'd = (gl_PointCoord - 0.5) * 2.0;' : ''}${FX[kind].frag} }`,
 });

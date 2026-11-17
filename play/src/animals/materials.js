@@ -392,7 +392,13 @@ const JADE = `float n = fbm3(p * 3.0 + 2.0), m = fbm3(p * 7.0 - 1.0 + vec3(0.0, 
   vec3 deep = vec3(0.02, 0.36, 0.17), light = vec3(0.3, 0.8, 0.48), col = mix(deep, light, smoothstep(0.3, 0.75, n));
   col = mix(col, vec3(0.75, 0.96, 0.82), smoothstep(0.6, 0.85, m) * 0.3);
   diffuseColor.rgb = col * 0.45; roughnessFactor = 0.07;
-  totalEmissiveRadiance += mix(deep, light, 0.55 + 0.45 * n) * (0.12 + 0.38 * pow(nv, 1.5)) * (0.9 + 0.1 * sin(uTime * 1.2));`;
+  totalEmissiveRadiance += mix(deep, light, 0.55 + 0.45 * n) * (0.12 + 0.38 * pow(nv, 1.5)) * (0.9 + 0.1 * sin(uTime * 1.2));
+  // 134: the legendary's tell (the rare 청자 is pale green glossy too): the drifts seen again deeper inside (shifted
+  // against the view, so they slide as it turns), a soft light round the outline, gold caps on the ear tips and the toes
+  vec3 vo = normalize(vdir * normalMatrix); float n2 = fbm3((p + vo * 0.14) * 4.0 + 7.0);
+  totalEmissiveRadiance += mix(deep, light, n2) * smoothstep(0.42, 0.75, n2) * 0.6 * nv + vec3(0.3, 1.0, 0.55) * pow(1.0 - nv, 2.5) * 0.75;
+  float ga = fwidth(p.y) * 1.5, gk = max(smoothstep(0.94, 0.94 + ga, p.y), 1.0 - smoothstep(0.04, 0.04 + ga, p.y));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.57, 0.1), gk); roughnessFactor = mix(roughnessFactor, 0.2, gk); metalnessFactor = gk; lookStudio = 0.85 * gk; totalEmissiveRadiance *= 1.0 - 0.9 * gk;`;
 // 황금 복돼지 (돼지, 가칭; inbox 10): polished gold all over, snout disc and hoof bands too, in the studio reflection; a
 // very faint relief of cloud curls (uCloud: height, laid on triplanar) only a mirror shows; the coins round it are figure.js
 const FORTUNE = `vec3 tw = pow(abs(on), vec3(6.0)); tw /= tw.x + tw.y + tw.z; vec3 tq = p * 1.3;
@@ -857,12 +863,13 @@ const gumiho116 = (mk, accent, more) => ({ body: sway116(hab89(mk()), true), g11
 // glow on each tip, three blue foxfires circling the body and a faint ring of light at the feet
 const SWAY125 = `vec3 sway125(float ti, float t) { float w = pow(smoothstep(0.06, 1.0, t), 1.5), ph = uTime * (0.62 + 0.08 * ti) + ti * 2.3 - t * 2.4;
   return w * (vec3(0.0, 0.09, 0.0) * sin(ph) + vec3(0.04, 0.0, 0.12) * sin(ph * 0.83 + ti * 1.1)); }\n`; // a slow wave running out along each tail, its own beat
-const sway125 = (m, still) => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
+// one: all the tails on one beat (132's blades meet: their own beats would tear the seams)
+const sway125 = (m, still, one) => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
   m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.uniforms.uTime = windTime;
-    sh.vertexShader = (sh.vertexShader.includes('uniform float uTime;') ? '' : 'uniform float uTime;\n') + 'attribute float _thickness;\nvarying float vTail;\n' + SWAY125 + sh.vertexShader.replace('#include <begin_vertex>',
-      `#include <begin_vertex>\n{ float ti = floor(_thickness * 0.5); vTail = _thickness - 2.0 * ti;${still ? ' vTail = 0.0;' : ' transformed += sway125(ti, vTail);'} }`);
-    sh.fragmentShader = 'varying float vTail;\n' + sh.fragmentShader; };
-  m.customProgramCacheKey = () => k + (still ? '-still125' : '-sway125'); return m; };
+    sh.vertexShader = (sh.vertexShader.includes('uniform float uTime;') ? '' : 'uniform float uTime;\n') + 'attribute float _thickness;\nvarying float vTail, vTi;\n' + SWAY125 + sh.vertexShader.replace('#include <begin_vertex>',
+      `#include <begin_vertex>\n{ float ti = floor(_thickness * 0.5); vTail = _thickness - 2.0 * ti; vTi = ti;${still ? ' vTail = 0.0;' : ` transformed += sway125(${one ? '4.0' : 'ti'}, vTail);`} }`);
+    sh.fragmentShader = 'varying float vTail, vTi;\n' + sh.fragmentShader; };
+  m.customProgramCacheKey = () => k + (still ? '-still125' : one ? '-one125' : '-sway125'); return m; };
 // the tips: white to lilac from half way, blue at the very end, lit a little by day and more by night; codex: 116's film and frost
 const TAIL125 = GLITTER116 + `float tl = smoothstep(0.5, 1.0, vTail), vt = smoothstep(0.76, 1.0, vTail);
   vec3 tip = mix(vec3(0.62, 0.48, 1.0), vec3(0.22, 0.46, 1.0), vt);
@@ -897,9 +904,9 @@ const ORBIT125 = `uniform float uTime, uR, uK; attribute vec3 aC; attribute floa
 vec3 drift116(float i) { float t = uTime * 0.32 + i * 2.0944; return aC + vec3(cos(t) * uR * 1.3, 0.3 * sin(t * 1.3 + i * 1.7) * uK, sin(t) * uR); }\n`;
 const orbit125 = (m, R) => { if (m.vertexShader.startsWith(DRIFT116)) m.vertexShader = ORBIT125 + m.vertexShader.slice(DRIFT116.length); m.uniforms.uR.value = R; return m; };
 // a soft glow on each tail tip, swaying with it
-const tipMat125 = k => new THREE.ShaderMaterial({ uniforms: { uTime: windTime, uK: { value: k }, uNight: nightGlow }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+const tipMat125 = (k, one) => new THREE.ShaderMaterial({ uniforms: { uTime: windTime, uK: { value: k }, uNight: nightGlow }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   vertexShader: 'uniform float uTime, uK; attribute vec3 aC; attribute float aT; varying vec2 vUv; varying float vI;\n' + SWAY125 +
-    'void main() { vec4 mv = modelViewMatrix * vec4(aC + sway125(aT, 1.0), 1.0); mv.xy += position.xy * uK; vUv = uv; vI = aT; gl_Position = projectionMatrix * mv; }',
+    `void main() { vec4 mv = modelViewMatrix * vec4(aC + sway125(${one ? '4.0' : 'aT'}, 1.0), 1.0); mv.xy += position.xy * uK; vUv = uv; vI = aT; gl_Position = projectionMatrix * mv; }`,
   fragmentShader: `uniform float uTime, uNight; varying vec2 vUv; varying float vI;
     void main() { float r = length(vUv - 0.5) * 2.0, a = pow(max(0.0, 1.0 - r), 2.4) * (0.3 + 0.7 * uNight) * (0.85 + 0.15 * sin(uTime * 1.7 + vI * 2.3));
       gl_FragColor = vec4(vec3(0.5, 0.6, 1.0) * a, 1.0); }` });
@@ -913,33 +920,65 @@ const ringMat125 = R => new THREE.ShaderMaterial({ uniforms: { uTime: windTime, 
       gl_FragColor = vec4(vec3(0.42, 0.6, 1.0) * a * (0.22 + 0.9 * uNight), a * 0.3 * (1.0 - 0.7 * uNight)); }` }); // faint by day
 // per body file: its face material, the effect meshes ([geometry, material, renderOrder]) and the ring
 const made125 = new WeakMap();
-const make125 = (geo, G, S) => {
+const make125 = (geo, G, S, mk = tail125, one = false) => {
   const b = G.body.boundingBox, H = b.max.y, cx = (b.min.x + b.max.x) / 2, e = G.eye.attributes.position, E = [0, 0, 0]; let n = 0;
   for (let i = 0; i < e.count; i++) if (e.getZ(i) > 0) { E[0] += e.getX(i); E[1] += e.getY(i); E[2] += e.getZ(i); n++; }
-  const face = tail125({ uEye: new THREE.Color().setRGB(E[0] / n, E[1] / n, E[2] / n), uFace: new THREE.Color().setRGB(H, cx, 1) });
+  const face = mk({ uEye: new THREE.Color().setRGB(E[0] / n, E[1] / n, E[2] / n), uFace: new THREE.Color().setRGB(H, cx, 1) }, geo);
   const th = geo.attributes._thickness, pos = geo.attributes.position, tip = [];
   for (let i = 0; i < th.count; i++) { const v = th.getX(i), ti = Math.floor(v / 2), t = v - 2 * ti; if (t > 0 && (!tip[ti] || t > tip[ti][1])) tip[ti] = [[pos.getX(i), pos.getY(i), pos.getZ(i)], t]; }
   const k = 0.12 * H, mid = [(b.min.x + b.max.x) / 2 - 0.05 * H, 0.47 * H, 0], fires = mk => mergeGeometries([0, 1, 2].map(i => tag116(mk(), mid, i)));
   const fx = [[fires(() => new THREE.PlaneGeometry(1, 1)), glow116(ORBIT125, k, ['drift116(aT) + vec3(0.0, 0.35 * uK, 0.0)', '2.6'], '0.35, 0.5, 1.0'), 5],
     [fires(() => new THREE.LatheGeometry(FLAME116, 16)), flameMat116(false, k), 5], [fires(() => new THREE.LatheGeometry(FLAME116, 12)), flameMat116(true, k), 5],
-    [mergeGeometries(tip.map(([c], i) => tag116(new THREE.PlaneGeometry(1, 1), c, i))), tipMat125(0.45 * k), 5]];
+    [mergeGeometries(tip.map(([c], i) => tag116(new THREE.PlaneGeometry(1, 1), c, i))), tipMat125(0.45 * k, one), 5]];
   for (const [, m] of fx) if (m.uniforms.uR) orbit125(m, 0.42 * H);
   return { face, fx, ring: [new THREE.PlaneGeometry(2, 2), ringMat125(0.62 * H), 5] };
 };
-const parts125 = (body, G, S) => {
+const partsOf = (key, mk, one) => (body, G, S) => {
   for (const o of [...body.children]) if (o.geometry === G.body || o.geometry === G.accent) body.remove(o);
-  const geo = G.legend.g125body; if (!geo) return;
-  if (!made125.has(geo)) made125.set(geo, make125(geo, G, S));
+  const geo = G.legend[key]; if (!geo) return;
+  if (!made125.has(geo)) made125.set(geo, make125(geo, G, S, mk, one));
   const X = made125.get(geo);
   for (const o of body.children) { if (o.geometry === geo) o.material = X.face; if (o.geometry === G.eye) o.material = EYE125; }
   const g = new THREE.Group(); for (const [gg, mat, ord] of X.fx) { const o = wear(new THREE.Mesh(gg, mat), ord); o.frustumCulled = false; g.add(o); } body.add(g);
   const root = body.parent, w = new THREE.Group(); w.scale.setScalar(1.25); root.remove(body); w.add(body); root.add(w); // 1.25x the fox
   const ring = wear(new THREE.Mesh(X.ring[0], X.ring[1]), X.ring[2]); ring.frustumCulled = false; ring.scale.setScalar(S.s); ring.position.y = 0.012; w.add(ring);
 };
+const parts125 = partsOf('g125body', tail125);
 const gumiho125 = bell => { const tail = tail125(), ear = phys('#e26a72', { roughness: 0.5 });
   return { body: tail125(false), hoof: tail125(false), g125body: tail, g125cord: bell ? sway125(hab89(phys('#c0141e', { roughness: 0.5, sheen: 0.5, sheenColor: new THREE.Color('#ff6070') }))) : tail,
     accent: ear, g125accent: ear, beak: toyMat('#2a2628'), parts: parts125,
     ...bell && { g125bell: sway125(hab89(look(phys('#e8b030', { roughness: 0.22, metalness: 1 }), 'bell116', BELL116, {}, { studio: 0.7 }))) } }; };
+// ---- 132-B 신수 구미호 3차 (?m89, inbox 132 B; 125d 안2's face, eyes, tips, foxfires and ring). MODELS legend pilot89_gumiho132w|n
+// (tools/bake-pilot89.mjs gumiho132: nine carved blades from one root, fanned 150 / 110 deg). Made like the carousel horse: white
+// porcelain gloss (clearcoat), each blade's long edges gilt (where its normal turns across the fan: the blade's own fan angle
+// from vTi), a red cloud outlined in gold on each flank, a gold necklace (painted in the bake, g132gold) with a gold bell and a
+// red tassel, gold ankle bands; no cords on the tails
+const P132 = () => pale116(phys('#fbfaf6', { roughness: 0.24, clearcoat: 1, clearcoatRoughness: 0.04 }));
+// the blades are one surface (they meet in the bake), so their own edges are gone: a gilt line where one blade turns into the
+// next, found from the fan angle round the root (uRoot, pattern space): u = the blade number there, a line at each half
+const EDGE132 = `{ float u = degrees(atan(p.z - uRoot.z, p.y - uRoot.y)) / (uSpread / 8.0) + 4.0, g = abs(fract(u) - 0.5), w = fwidth(u);
+  GILD((1.0 - smoothstep(0.045, 0.045 + 1.5 * w, g)) * smoothstep(0.06, 0.14, vTail) * step(0.001, vTail)) }`;
+// the clouds (side view, both flanks, pattern space): three round lobes on a flat foot, red, a gold outline and a gold curl in
+// the middle lobe; a big one on the flank, a small one on the haunch. Crisp at any size (their own fwidth, not SH's floor)
+const CLOUD132 = `{ float cs = 0.0, side = smoothstep(0.35, 0.55, abs(on.z)) * step(vTail, 0.001);
+  for (int k = 0; k < 2; k++) { float sc = k == 0 ? 0.12 : 0.07; vec2 q = (p.xy - (k == 0 ? vec2(0.1, 0.5) : vec2(-0.13, 0.58))) / sc;
+    float d = min(min(length(q - vec2(-0.55, 0.0)) - 0.4, length(q - vec2(0.0, 0.2)) - 0.52), length(q - vec2(0.55, 0.0)) - 0.4);
+    d = max(d, -(q.y + 0.3)) * sc; float aa = fwidth(d), fill = (1.0 - smoothstep(-aa, aa, d)) * side;
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.78, 0.07, 0.09), fill);
+    vec2 c1 = q - vec2(0.0, 0.2); float cu = abs(length(c1) - 0.26) * sc - 0.005, ol = abs(d) - 0.006;
+    cs = max(cs, max((1.0 - smoothstep(-fwidth(ol), fwidth(ol), ol)) * side, (1.0 - smoothstep(-fwidth(cu), fwidth(cu), cu)) * step(-0.1, c1.y) * fill)); }
+  GILD(cs) }`;
+const ANKLE132 = `GILD((1.0 - SH(abs(p.y - 0.075), 0.011)) * step(0.0, p.y))`;
+// geo (the legend body): uRoot = where the tails start, the middle of their first few vertices
+const root132 = geo => { const th = geo.attributes._thickness, op = geo.attributes._op, r = [0, 0, 0]; let n = 0;
+  for (let i = 0; i < th.count; i++) { const v = th.getX(i); if (v > 0 && v - 2 * Math.floor(v / 2) < 0.05) { r[0] += op.getX(i); r[1] += op.getY(i); r[2] += op.getZ(i); n++; } }
+  n ||= 1; return new THREE.Color().setRGB(r[0] / n, r[1] / n, 0); }; // z 0: the fan is symmetric (n 0: no tails, no NaN)
+const tail132 = spread => (face, geo) => sway125(hab89(look(P132(), face ? 'face132' : 'tail132', SH89 + GILD89 + TAIL125 + (face ? EDGE132 + FACE125 + CLOUD132 : ''),
+  { ...face, uSpread: spread, ...face && { uRoot: root132(geo) } }, { studio: 0.2 })), !face && face !== undefined, true);
+const gumiho132 = spread => { const ear = phys('#e26a72', { roughness: 0.5 }), legs = hab89(look(P132(), 'leg132', SH89 + GILD89 + ANKLE132, {}, { studio: 0.2 })),
+    gold = hab89(look(phys('#e8b030', { roughness: 0.2, metalness: 1 }), 'bell116', BELL116, {}, { studio: 0.7 }));
+  return { body: legs, hoof: legs, g132body: tail132(spread)(), g132gold: hab89(look(phys('#e8b030', { roughness: 0.2, metalness: 1 }), 'gold132', '', {}, { studio: 0.7 })), g132bell: gold,
+    g132tassel: phys('#c0141e', { roughness: 0.5, sheen: 0.5, sheenColor: new THREE.Color('#ff6070') }), accent: ear, g132accent: ear, beak: toyMat('#2a2628'), parts: partsOf('g132body', tail132(spread), true) }; };
 const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ...)
   solid: c => plain(toyBody(c.body), c),
   twotone: c => plain(look(toyBody(c.body), 'twotone', TWOTONE, { uSecond: c.second }), c),
@@ -964,7 +1003,7 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
     return { body: look(phys('#ffc75a', { roughness: 0.13, metalness: 1 }), 'gold', GOLD), accent, hoof: accent }; },
   pearl: () => same(look(phys('#f6efea', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03, iridescence: 1, iridescenceIOR: 1.35, iridescenceThicknessRange: [250, 650], sheen: 1, sheenColor: new THREE.Color('#ffd3e6') }), 'pearl', PEARL)),
   galaxy: () => same(look(phys('#101030', { roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.05 }), 'galaxy', GALAXY)),
-  jade: () => same(look(phys('#5fb88a', { roughness: 0.07, clearcoat: 1, clearcoatRoughness: 0.02, sheen: 0, sheenColor: new THREE.Color('#d8ffe8') }), 'jade', JADE)),
+  jade: () => same(look(phys('#5fb88a', { roughness: 0.07, clearcoat: 1, clearcoatRoughness: 0.02, sheen: 0, sheenColor: new THREE.Color('#d8ffe8') }), 'jade', JADE, {}, { studio: 0 })),
   fortune: () => { const g = shine('#ffc75a');
     return { body: look(phys('#ffc75a', { roughness: 0.15, metalness: 1 }), 'fortune', FORTUNE, { uCloud: cloudTex() }, { studio: 0.85 }), accent: g, hoof: g, beak: shine('#e8a640', 0.3) }; },
   cotton: () => same(look(phys('#ffd0e4', { roughness: 0.75, sheen: 1, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffffff') }), 'cotton', COTTON)),
@@ -1045,6 +1084,9 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
   // 125-D 신수 구미호 안1 (cord and bell on the three outer tails) / 안2 (none) (?m89): data.js M89, MODELS legend pilot89_gumiho125
   gumiho125a: () => gumiho125(true),
   gumiho125b: () => gumiho125(false),
+  // 132-B 구미호 3차, the fan wide (150 deg) / narrow (110 deg) (?m89&g132=w|n): data.js M89, MODELS legend pilot89_gumiho132w|n
+  gumiho132w: () => gumiho132(150),
+  gumiho132n: () => gumiho132(110),
 };
 // ---- 125-B 티라노 (?m89 시범; data.js M89: MODELS.tRex.m89 = { solid: 'rex125' }, the commons only): the commons' plain vinyl
 // + its 'stripe' paint (the body colour darker, so the orange and purple commons get their own) and the 'mouth' paint; in the
