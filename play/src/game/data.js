@@ -801,16 +801,6 @@ export const LEGEND128 = {
 // inbox 131 (user 11/17 13:01): only the vane chicken stays (?m89). The carousel horse is kept as the base of a later 신수 unicorn;
 // the pig, sheep, rabbit and cow are dropped. All six stay in this table and in materials.js (kept, and check-eggs' 69-1 test).
 if (M89) for (const sp of ['chicken']) SPECIES.find(s => s.id === sp).legendary.push(LEGEND128[sp]);
-// 134 A 전설 2번째 다시 (?m89 시범; user 11/17 13:11): the whole body turns into another thing, its colours far from the animal's
-// own and from its first legendary. With the vane chicken (above) the meadow's second set. Looks: materials.js 134
-export const LEGEND134 = {
-  horse: { id: 'sancai', name: $t('삼채 도자 말'), mat: 'sancai134', effect: 'twinkle' },
-  sheep: { id: 'hydrangea', name: $t('수국 양'), mat: 'hydrangea134', effect: 'florets' },
-  rabbit: { id: 'saekdong', name: $t('색동 토끼'), mat: 'saekdong134', effect: 'confetti' },
-  pig: { id: 'watermelon', name: $t('수박 돼지'), mat: 'watermelon134', effect: 'drops' },
-  cow: { id: 'berrycow', name: $t('딸기우유 소'), mat: 'berrycow134', effect: 'puffs' },
-};
-if (M89) for (const [sp, L] of Object.entries(LEGEND134)) SPECIES.find(s => s.id === sp).legendary.push(L);
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
 export const WAVE127 = 0;
