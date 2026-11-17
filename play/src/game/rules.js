@@ -84,7 +84,16 @@ export function newGame(now) {
 // 27-1: a field of the wrong type gets its default too (a hand-edited backup, a broken write); anything else that would
 // throw here or in the first catch-up (tried on a copy) makes the whole save unreadable instead of a game that dies on start.
 const shape = v => v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v, isObj = v => shape(v) === 'object';
+// 135: a save is text from outside (a #backup= link, a file, a code). One pass before anything reads it: no __proto__ /
+// constructor / prototype keys, and no <>"'` in any string (nothing the game writes has them; names go through cleanName),
+// so a field shown with innerHTML (a postcard's name, an artwork's maker) cannot carry markup.
+const BAD_KEY = new Set(['__proto__', 'constructor', 'prototype']);
+export const scrub = v => typeof v === 'string' ? v.replace(/[<>"'`]/g, '') : Array.isArray(v) ? v.map(scrub)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([k]) => !BAD_KEY.has(k)).map(([k, x]) => [scrub(k), scrub(x)])) : v;
 export function fromSave(raw, now) {
+  const snap = raw?.layoutUndo?.snap; // 135 review: 「불러오기 전으로」 keeps JSON text (layoutOf); scrub what it holds, not its quotes
+  raw = scrub(raw);
+  if (raw?.layoutUndo) try { const o = scrub(JSON.parse(snap)); if (!Array.isArray(o?.p)) throw 0; raw.layoutUndo.snap = JSON.stringify(o); } catch { delete raw.layoutUndo; }
   if (!raw || typeof raw !== 'object' || !(raw.schemaVersion >= 1) || raw.schemaVersion > SCHEMA_VERSION) return null;
   try {
     const T = newGame(now), S = { ...T };

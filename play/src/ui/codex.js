@@ -133,7 +133,9 @@ function bar(habId, cells, n) {
   const left = L && !L.open && L.friends ? $t('{0}{이/가} 열리기까지 친구 {1}마리', next.name, Math.max(0, L.friends - L.got)) : L && !L.open && L.need ? $t('{0}{이/가} 열리기까지 도감 {1}칸{2}', next.name, Math.max(0, L.need - L.have), G.S.hearts < L.hearts ? $t(' · 하트 {0}개 더 <span style="white-space:nowrap">(친구를 쓰다듬으면 생겨요)</span>', L.hearts - G.S.hearts) : '') : '';
   const W = wholeOf(G.S, habId), R = COMPLETE[habId], i = G.S.whole?.[habId] || 0, at = R && i < R.length && Math.ceil(COMPLETE.at[i] * W.all - 1e-9);
   const gift = at ? $t('<small>모으기 선물까지 {0}칸: {1}</small>', at - W.got, R[i] === 'expand' ? $t('땅 넓히기 한 번 무료{0}', ZONES[habId]?.[levelOf(G.S, habId)] ? ` (${ZONES[habId][levelOf(G.S, habId)].name})` : '') : $t('큰 소품 「{0}」', PROP[R[i]]?.name)) : R ? $t('<small>모으기 선물을 다 받았어요</small>') : '';
-  return $t('<div class="cbar">{0} 모으기 {1}/{2} ({3}%) <span style="white-space:nowrap">· 알 친구 {4}/{5}</span><u><i style="width:{6}%"></i></u>{7}{8}</div>', HAB[habId].name, W.got, W.all, Math.round(W.got / W.all * 100), n, cells.length, W.got / W.all * 100, gift, left ? `<small>${left}</small>` : '');
+  const ng = wanderersOf(habId).length, nm = W.all - cells.length - ng; // 133: what 모으기 counts besides the egg friends (the 도감 n/N above)
+  const inc = ng && nm ? $t('· 손님·신수 포함') : ng ? $t('· 손님 포함') : nm ? $t('· 신수 포함') : '';
+  return $t('<div class="cbar">{0} 모으기 {1}/{2} ({3}%) <span style="white-space:nowrap">{4}</span><u><i style="width:{6}%"></i></u>{7}{8}</div>', HAB[habId].name, W.got, W.all, Math.round(W.got / W.all * 100), inc, cells.length, W.got / W.all * 100, gift, left ? `<small>${left}</small>` : '');
 }
 
 const tabs = () => $t('<div class="ctabs">{0}<button data-tab="album"{1}>치장 앨범</button></div>', HABITATS.map(h => `<button ${open(h.id) ? `data-tab="${h.id}"` : `data-lock="${h.id}" class="lock"`}${h.id === tab ? ' class="on"' : ''}>${h.name}${open(h.id) ? '' : ' 🔒'}</button>`).join(''), tab === 'album' ? ' class="on"' : '');

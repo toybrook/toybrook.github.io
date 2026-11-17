@@ -269,7 +269,7 @@ export const SIZE = {
   unit: 4.05, baby: 0.75,
   horse: 1.00, cow: 0.95, polarBear: 1.05, reindeer: 0.95, flamingo: 0.85, sheep: 0.70, pig: 0.60, swan: 0.60, capybara: 0.55, // the polar bear is also the longest
   penguin: 0.55, seal: 0.45, arcticFox: 0.45, rabbit: 0.48, chicken: 0.44, otter: 0.40, snowyOwl: 0.40, duck: 0.30, turtle: 0.30, // the seal lies down
-  brachiosaurus: 1.30, triceratops: 0.85, stegosaurus: 0.85, tRex: 0.80, ankylosaurus: 0.60, pteranodon: 0.45, // 14-3 dino: to the neck's top, the frill's, the plates', the crest's
+  brachiosaurus: 1.60, triceratops: 0.85, stegosaurus: 0.85, tRex: 1.05, ankylosaurus: 0.60, pteranodon: 0.45, // 14-3 dino: to the neck's top, the frill's, the plates', the crest's
   firemane: 1.40, // 14-1 신수 (MYTHIC)
 };
 // a stage in model units -> scale s, and sink / r / seg in world units (legs and attach stay in model units)
@@ -456,10 +456,10 @@ export const MODELS = {
   },
   tRex: {
     move: 'walk', walk: { hop: 0, trot: 1.4, pace: 0.85, roam: 0.55, dig: 0.2 },
-    files: { baby: 'assets/models/tRex_baby.glb', adult: 'assets/models/tRex_adult.glb' }, paints: ['belly'], // 71-1
-    legend: { baby: 'assets/models/tRex_bones_baby.glb', adult: 'assets/models/tRex_bones_adult.glb' }, // 71-2: the amber legendary's skeleton (figure.js)
-    baby: sized('tRex', 'baby', { h: 2.16, r: 0.527, seg: [-0.981, 0.759], legs: { hip: 0.44, x: [0], z: 0.27 }, attach: { head: { p: [0.68, 2.12, 0], r: [0, 0, -0.1], s: 1.2 }, neck: { p: [0.47, 1.34, 0], r: [0, 0, -0.6], s: 1.2 }, back: { p: [-0.2, 1.4, 0], r: [0, 0, 0.3], s: 1.0 }, eye: { p: [0.9, 1.88, 0], r: [0, 0, 0], s: 1.25 } } }),
-    adult: sized('tRex', 'adult', { h: 2.619, r: 0.575, seg: [-1.472, 0.902], legs: { hip: 0.74, x: [0], z: 0.3 }, attach: { head: { p: [0.82, 2.58, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.58, 1.83, 0], r: [0, 0, -0.6], s: 1.25 }, back: { p: [-0.2, 1.86, 0], r: [0, 0, 0.4], s: 1.05 }, eye: { p: [1.02, 2.36, 0], r: [0, 0, 0], s: 1.15 } } }),
+    files: { baby: 'assets/models/tRex125_baby.glb', adult: 'assets/models/tRex125_adult.glb' }, paints: ['belly', 'mouth', 'stripe'], m89: { solid: 'rex125' }, // 132 A: 125-B 안2 without the teeth (tools/bake-trex125.mjs c), the commons in materials.js rex125; the 71-1 body tRex_*.glb kept (?m89&trex=1|2 the 125-B pilots)
+    legend: { baby: 'assets/models/tRex125_bones_baby.glb', adult: 'assets/models/tRex125_bones_adult.glb' }, // 71-2, refitted to the 132 A body (bake-trex125.mjs; tRex_bones_* kept): the amber legendary's skeleton (figure.js)
+    baby: sized('tRex', 'baby', { h: 2.108, r: 0.57, seg: [-1.799, 1.455], legs: { hip: 0.6, x: [0], z: 0.3 }, attach: { head: { p: [1.06, 2.11, 0], r: [0, 0, -0.1], s: 1.3 }, neck: { p: [0.64, 1.44, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.61, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.21, 1.85, 0], r: [0, 0, 0], s: 1.36 } } }),
+    adult: sized('tRex', 'adult', { h: 2.268, r: 0.571, seg: [-2.075, 1.309], legs: { hip: 0.82, x: [0], z: 0.3 }, attach: { head: { p: [1.06, 2.27, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.7, 1.7, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.8, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.19, 2.05, 0], r: [0, 0, 0], s: 1.15 } } }),
   },
   pteranodon: {
     move: 'walk', walk: { hop: 0.6, trot: 1.5, pace: 0.8, roam: 0.45, rest: 'sit', perch: 0.4 }, legMat: 'hoof',
@@ -735,7 +735,7 @@ export const SPECIES = [
       gradient: [{ id: 'choco', name: $t('초코우유'), body: '#fff4e6', second: '#9a6444' }, { id: 'dusk', name: $t('저녁'), body: '#d8dce4', second: '#5a6278' }, { id: 'aurora', name: $t('오로라'), body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
     legendary: [{ id: 'malachite', name: $t('공작석 갑옷'), mat: 'malachite', effect: 'motes' }] },
-  { id: 'tRex', name: $t('티라노사우루스'), habitat: 'dino', model: 'tRex', colors: { hoof: '#e4d6b0', paint: { belly: '#cfc796' } },
+  { id: 'tRex', name: $t('티라노사우루스'), habitat: 'dino', model: 'tRex', colors: { hoof: '#e4d6b0', nostril: '#f7f0de', paint: { belly: '#cfc796', mouth: '#3b2c26' } }, // 132 A: nostril = the eyes' glints
     palette: {
       solid: [{ id: 'olive', name: $t('올리브'), body: '#747a48' }, { id: 'orange', name: $t('주황'), body: '#e89060' }, { id: 'purple', name: $t('보라'), body: '#a585f0', seldom: true }],
       twotone: [{ id: 'orange', name: $t('주황'), body: '#e89060', second: '#fbeedc' }, { id: 'sky', name: $t('하늘'), body: '#86a8cc', second: '#f2f8ff' }, { id: 'pink', name: $t('분홍'), body: '#f4a6b8', second: '#fff4f6', seldom: true }],
@@ -767,19 +767,14 @@ add120('sheep', [['cloud115', 'rare', $t('뭉게구름'), true], ['nightsky115',
 // 125-A: nothing behind ?m89 now: the arctic fox adult (104·110) went public above; 구미호 116·121 and the 117 dinosaurs dropped (user
 // 11/17; files and looks kept: pilot89_gumiho*.glb, materials.js gumiho*)
 if (M89) {
-  // 125-B 티라노 (pilot): tools/bake-trex125.mjs. &trex=1 안1 (chunky, simple; the default) | &trex=2 안2 (more detail);
-  // &rexsize=1.05 (default) | 1.30: its height against the horse (public 0.80); the brachiosaurus 1.60 here (a proposal;
-  // public 1.30), &brachio=<n> to compare. Commons (solid) wear materials.js rex125: stripes, the mouth, scale detail.
-  const q = new URLSearchParams(location.search), v = q.get('trex') === '2' ? 'b' : 'a', grow = (id, f) => { for (const st of ['adult', 'baby']) { const S = MODELS[id][st]; Object.assign(S, { s: S.s * f, sink: S.sink * f, r: S.r * f, seg: S.seg.map(x => x * f) }); } };
-  const br = +(q.get('brachio') || 1.6); grow('brachiosaurus', br / SIZE.brachiosaurus); SIZE.brachiosaurus = br;
-  SIZE.tRex = +(q.get('rexsize') || 1.05);
-  const D = { a: { adult: { h: 2.268, r: 0.571, seg: [-1.877, 1.233], legs: { hip: 0.82, x: [0], z: 0.3 }, attach: { head: { p: [1.02, 2.27, 0], r: [0, 0, -0.1], s: 1.17 }, neck: { p: [0.64, 1.67, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.84, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.16, 2.04, 0], r: [0, 0, 0], s: 1.22 } } },
-      baby: { h: 2.112, r: 0.571, seg: [-1.625, 1.375], legs: { hip: 0.6, x: [0], z: 0.3 }, attach: { head: { p: [1.02, 2.11, 0], r: [0, 0, -0.1], s: 1.38 }, neck: { p: [0.57, 1.4, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.61, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.18, 1.84, 0], r: [0, 0, 0], s: 1.44 } } } },
-    b: { adult: { h: 2.268, r: 0.571, seg: [-2.075, 1.309], legs: { hip: 0.82, x: [0], z: 0.3 }, attach: { head: { p: [1.06, 2.27, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.7, 1.7, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.8, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.19, 2.05, 0], r: [0, 0, 0], s: 1.15 } } },
-      baby: { h: 2.108, r: 0.57, seg: [-1.799, 1.455], legs: { hip: 0.6, x: [0], z: 0.3 }, attach: { head: { p: [1.06, 2.11, 0], r: [0, 0, -0.1], s: 1.3 }, neck: { p: [0.64, 1.44, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.61, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.21, 1.85, 0], r: [0, 0, 0], s: 1.36 } } } } }[v];
-  Object.assign(MODELS.tRex, { files: { baby: `assets/models/pilot89_trex125${v}_baby.glb`, adult: `assets/models/pilot89_trex125${v}_adult.glb` }, paints: ['belly', 'mouth', 'stripe'],
-    baby: sized('tRex', 'baby', D.baby), adult: sized('tRex', 'adult', D.adult), m89: { solid: 'rex125' } });
-  const c = SPECIES.find(s => s.id === 'tRex').colors; Object.assign(c, { nostril: '#f7f0de', paint: { ...c.paint, mouth: '#3b2c26' } }); // the teeth and the eyes' glints (bake-trex125: one 'nostril' mesh) ivory, the mouth line dark
+  // 125-B 티라노 pilots, public since 132 A as 안2 without teeth (tRex125_*). ?m89&trex=1 안1 | &trex=2 안2 with teeth (pilot89_trex125a|b);
+  // &rexsize=<n> | &brachio=<n> to compare heights against the horse (public 1.05 / 1.60)
+  const q = new URLSearchParams(location.search), v = { 1: 'a', 2: 'b' }[q.get('trex')], grow = (id, f) => { for (const st of ['adult', 'baby']) { const S = MODELS[id][st]; Object.assign(S, { s: S.s * f, sink: S.sink * f, r: S.r * f, seg: S.seg.map(x => x * f) }); } };
+  if (q.get('brachio')) { const br = +q.get('brachio'); grow('brachiosaurus', br / SIZE.brachiosaurus); SIZE.brachiosaurus = br; }
+  if (q.get('rexsize')) { const rs = +q.get('rexsize'); grow('tRex', rs / SIZE.tRex); SIZE.tRex = rs; }
+  if (v) { const D = { a: { adult: { h: 2.268, r: 0.571, seg: [-1.877, 1.233], legs: { hip: 0.82, x: [0], z: 0.3 }, attach: { head: { p: [1.02, 2.27, 0], r: [0, 0, -0.1], s: 1.17 }, neck: { p: [0.64, 1.67, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.84, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.16, 2.04, 0], r: [0, 0, 0], s: 1.22 } } },
+      baby: { h: 2.112, r: 0.571, seg: [-1.625, 1.375], legs: { hip: 0.6, x: [0], z: 0.3 }, attach: { head: { p: [1.02, 2.11, 0], r: [0, 0, -0.1], s: 1.38 }, neck: { p: [0.57, 1.4, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.61, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.18, 1.84, 0], r: [0, 0, 0], s: 1.44 } } } } }[v];
+    Object.assign(MODELS.tRex, { files: { baby: `assets/models/pilot89_trex125${v}_baby.glb`, adult: `assets/models/pilot89_trex125${v}_adult.glb` }, ...D && { baby: sized('tRex', 'baby', D.baby), adult: sized('tRex', 'adult', D.adult) } }); }
 }
 if (M89) {
   // 125-D 구미호 (pilot): two new arctic fox legendary slots on one legend file (tools/bake-pilot89.mjs gumiho125; materials.js

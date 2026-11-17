@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oBhLSLEdjZCBWwfuYlZWzyLVwyeIArB8VbWCYZBIJD4=' 'sha256-av/cMI4buR42DUrytfcd09+QH33VMq/PAZd5halEyyM=' 'sha256-47SYuv52ST9yQ76ncm8OHvWn4zem0EXrZt9l4WuC2XY=' 'sha256-LekQCI00JEaZLRMdEJfXDTJ26YaczH8pYQPetF2atRA=' 'sha256-H1WkRxmRLWU2DqSd/qtOcuEN2CYuS5Exl+lSX6UxEzA=' 'sha256-m2HeyogCp9/OyjjO68ATE4LY4EtU5n3XvLpXYYaDINg=' 'wasm-unsafe-eval' https://cloud.umami.is; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' data: blob: https://cloud.umami.is https://gateway.umami.is; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f5dcbc">
 <meta name="color-scheme" content="light only">
@@ -13,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.80.1-a3b16221">
+<meta name="build" content="toybrook-0.80.1-55ebdb21">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -27,7 +28,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="1109533" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="1110071" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>

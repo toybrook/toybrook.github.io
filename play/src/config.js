@@ -48,7 +48,7 @@ export const WEATHER_Q = params.get('weather');
 export const VIEW = { hour: null, weather: null };
 // 26-1: the bytes of the 3D code fetched after the first screen (ui/loadbar.js), and whether the offline files (dist-web/sw.js) are
 // there. Both lines are rewritten by tools/build-web.mjs; here (the source folder, no sw.js) a rough number and off.
-export const CODE_BYTES = 2487501; // release build
+export const CODE_BYTES = 2487962; // release build
 export const OFFLINE = true; // release build
 // settings sheet (main.js): kept apart from the save. time: 'real' | 'day' (항상 낮); weather: false = 날씨 효과 끄기
 // 26-2 소리: mute (모두 끄기), vAll / vAmb / vFx / vAnimal (전체 / 배경 / 효과 / 13-0 동물 소리, 0..1). Low at first (40%).
