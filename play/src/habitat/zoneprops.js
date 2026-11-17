@@ -13,7 +13,7 @@ import { ZONES, UNIT, NAT_K } from '../game/data.js';
 
 const S = UNIT; // inbox 42 A: the old board's metres -> the world's
 import { PREFS } from '../config.js';
-import { kit, emptyL, flowerPal, flowerCluster, addPads, addReeds, decorModel, part, halo } from './meadow/props.js';
+import { kit, emptyL, flowerPal, flowerCluster, addPads, addReeds, decorModel, part, halo, partGeos } from './meadow/props.js';
 import { toyMat, instanced, lathe, roundedBox, skyLit, nightGlow } from './toyKit.js';
 import { fireflies } from './daylight.js';
 import { mergeGeometries } from '../../vendor/utils/BufferGeometryUtils.js';
@@ -35,6 +35,16 @@ const MIX = {
   mudflat: { tree: 0.2, bush: 0.4, rock: 0.2, fl: 0, grass: 0.5, fern: 1.5 }, springs: { tree: 0.4, bush: 0.5, rock: 0.4, fl: 0.6, grass: 0.8, fern: 2 },
 };
 const GREENS = ['#6aa83a', '#7cb843', '#5e9c35'];
+// 141 D (?s129=4): a flat natural stone, faceted: planes cutting a ball (a flat top a little tilted, a flat bottom, seven sides
+// leaning in and out), their edges a little round (a soft min of the planes: a toy's, not sharp). One, cached like partGeos (lives
+// as long as the page, as those do: no dispose)
+let SLAB = null;
+const slabGeo = () => SLAB ??= (() => { const g = new THREE.SphereGeometry(1, 28, 18), p = g.attributes.position, v = new THREE.Vector3(), k = 0.06;
+  const N = [[0, 1, 0.12, 0.5], [0.08, -1, 0, 0.55], ...Array.from({ length: 7 }, (_, i) => { const a = i / 7 * 6.283 + 0.35 * Math.sin(i * 2.3); return [Math.cos(a), 0.35 * Math.sin(i * 1.7 + 1), Math.sin(a), 0.8 + 0.12 * Math.sin(i * 3.1)]; })]
+    .map(([x, y, z, o]) => { const l = Math.hypot(x, y, z); return [x / l, y / l, z / l, o]; });
+  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); let e = 0; for (const [x, y, z, o] of N) { const c = v.x * x + v.y * y + v.z * z; if (c > 0.02) e += Math.exp(-o / c / k); }
+    v.multiplyScalar(Math.min(1.2, -k * Math.log(e))); p.setXYZ(i, v.x, v.y, v.z); }
+  g.computeVertexNormals(); return g; })();
 let soft = null; // a soft round spot (fog, steam, mist; 14-3: the volcano's smoke, dino/props.js)
 export const softTex = () => { if (soft) return soft; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return soft = new THREE.CanvasTexture(c); };
@@ -44,9 +54,9 @@ const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vect
 // Z (zoneSet), back (the back forest's front edge), cliff (meadow: the cliff's foot, for its rock ledge) }
 export function zoneProps(scene, hab, o) {
   const { L, N, heightAt, occupied, free, O, Z, back } = o, snow = hab === 'snow', dino = hab === 'dino';
-  const Lr = emptyL(), pads = [], fruit = [], caps = [], crystals = [], ups = [], orchard = [], fx = [], shells = [], signs = [];
+  const Lr = emptyL(), pads = [], fruit = [], caps = [], slabs = [], crystals = [], ups = [], orchard = [], fx = [], shells = [], signs = [];
   const nearSpot = (x, z, m) => Z.spots.some(s => Math.hypot(x - s.x, z - s.z) < s.r + m);
-  const popK = S129 ? REVEAL.k : 0, pop = { t0: null, quiet: false, rocks: [], caps: [] }, sm = u => (u = Math.min(1, Math.max(0, u))) * u * (3 - 2 * u); // 129: the zone just opened (its fixtures pop up)
+  const popK = S129 ? REVEAL.k : 0, pop = { t0: null, quiet: false, rocks: [], slabs: [], caps: [] }, sm = u => (u = Math.min(1, Math.max(0, u))) * u * (3 - 2 * u); // 129: the zone just opened (its fixtures pop up)
   const popIn = t => pop.t0 == null ? 0 : sm((t - pop.t0 - 0.9) / 1.6); // its steam comes up with them
   for (let k = 1; k <= ZONES[hab].length; k++) {
     const s = strip(hab, k); if (!inRect(O, s.cx, s.cz)) continue;
@@ -233,14 +243,31 @@ export function zoneProps(scene, hab, o) {
     // capped rocks round the steps' feet and down the falls' sides; stone lanterns lit at night, a plank deck, a low bamboo fence,
     // stacked wooden buckets; slow thick steam over each pool (one mesh, steam129) and a little puff over each head in it
     function spring129() {
-      const F = Z.F.filter(f => f.zone === s.id), falls = F.filter(f => f.t === 'fall'), V3 = S129 === 3, stone = (x, z, sc) => { K.rock(x, z, sc); const q = L.rock.at(-1); q.c = jitter(V3 ? '#948e86' : '#66625e', 0.05); occupied.pop(); if (k === popK) pop.rocks.push(L.rock.length - 1);
+      const F = Z.F.filter(f => f.zone === s.id), falls = F.filter(f => f.t === 'fall'), V3 = S129 >= 3, V4 = S129 === 4, stone = (x, z, sc) => { K.rock(x, z, sc); const q = L.rock.at(-1); q.c = jitter(V3 ? '#948e86' : '#66625e', 0.05); occupied.pop(); if (k === popK) pop.rocks.push(L.rock.length - 1);
         if (V3) { caps.push({ x: q.x, y: q.y + q.s[1] * 0.8, z: q.z, s: [q.s[0] * 0.62, q.s[1] * 0.26, q.s[2] * 0.62], ry: q.ry, c: '#f6f9fc' }); if (k === popK) pop.caps.push([caps.length - 1, L.rock.length - 1]); } }; // warm: wet, no snow on it (129: pops up); 139-3: lighter, a snow cap that pops with it
       const gap = (x, z) => falls.some(f => Math.hypot(x - f.from[0], z - f.from[1]) < 1.0 || Math.hypot(x - f.to[0], z - f.to[1]) < 0.9);
-      for (const p of pools) { const n = Math.round(p.r * 5.5); for (let i = 0; i < n; i++) { const a = i / n * 6.283 + rnd() * 0.15, d = p.r - 0.42 + rnd() * 0.22, x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d;
+      // 141 D (V4): flat faceted stones (slabGeo) half sunk in the ground, in heaps on the water's edge, not strewn round it: in
+      // each a big flat one (snow on it), a mid one or two and small ones at their feet; the rim between the heaps bare
+      let s4 = 4141 + k; const r4 = () => { s4 = (s4 * 16807) % 2147483647; return (s4 - 1) / 2147483646; }; // 141 D: the V4 stones' own stream (the trees and the rest keep theirs)
+      const way = (x, z) => F.some(f => f.soak && polyD(x, z, [[f.x, f.z], f.soak.out]) < 1.3); // not on a soaker's way in and out
+      const slab4 = (x, z, sc, big, keep) => { const sx = sc * (1.05 + r4() * 0.35), sy = sc * (0.6 + r4() * 0.2), sz = sc * (0.8 + r4() * 0.25), h0 = heightAt(x, z), m = 0.7 * Math.max(sx, sz);
+        const lo = Math.min(h0, heightAt(x + m, z), heightAt(x - m, z), heightAt(x, z + m), heightAt(x, z - m)), y = Math.max(lo, h0 - 0.4 * sy) - 0.05 * sy; // its middle at the ground's lowest under it: half in
+        const q = { x, y, z, s: [sx, sy, sz], ry: r4() * 6.283, rx: big ? 0 : (r4() - 0.5) * 0.3, rz: big ? 0 : (r4() - 0.5) * 0.3, c: jitter(big ? '#7c776f' : sc > 0.3 ? '#6f6b64' : '#625e58', 0.06) };
+        slabs.push(q); if (k === popK) pop.slabs.push(slabs.length - 1); if (keep) occupied.push({ x, z, r: 0.8 * Math.max(sx, sz), h: 0.6 * sy });
+        if (big) { caps.push({ x, y: y + sy * 0.44, z, s: [sx * 0.55, sy * 0.16, sz * 0.55], ry: q.ry, c: '#f6f9fc' }); if (k === popK) pop.caps.push([caps.length - 1, slabs.length - 1, slabs]); } };
+      const HEAP = [[0.95, 0.15, 0.42], [-0.85, -0.1, 0.32], [0.55, -0.6, 0.2], [1.5, -0.2, 0.15], [-0.45, 0.65, 0.2], [-1.35, 0.3, 0.13]]; // along, out (x its size), size
+      const heap = (x, z, sc, ux, uz, nx, nz, keep) => { slab4(x, z, sc, true, keep);
+        for (const [a, b, f] of HEAP) { if (r4() < 0.2) continue; const px = x + (ux * a + nx * b) * sc, pz = z + (uz * a + nz * b) * sc; const s2 = f * sc * (0.85 + r4() * 0.3); if (s2 >= 0.14 && !gap(px, pz) && !way(px, pz)) slab4(px, pz, s2, false); } }; // 141 D: no loose chips under 0.14
+      if (V4) for (const p of pools) { const n = p.r > 3 ? 3 : 2; let t = r4();
+        for (let i = 0; i < n; i++, t += (0.8 + r4() * 0.4) / n) { const sc = 0.85 + r4() * 0.4 + (p.r > 3 ? 0.2 : 0);
+          for (let j = 0; j < 4; j++, t += 0.05) { const [x, z] = poolAt(p, t, wl(p) + 0.5 + sc * 0.3); if (gap(x, z) || way(x, z)) continue;
+            const l = Math.hypot(x - p.x, z - p.z), nx = (x - p.x) / l, nz = (z - p.z) / l; heap(x, z, sc, -nz, nx, nx, nz); break; } } }
+      else for (const p of pools) { const n = Math.round(p.r * 5.5); for (let i = 0; i < n; i++) { const a = i / n * 6.283 + rnd() * 0.15, d = p.r - 0.42 + rnd() * 0.22, x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d;
         if (!gap(x, z)) stone(x, z, 0.2 + rnd() * 0.14); } }
       for (const f of falls) { const dx = f.to[0] - f.from[0], dz = f.to[1] - f.from[1], l = Math.hypot(dx, dz), nx = -dz / l, nz = dx / l; // the fall's sides: rock steps
-        for (const t of [0.25, 0.6]) for (const sd of [-1, 1]) { stone(f.from[0] + dx * t + nx * sd * 0.9, f.from[1] + dz * t + nz * sd * 0.9, 0.32 + rnd() * 0.16); } }
-      for (const f of F.filter(f => f.t === 'boulder')) if (free(f.x, f.z, 0.3)) rock(f.x, f.z, f.sc); // 139-3: capped boulders and pines set by hand on the hill (zones.js spring139)
+        for (const t of [0.25, 0.6]) for (const sd of [-1, 1]) { if (V4) continue; const x = f.from[0] + dx * t + nx * sd * 0.9, z = f.from[1] + dz * t + nz * sd * 0.9; stone(x, z, 0.32 + rnd() * 0.16); }
+        if (V4) { const sd = r4() < 0.5 ? 1 : -1; for (const [t, o, sc] of [[0.15, 1.4, 0.75 + r4() * 0.2], [0.6, 1.2, 0.5 + r4() * 0.12]]) heap(f.from[0] + dx * t + nx * sd * o, f.from[1] + dz * t + nz * sd * o, sc, dx / l, dz / l, nx * sd, nz * sd); } } // 141 D: a heap by the lip on one side, a smaller one lower down
+      for (const f of F.filter(f => f.t === 'boulder')) if (free(f.x, f.z, 0.3)) { if (!V4) rock(f.x, f.z, f.sc); else { const a = r4() * 6.283; heap(f.x, f.z, f.sc, Math.cos(a), Math.sin(a), -Math.sin(a), Math.cos(a), true); } } // 139-3: capped boulders and pines set by hand on the hill (zones.js spring139)
       for (const f of F.filter(f => f.t === 'pine')) if (free(f.x, f.z, 0.8)) tree(f.x, f.z, f.sc);
       if (!V3) for (const h of F.filter(f => f.t === 'hill')) for (let i = 0; i < 5; i++) { const a = i / 5 * 6.283 + rnd() * 0.4, x = h.x + Math.cos(a) * h.rx * 0.97, z = h.z + Math.sin(a) * h.rz * 0.97;
         if (!gap(x, z) && !pools.some(p => Math.hypot(x - p.x, z - p.z) < p.r + 0.9) && free(x, z, 0.6)) rock(x, z, 0.55 + rnd() * 0.3); }
@@ -267,12 +294,12 @@ export function zoneProps(scene, hab, o) {
         for (const [x, y] of [[-0.2, 0.06], [0.2, 0.06], [0, 0.44]]) part(g, new THREE.CylinderGeometry(0.185, 0.185, 0.03, 16), '#7a5a3a', x, y + 0.1, 0);
         part(g, new THREE.CylinderGeometry(0.02, 0.02, 0.6, 6), '#d8b47a', 0.36, 0.3, 0.12, { rz: 0.35 }); part(g, new THREE.CylinderGeometry(0.07, 0.06, 0.08, 10), '#d8b47a', 0.25, 0.05, 0.12);
         put(g, f.x, f.z, rnd() * 6, 0.45, heightAt(f.x, f.z) - 0.02, 0.6); }
-      steam129(V3);
+      steam129(V3, V4);
     }
-    function steam129(V3) { // (139-3 V3: white, starts higher and narrower: only columns going up, nothing lying on the rocks) over each pool 2-4 slow columns, 5 puffs each (9 s up 5 m, 1.2 -> 4 m wide); 8 small ones over the heads in it
+    function steam129(V3, V4) { // (139-3 V3: white, starts higher and narrower: only columns going up, nothing lying on the rocks) over each pool 2-4 slow columns, 5 puffs each (9 s up 5 m, 1.2 -> 4 m wide); 8 small ones over the heads in it
       const cols = [];
-      for (const p of pools) { const n = Math.max(2, Math.min(4, Math.round(p.r))), y = waterAt(p); for (let i = 0; i < n; i++) { const a = i / n * 6.283 + rnd(), d = (0.3 + 0.5 * rnd()) * wl(p); cols.push({ x: p.x + Math.cos(a) * d, y, z: p.z + Math.sin(a) * d, ph: rnd() }); } }
-      const PER = 5, N = cols.length * PER + 8, aA = new THREE.InstancedBufferAttribute(new Float32Array(N), 1), geo = new THREE.PlaneGeometry(1, 1); geo.setAttribute('aA', aA);
+      for (const p of pools) { const n = V4 ? (p.r > 2.3 ? 3 : 2) : Math.max(2, Math.min(4, Math.round(p.r))), y = waterAt(p); for (let i = 0; i < n; i++) { const a = i / n * 6.283 + rnd(), d = (0.3 + 0.5 * rnd()) * wl(p); cols.push({ x: p.x + Math.cos(a) * d, y, z: p.z + Math.sin(a) * d, ph: rnd() }); } }
+      const PER = V4 ? 6 : 5, N = cols.length * PER + 8, aA = new THREE.InstancedBufferAttribute(new Float32Array(N), 1), geo = new THREE.PlaneGeometry(1, 1); geo.setAttribute('aA', aA);
       const color = { value: new THREE.Color() }, mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, fog: true,
         uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), map: { value: softTex() }, color },
         vertexShader: `attribute float aA; varying float vA; varying vec2 vUv;
@@ -282,7 +309,7 @@ void main() { vUv = uv; vA = aA; vec4 mvPosition = modelViewMatrix * instanceMat
 }`,
         fragmentShader: `uniform sampler2D map; uniform vec3 color; varying float vA; varying vec2 vUv;
 #include <fog_pars_fragment>
-void main() { gl_FragColor = vec4(color * ${V3 ? 'mix(vec3(0.86, 0.9, 0.96), vec3(1.06), smoothstep(0.0, 0.75, vUv.y))' : 'mix(vec3(0.83, 0.87, 0.93), vec3(1.04), smoothstep(0.1, 0.8, vUv.y))'}, texture2D(map, vUv).a * vA); // shaded under: a puff, not a smear
+void main() { ${V4 ? 'vec2 p = vUv * 2.0 - 1.0; float r2 = dot(p, p); if (r2 > 1.0) discard; float l = clamp(dot(vec3(p, sqrt(1.0 - r2)), vec3(-0.42, 0.7, 0.58)), 0.0, 1.0); float e = 1.0 - r2; gl_FragColor = vec4(color * mix(vec3(0.9, 0.92, 0.96), vec3(1.06), l), e * e * vA); // 140: each puff soft, lit top-left (seen on the white snow); no hard rim or dark side, or they read as grey balls\n' : `gl_FragColor = vec4(color * ${V3 ? 'mix(vec3(0.86, 0.9, 0.96), vec3(1.06), smoothstep(0.0, 0.75, vUv.y))' : 'mix(vec3(0.83, 0.87, 0.93), vec3(1.04), smoothstep(0.1, 0.8, vUv.y))'}, texture2D(map, vUv).a * vA); // shaded under: a puff, not a smear`}
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
 #include <fog_fragment>
@@ -290,9 +317,10 @@ void main() { gl_FragColor = vec4(color * ${V3 ? 'mix(vec3(0.86, 0.9, 0.96), vec
       const im = new THREE.InstancedMesh(geo, mat, N); im.renderOrder = 2; im.frustumCulled = false; scene.add(im);
       const white = new THREE.Color('#f4f6f8'), warm = new THREE.Color('#ffc98a'), A = aA.array, fin = t => k === popK ? popIn(t) : 1;
       ups.push((t, ctx) => {
-        color.value.copy(white).multiply(skyLit.value).lerp(warm, 0.3 * nightGlow.value); // lit by the sky; at night a little warm from the lanterns
+        color.value.copy(white).multiply(skyLit.value).lerp(warm, (V4 ? 0.4 : 0.3) * nightGlow.value); // lit by the sky; at night a little warm from the lanterns
         const th = (1 + 0.5 * Math.min(1, ctx?.rain || 0)) * fin(t); let i = 0; // cold wet air: thicker
-        for (const c of cols) for (let j = 0; j < PER; j++, i++) { const u = (t / 9 + c.ph + j / PER) % 1, w = Math.sin(t * 0.13 + c.ph * 6) * 0.6 * u;
+        for (const c of cols) for (let j = 0; j < PER; j++, i++) { const u = (t / (V4 ? 14 : 9) + c.ph + j / PER) % 1, w = Math.sin(t * 0.13 + c.ph * 6) * 0.6 * u;
+          if (V4) { const sz = 1.1 + u * 2.4; im.setMatrixAt(i, _m.compose(_p.set(c.x + w * 0.4, c.y + 1.3 + u * 7, c.z + w * 0.2), _q.identity(), _s.set(sz, sz * 1.35, 1))); A[i] = 0.8 * th * sm((u - 0.03) / 0.15) * (1 - u) ** 1.3; continue; } // 140: thick, slow, each puff shaded round (lit top-left)
           if (V3) { im.setMatrixAt(i, _m.compose(_p.set(c.x + w * 0.5, c.y + 0.9 + u * 6, c.z + w * 0.2), _q.identity(), _s.set(0.7 + u * 1.9, (0.7 + u * 1.9) * 1.5, 1))); A[i] = 0.85 * th * sm((u - 0.04) / 0.2) * (1 - u) ** 1.3; continue; }
           im.setMatrixAt(i, _m.compose(_p.set(c.x + w, c.y + 0.5 + u * 6, c.z + w * 0.4), _q.identity(), _s.setScalar(1.1 + u * 2.2))); A[i] = 0.6 * th * sm(u / 0.15) * (1 - u) ** 1.2; }
         let h = 0;
@@ -316,7 +344,8 @@ void main() { gl_FragColor = vec4(color * ${V3 ? 'mix(vec3(0.86, 0.9, 0.96), vec
     const n = v => Math.round(A / 100 * (v || 0));
     if (mix.tree) place(n(mix.tree), (x, z) => low(1.5, x, z), (x, z) => tree(x, z, (snow ? 0.85 : 1) + rnd() * 0.35));
     if (mix.bush) place(n(mix.bush), (x, z) => low(0.9, x, z), (x, z) => N.add('bush', nk.bush, x, z, 0.9 + rnd() * 0.4));
-    if (mix.rock) place(n(mix.rock), (x, z) => low(1, x, z), (x, z) => snow ? rock(x, z, 0.4 + rnd() * 0.45) : N.add('rock', nk.rock, x, z, 0.55 + rnd() * 0.5));
+    if (mix.rock && !(S129 === 4 && s.id === 'hotspring')) place(n(mix.rock), // 141 D: no strewn rocks round the spring (its stones are in heaps)
+       (x, z) => low(1, x, z), (x, z) => snow ? rock(x, z, 0.4 + rnd() * 0.45) : N.add('rock', nk.rock, x, z, 0.55 + rnd() * 0.5));
     if (mix.fern) place(n(mix.fern), (x, z) => low(0.5, x, z), (x, z) => K.fern(x, z, 0.8 + rnd() * 0.5)); // 14-3
     if (mix.fl && mix.drift) { // inbox 67-3 the flower hill: no carpet. Drifts of small flower bushes in the grass, one colour
       // each (of three), thick at a drift's middle and thinning out, sparse toward the strip's edges
@@ -335,6 +364,7 @@ void main() { gl_FragColor = vec4(color * ${V3 ? 'mix(vec3(0.86, 0.9, 0.96), vec
   if (pads.length) addPads(scene, pads);
   if (fruit.length) scene.add(instanced(new THREE.SphereGeometry(1, 10, 7), toyMat('#ffffff', { roughness: 0.35 }), fruit, { cast: false }));
   const capM = caps.length ? instanced(new THREE.SphereGeometry(1, 14, 8), toyMat('#ffffff', { roughness: 0.62 }), caps, { cast: false }) : null; if (capM) scene.add(capM);
+  const slabM = slabs.length ? instanced(slabGeo(), partGeos().mat.rock, slabs) : null; if (slabM) scene.add(slabM); // 141 D: the spring's flat stones (the rocks' own material: snow on their tops in snow)
   if (crystals.length) scene.add(instanced(new THREE.CylinderGeometry(0.6, 1, 1, 6), toyMat('#ffffff', { roughness: 0.12, transparent: true, opacity: 0.88 }), crystals));
   if (shells.length) scene.add(instanced(new THREE.SphereGeometry(1, 12, 5, 0, Math.PI * 2, 0, Math.PI / 2), toyMat('#ffffff', { roughness: 0.4 }), shells, { cast: false }));
   if (orchard.length) ups.push(drops(scene, orchard, heightAt));
@@ -351,14 +381,15 @@ void main() { gl_FragColor = vec4(color * ${V3 ? 'mix(vec3(0.86, 0.9, 0.96), vec
   const easeB = u => u >= 1 ? 1 : 1 + 2.70158 * (u - 1) ** 3 + 1.70158 * (u - 1) ** 2; // back-ease out: past full and back
   const popUp = (t, ctx) => pops.forEach((q, i) => { if (q.f === 1) return; const u = (t - pop.t0 - 1.3 - 0.18 * i) / 0.45; if (u <= 0) return;
     if (!q.f && !pop.quiet) sfx('pop'); grow(q, easeB(u)); if (q.f === 1 && ctx) ctx.shade = true; }); // settled: its shadow (habitat.js)
-  const R = pop.rocks, rockUp = (t, ctx) => { const im = L.mesh?.rock; if (!im) return; let left = 0; // the rim's stones round each pool in turn, 0.9-2.1 s (the curtain is off at 0.5)
-    R.forEach((j, i) => { const u = (t - pop.t0 - 0.9 - 1.2 * i / R.length) / 0.35, q = L.rock[j]; left += u < 1; _e.set(0, q.ry, 0);
-      im.setMatrixAt(j, _m.compose(_p.set(q.x, q.y, q.z), _q.setFromEuler(_e), _s.set(...q.s).multiplyScalar(q.f = Math.max(1e-3, u <= 0 ? 0 : easeB(u))))); });
-    for (const [ci, j] of pop.caps) { const c = caps[ci], q = L.rock[j]; _e.set(0, c.ry, 0); capM.setMatrixAt(ci, _m.compose(_p.set(q.x, q.y + (c.y - q.y) * q.f, q.z), _q.setFromEuler(_e), _s.set(...c.s).multiplyScalar(q.f))); } // 139-3: its cap with it
+  const R = pop.rocks, RS = pop.slabs, rockUp = (t, ctx) => { const im = L.mesh?.rock; if (!im) return; let left = 0; const n = R.length + RS.length; // the rim's stones round each pool in turn, 0.9-2.1 s (the curtain is off at 0.5)
+    const one = (m, q, j, i) => { const u = (t - pop.t0 - 0.9 - 1.2 * i / n) / 0.35; left += u < 1; _e.set(q.rx || 0, q.ry, q.rz || 0);
+      m.setMatrixAt(j, _m.compose(_p.set(q.x, q.y, q.z), _q.setFromEuler(_e), _s.set(...q.s).multiplyScalar(q.f = Math.max(1e-3, u <= 0 ? 0 : easeB(u))))); };
+    R.forEach((j, i) => one(im, L.rock[j], j, i)); RS.forEach((j, i) => one(slabM, slabs[j], j, R.length + i)); // 141 D: the flat stones too
+    for (const [ci, j, S] of pop.caps) { const c = caps[ci], q = (S || L.rock)[j]; _e.set(0, c.ry, 0); capM.setMatrixAt(ci, _m.compose(_p.set(q.x, q.y + (c.y - q.y) * q.f, q.z), _q.setFromEuler(_e), _s.set(...c.s).multiplyScalar(q.f))); } // 139-3: its cap with it
     if (pop.caps.length) capM.instanceMatrix.needsUpdate = true;
-    im.instanceMatrix.needsUpdate = true; if (!left) { R.length = 0; if (ctx) ctx.shade = true; } };
+    im.instanceMatrix.needsUpdate = true; if (slabM) slabM.instanceMatrix.needsUpdate = true; if (!left) { R.length = RS.length = 0; if (ctx) ctx.shade = true; } };
   const sg = signs.length ? signBoards(signs) : null; if (sg) scene.add(sg);
-  return { update: (t, ctx) => { if (sg) sg.visible = PREFS.signs !== false; if (pop.t0 == null) pop.t0 = t; if (pops.length) popUp(t, ctx); if (R.length) rockUp(t, ctx); for (const u of ups) u(t, ctx); } };
+  return { update: (t, ctx) => { if (sg) sg.visible = PREFS.signs !== false; if (pop.t0 == null) pop.t0 = t; if (pops.length) popUp(t, ctx); if (R.length || RS.length) rockUp(t, ctx); for (const u of ups) u(t, ctx); } };
 }
 
 // the zone signs: two posts and a board each (merged), the names on one canvas, its text planes one mesh

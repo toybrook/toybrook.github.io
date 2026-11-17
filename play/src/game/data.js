@@ -811,7 +811,7 @@ export const LEGEND128 = {
 };
 // inbox 131 (user 11/17 13:01): only the vane chicken stays (?m89). The carousel horse is kept as the base of a later 신수 unicorn;
 // the pig, sheep, rabbit and cow are dropped. All six stay in this table and in materials.js (kept, and check-eggs' 69-1 test).
-if (M89) for (const sp of ['chicken']) SPECIES.find(s => s.id === sp).legendary.push(LEGEND128[sp]);
+for (const sp of ['chicken']) SPECIES.find(s => s.id === sp).legendary.push(LEGEND128[sp]); // 144 A: public (user OK 11/18 01:14)
 // 134 A 전설 2번째 다시 (?m89 시범; user 11/17 13:11): the whole body turns into another thing, its colours far from the animal's
 // own and from its first legendary. With the vane chicken (above) the meadow's second set. Looks: materials.js 134
 export const LEGEND134 = {
@@ -823,6 +823,16 @@ export const LEGEND134 = {
 };
 // 139 (user 11/17 20:15): these five dropped, only the vane chicken (LEGEND128) stays; the table and the looks kept, not pushed
 // if (M89) for (const [sp, L] of Object.entries(LEGEND134)) SPECIES.find(s => s.id === sp).legendary.push(L);
+// 141 B 전설 2번째 「빛 재질」 (?m89 시범; inbox 141 B): the first legendaries' language (clear, lit from inside, gem, gold, sparkle),
+// no painted pattern, colour and material apart from each one's first. With the vane chicken the meadow's second set. Looks: materials.js 141
+export const LEGEND141 = {
+  horse: { id: 'crystalglass', name: $t('수정 유리 말'), mat: 'crystal141', effect: 'twinkle' },
+  sheep: { id: 'kintsugi', name: $t('금 이음 양'), mat: 'kintsugi141', effect: 'goldsparks' },
+  rabbit: { id: 'rubygem', name: $t('루비 토끼'), mat: 'ruby141', effect: 'twinkle' },
+  pig: { id: 'piggybank', name: $t('유리 저금통 돼지'), mat: 'piggy141', effect: 'coins' },
+  cow: { id: 'lapis', name: $t('청금석 소'), mat: 'lapis141', effect: 'twinkle' },
+};
+for (const [sp, L] of Object.entries(LEGEND141)) if (M89 || sp !== 'horse') SPECIES.find(s => s.id === sp).legendary.push(L); // 144 A: public; the crystal horse stays ?m89 (144 B remake)
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
 export const WAVE127 = 0;
@@ -840,13 +850,16 @@ export const SHARED127 = [
     { id: 'mint', name: $t('민트'), body: '#aee6d0' }, { id: 'lavender', name: $t('라벤더'), body: '#cbb8ee' }, { id: 'lemon', name: $t('레몬'), body: '#f2e48a' }) },
   // 138 B (inbox 138, 사용자: 「꽃무늬 남발, 더 기발하게」): the six heroic looks redone in place, no flowers (same slot, tier, wave)
   { id: 'bunfish', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('분청 물고기'), colors: c3(
-    { id: 'brush', name: $t('귀얄'), body: '#7a7468', fill: '#ece6da', ink: '#46413a', slip: 1 }, { id: 'iron', name: $t('철화'), body: '#857560', fill: '#efe6d4', fish: '#a0522a', ink: '#5a2410', slip: 1.6 }, { id: 'black', name: $t('흑유'), body: '#2a221e', fill: '#e8e0d0', ink: '#2a221e', slip: 0 }) },
+    // 141 C: white slip, one big iron-painted fish on each side (clay: the unglazed foot and the dry-brush gaps)
+    { id: 'iron', name: $t('철화'), body: '#f1ebdf', ink: '#3d2817', clay: '#8c7b68' }, { id: 'cream', name: $t('미색'), body: '#eadcc2', ink: '#4b2e1b', clay: '#957d62' }, { id: 'copper', name: $t('진사'), body: '#f2ede4', ink: '#9e2b25', clay: '#8a7a6a' }) },
   { id: 'marquetry', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('쪽매 나무'), colors: c3(
     { id: 'maple', name: $t('메이플·호두'), light: '#e6c48e', dark: '#6e4528' }, { id: 'cherry', name: $t('체리·흑단'), light: '#c47a50', dark: '#2e221c' }, { id: 'birch', name: $t('자작·청록 물들임'), light: '#efe2c4', dark: '#2f7c78' }) },
   { id: 'xstitch', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('십자수'), colors: c3(
-    { id: 'cotton', name: $t('무명'), body: '#f1e8d6', t1: '#d0343c', t2: '#2f7a4a' }, { id: 'gingham', name: $t('깅엄'), body: '#f6f4ef', check: '#a8c2ea', t1: '#2a3f8a', t2: '#d03a4a' }, { id: 'denim', name: $t('데님'), body: '#3d5a88', t1: '#f4efe4', t2: '#e8b13a', twill: 1 }) },
+    // 142: a sampler on aida (t1 heart and zigzag, t2 border rows and checks, t3 diamonds and stars; gold: metal thread)
+    { id: 'sampler', name: $t('샘플러'), body: '#efe6d2', t1: '#c3262f', t2: '#1f2c66', t3: '#3b62b0' }, { id: 'pastel', name: $t('파스텔'), body: '#f4efe6', t1: '#f08aa8', t2: '#7cc0e8', t3: '#86d4b4' }, { id: 'gold', name: $t('금실'), body: '#1e1c1f', t1: '#e6b84a', t2: '#c9962e', t3: '#f2d68a', gold: 1 }) },
   { id: 'marbled', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('마블링 종이'), colors: c3(
-    { id: 'indigo', name: $t('쪽빛'), body: '#ecdcbc', c1: '#26408a', c2: '#c4503a', c3: '#d8a040' }, { id: 'sunset', name: $t('노을'), body: '#f6e2c8', c1: '#e8664a', c2: '#d84a7a', c3: '#f2b440' }, { id: 'ink', name: $t('먹'), body: '#f2ede2', c1: '#1c1c20', c2: '#8a8e96', c3: '#c8ccd2' }) },
+    // 141 C: comb-pattern marbling in harmonious colours
+    { id: 'indigo', name: $t('쪽빛'), body: '#efe4cc', c1: '#2a4478', c2: '#c4903e', c3: '#7d93b4' }, { id: 'ochre', name: $t('황토'), body: '#f1e6cf', c1: '#b8742e', c2: '#5d6e4a', c3: '#e0c48a' }, { id: 'inkgold', name: $t('먹·금'), body: '#efe9dc', c1: '#1d1d22', c2: '#c9a24a', c3: '#7c7e84' }) },
   { id: 'hammered', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('두드린 동판'), colors: c3(
     { id: 'copper', name: $t('구리'), body: '#d07a4c', pat: 0.3 }, { id: 'bronze', name: $t('청동'), body: '#b48c50', pat: 0.38 }, { id: 'verdigris', name: $t('녹청'), body: '#c87048', pat: 0.9 }) },
   { id: 'beads', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('비즈 공예'), colors: c3(

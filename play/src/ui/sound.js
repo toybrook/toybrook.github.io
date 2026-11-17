@@ -127,7 +127,7 @@ const DUR = { hatch: 1.8, grown: 1.6, level: 2, bell: 1.8, fireworks: 1.6, train
 const BUZZ = { hatch: [25, 70, 25], grown: 40 }; // 26-3 진동 (Android Chrome; iPhone browsers have no navigator.vibrate)
 export function sfx(name, delay = 0) {
   if (!FX[name]) return; // 28-3: a prop's own sound by its id (habitat.js), when it has one
-  if (BUZZ[name] && PREFS.buzz) navigator.vibrate?.(BUZZ[name]);
+  if (BUZZ[name] && PREFS.buzz && navigator.userActivation?.hasBeenActive !== false) navigator.vibrate?.(BUZZ[name]); // no tap yet = Chrome blocks it and logs an error
   if (!A || A.state !== 'running' || PREFS.mute) return;
   const t = A.currentTime + delay; if ((fxBusy[name] || 0) >= 2 || t - (lastAt[name] ?? -1) < 0.05) return;
   fxBusy[name] = (fxBusy[name] || 0) + 1; lastAt[name] = t; setTimeout(() => fxBusy[name]--, (delay + (DUR[name] || 0.3)) * 1000);

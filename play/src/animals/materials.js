@@ -1460,43 +1460,45 @@ const DEW127 = BUMP115 + `float hh = 0.0, drop = 0.0; vec2 u = vec2(0.0);
 // flanks ±z, 1 the chest and rump ±x, 2 the top and belly ±y). Where two faces meet the grid jumps: a panel seam, as on
 // a real beaded or veneered toy.
 const PL138 = '#define PL138(Q, F) { vec3 a_ = abs(on); F = a_.y >= max(a_.x, a_.z) ? 2.0 : a_.x >= a_.z ? 1.0 : 0.0; Q = F > 1.5 ? p.xz : F > 0.5 ? p.zy : p.xy; }\n';
-// 분청 물고기: grey clay with the white slip brushed on in broad strokes (uSlip how much, 0 none: the 흑유 black glaze), and
-// fish scraped out of it: each a white slip fish (박지) with the clay scraped bare round it, its outline, eye, gill and
-// fins incised (uInk), crosshatched scales close up; between the fish, little sets of three wave lines. The fish face
-// either way, tilted a little, upright on the flanks (their frame is the surface's up, not a scattered one). uFish is the
-// fish's own colour (the 철화 one painted iron brown, the others the slip). No fish where the surface bends tightly
-// (muzzle, ear, leg tip: curvature from the normal's change over the position's): one wrapped round a muzzle read as a grin
+// 분청 물고기 (143 A: 철화어문 분청 그릇): the body a buncheong bowl. 귀얄: white slip brushed round it in wavy horizontal
+// strokes; where a stroke runs thin the bristles leave streaks of the grey clay (uClay) (at the home distance a grey wash
+// in patches). Painted round it in iron (uInk) like the band on a jar: two big fish swimming along each flank (a big one
+// high toward the rump, one low toward the chest, so any side view shows two), water weeds on the chest side and the rump,
+// a pair of wavy water lines low and high. Placed round the body (the angle round the upright axis, the body's length
+// stretched to its width, and the height), so every species carries them on its torso; not on the head end (x > 0.24),
+// the top and belly faces or where the surface bends tightly (muzzle, ear, leg, tail). Close up the fish's scale arcs,
+// eye ring and gill left in the slip. The accent (mane, hooves, beak) plain slip a shade darker
 const BUNFISH138 = AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.3, 0.7, fwidth(p.y) * 20.0);
-  vec2 b = mat2(0.8, -0.6, 0.6, 0.8) * vec2(p.x, p.y + 0.3 * p.z); float e = fbm3(vec3(b.x * 30.0, b.y * 3.0, p.z * 4.0)) - 0.5;
-  float s0 = fbm3(vec3(b.x * 0.8, b.y * 5.0, p.z * 3.0) + 3.0), st = vn3(vec3(b.x * 2.0, b.y * 70.0, p.z * 8.0)), w = 0.1 * uSlip;
-  float slip = smoothstep(0.5 - w, 0.54 - w, s0 + 0.18 * (st - 0.5) + 0.05 * e) * min(1.0, uSlip * 3.0);
-  slip *= mix(0.88, 0.5 + 0.6 * vn3(vec3(b.x * 3.0, b.y * mix(140.0, 50.0, uHab), p.z * 10.0)), mix(fade, 0.6, uHab));
-  vec3 col = mix(diffuseColor.rgb, uFill, clamp(slip, 0.0, 1.0) * 0.85);
+  float yb = p.y + 0.02 * sin(p.x * 7.0 + p.z * 5.0) + 0.012 * sin(p.x * 17.0 - p.z * 11.0);
+  float tight = smoothstep(11.0, 15.0, length(fwidth(on)) / max(length(fwidth(p)), 1e-5));
+  float br = vn3(vec3(p.x * 1.4, yb * 150.0, p.z * 1.4)), thin = smoothstep(0.36, 0.76, vn3(vec3(p.x * 2.4 + 3.0, yb * 7.0, p.z * 2.4))) * (1.0 - 0.6 * tight);
+  vec3 col = diffuseColor.rgb;
   if (uAcc < 0.5) {
-    vec3 q = p * 2.7 + 5.0, qi = floor(q), qf = fract(q), ty = normalize(vec3(0.0, 1.0, 0.0) - on * on.y + vec3(0.0, 0.0, 1e-3)), tx = cross(ty, on);
-    float fd = 1.0, wd = 1.0; vec2 fv = vec2(0.0), wv = vec2(0.0);
-    for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-      vec3 o = vec3(x, y, z), r = qf - o - h33(qi + o) * 0.8 - 0.1; float hz = h31(qi + o + 0.5);
-      if (abs(dot(r, on)) > 0.4) continue;
-      float an = (fract(hz * 13.1) - 0.5) * 0.5, cs = cos(an), sn = sin(an);
-      vec2 v = mat2(cs, -sn, sn, cs) * vec2(dot(r, tx), dot(r, ty)); v.x *= fract(hz * 7.3) < 0.5 ? -1.0 : 1.0;
-      if (hz < 0.2) { float dd = length(v / vec2(0.3, 0.13)); if (dd < wd) { wd = dd; wv = v; } continue; }
-      float bh = mix(0.05, 0.1, smoothstep(-0.22, 0.04, v.x)), d = (length(vec2((v.x - 0.02) / 0.24, v.y / bh)) - 1.0) * bh;
-      float t = -0.19 - v.x; d = min(d, max(max(max(-t, t - 0.13), abs(v.y) - 0.005 - t * 0.8), (t - 0.05) * 0.9 - abs(v.y)) - 0.016);
-      d = min(d, (length((v - vec2(-0.03, 0.09)) / vec2(0.09, 0.04)) - 1.0) * 0.04);
-      d = min(d, (length((v - vec2(0.05, -0.085)) / vec2(0.05, 0.03)) - 1.0) * 0.03);
-      if (d < fd) { fd = d; fv = v; } }
-    float lw = mix(0.011, 0.018, uHab), fish = 1.0 - AA(fd, 0.0), halo = (1.0 - AA(fd, 0.075)) * (1.0 - fish);
-    float ln = 1.0 - AA(abs(fd), lw), er = length(fv - vec2(0.15, 0.025));
-    ln = max(ln, max(1.0 - AA(abs(er - 0.026), lw * 0.7), 1.0 - AA(er, mix(0.009, 0.03, uHab))));
-    ln = max(ln, (1.0 - AA(abs(length(fv - vec2(0.22, 0.0)) - 0.1), lw * 0.7)) * step(fv.x, 0.16) * step(fd, 0.0));
-    if (uHab < 0.5) { float h1 = abs(fract((fv.x + fv.y) * 24.0) - 0.5), h2 = abs(fract((fv.x - fv.y) * 24.0) - 0.5);
-      ln = max(ln, (1.0 - AA(min(h1, h2), 0.07)) * step(fd, -0.018) * step(fv.x, 0.1) * step(-0.18, fv.x) * fade * 0.8); }
-    float fm = 1.0 - smoothstep(6.0, 9.0, length(fwidth(on)) / max(length(fwidth(p)), 1e-5)); fish *= fm; halo *= fm; ln *= fm;
-    float wl = 0.0; for (int k = -1; k <= 1; k++) { float yy = wv.y - float(k) * 0.06 - 0.022 * sin(wv.x * 26.0 + float(k) * 1.3); wl = max(wl, 1.0 - AA(abs(yy), lw * 0.8)); }
-    wl *= 1.0 - smoothstep(0.75, 1.0, wd);
-    col = mix(col, diffuseColor.rgb * 0.85, halo); col = mix(col, uFish, fish); col = mix(col, uInk, max(ln, wl) * 0.92);
-    float hh = 0.4 * fish - max(ln, wl); BUMP115(hh, 0.003 * fade) }
+    float clay = mix(thin * 0.62, (1.0 - AA(br, 0.12 + thin * 0.72)) * (0.4 + 0.6 * thin), fade);
+    float lg = smoothstep(5.0, 8.0, max(length(dFdx(on)) / max(length(dFdx(p)), 1e-5), length(dFdy(on)) / max(length(dFdy(p)), 1e-5))) * (1.0 - smoothstep(0.42, 0.52, p.y));
+    clay *= 1.0 - 0.9 * max(lg, 1.0 - smoothstep(0.2, 0.32, p.y));
+    col = mix(col * (0.96 + 0.05 * br), uClay, clay * 0.8);
+    float m = smoothstep(0.88, 0.62, abs(on.y)) * (1.0 - tight) * (1.0 - smoothstep(0.24, 0.34, p.x)) * (1.0 - lg);
+    float ph = atan(p.z * 2.2, p.x + 0.05), ink = 0.0, lw = mix(0.035, 0.06, uHab);
+    for (int k = 0; k < 4; k++) { float sd = k < 2 ? 1.0 : -1.0, lo = float(k == 0 || k == 2), pc = sd * mix(2.25, 1.45, lo), dr = sd * (lo > 0.5 ? -1.0 : 1.0), S = mix(0.26, 0.22, lo), yc = mix(0.6, 0.38, lo);
+      vec2 u = vec2((mod(ph - pc + 3.1416, 6.2832) - 3.1416) * 0.32 * dr, p.y - yc) / S; u.y -= 0.1 * sin(u.x * 1.6 + 0.6 + float(k));
+      float xq = (u.x - 0.12) / 0.88, wob = 0.05 * (vn3(vec3(u * 7.0, float(k))) - 0.5), ry = 0.34 * sqrt(max(0.0, 1.0 - xq * xq)) * mix(0.6, 1.0, smoothstep(-0.7, 0.1, u.x));
+      float d = abs(u.y) - ry + step(ry, 0.001), t = -0.72 - u.x, fx = abs(u.x + 0.02);
+      d = min(d, max(max(-t - 0.06, t - 0.42), max(abs(u.y) - 0.06 - t * 0.95, (t - 0.2) * 1.3 - abs(u.y))));
+      d = min(d, max(max(u.y - ry - 0.18 * (1.0 - fx / 0.34), -u.y), fx - 0.34));
+      d = min(d, max(max(-u.y - ry - 0.13 * (1.0 - abs(u.x - 0.22) / 0.13), u.y), abs(u.x - 0.22) - 0.13));
+      float e = length(u - vec2(0.68, 0.09)), res = max((1.0 - AA(abs(length(u - vec2(1.0, 0.0)) - 0.42), lw)) * step(0.45, u.x) * step(abs(u.y), ry - 0.03), 1.0 - AA(abs(e - 0.07), lw * 0.8));
+      if (uHab < 0.5) { vec2 sc = vec2(fract(u.x * 5.0 + 0.5 * floor(u.y * 6.0)) - 0.5, fract(u.y * 6.0));
+        res = max(res, (1.0 - AA(abs(length(sc * vec2(1.0, 0.8)) - 0.42), 0.05)) * step(abs(u.y), ry - 0.06) * step(-0.55, u.x) * step(u.x, 0.45) * fade * 0.6); }
+      ink = max(ink, (1.0 - AA(d + wob, 0.0)) * (0.82 + 0.18 * vn3(vec3(u.x * 2.5, u.y * 35.0, 2.0))) * (1.0 - res * 0.9)); }
+    float fa = abs(ph), fr = step(1.7, fa), wc = mix(0.6, 2.78, fr), wa = (fa - wc) * 0.32, y0 = mix(0.44, 0.2, fr);
+    for (int k = 0; k < 3; k++) { float fk = float(k), yt = y0 + 0.24 + 0.05 * fk - 0.07 * step(1.5, fk), a = clamp((p.y - y0) / (yt - y0), 0.0, 1.0);
+      float xc = (fk - 1.0) * 0.035 + 0.03 * sin(p.y * 21.0 + fk * 2.0 + wc) * a + 0.05 * a * a * (fk - 1.0);
+      ink = max(ink, (1.0 - AA(abs(wa - xc), mix(0.009, 0.014, uHab) * (1.0 - 0.75 * a))) * step(y0, p.y) * step(p.y, yt) * 0.9); }
+    for (int k = 0; k < 4; k++) { float fk = float(k), y0 = (k < 2 ? 0.2 : 0.72) + 0.026 * mod(fk, 2.0) + 0.01 * sin(ph * 14.0 + fk * 1.3);
+      ink = max(ink, (1.0 - AA(abs(p.y - y0), mix(0.0035, 0.006, uHab))) * 0.85); }
+    col = mix(col, uInk, ink * m); }
+  BUMP115(br, 0.0012 * fade * (1.0 - uAcc))
   diffuseColor.rgb = col;`;
 // 쪽매 나무: veneer pieces, light (uLight), dark (uDark) and between (mixed), glued edge to edge, every piece its own grain
 // and a shade lighter or darker; a different classic pattern on each face: tumbling blocks (a hexagon cut into three
@@ -1520,55 +1522,76 @@ const MARQ138 = PL138 + AA127 + `float fade = 1.0 - smoothstep(0.3, 0.8, fwidth(
   if (uHab < 0.5) wc *= mix(1.0, 0.92 + 0.12 * vn3(vec3(gg * 9.0, pid * 30.0, p.y * 20.0)), fade);
   wc = mix(wc, uDark * 0.3, (1.0 - AA(edge, 0.035)) * mix(0.45, 0.9, fade));
   diffuseColor.rgb = wc;`;
-// 십자수: an even-weave cloth (aida: a woven grid, a hole at every corner close up) stitched in cross-stitch: hearts (uT1)
-// and stars (uT2) in turn, seven stitches across, and a checked border row under each. Close up each stitch an X of
-// thread, the under leg darker, a twist along the thread; far off the stitches merge into flat pixels. uGc: a gingham
-// check woven into the cloth (the body's own colour: none); uTwill 1: a denim twill instead of the aida weave
-const XST138 = PL138 + AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.25, 0.6, fwidth(p.y) * 26.0), det = fade * (1.0 - uHab), F; vec2 Q; PL138(Q, F)
-  vec2 g = Q * 26.0, c = floor(g), f = g - c - 0.5, tc = mod(c, vec2(9.0, 11.0)), T = floor(c / vec2(9.0, 11.0));
-  float star = mod(T.x + T.y, 2.0), r = 10.0 - tc.y;
-  float row = star < 0.5 ? (r < 0.5 ? 54.0 : r < 2.5 ? 127.0 : r < 3.5 ? 62.0 : r < 4.5 ? 28.0 : r < 5.5 ? 8.0 : 0.0)
-    : (r < 0.5 ? 8.0 : r < 1.5 ? 28.0 : r < 2.5 ? 127.0 : r < 3.5 ? 62.0 : r < 4.5 ? 28.0 : r < 5.5 ? 54.0 : 34.0);
-  float m1 = tc.y >= 4.0 && tc.x >= 1.0 && tc.x <= 7.0 ? mod(floor(row / exp2(tc.x - 1.0)), 2.0) : 0.0;
-  float m2 = tc.y < 2.0 ? mod(c.x + c.y, 2.0) : 0.0, sc = max(m1, m2) * (1.0 - uAcc);
-  vec3 th = (m1 > 0.5) == (star > 0.5) ? uT2 : uT1;
-  vec3 gr = mix(diffuseColor.rgb, uGc, (step(0.5, fract(c.x / 12.0)) + step(0.5, fract(c.y / 12.0))) * 0.5);
-  float hole = 1.0 - AA(length(0.5 - abs(f)), 0.1);
-  float wv = uTwill > 0.5 ? 0.5 + 0.5 * sin((g.x + g.y) * 18.85) : 0.5 + 0.5 * sin(g.x * 25.13) * sin(g.y * 25.13);
-  gr *= mix(1.0, (0.9 + 0.14 * wv) * (1.0 - 0.4 * hole * (1.0 - uTwill)), det);
-  float l1 = 1.0 - AA(abs(f.x - f.y) * 0.7071, 0.2), l2 = 1.0 - AA(abs(f.x + f.y) * 0.7071, 0.2), xs = max(l1, l2) * (1.0 - AA(max(abs(f.x), abs(f.y)), 0.46));
-  float sh = mix(0.8, 1.0, l2) * mix(1.0, 0.86 + 0.18 * sin((l2 > 0.5 ? f.x - f.y : f.x + f.y) * 34.0), det);
-  float cov = mix(0.85, xs, fade) * sc;
-  diffuseColor.rgb = mix(gr, th * mix(1.0, sh, fade), cov);
-  float hh = xs * sc; BUMP115(hh, 0.002 * det)
-  roughnessFactor = mix(roughnessFactor, 0.6, cov);`;
-// 마블링 종이: paints dropped on size water (uC1..uC3 on the paper's own colour), stirred into swirls (a domain warp), then
-// a comb drawn through: the colour bands pulled into fine zigzags. Sharp-edged bands, each lined at its edge in the next
-// one's colour a shade darker; the matte paper with its fibres close up
-const MARB138 = AA127 + `vec3 w = p * 2.2 + 4.0;
-  vec3 wq = w + 1.5 * (vec3(fbm3(w * 0.8), fbm3(w * 0.8 + 5.2), fbm3(w * 0.8 + 9.7)) - 0.5);
-  wq += 0.6 * (vec3(vn3(wq * 2.2 + 1.3), vn3(wq * 2.2 + 7.1), vn3(wq * 2.2 + 3.3)) - 0.5);
-  float t = wq.y * 6.0 + 1.5 * fbm3(wq * 2.0 + 2.0) + 0.35 * sin((p.x + 0.4 * p.z) * 56.0);
-  float i = floor(t), fr = fract(t), hk = h31(vec3(i, 7.0, 3.0)), hn = h31(vec3(i + 1.0, 7.0, 3.0));
-  vec3 g = diffuseColor.rgb, c = hk < 0.28 ? g : hk < 0.55 ? uC1 : hk < 0.8 ? uC2 : uC3, cn = hn < 0.28 ? g : hn < 0.55 ? uC1 : hn < 0.8 ? uC2 : uC3;
-  float ws = 0.55 + 0.4 * h31(vec3(i, 2.0, 9.0));
-  c = mix(c, g, AA(fr, ws) * (1.0 - AA(fr, ws + 0.08)));
-  c = mix(c, cn * 0.8, AA(fr, 0.94));
-  c = uAcc > 0.5 ? g : c;
-  if (uHab < 0.5) { float fb = fbm3(p * vec3(30.0, 8.0, 30.0)); c *= 0.95 + 0.08 * fb; }
-  diffuseColor.rgb = c; roughnessFactor = 0.85;`;
-// 두드린 동판: copper hammered all over, dimple by dimple: every dimple a shallow bowl, so the light breaks into small
-// facets with crisp ridges between them. The patina (dull verdigris) only lies in the bowls' bottoms, in uPat of them
-// (녹청: nearly all, and a darker old metal)
-const HAM138 = AA127 + `float fade = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 17.0);
-  vec3 q = p * 17.0, qi = floor(q), qf = fract(q), bo = vec3(0.0); float d1 = 9.0, d2 = 9.0, id = 0.0;
+// 십자수 (142): a sampler on aida cloth (the body's colour: woven blocks, a hole at every corner, countable close up), the
+// motifs in set places, not scattered: a big pixel heart (uT1, a paler highlight) on each flank, a zigzag border (uT1
+// between two uT2 rows) round the legs, a diamond border (uT3) round the neck, two-colour stripes on the tail, small stars
+// (uT3) and checks (uT2) on the back. 30 stitches to the body height, so the heart and the borders still read at the home
+// camera (there the stitches merge into flat pixels). Close up each stitch a raised X of twisted thread, the top leg over
+// the under one, a soft shadow on the cloth round it and the cloth showing at the corners; uGold 1: metallic gold thread
+const XST138 = PL138 + AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.3, 0.7, fwidth(p.y) * 30.0), dxs = fade * (1.0 - uHab), F; vec2 Q; PL138(Q, F)
+  vec2 g = Q * 30.0, c = floor(g), f = g - c - 0.5, af = abs(f); float id = 0.0, tight = step(13.0 * length(fwidth(p)), length(fwidth(on)));
+  if (uAcc < 0.5) {
+    if (F < 0.5) { vec2 h = vec2(c.x + 6.0, 19.0 - c.y);
+      if (h.x > -0.5 && h.x < 8.5 && h.y > -0.5 && h.y < 7.5) {
+        float bits = h.y < 0.5 ? 198.0 : h.y < 1.5 ? 495.0 : h.y < 3.5 ? 511.0 : h.y < 4.5 ? 254.0 : h.y < 5.5 ? 124.0 : h.y < 6.5 ? 56.0 : 16.0;
+        if (mod(floor(bits / exp2(h.x)), 2.0) > 0.5) id = h.x > 0.5 && h.y > 0.5 && h.x + h.y < 3.5 ? 4.0 : 1.0; } }
+    if (F < 1.5 && c.y > 2.5 && c.y < 8.5) { float r = c.y - 3.0; id = r < 0.5 || r > 4.5 ? 2.0 : abs(r - 1.0 - abs(mod(c.x, 6.0) - 3.0)) < 0.5 ? 1.0 : 0.0; }
+    if (F < 1.5 && p.x > 0.15 && c.y > 14.5 && c.y < 19.5) { float r = c.y - 15.0; id = r < 0.5 || r > 3.5 ? 2.0 : abs(abs(r - 2.0) + abs(mod(c.x, 4.0) - 2.0) - 1.0) < 0.5 ? 3.0 : 0.0; }
+    if (p.x < -0.3 && p.y > 0.3 && tight > 0.5) { float m = mod(c.y, 3.0); id = m < 0.5 ? 2.0 : m < 1.5 ? 3.0 : 0.0; }
+    if (F > 1.5 && on.y > 0.0 && p.y > 0.45) { vec2 t = mod(c, 10.0), T = floor(c / 10.0), s = t - 2.0;
+      if (mod(T.x + T.y, 2.0) < 0.5) { if (s.x > -0.5 && s.x < 4.5 && s.y > -0.5 && s.y < 4.5) {
+          float bits = s.y < 0.5 ? 17.0 : s.y < 1.5 ? 10.0 : s.y < 2.5 ? 14.0 : s.y < 3.5 ? 31.0 : 4.0; if (mod(floor(bits / exp2(s.x)), 2.0) > 0.5) id = 3.0; } }
+      else { s = t - 3.0; if (s.x > -0.5 && s.x < 3.5 && s.y > -0.5 && s.y < 3.5 && mod(s.x + s.y, 2.0) < 0.5) id = 2.0; } } }
+  float sc = step(0.5, id);
+  vec3 th = id < 1.5 ? uT1 : id < 2.5 ? uT2 : id < 3.5 ? uT3 : mix(uT1, vec3(1.0), 0.45);
+  float hole = 1.0 - AA(length(0.5 - af), 0.12), blk = 1.0 - smoothstep(0.3, 0.5, max(af.x, af.y)), wv = 0.5 + 0.5 * sin(g.x * 12.566) * sin(g.y * 12.566);
+  vec3 cl = diffuseColor.rgb * mix(1.0, (0.88 + 0.12 * blk + 0.06 * wv) * (1.0 - 0.45 * hole), dxs);
+  float w = 0.16, d1 = abs(f.x - f.y) * 0.7071, d2 = abs(f.x + f.y) * 0.7071, en = 1.0 - AA(max(af.x, af.y), 0.43);
+  float a2 = (1.0 - AA(d2, w)) * en, xs = max((1.0 - AA(d1, w)) * en, a2);
+  float rr = mix(sqrt(max(0.0, 1.0 - d1 * d1 / (w * w))) * 0.85, sqrt(max(0.0, 1.0 - d2 * d2 / (w * w))), a2);
+  float al = a2 > 0.5 ? f.x - f.y : f.x + f.y, ac = a2 > 0.5 ? f.x + f.y : f.x - f.y, tw = 0.8 + 0.2 * sin((al * 3.5 + ac * 2.0) * 4.4429);
+  vec3 tc = th * mix(1.0, (0.55 + 0.45 * rr) * tw * mix(0.8, 1.0, a2), dxs);
+  cl *= mix(1.0, 1.0 - 0.35 * sc * (1.0 - AA(min(d1, d2), w + 0.13)) * (1.0 - xs), dxs);
+  float cov = sc * mix(0.92, xs, fade);
+  diffuseColor.rgb = mix(cl, tc, cov);
+  float hh = sc * xs * (0.6 + 0.4 * rr * mix(0.8, 1.0, a2) + 0.1 * tw) + (1.0 - sc) * (0.15 * blk - 0.3 * hole); BUMP115(hh, 0.004 * dxs)
+  roughnessFactor = mix(roughnessFactor, mix(0.5, 0.3, uGold), cov); metalnessFactor = mix(metalnessFactor, uGold, cov);
+  totalEmissiveRadiance += th * pow(rr, 6.0) * cov * 0.08 * dxs;`;
+// 마블링 종이 (143 A: ebru): marbled paper as it is made: drops of paint (uC1, uC2, a ring of the other round each, a thin
+// ring of paper in the middle) floated on the paper colour (here and there a wash of uC3), their edges pressed into thin
+// veins; a stylus swirled through them (curls round centres on a grid, each its own way round, fading to nothing at the
+// grid cell's edge so no seam), the fbm wobble on top, then a comb drawn up the body and a second one down between its
+// teeth (every drop pulled into a feather, its tip on the tooth). No straight zigzag: the feathers' barbs bend. Matte
+// paper, its fibres close up
+const MARB138 = AA127 + `float fade = 1.0 - smoothstep(0.3, 0.8, fwidth(p.y) * 30.0);
+  vec3 q = p * 4.5;
+  float tx = q.x * 1.6 + 0.35 * sin(q.y * 1.3 + q.z * 1.1), t1 = abs(fract(tx) - 0.5), t2 = 0.5 - t1;
+  q.y -= fade * 0.6 * (exp(-t1 * 10.0) - exp(-t2 * 10.0));
+  vec3 qs = q * 0.42, ci = floor(qs), lc = fract(qs) - 0.5, r = (lc - (h33(ci) - 0.5) * 0.2) / 0.42; float sid = h31(ci);
+  float th = (sid < 0.42 ? 10.0 : sid < 0.84 ? -10.0 : 0.0) * exp(-dot(r, r) * 1.0) * (1.0 - smoothstep(0.28, 0.46, max(max(abs(lc.x), abs(lc.y)), abs(lc.z))));
+  float cs = cos(th), sn = sin(th); q += r * (cs - 1.0) + cross(on, r) * sn + on * dot(on, r) * (1.0 - cs);
+  q += 0.45 * vec3(fbm3(q * 0.55) - 0.5, fbm3(q * 0.55 + 7.0) - 0.5, 0.0);
+  vec3 c = cells(q), g = diffuseColor.rgb; float id = c.z, rg = c.x, r0 = 0.29 + 0.2 * abs(id - 0.5);
+  vec3 k1 = id < 0.45 ? uC1 : uC2, k2 = id < 0.45 ? uC2 : uC1, col = id > 0.62 ? uC3 : g;
+  col = mix(col, k2, 1.0 - AA(rg, r0 + 0.09));
+  col = mix(col, k1, 1.0 - AA(rg, r0));
+  col = mix(col, g, (1.0 - AA(abs(rg - r0 * 0.5), 0.025)) * fade);
+  col = mix(col, uC1 * 0.8 + g * 0.1, (1.0 - AA(c.y - c.x, 0.035)) * 0.7);
+  col = uAcc > 0.5 ? g : col;
+  if (uHab < 0.5) { float fb = fbm3(p * vec3(30.0, 8.0, 30.0)); col *= 0.95 + 0.08 * fb; }
+  diffuseColor.rgb = col; roughnessFactor = 0.85;`;
+// 두드린 동판 (141 C): copper hammered all over with a round-faced hammer: every blow a round shallow bowl, the bowls summed
+// (each falls off smoothly to its rim, so no sharp ridge where they meet) and each holds a small round reflection. The
+// patina (dull verdigris) lies softly in the bowls' bottoms, in uPat of them (녹청: nearly all, and a darker old metal)
+const HAM138 = AA127 + `float fade = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 26.0);
+  vec3 q = p * 26.0, qi = floor(q), qf = fract(q), gs = vec3(0.0); float hs = 0.0;
   for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-    vec3 o = vec3(x, y, z), r = o + h33(qi + o) * 0.85 + 0.075 - qf; float d = dot(r, r);
-    if (d < d1) { d2 = d1; d1 = d; bo = r; id = h31(qi + o + 0.5); } else if (d < d2) d2 = d; }
-  d1 = sqrt(d1); d2 = sqrt(d2); bo -= on * dot(bo, on);
-  normal = normalize(normal + normalMatrix * bo * 0.42 * fade);
-  float pr = 0.14 + 0.2 * uPat, pat = step(id, uPat) * (1.0 - smoothstep(pr * 0.6, pr, d1 + 0.1 * (vn3(q * 3.0) - 0.5))) * (1.0 - uAcc);
-  vec3 col = diffuseColor.rgb * mix(1.0, 0.8, uPat * 0.5) * (1.0 + 0.18 * (1.0 - AA(d2 - d1, 0.08)) * fade);
+    vec3 o = vec3(x, y, z), r = o + h33(qi + o) * 0.6 + 0.2 - qf; r -= on * dot(r, on);
+    float id = h31(qi + o + 0.5), R = 0.52 + 0.14 * fract(id * 7.3), k = max(0.0, 1.0 - dot(r, r) / (R * R));
+    hs += k * k; gs += r * (4.0 * k / (R * R)); }
+  normal = normalize(normal + normalMatrix * gs * 0.06 * fade);
+  float pat = smoothstep(0.88 - 0.55 * uPat, 0.98 - 0.55 * uPat, fbm3(p * 4.0 + 3.0)) * smoothstep(0.45, 0.9, hs) * 0.9 * (1.0 - uAcc);
+  vec3 col = diffuseColor.rgb * mix(1.0, 0.8, uPat * 0.5) * (1.0 - 0.06 * fade * min(hs, 1.0));
   diffuseColor.rgb = mix(col, vec3(0.13, 0.31, 0.24) * (0.85 + 0.3 * vn3(q * 2.0)), pat);
   metalnessFactor = mix(metalnessFactor, 0.0, pat); roughnessFactor = mix(roughnessFactor, 0.85, pat); lookStudio *= 1.0 - pat;`;
 // 비즈 공예: the whole body in rows of small glass seed beads (brick stagger, a dark thread in the gaps), bands of twelve
@@ -1598,11 +1621,11 @@ Object.assign(LOOKS, {
   marble: c => same(L127(phys(c.body ?? '#efe7d8', { roughness: 0.18, clearcoat: 0.7, clearcoatRoughness: 0.08 }), 'marble127', MARBLE127, { uVein: c.vein ?? '#5e534a' })),
   dew: c => { const d = (b, a) => wet127(L127(phys(b, { roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.03 }), 'dew127', DEW127, { uAcc: a })), accent = d(dk(c.body, 0.85), 1);
     return { body: d(c.body, 0), accent, hoof: accent }; },
-  bunfish: c => { const b = (col, a) => L127(phys(col, { roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.1 }), 'bunfish138', BUNFISH138, { uInk: c.ink, uFill: c.fill, uFish: c.fish ?? c.fill, uSlip: c.slip ?? 1, uAcc: a }), accent = b(dk(c.body, 0.9), 1);
+  bunfish: c => { const b = (col, a) => L127(phys(col, { roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.1 }), 'bunfish138', BUNFISH138, { uInk: c.ink, uClay: c.clay, uAcc: a }), accent = b(dk(c.body, 0.88), 1);
     return { body: b(c.body, 0), accent, hoof: accent }; },
   marquetry: c => { const w = a => L127(phys(c.light, { roughness: 0.42, clearcoat: 0.35, clearcoatRoughness: 0.2 }), 'marq138', MARQ138, { uLight: c.light, uDark: c.dark, uAcc: a }), accent = w(1);
     return { body: w(0), accent, hoof: accent }; },
-  xstitch: c => { const x = (b, a) => L127(phys(b, { roughness: 0.9, sheen: 0.5, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffffff') }), 'xst138', XST138, { uT1: c.t1, uT2: c.t2, uGc: c.check ?? b, uTwill: c.twill ?? 0, uAcc: a }), accent = x(dk(c.body, 0.85), 1);
+  xstitch: c => { const x = (b, a) => L127(phys(b, { roughness: 0.9, sheen: 0.5, sheenRoughness: 0.5, sheenColor: new THREE.Color('#ffffff') }), 'xst138', XST138, { uT1: c.t1, uT2: c.t2, uT3: c.t3 ?? c.t2, uGold: c.gold ?? 0, uAcc: a }), accent = x(dk(c.body, 0.85), 1);
     return { body: x(c.body, 0), accent, hoof: accent }; },
   marbled: c => { const m = (b, a) => L127(phys(b, { roughness: 0.85 }), 'marb138', MARB138, { uC1: c.c1, uC2: c.c2, uC3: c.c3, uAcc: a }), accent = m(dk(c.body, 0.88), 1);
     return { body: m(c.body, 0), accent, hoof: accent }; },
@@ -1703,4 +1726,109 @@ Object.assign(LOOKS, {
     return { body: w(0), accent: w(1), beak: phys('#14100e', { roughness: 0.2, clearcoat: 0.8 }), hoof: phys('#1e3a1a', { roughness: 0.3, clearcoat: 0.5 }) }; },
   berrycow134: () => { const c = acc => L127(phys('#ffd8e2', { roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.05, sheen: 0.7, sheenRoughness: 0.35, sheenColor: new THREE.Color('#ffffff') }), 'berrycow134', BERRYCOW134, { uAcc: acc });
     return { body: c(0), accent: c(1), beak: phys('#f79ab2', { roughness: 0.25, clearcoat: 0.8 }), nostril: phys('#8a3048', { roughness: 0.3 }), horn: phys('#f8ecd2', { roughness: 0.2, clearcoat: 1 }), hoof: phys('#c8304a', { roughness: 0.2, clearcoat: 0.8 }) }; },
+});
+
+// ---- 141 B 전설 2번째 「빛 재질」 (?m89 시범; data.js LEGEND141): the first legendaries' language (clear, lit from inside, gem,
+// polished gold, sparkle), no painted pattern. Two levels like 128 (uHab 1, the habitat: the fine sparkle grows coarser).
+// gold141 (the clear looks' gold parts, in their post: screen colour): polished gold in the studio's reflection (STUDIO, renamed)
+const FN141 = STUDIO.replace('studioEnv', 'studio141') + `vec3 gold141(vec3 n, vec3 v) { vec3 g = vec3(1.0, 0.6, 0.14) * (0.15 + 0.85 * studio141(inverseTransformDirection(reflect(-v, n), viewMatrix)));
+  return pow(g / (1.0 + 0.45 * g), vec3(0.4545)); }
+vec3 facet141(vec3 n, out float id, out float e) { // the ruby's cut: n (object space) to the nearest of 24 directions (a Fibonacci sphere:
+  float b = -2.0, b2 = -2.0; vec3 d = n; id = 0.0;   // even, not regular), so each facet is flat and its edges straight; e: how far from an edge
+  for (int i = 0; i < 24; i++) { float y = 1.0 - (float(i) + 0.5) / 12.0, r = sqrt(1.0 - y * y), a = float(i) * 2.39996; vec3 c = vec3(r * cos(a), y, r * sin(a));
+    float k = dot(n, c); if (k > b) { b2 = b; b = k; d = c; id = float(i); } else if (k > b2) b2 = k; }
+  e = b - b2; return d; }
+`;
+// gold141t: the clear looks' gold parts drawn after the glass (the transparent pass, opacity 1), so they are not in its screen copy:
+// a far hoof seen through a near leg read as a floating band (the far glass leg is not in the copy)
+const gold141t = () => Object.assign(shine('#ffc75a'), { transparent: true });
+const C141 = o => hab89(clear(o)), fn141 = m => { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.fragmentShader = sh.fragmentShader.replace('void main() {', FN141 + 'void main() {'); }; return m; };
+// 수정 유리 말: clear crystal, a pale sky blue where it is thick (the tint); inside, a few thin veins of rainbow light (seen a little
+// deeper than the surface, so they slide as it turns), the prism's colours split along the outline, small glints flashing near the edge
+const CRYSTAL141 = `float t_ = uTime * 0.05; vec3 q_ = p + rd * 0.09;
+      float w1 = fbm3(q_ * 1.7 + vec3(0.0, t_, t_ * 0.6)), w2 = fbm3(q_ * 2.6 - vec3(t_, 1.0, 2.0));
+      float wisp = (1.0 - smoothstep(0.0, 0.03 + 1.5 * fwidth(w1), abs(w1 - 0.48))) * smoothstep(0.42, 0.55, w2) * (1.0 - fr);
+      vec3 rb = rainbow(w2 * 2.2 + p.y * 1.4 - t_);
+      gl_FragColor.rgb += see * (rb * 1.4 - 1.0) * wisp * 0.5 + rb * wisp * 0.16 + vec3(0.55, 0.78, 1.0) * (0.02 + 0.05 * pow(nv, 2.0)) * (1.0 - fr);
+      vec3 pc = rainbow(s * 4.0 + p.y * 2.0 + dot(vn, vec3(0.6, 0.4, 0.0)) - t_);
+      gl_FragColor.rgb += ((pc - 0.5) * 0.55 + 0.04) * smoothstep(0.72, 0.9, s) * (1.0 - smoothstep(0.93, 0.99, s)) * (1.0 - rim);
+      vec3 gc = cells(p * mix(28.0, 10.0, uHab)); float tw = pow(max(0.0, sin(uTime * (1.0 + 2.0 * gc.z) + gc.z * 60.0)), 8.0);
+      gl_FragColor.rgb += vec3(1.0, 0.98, 0.94) * 1.5 * tw * step(0.62, gc.z) * (1.0 - smoothstep(0.07, 0.07 + 1.5 * fwidth(gc.x), gc.x)) * smoothstep(0.3, 0.8, s);`;
+// 금 이음 양: black porcelain, mirror glazed (each wool lump a round highlight), mended with gold: lacquer-gold seams wandering over
+// it (where a smooth noise crosses one level, a little jagged), finer branches off them close up, glowing softly and breathing.
+// uAcc 1 (the face and the legs): the main seams only
+const KINTSUGI141 = SH89 + GILD89 + `float j_ = 0.06 * (vn3(p * 14.0) - 0.5) + 0.025 * (vn3(p * 37.0) - 0.5);
+  float f1 = fbm3(p * 1.6 + 3.0), f2 = fbm3(p * 2.7 - 1.3), n1 = f1 + j_, n2 = f2 + j_ * 1.3, c1 = abs(n1 - 0.5), c2 = abs(n2 - 0.5);
+  float pw_ = max(length(fwidth(p)), 1e-5), w1 = max(min(0.011 * fwidth(f1) / pw_, 0.025), 1.2 * fwidth(n1)), w2 = max(min(0.007 * fwidth(f2) / pw_, 0.016), fwidth(n2));
+  float k1 = 1.0 - smoothstep(0.5 * w1, w1, c1), k2 = (1.0 - smoothstep(0.5 * w2, w2, c2)) * (1.0 - smoothstep(0.03, 0.14, c1)) * (1.0 - uAcc) * (1.0 - uHab);
+  float cr = max(k1, k2 * 0.85), halo = (1.0 - smoothstep(w1, w1 * 4.0, c1)) * (1.0 - cr);
+  diffuseColor.rgb = mix(vec3(0.008, 0.008, 0.011), vec3(0.03, 0.03, 0.036), uAcc); roughnessFactor = 0.07; // the face a shade lighter: the black bead eyes show on it
+  GILD(cr)
+  totalEmissiveRadiance += vec3(1.0, 0.6, 0.16) * (cr * 0.5 + halo * 0.08) * (0.8 + 0.2 * sin(uTime * 1.4 - n1 * 14.0));`;
+// 루비 토끼: a cut ruby: big flat facets following the body (its normal snapped to 24 directions, facet141), straight edges; each
+// facet lit its own way from inside (bright clear red to dark wine, changing as it turns) and flashing whole when it meets the light.
+// Lit red from inside. No white outline (rimK 0): a hairline glint on the true silhouette. Gold caps on the ear tips and the toes
+// (by height, as the jade rabbit's), smooth
+const RUBY141_GK = 'max(smoothstep(0.93, 0.95, P.y), 1.0 - smoothstep(0.035, 0.055, P.y))';
+const RUBY141_NRM = `float gk_ = ${RUBY141_GK.replace(/P/g, 'vOp')}, id_, e_; vec3 d_ = facet141(normalize(normal * normalMatrix), id_, e_), v_ = normalize(vViewPosition), sn = normalize(normalMatrix * d_);
+  sn = normalize(sn + v_ * max(0.0, 0.25 - dot(sn, v_))); // a facet turned away at the silhouette still faces us a little (no grey band of sky there)
+  normal = normalize(mix(normal, sn, 1.0 - gk_));`;
+const RUBY141 = `float gk141 = ${RUBY141_GK.replace(/P/g, 'p')};
+      { vec3 v_ = normalize(vViewPosition), n0 = normalize(vNormal); float fid, fe; vec3 fd = facet141(normalize(n0 * normalMatrix), fid, fe);
+        float lum = smoothstep(0.35, 0.97, 0.5 + 0.5 * sin(dot(fd, -rd) * 7.0 + h31(vec3(fid * 13.7 + 1.0)) * 6.2832));
+        float fl = pow(max(dot(reflect(-v_, vn), normalize(vec3(-0.45, 0.75, 0.5))), 0.0), 10.0), ed = 1.0 - smoothstep(0.0, 1.5 * fwidth(fe), fe);
+        float nv0 = abs(dot(n0, v_)), sil = 1.0 - smoothstep(0.0, 1.5 * fwidth(nv0), nv0);
+        vec3 ruby = mix(vec3(0.04, 0.0, 0.01), vec3(0.6, 0.0, 0.07), lum) * (0.4 + 0.5 * nv) + vec3(1.0, 0.04, 0.14) * 0.28 * pow(nv0, 4.0); // + the light inside (smooth, across the facets)
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb - see * 0.85 + ruby * (1.0 - fr) + vec3(1.0, 0.82, 0.86) * (fl * 0.9 + ed * 0.18 + sil * 0.35), 1.0 - gk141);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, gold141(vn, v_), gk141); }`;
+// 유리 저금통 돼지: clear glass with a pink blush; inside it, gold coins with a square hole lying in a heap on the belly (some flat,
+// some leaning, one on its edge: where the view ray meets each coin's disc, the nearest wins), each glinting now and then and
+// stirring a little; a gold-rimmed coin slot on the back
+const PIGGY141 = `gl_FragColor.rgb += vec3(1.0, 0.55, 0.7) * (0.04 + 0.1 * pow(nv, 2.0)) * (1.0 - fr);
+      float th141 = 9.0, ch141 = 0.0, cr141 = 0.0, cf141 = 0.0, ci141 = 0.0; vec2 cu141 = vec2(0.0);
+      #define COIN141(C, N, I) { vec3 n_ = normalize(N), c_ = C + vec3(0.0, 0.003 * sin(uTime * 2.3 + I * 1.7), 0.0); float dn_ = dot(rd, n_); \\
+        if (abs(dn_) > 0.02) { float t_ = dot(c_ - p, n_) / dn_; vec3 h_ = p + rd * t_ - c_; float r_ = length(h_) / 0.068; \\
+          vec3 a_ = normalize(cross(n_, abs(n_.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0))), b_ = cross(n_, a_); vec2 u_ = vec2(dot(h_, a_), dot(h_, b_)) / 0.068; \\
+          if (t_ > 0.0 && t_ < th141 && r_ < 1.0 && max(abs(u_.x), abs(u_.y)) > 0.26) { th141 = t_; ch141 = 1.0; cr141 = r_; cf141 = abs(dn_); ci141 = I; cu141 = u_; } } }
+      COIN141(vec3(-0.18, 0.3, 0.05), vec3(0.1, 1.0, 0.2), 0.0) COIN141(vec3(-0.05, 0.29, -0.06), vec3(0.3, 1.0, -0.1), 1.0)
+      COIN141(vec3(0.08, 0.31, 0.04), vec3(-0.2, 0.9, 0.5), 2.0) COIN141(vec3(-0.1, 0.36, 0.09), vec3(0.2, 0.6, 1.0), 3.0)
+      COIN141(vec3(0.02, 0.38, -0.08), vec3(-0.3, 0.5, -1.0), 4.0) COIN141(vec3(-0.26, 0.37, -0.03), vec3(0.8, 0.6, 0.3), 5.0)
+      COIN141(vec3(0.15, 0.37, -0.02), vec3(-0.6, 0.4, 0.7), 6.0) COIN141(vec3(-0.13, 0.43, 0.0), vec3(0.1, 0.3, 1.0), 7.0)
+      { float sq = max(abs(cu141.x), abs(cu141.y)), lip = smoothstep(0.78, 0.9, cr141) + (1.0 - smoothstep(0.26, 0.36, sq)) * 0.8;
+        vec3 coin = mix(mix(vec3(0.62, 0.36, 0.06), vec3(1.0, 0.8, 0.34), 0.3 + 0.7 * cf141), vec3(1.0, 0.92, 0.6), lip * 0.6);
+        coin += vec3(1.0, 0.95, 0.8) * 1.2 * pow(max(0.0, sin(uTime * 0.9 + ci141 * 2.4)), 30.0) * (1.0 - cr141);
+        gl_FragColor.rgb += (coin * mix(vec3(1.0), pass, 0.5) * (1.0 - fr) * (1.0 - 0.5 * dark) - see) * ch141; }
+      { float sd = length(vec2(max(abs(p.x + 0.04) - 0.07, 0.0), p.z)) - 0.016, aa = fwidth(sd) + 1e-4, top = smoothstep(0.73, 0.75, p.y);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, gold141(vn, normalize(vViewPosition)), (1.0 - smoothstep(0.009, 0.009 + aa, sd)) * top);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.06, 0.03, 0.035), (1.0 - smoothstep(-aa, 0.0, sd)) * top); }`;
+// 청금석 소: polished lapis lazuli, deep ultramarine clouded darker and lighter, strewn with gold (pyrite) flecks that twinkle as
+// the angle changes; where its patches go (밀키 오팔's places, COWOPAL) and on the ears and the tail tuft (uAcc 1) a tone lighter
+const LAPIS141 = SH89 + GILD89 + `float n = fbm3(p * 3.2 + 1.0), m = fbm3(p * 7.0 - 2.0);
+  vec3 col = mix(vec3(0.008, 0.022, 0.16), vec3(0.025, 0.07, 0.4), smoothstep(0.3, 0.75, n)); col = mix(col, vec3(0.05, 0.12, 0.5), smoothstep(0.6, 0.85, m) * 0.5);
+  vec3 q = vec3(p.x, p.y, abs(p.z)); float wob = 0.4 * (vn3(p * 4.5 + 2.0) - 0.5) + 0.08 * (vn3(p * 11.0) - 0.5);
+  #define BLOB(v, c, r) (1.0 - length((v - c) / r))
+  float bl = max(max(BLOB(p, vec3(0.06, 0.6, 0.25), vec3(0.17, 0.18, 0.15)), BLOB(p, vec3(-0.41, 0.63, 0.2), vec3(0.15, 0.15, 0.15))),
+                 max(BLOB(p, vec3(-0.17, 0.6, -0.25), vec3(0.21, 0.17, 0.15)), BLOB(q, vec3(0.25, 0.87, 0.15), vec3(0.11, 0.12, 0.12)))) + wob;
+  float ear = uAcc * max(step(0.2, abs(p.z)) * step(0.75, p.y), step(p.y, 0.42) * step(p.x, -0.48));
+  col = mix(col, col + vec3(0.035, 0.085, 0.22), max(SH(bl, 0.0), ear));
+  vec3 c = cells(p * mix(44.0, 20.0, uHab)), c2 = cells(p * 15.0 + 4.0);
+  float g = max((1.0 - smoothstep(0.09, 0.09 + 1.5 * fwidth(c.x), c.x)) * step(0.45, c.z), (1.0 - smoothstep(0.08, 0.08 + 1.5 * fwidth(c2.x), c2.x)) * step(0.62, c2.z));
+  float tw = pow(max(0.0, sin(dot(normal, vec3(9.0, 7.0, 5.0)) + c.z * 50.0 + uTime * (0.6 + c.z))), 6.0);
+  diffuseColor.rgb = col; roughnessFactor = 0.1;
+  totalEmissiveRadiance += col * 0.35 + vec3(0.2, 0.35, 1.0) * 0.12 * pow(1.0 - nv, 2.0);
+  GILD(g)
+  totalEmissiveRadiance += vec3(1.0, 0.6, 0.16) * g * (0.3 + 0.9 * tw);`;
+Object.assign(NIGHT_LOOK, { kintsugi141: 1.5, lapis141: 1.0 });
+Object.assign(NIGHT_CLEAR, { crystal141: CRYSTAL_NIGHT + 'gl_FragColor.rgb += uNight * rb * wisp * 0.3 * (1.0 - fr);', ruby141: 'gl_FragColor.rgb += uNight * vec3(1.0, 0.1, 0.2) * (0.15 + 0.3 * pow(nv, 2.0)) * (1.0 - fr) * (1.0 - gk141);',
+  piggy141: 'gl_FragColor.rgb += uNight * (vec3(1.0, 0.55, 0.7) * (0.22 + 0.4 * pow(nv, 2.0)) * (1.0 - fr) + vec3(1.0, 0.8, 0.35) * ch141 * 0.35);' });
+Object.assign(LOOKS, {
+  crystal141: () => { const g = gold141t();
+    return { body: C141({ key: 'crystal141', tint: '#b8dcff', absorb: 1.2, inner: '#4a7cb0', dark: 0.5, rough: 0.04, coat: 1, neutral: 0.75, bend: 0.2, rimK: 0.3, post: CRYSTAL141 }), accent: g, hoof: g }; },
+  kintsugi141: () => { const k = acc => L127(phys('#0c0c10', { roughness: 0.07, clearcoat: 1, clearcoatRoughness: 0.02 }), 'kintsugi141', KINTSUGI141, { uAcc: acc }, { studio: 0.6 });
+    return { body: k(0), accent: k(1), hoof: shine('#ffc75a') }; },
+  ruby141: () => same(fn141(C141({ key: 'ruby141', tint: '#ff2040', absorb: 3.0, inner: '#600010', dark: 0.45, color: '#2a0008', rough: 0.05, neutral: 0.85, rimK: 0, nrm: RUBY141_NRM, post: RUBY141 }))),
+  piggy141: () => { const g = fn141(C141({ key: 'piggy141', tint: '#ffd0dc', absorb: 1.3, inner: '#ffb0c8', dark: 0.4, rough: 0.05, coat: 1, neutral: 0.6, post: PIGGY141 }));
+    return { body: g, accent: g, beak: phys('#d0607e', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03 }), hoof: gold141t() }; },
+  lapis141: () => { const c = acc => L127(phys('#1a3a9a', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03 }), 'lapis141', LAPIS141, { uAcc: acc }, { studio: 0.35 }), g = shine('#ffc75a');
+    return { body: c(0), accent: c(1), beak: c(0), nostril: phys('#060a1c', { roughness: 0.1, clearcoat: 1 }), horn: g, hoof: g }; },
 });

@@ -1845,6 +1845,7 @@ export default {
  "단짝 놀이: 단짝 둘이 좋아하는 소품 곁에 있으면 함께 놀아요(처음엔 ♥+20)": "Buddy play: Best buddies near their favorite decor play together (♥+20 the first time)",
  "첫 주 선물: 새로 시작하면 이틀째에 전설 알, 6일째에 영웅 알, 7일째에 신수 단서를 받아요": "First-week gifts: New players get a Legendary egg on day 2, an Epic egg on day 6 and a Mythic clue on day 7",
  "12월 5일부터 2주 동안 첫눈 이벤트: 눈 덮인 초원에서 눈더미를 모아 눈사람을 만들고, 친구에게 털모자를 씌워요": "First Snow event for 2 weeks from 12/5: Gather snow piles in the snowy Meadow to build a snowman, and give friends knit hats",
+ "초원 알에 두 번째 전설 5종: 금 이음 양·루비 토끼·유리 저금통 돼지·청금석 소·풍향계 닭": "Five new second Legendaries in the meadow egg: Kintsugi Sheep, Ruby Rabbit, Glass Piggy Bank, Lapis Cow, Weathervane Rooster",
  "옥토끼 비취가 더 빛나요: 귀 끝·발끝 금테, 은은한 속빛": "The Jade Moon Rabbit shines brighter: gold tips on its ears and toes, a soft inner glow",
  "양에 「밤하늘」 모습이 새로 생겼어요": "A new look for the sheep: Night Sky",
  "English·日本語로도 할 수 있어요(설정 › 언어)": "You can also play in English and Japanese (Settings › Language)",
@@ -1865,6 +1866,12 @@ export default {
  "색동 토끼": "Saekdong Rabbit",
  "수박 돼지": "Watermelon Pig",
  "딸기우유 소": "Strawberry Milk Cow",
+ // 141 B 전설 2번째 빛 재질 (?m89)
+ "수정 유리 말": "Crystal Glass Horse",
+ "금 이음 양": "Kintsugi Sheep",
+ "루비 토끼": "Ruby Rabbit",
+ "유리 저금통 돼지": "Glass Piggy Bank",
+ "청금석 소": "Lapis Cow",
  // 127 새 공유 재질 (?m89)
  "원목": "Wood",
  "메이플": "Maple",
@@ -1903,4 +1910,10 @@ export default {
  "비즈 공예": "Beadwork",
  "진주": "Pearl",
  "루비": "Ruby",
+ // 141 C / 142: new colour names for the redone looks
+ "미색": "Cream",
+ "샘플러": "Sampler",
+ "파스텔": "Pastel",
+ "금실": "Gold Thread",
+ "먹·금": "Ink & Gold",
 };

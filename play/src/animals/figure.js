@@ -171,6 +171,9 @@ Object.assign(FX, {
       if (abs(d.x) > wd) discard; float e = abs(d.x) / max(wd, 0.01), hl = 1.0 - smoothstep(0.06, 0.13, length(vec2((d.x + 0.2) / 0.6, d.y - 0.2)));
       gl_FragColor = vec4(mix(vec3(0.62, 0.86, 1.0), vec3(1.0), max(hl, 0.35 * e * e)), min(1.0, 0.5 + 0.3 * e * e + 0.5 * hl) * vA);` },
 });
+// 141 B (?m89): goldsparks: the sparks (chicken) in gold dust colours (the kintsugi sheep)
+FX.goldsparks = { ...FX.sparks, frag: FX.sparks.frag.replace('vS < 0.34 ? vec3(1.0, 0.55, 0.18) : vS < 0.67 ? vec3(1.0, 0.42, 0.62) : vec3(0.72, 0.42, 1.0)',
+  'vS < 0.5 ? vec3(1.0, 0.72, 0.22) : vec3(1.0, 0.86, 0.45)') };
 const fxMats = {};
 const fxMat = kind => fxMats[kind] ??= new THREE.ShaderMaterial({
   uniforms: { uTime: windTime, uPx: { value: 800 } }, transparent: true, depthWrite: FX[kind].solid || false, blending: FX[kind].solid || FX[kind].soft ? THREE.NormalBlending : THREE.AdditiveBlending,
