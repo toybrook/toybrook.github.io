@@ -22,7 +22,7 @@ const LAYERS = [0.5, 1.4, 2.3], CELL = 1, PAST = 3; // sheet heights over the gr
 
 // from / open: the open ground at the start / now; built: the board as built (28-1: rects [x0, x1, z0, z1], zones.js); floor(x, z): the ground
 const grow = (r, m) => [r[0] - m, r[1] + m, r[2] - m, r[3] + m];
-export function mist(scene, floor, open, built, from = open) {
+export function mist(scene, floor, open, built, from = open, T = 2.6) { // T: the reveal's length (s)
   const inner = grow(from, -1), outer = grow(built, PAST), C = THREE.MathUtils.clamp;
   const nx = Math.ceil((outer[1] - outer[0]) / CELL), nz = Math.ceil((outer[3] - outer[2]) / CELL), X = i => outer[0] + i * (outer[1] - outer[0]) / nx, Z = j => outer[2] + j * (outer[3] - outer[2]) / nz;
   const y = []; // the ground under each grid point; past the board, the rim's (the board's edge rounds down under it)
@@ -42,12 +42,13 @@ export function mist(scene, floor, open, built, from = open) {
   m.frustumCulled = false; m.renderOrder = 2; scene.add(m);
   const last = open.every((v, i) => v === built[i]), to = last ? grow(open, PAST + 2) : open; // the last step: nothing left under mist once it has drawn back
   m.visible = !(last && from === open);
-  let k = from === open ? 1 : 0, done; const T = 2.6; // the reveal's length (s)
+  let k = from === open ? 1 : 0, done;
   const tick = (t, dt) => {
     if (!m.visible) return;
     U.uTime.value = t;
     if (k < 1) { k = Math.min(1, k + dt / T); const u = k * k * (3 - 2 * k); U.uOpen.value.set(...from.map((v, i) => v + (to[i] - v) * u)); if (k === 1) { done(); if (last) m.visible = false; } }
   };
+  tick.skip = () => { k = Math.max(k, 0.999); }; // 129 (?s129): a tap ends the reveal (habitat.js)
   tick.mesh = m; // 28-1: hidden for 넓히기 전과 비교 (habitat.js topView)
   tick.done = new Promise(r => { done = r; if (k === 1) r(); }); // inbox 17: once the mist has drawn back (main.js: 「땅을 넓혔어요」 then)
   return tick;

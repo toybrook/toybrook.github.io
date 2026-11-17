@@ -7,12 +7,13 @@
 // spray, the sandbar's shells and driftwood, the lotus pond, the isle's long bridge, the swamp's fog and stumps, the snow's
 // blue pillars and sparkling ice), and a small wooden sign with the zone's name at its entrance (설정 「구역 팻말 보이기」).
 import * as THREE from 'three';
-import { strip, inRect, polyD, poolAt, ORCHARD_ROWS } from './zones.js';
+import { strip, inRect, polyD, poolAt, ORCHARD_ROWS, S129, SOAK, REVEAL } from './zones.js';
+import { sfx } from '../ui/sound.js';
 import { ZONES, UNIT, NAT_K } from '../game/data.js';
 
 const S = UNIT; // inbox 42 A: the old board's metres -> the world's
 import { PREFS } from '../config.js';
-import { kit, emptyL, flowerPal, flowerCluster, addPads, addReeds, decorModel, part } from './meadow/props.js';
+import { kit, emptyL, flowerPal, flowerCluster, addPads, addReeds, decorModel, part, halo } from './meadow/props.js';
 import { toyMat, instanced, lathe, roundedBox, skyLit, nightGlow } from './toyKit.js';
 import { fireflies } from './daylight.js';
 import { mergeGeometries } from '../../vendor/utils/BufferGeometryUtils.js';
@@ -37,7 +38,7 @@ const GREENS = ['#6aa83a', '#7cb843', '#5e9c35'];
 let soft = null; // a soft round spot (fog, steam, mist; 14-3: the volcano's smoke, dino/props.js)
 export const softTex = () => { if (soft) return soft; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return soft = new THREE.CanvasTexture(c); };
-const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler();
 
 // hab: 'meadow' | 'pond' | 'snow' | 'dino'; o: { L, N (natives), heightAt, occupied, free (the open ground now), O (the open rect),
 // Z (zoneSet), back (the back forest's front edge), cliff (meadow: the cliff's foot, for its rock ledge) }
@@ -45,6 +46,8 @@ export function zoneProps(scene, hab, o) {
   const { L, N, heightAt, occupied, free, O, Z, back } = o, snow = hab === 'snow', dino = hab === 'dino';
   const Lr = emptyL(), pads = [], fruit = [], caps = [], crystals = [], ups = [], orchard = [], fx = [], shells = [], signs = [];
   const nearSpot = (x, z, m) => Z.spots.some(s => Math.hypot(x - s.x, z - s.z) < s.r + m);
+  const popK = S129 ? REVEAL.k : 0, pop = { t0: null, quiet: false, rocks: [], caps: [] }, sm = u => (u = Math.min(1, Math.max(0, u))) * u * (3 - 2 * u); // 129: the zone just opened (its fixtures pop up)
+  const popIn = t => pop.t0 == null ? 0 : sm((t - pop.t0 - 0.9) / 1.6); // its steam comes up with them
   for (let k = 1; k <= ZONES[hab].length; k++) {
     const s = strip(hab, k); if (!inRect(O, s.cx, s.cz)) continue;
     let sd = 7919 * k + (hab === 'pond' ? 31 : snow ? 57 : dino ? 71 : 3); const rnd = () => { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; };
@@ -53,7 +56,7 @@ export function zoneProps(scene, hab, o) {
     const ok = (x, z, m) => free(x, z, m) && !nearSpot(x, z, m + 0.3);
     const place = (n, okf, put) => { for (let i = 0, c = 0; c < n && i < n * 60; i++) { const x = r[0] + rnd() * (r[1] - r[0]), z = r[2] + rnd() * (r[3] - r[2]); if (okf(x, z)) { put(x, z); c++; } } };
     const rock = (x, z, sc) => { K.rock(x, z, sc); if (snow) { const q = L.rock.at(-1); caps.push({ x: q.x, y: q.y + q.s[1] * 0.78, z: q.z, s: [q.s[0] * 0.7, q.s[1] * 0.32, q.s[2] * 0.7], ry: q.ry, c: '#f6f9fc' }); } };
-    const put = (g, x, z, ry = 0, rr = 1, y = heightAt(x, z), h = 1.2) => { g.position.set(x, y, z); g.rotation.y = ry; scene.add(g); fx.push(g); occupied.push({ x, z, r: rr, h }); return g; };
+    const put = (g, x, z, ry = 0, rr = 1, y = heightAt(x, z), h = 1.2) => { g.position.set(x, y, z); g.rotation.y = ry; g.userData.zk = k; scene.add(g); fx.push(g); occupied.push({ x, z, r: rr, h }); return g; };
     const fixture = (id, ...a) => put(decorModel(id), ...a);
     // n points d0..d1 out from a pool's middle line (a capsule's too), fn(x, z, the way out)
     const ringOf = (f, n, d0, d1, fn) => { for (let i = 0; i < n; i++) { const [x, z, cx, cz] = poolAt(f, (i + rnd() * 0.4) / n, d0 + rnd() * (d1 - d0)); fn(x, z, Math.atan2(z - cz, x - cx)); } };
@@ -160,7 +163,7 @@ export function zoneProps(scene, hab, o) {
         for (let j = 0; j < 4; j++) { const big = j < 2, a = a0 + j * 1.3 + rnd() * 0.3, d = f.r + (big ? 0.6 : 0.35), x = f.x + Math.cos(a) * d, z = f.z + Math.sin(a) * d, sc = big ? 0.85 + rnd() * 0.2 : 0.5, hh = big ? 7.5 + rnd() * 3 : 2.2 + rnd() * 1; // inbox 42 C2: x3 / x2 (big 2.2-3.1H)
           crystals.push({ x, y: heightAt(x, z) + hh * 0.45, z, s: [sc, hh, sc], rx: Math.sin(a) * 0.12, rz: -Math.cos(a) * 0.12, ry: rnd() * 6, c: pickOf(['#9fd0f0', '#7fc0ec', '#b5ddf5']) });
           if (big) occupied.push({ x, z, r: 0.85, h: hh }); } } },
-      hotspring() { const p = pools[0]; for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283 + rnd() * 0.15, d = p.r - 0.15; K.rock(p.x + Math.cos(a) * d, p.z + Math.sin(a) * d, 0.32 + rnd() * 0.2); occupied.pop(); }
+      hotspring() { if (S129) return spring129(); const p = pools[0]; for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283 + rnd() * 0.15, d = p.r - 0.15; K.rock(p.x + Math.cos(a) * d, p.z + Math.sin(a) * d, 0.32 + rnd() * 0.2); occupied.pop(); }
         steam(p.x, waterAt(p), p.z, wl(p)); },
       cave() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id), x = h.x, z = h.z + h.rz * 0.9, y = Math.min(heightAt(x, z), heightAt(x - 2.6, z), heightAt(x + 2.6, z)); // inbox 42 C2: at the 10 m hill's foot, twice as big
         occupied.push({ x: h.x, z: h.z, r: 0.7 * Math.min(h.rx, h.rz), h: h.h }); // no one climbs the rock
@@ -226,6 +229,79 @@ export function zoneProps(scene, hab, o) {
       const c0 = new THREE.Color('#eef2ea');
       ups.push(t => { mat.color.copy(c0).multiply(skyLit.value); for (let i = 0; i < P.length; i++) { const q = P[i]; im.setMatrixAt(i, _m.compose(_p.set(q.x + Math.sin(t * 0.07 + q.ph) * 1.5, q.y + Math.sin(t * 0.2 + q.ph) * 0.05, q.z + Math.cos(t * 0.05 + q.ph) * 0.6), _q.identity(), _s.set(q.s, 1, q.s * 0.6))); } im.instanceMatrix.needsUpdate = true; });
     }
+    // 129 (?s129 trial; zones.js spring129): the pools' rims of dark wet rock (snow on top), a gap where the water spills, big
+    // capped rocks round the steps' feet and down the falls' sides; stone lanterns lit at night, a plank deck, a low bamboo fence,
+    // stacked wooden buckets; slow thick steam over each pool (one mesh, steam129) and a little puff over each head in it
+    function spring129() {
+      const F = Z.F.filter(f => f.zone === s.id), falls = F.filter(f => f.t === 'fall'), V3 = S129 === 3, stone = (x, z, sc) => { K.rock(x, z, sc); const q = L.rock.at(-1); q.c = jitter(V3 ? '#948e86' : '#66625e', 0.05); occupied.pop(); if (k === popK) pop.rocks.push(L.rock.length - 1);
+        if (V3) { caps.push({ x: q.x, y: q.y + q.s[1] * 0.8, z: q.z, s: [q.s[0] * 0.62, q.s[1] * 0.26, q.s[2] * 0.62], ry: q.ry, c: '#f6f9fc' }); if (k === popK) pop.caps.push([caps.length - 1, L.rock.length - 1]); } }; // warm: wet, no snow on it (129: pops up); 139-3: lighter, a snow cap that pops with it
+      const gap = (x, z) => falls.some(f => Math.hypot(x - f.from[0], z - f.from[1]) < 1.0 || Math.hypot(x - f.to[0], z - f.to[1]) < 0.9);
+      for (const p of pools) { const n = Math.round(p.r * 5.5); for (let i = 0; i < n; i++) { const a = i / n * 6.283 + rnd() * 0.15, d = p.r - 0.42 + rnd() * 0.22, x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d;
+        if (!gap(x, z)) stone(x, z, 0.2 + rnd() * 0.14); } }
+      for (const f of falls) { const dx = f.to[0] - f.from[0], dz = f.to[1] - f.from[1], l = Math.hypot(dx, dz), nx = -dz / l, nz = dx / l; // the fall's sides: rock steps
+        for (const t of [0.25, 0.6]) for (const sd of [-1, 1]) { stone(f.from[0] + dx * t + nx * sd * 0.9, f.from[1] + dz * t + nz * sd * 0.9, 0.32 + rnd() * 0.16); } }
+      for (const f of F.filter(f => f.t === 'boulder')) if (free(f.x, f.z, 0.3)) rock(f.x, f.z, f.sc); // 139-3: capped boulders and pines set by hand on the hill (zones.js spring139)
+      for (const f of F.filter(f => f.t === 'pine')) if (free(f.x, f.z, 0.8)) tree(f.x, f.z, f.sc);
+      if (!V3) for (const h of F.filter(f => f.t === 'hill')) for (let i = 0; i < 5; i++) { const a = i / 5 * 6.283 + rnd() * 0.4, x = h.x + Math.cos(a) * h.rx * 0.97, z = h.z + Math.sin(a) * h.rz * 0.97;
+        if (!gap(x, z) && !pools.some(p => Math.hypot(x - p.x, z - p.z) < p.r + 0.9) && free(x, z, 0.6)) rock(x, z, 0.55 + rnd() * 0.3); }
+      const ball = new THREE.SphereGeometry(1, 12, 8), ST = '#a9a59e', WOOD = ['#c99a62', '#b98a54'];
+      for (const f of F.filter(f => f.t === 'lantern')) { const g = new THREE.Group(); // a stone lantern: base, post, a ledge, the lit firebox, a hipped roof with snow on it
+        part(g, new THREE.CylinderGeometry(0.3, 0.36, 0.14, 8), ST, 0, 0.07, 0); part(g, new THREE.CylinderGeometry(0.11, 0.13, 0.7, 8), ST, 0, 0.49, 0);
+        part(g, roundedBox(0.56, 0.1, 0.56, 0.04), ST, 0, 0.89, 0); part(g, roundedBox(0.4, 0.34, 0.4, 0.05), ST, 0, 1.11, 0);
+        for (const ry of [0, Math.PI / 2]) part(g, new THREE.BoxGeometry(0.42, 0.15, 0.2), '#ffd27a', 0, 1.12, 0, { lit: true, ry });
+        part(g, new THREE.ConeGeometry(0.5, 0.32, 4), ST, 0, 1.44, 0, { ry: Math.PI / 4 }); part(g, ball, '#f6f9fc', 0, 1.5, 0).scale.set(0.3, 0.09, 0.3); part(g, ball, ST, 0, 1.63, 0).scale.setScalar(0.07);
+        halo(g, '#ffcf7a', 2.2, 0, 1.12, 0); put(g, f.x, f.z, rnd() * 0.6, 0.45, heightAt(f.x, f.z) - 0.04, 1.7); }
+      for (const f of F.filter(f => f.t === 'deck')) { const [x0, x1, z0, z1] = f.r, g = new THREE.Group(), y = Math.max(...[[x0, z0], [x1, z0], [x0, z1], [x1, z1], [(x0 + x1) / 2, (z0 + z1) / 2]].map(([x, z]) => heightAt(x, z)));
+        for (let z = z0 + 0.2, i = 0; z < z1 - 0.1; z += 0.4, i++) part(g, roundedBox(x1 - x0, 0.06, 0.36, 0.02), WOOD[i % 2], 0, 0.01, z - (z0 + z1) / 2);
+        for (const sx of [-1, 1]) part(g, roundedBox(0.14, 0.12, z1 - z0, 0.03), '#9c7044', sx * ((x1 - x0) / 2 - 0.1), -0.05, 0); // the beams under it
+        put(g, (x0 + x1) / 2, (z0 + z1) / 2, 0, 0, y + 0.02); occupied.pop(); } // walked on (a hair over the ground)
+      const cane = [0.62, 0.67, 0.72].map(hh => new THREE.CylinderGeometry(0.055, 0.06, hh, 7));
+      for (const f of F.filter(f => f.t === 'fence')) { const g = new THREE.Group(); g.userData.zk = k; scene.add(g); fx.push(g); // a low bamboo fence: canes, two rails along every four
+        for (let i = 1; i < f.pts.length; i++) { const [ax, az] = f.pts[i - 1], [bx, bz] = f.pts[i], l = Math.hypot(bx - ax, bz - az), n = Math.round(l / 0.18), ry = -Math.atan2(bz - az, bx - ax), rail = new THREE.CylinderGeometry(0.035, 0.035, l / n * 4 + 0.06, 6);
+          const P = j => [ax + (bx - ax) * j / n, az + (bz - az) * j / n];
+          for (let j = 0; j <= n; j++) { const [x, z] = P(j), hh = 0.62 + (j % 3) * 0.05; part(g, cane[j % 3], j % 2 ? '#b9c06a' : '#a9b25c', x, heightAt(x, z) + hh / 2 - 0.05, z); if (j % 4 === 0) occupied.push({ x, z, r: 0.45, h: 0.7 }); }
+          for (let j = 0; j + 4 <= n; j += 4) { const [x, z] = P(j + 2), y = heightAt(x, z); for (const hy of [0.22, 0.48]) part(g, rail, '#8d9a4a', x, y + hy, z, { rz: Math.PI / 2, ry }); } } }
+      const tub = lathe([[0, 0], [0.16, 0], [0.19, 0.24], [0.165, 0.245], [0.15, 0.05], [0, 0.05]], 16);
+      for (const f of F.filter(f => f.t === 'buckets')) { const g = new THREE.Group(); // two tubs, one upside down on them, a ladle leaning on it
+        part(g, tub, WOOD[0], -0.2, 0, 0); part(g, tub, WOOD[1], 0.2, 0, 0.02); part(g, tub, WOOD[0], 0, 0.5, 0, { rx: Math.PI });
+        for (const [x, y] of [[-0.2, 0.06], [0.2, 0.06], [0, 0.44]]) part(g, new THREE.CylinderGeometry(0.185, 0.185, 0.03, 16), '#7a5a3a', x, y + 0.1, 0);
+        part(g, new THREE.CylinderGeometry(0.02, 0.02, 0.6, 6), '#d8b47a', 0.36, 0.3, 0.12, { rz: 0.35 }); part(g, new THREE.CylinderGeometry(0.07, 0.06, 0.08, 10), '#d8b47a', 0.25, 0.05, 0.12);
+        put(g, f.x, f.z, rnd() * 6, 0.45, heightAt(f.x, f.z) - 0.02, 0.6); }
+      steam129(V3);
+    }
+    function steam129(V3) { // (139-3 V3: white, starts higher and narrower: only columns going up, nothing lying on the rocks) over each pool 2-4 slow columns, 5 puffs each (9 s up 5 m, 1.2 -> 4 m wide); 8 small ones over the heads in it
+      const cols = [];
+      for (const p of pools) { const n = Math.max(2, Math.min(4, Math.round(p.r))), y = waterAt(p); for (let i = 0; i < n; i++) { const a = i / n * 6.283 + rnd(), d = (0.3 + 0.5 * rnd()) * wl(p); cols.push({ x: p.x + Math.cos(a) * d, y, z: p.z + Math.sin(a) * d, ph: rnd() }); } }
+      const PER = 5, N = cols.length * PER + 8, aA = new THREE.InstancedBufferAttribute(new Float32Array(N), 1), geo = new THREE.PlaneGeometry(1, 1); geo.setAttribute('aA', aA);
+      const color = { value: new THREE.Color() }, mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, fog: true,
+        uniforms: { ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog), map: { value: softTex() }, color },
+        vertexShader: `attribute float aA; varying float vA; varying vec2 vUv;
+#include <fog_pars_vertex>
+void main() { vUv = uv; vA = aA; vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0); mvPosition.xy += position.xy * vec2(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz)); gl_Position = projectionMatrix * mvPosition;
+#include <fog_vertex>
+}`,
+        fragmentShader: `uniform sampler2D map; uniform vec3 color; varying float vA; varying vec2 vUv;
+#include <fog_pars_fragment>
+void main() { gl_FragColor = vec4(color * ${V3 ? 'mix(vec3(0.86, 0.9, 0.96), vec3(1.06), smoothstep(0.0, 0.75, vUv.y))' : 'mix(vec3(0.83, 0.87, 0.93), vec3(1.04), smoothstep(0.1, 0.8, vUv.y))'}, texture2D(map, vUv).a * vA); // shaded under: a puff, not a smear
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+#include <fog_fragment>
+}` });
+      const im = new THREE.InstancedMesh(geo, mat, N); im.renderOrder = 2; im.frustumCulled = false; scene.add(im);
+      const white = new THREE.Color('#f4f6f8'), warm = new THREE.Color('#ffc98a'), A = aA.array, fin = t => k === popK ? popIn(t) : 1;
+      ups.push((t, ctx) => {
+        color.value.copy(white).multiply(skyLit.value).lerp(warm, 0.3 * nightGlow.value); // lit by the sky; at night a little warm from the lanterns
+        const th = (1 + 0.5 * Math.min(1, ctx?.rain || 0)) * fin(t); let i = 0; // cold wet air: thicker
+        for (const c of cols) for (let j = 0; j < PER; j++, i++) { const u = (t / 9 + c.ph + j / PER) % 1, w = Math.sin(t * 0.13 + c.ph * 6) * 0.6 * u;
+          if (V3) { im.setMatrixAt(i, _m.compose(_p.set(c.x + w * 0.5, c.y + 0.9 + u * 6, c.z + w * 0.2), _q.identity(), _s.set(0.7 + u * 1.9, (0.7 + u * 1.9) * 1.5, 1))); A[i] = 0.85 * th * sm((u - 0.04) / 0.2) * (1 - u) ** 1.3; continue; }
+          im.setMatrixAt(i, _m.compose(_p.set(c.x + w, c.y + 0.5 + u * 6, c.z + w * 0.4), _q.identity(), _s.setScalar(1.1 + u * 2.2))); A[i] = 0.6 * th * sm(u / 0.15) * (1 - u) ** 1.2; }
+        let h = 0;
+        for (const q of SOAK.values()) for (let j = 0; j < 2 && h < 8; j++, h++, i++) { const u = (t / 2.6 + j / 2 + h * 0.37) % 1;
+          im.setMatrixAt(i, _m.compose(_p.set(q.x, q.y + 0.05 + u * 0.8, q.z), _q.identity(), _s.setScalar(0.3 + u * 0.6))); A[i] = 0.5 * Math.sin(u * Math.PI); }
+        for (; i < N; i++) A[i] = 0;
+        im.instanceMatrix.needsUpdate = true; aA.needsUpdate = true;
+      });
+    }
     function steam(px, py, pz, pr) { // little puffs rising off the warm water, growing and fading
       const tex = softTex(), puffs = [];
       for (let i = 0; i < 9; i++) { const m = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }), sp = new THREE.Sprite(m); sp.renderOrder = 2; scene.add(sp); const a = rnd() * 6.28, d = rnd() * pr * 0.8; puffs.push({ sp, x: px + Math.cos(a) * d, z: pz + Math.sin(a) * d, ph: i / 9 }); }
@@ -258,13 +334,31 @@ export function zoneProps(scene, hab, o) {
   if (Lr.stem.length) addReeds(scene, Lr);
   if (pads.length) addPads(scene, pads);
   if (fruit.length) scene.add(instanced(new THREE.SphereGeometry(1, 10, 7), toyMat('#ffffff', { roughness: 0.35 }), fruit, { cast: false }));
-  if (caps.length) scene.add(instanced(new THREE.SphereGeometry(1, 14, 8), toyMat('#ffffff', { roughness: 0.62 }), caps, { cast: false }));
+  const capM = caps.length ? instanced(new THREE.SphereGeometry(1, 14, 8), toyMat('#ffffff', { roughness: 0.62 }), caps, { cast: false }) : null; if (capM) scene.add(capM);
   if (crystals.length) scene.add(instanced(new THREE.CylinderGeometry(0.6, 1, 1, 6), toyMat('#ffffff', { roughness: 0.12, transparent: true, opacity: 0.88 }), crystals));
   if (shells.length) scene.add(instanced(new THREE.SphereGeometry(1, 12, 5, 0, Math.PI * 2, 0, Math.PI / 2), toyMat('#ffffff', { roughness: 0.4 }), shells, { cast: false }));
   if (orchard.length) ups.push(drops(scene, orchard, heightAt));
-  if (fx.length) scene.add(mergeByMat(fx));
+  // 129 넓히는 순간: the opened zone's fixtures each merged on their own, from nothing up past full and back (one after another
+  // from the old ground's side outward, as the mist draws back), a 「통」 each; the rest as one
+  const popG = popK ? fx.filter(g => g.userData.zk === popK && !new THREE.Box3().setFromObject(g).isEmpty()) : [], rest = popG.length ? fx.filter(g => !popG.includes(g)) : fx;
+  if (rest.length) scene.add(mergeByMat(rest));
+  const [ax, sg1] = popK ? { '+x': ['x', 1], '-x': ['x', -1], '+z': ['z', 1], '-z': ['z', -1] }[strip(hab, popK).side] : [], pops = popG.map(g => { const b = new THREE.Box3().setFromObject(g), m = mergeByMat([g]);
+    for (const c of [...g.children]) m.attach(c); g.removeFromParent(); scene.add(m); // what it kept (a lantern's halo) goes with it
+    return { m, P: new THREE.Vector3((b.min.x + b.max.x) / 2, b.min.y, (b.min.z + b.max.z) / 2), f: 0 }; }).sort((a, b) => (a.P[ax] - b.P[ax]) * sg1);
+  const grow = (q, f) => { q.f = f; f = Math.max(1e-3, f); q.m.scale.setScalar(f); q.m.position.copy(q.P).multiplyScalar(1 - f); };
+  pops.forEach(q => grow(q, 0));
+  if (popK) REVEAL.skip = () => { pop.t0 = -1e9; pop.quiet = true; }; // a tap: all of it at once (habitat.js)
+  const easeB = u => u >= 1 ? 1 : 1 + 2.70158 * (u - 1) ** 3 + 1.70158 * (u - 1) ** 2; // back-ease out: past full and back
+  const popUp = (t, ctx) => pops.forEach((q, i) => { if (q.f === 1) return; const u = (t - pop.t0 - 1.3 - 0.18 * i) / 0.45; if (u <= 0) return;
+    if (!q.f && !pop.quiet) sfx('pop'); grow(q, easeB(u)); if (q.f === 1 && ctx) ctx.shade = true; }); // settled: its shadow (habitat.js)
+  const R = pop.rocks, rockUp = (t, ctx) => { const im = L.mesh?.rock; if (!im) return; let left = 0; // the rim's stones round each pool in turn, 0.9-2.1 s (the curtain is off at 0.5)
+    R.forEach((j, i) => { const u = (t - pop.t0 - 0.9 - 1.2 * i / R.length) / 0.35, q = L.rock[j]; left += u < 1; _e.set(0, q.ry, 0);
+      im.setMatrixAt(j, _m.compose(_p.set(q.x, q.y, q.z), _q.setFromEuler(_e), _s.set(...q.s).multiplyScalar(q.f = Math.max(1e-3, u <= 0 ? 0 : easeB(u))))); });
+    for (const [ci, j] of pop.caps) { const c = caps[ci], q = L.rock[j]; _e.set(0, c.ry, 0); capM.setMatrixAt(ci, _m.compose(_p.set(q.x, q.y + (c.y - q.y) * q.f, q.z), _q.setFromEuler(_e), _s.set(...c.s).multiplyScalar(q.f))); } // 139-3: its cap with it
+    if (pop.caps.length) capM.instanceMatrix.needsUpdate = true;
+    im.instanceMatrix.needsUpdate = true; if (!left) { R.length = 0; if (ctx) ctx.shade = true; } };
   const sg = signs.length ? signBoards(signs) : null; if (sg) scene.add(sg);
-  return { update: (t, ctx) => { if (sg) sg.visible = PREFS.signs !== false; for (const u of ups) u(t, ctx); } };
+  return { update: (t, ctx) => { if (sg) sg.visible = PREFS.signs !== false; if (pop.t0 == null) pop.t0 = t; if (pops.length) popUp(t, ctx); if (R.length) rockUp(t, ctx); for (const u of ups) u(t, ctx); } };
 }
 
 // the zone signs: two posts and a board each (merged), the names on one canvas, its text planes one mesh

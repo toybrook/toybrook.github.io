@@ -7,7 +7,7 @@ import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { buildMeadow } from './meadow/index.js';
-import { rectAt, strip, zoneSet, BOARD0 } from './zones.js';
+import { rectAt, strip, zoneSet, BOARD0, S129, REVEAL } from './zones.js';
 import { mist } from './mist.js';
 import { windTime, toyMat, snowNow } from './toyKit.js';
 import { daylight, fireflies, hourNow } from './daylight.js';
@@ -179,9 +179,11 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   await Promise.all([...now.map(get),
     ...records.filter(r => habitatOf(r) === habId).flatMap(r => [r.acc, ...r.wear || []]).filter(Boolean).map(loadAcc)]); // 26-1: the secret accessories worn here (15-2: and event wear)
   stamps.length = 0; // 28-6: the terrain stamps of the habitat before (syncStamps puts this one's back)
-  const habitat = (await builder)(scene, { zzz: obj => ui.zzz(project(obj)) }, sunDir, level, top);
+  const buildIt = await builder; REVEAL.k = S129 && reveal ? level : 0; REVEAL.skip = null; // 129 (?s129): the zone just bought, its fixtures pop up (zoneprops.js)
+  const habitat = buildIt(scene, { zzz: obj => ui.zzz(project(obj)) }, sunDir, level, top), popSkip = REVEAL.skip; REVEAL.k = 0; REVEAL.skip = null;
   renderer.shadowMap.needsUpdate = true;
-  const mistTick = mist(scene, habitat.floor, open, built, reveal && level > 0 ? rectAt(habId, level - 1) : open), U = habitat.unit; // U: saved decor x, z -> here
+  const mistTick = mist(scene, habitat.floor, open, built, reveal && level > 0 ? rectAt(habId, level - 1) : open, S129 ? 3.4 : 2.6), U = habitat.unit; // U: saved decor x, z -> here
+  if (S129 && reveal) container.addEventListener('pointerdown', () => { mistTick.skip(); popSkip?.(); }, { ...sig, once: true }); // 129: a tap skips the reveal
   const flies = habId === 'meadow' ? fireflies(scene, habitat.ctx) : null; // 21-1: fireflies over the meadow at night (the pond: sparkles on its water)
   habitat.ctx.crowd = new Set(); // every animal's body capsule, so they keep apart (crowd.js)
   const bugs = butterflies(scene); habitat.ctx.sets = []; habitat.ctx.play = [];
@@ -1208,7 +1210,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (!focus && !goingHome && !aim) { lastGoal = null; return; }
     const key = focus ? glide : aim ?? (decorOn ? 'decor' : HOME); if (key !== lastGoal) { lastGoal = key; ramp = 0; }
     ramp = Math.min(1, ramp + dt / 0.35);
-    const k = calm() ? 1 : (1 - Math.exp(-dt * 3.2)) * (key ? smooth(ramp) : 1); // frame-rate independent ease (26-3 움직임 줄이기: a cut)
+    const k = calm() ? 1 : (1 - Math.exp(-dt * ((!focus && aim?.rate) || 3.2))) * (key ? smooth(ramp) : 1); // frame-rate independent ease (26-3 움직임 줄이기: a cut)
     if (focus) want.set(focus.position.x, focus.position.y + lift, focus.position.z); else want.copy(aim ? aim.at : HOME.target);
     const goal = focus ? glide : aim ? { radius: aim.radius, phi: aim.phi ?? 0.5, theta: aim.theta } : decorOn ? { radius: HOME.wide * 0.85, phi: 0.5, theta: 0 } : HOME; // decorating: closer, more from above
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off);
@@ -1265,7 +1267,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (PREFS.saver || deskOn) { const now = performance.now(); if (now - lastDraw < 1000 / fpsCap() - 4) return; lastDraw = now; } // 26-3 배터리 절약
     const raw = clock.getDelta(), dt = Math.min(PREFS.saver || deskOn ? 0.075 : 0.05, raw), t = clock.elapsedTime; // 15 fps: steps of 1/15 s keep the walk at speed
     const w = sky.now(), L = light(w.gray); habitat.ctx.night = L.night; habitat.ctx.rain = w.rain + w.snow; habitat.ctx.az = Math.atan2(camera.position.z - controls.target.z, camera.position.x - controls.target.x); flies?.(t, L.night); ambience(habId, L.night, w.rain, w.snow); // walk.js / swim.js: sleepier at night, shelter or swim in the rain (25-1: the snow's snow alike)
-    windTime.value = t; habitat.update(dt, t); mistTick(t, dt); bugs.tick(t, L.night, w.rain); wildFlies?.(t, L.night); lilies(lilyK); // 17-3
+    windTime.value = t; habitat.update(dt, t); mistTick(t, dt); if (habitat.ctx.shade) { habitat.ctx.shade = false; renderer.shadowMap.needsUpdate = true; } /* 129: a fixture popped up */ bugs.tick(t, L.night, w.rain); wildFlies?.(t, L.night); lilies(lilyK); // 17-3
     if (t > noteAt) { noteAt = t + 2; const es = [...placed.values()]; // 23-2 도전 과제: what is on screen now
       if (L.night > 0.5) ui.note?.('lights', es.filter(e => e.light).length);
       if (w.rain > 0.3) ui.note?.('roof', Math.max(0, ...es.filter(e => e.roof?.under).map(e => [...actors.values()].filter(a => Math.hypot(a.position.x - e.roof.x, a.position.z - e.roof.z) < e.roof.under.r).length)));
@@ -1332,11 +1334,21 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     // a little in from the strip's middle (the old ground beside it shows, not the empty table past the edge), the same closeness at
     // step 1 and step 6 (HOME.radius grows with the board, kR). inbox 34: nearer than the home view, and along a side strip at its
     // hills and pools, so the zone's landmark is big on the screen
-    const ix = { '+x': -3, '-x': 3 }[s.side] || 0, iz = s.side === '+z' ? -2.5 : 0, big = zoneSet(habId, k).F.filter(f => f.k === k && (f.t === 'hill' || f.t === 'pool'));
+    const ix = S129 ? 0 : { '+x': -3, '-x': 3 }[s.side] || 0, iz = s.side === '+z' ? -2.5 : 0, big = zoneSet(habId, k).F.filter(f => f.k === k && (f.t === 'hill' || f.t === 'pool'));
     const cz = big.length && s.side !== '+z' ? big.reduce((a, f) => a + f.z, 0) / big.length : s.cz;
-    aim = { at: new THREE.Vector3(C(s.cx + ix, ...panX), 0, C(cz + iz, ...panZ)), radius: HOME.wide / kR * 0.48, phi: 0.78 };
+    const cx = S129 && big.length && s.side !== '+z' ? big.reduce((a, f) => a + f.x, 0) / big.length - ({ '+x': 1.5, '-x': -1.5 }[s.side] || 0) : s.cx; // 129: on the landmark itself (a little in: not the table past the edge)
+    aim = { at: new THREE.Vector3(C(cx + ix, ...panX), 0, C(cz + iz, ...panZ)), radius: HOME.wide / kR * 0.48, phi: 0.78, rate: S129 ? 1.3 : 0 }; // 129: a slow glide (95% in 2.3 s)
     const far = a => Math.hypot(a.position.x - s.cx, a.position.z - s.cz); // the nearest four: they get there while the camera looks
-    if (sp.length) idle().sort((a, b) => far(a) - far(b)).slice(0, 4).forEach((a, i) => { const p = sp[i % sp.length]; a.send(p.x + (Math.random() - 0.5) * 2, p.z + (Math.random() - 0.5) * 2, 'run', { fast: true }); });
+    if (S129) { // 129 넓히는 순간: the mist blown off; the nearest one or two (of the kinds a spot is for) run in and do the zone's own thing there
+      sfx('unveil'); const near = idle().sort((a, b) => far(a) - far(b)), e = { '+x': s.r[0] - 1.5, '-x': s.r[1] + 1.5, '+z': s.r[2] - 1.5, '-z': s.r[3] + 1.5 }[s.side];
+      const from = p => s.side[1] === 'x' ? [e, p.z] : [p.x, e], used = []; let n = 0; // under the veil: put just outside the zone, level with its spot (the nearest spots first), so they run straight in while the camera looks
+      const gap = p => (p.act === 'rest' ? 99 : 0) + Math.abs((s.side[1] === 'x' ? p.x : p.z) - e); // the zone's own thing first (a plain rest last)
+      for (const p of [...sp].sort((a, b) => gap(a) - gap(b))) {
+        const a = n < 2 && near.find(a => !p.who || p.who.includes(a.rec.species)); if (!a || !a.send(p.x, p.z, p.act, { fast: true, to: p.to, soak: p.soak })) continue;
+        const at = nearest((x, z) => habitat.ctx.walkable(x, z) && free(habitat.ctx.crowd, a.body, x, z) && used.every(([u, v]) => Math.hypot(u - x, v - z) > 2), from(p));
+        a.drop(...at, 1e-3); used.push(at); n++; near.splice(near.indexOf(a), 1); // 1e-3: on the ground at once (no fall)
+      }
+    } else if (sp.length) idle().sort((a, b) => far(a) - far(b)).slice(0, 4).forEach((a, i) => { const p = sp[i % sp.length]; a.send(p.x + (Math.random() - 0.5) * 2, p.z + (Math.random() - 0.5) * 2, 'run', { fast: true }); });
   }
   // 28-1 넓히기 전과 비교: the open ground from straight above, w px wide (no mist), and the first board's part of it alone on the table
   function topView(w = 600) {

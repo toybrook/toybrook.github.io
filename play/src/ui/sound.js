@@ -119,8 +119,11 @@ const FX = {
   lights: t => { puff(t, 0.02, 'bandpass', 2400, 0.3, { Q: 4 }); tone(t, 1900, 0.03, { gain: 0.04 }); },
   fireworks: t => { tone(t, 650, 0.75, { to: 1500, gain: 0.02 }); puff(t + 0.8, 0.4, 'lowpass', 700, 0.2); for (let i = 0; i < 7; i++) puff(t + 0.9 + i * rnd(0.05, 0.11), 0.02, 'highpass', 3000, 0.04, { pan: rnd(-0.6, 0.6) }); },
   pinhill: t => { puff(t, 0.9, 'bandpass', 700, 0.14, { Q: 1.2 }); puff(t + 0.12, 0.8, 'bandpass', 1300, 0.08, { Q: 1.2 }); },
+  // 129 넓히는 순간 (?s129): the mist blown off (a soft gust, a high chime as it opens), each fixture's 「통」 as it pops up
+  unveil: t => { puff(t, 1.2, 'bandpass', 520, 0.13, { Q: 0.9 }); puff(t + 0.2, 1.0, 'bandpass', 1150, 0.07, { Q: 1 }); bell(t + 0.55, 1568, 1.3, 0.06); bell(t + 0.7, 2093, 1.1, 0.045); },
+  pop: t => tone(t, 300, 0.12, { type: 'triangle', gain: 0.1, to: 620 }),
 };
-const DUR = { hatch: 1.8, grown: 1.6, level: 2, bell: 1.8, fireworks: 1.6, train: 0.7 }, fxBusy = {}, lastAt = {};
+const DUR = { hatch: 1.8, grown: 1.6, level: 2, bell: 1.8, fireworks: 1.6, train: 0.7, unveil: 1.8, pop: 0.14 }, fxBusy = {}, lastAt = {};
 const BUZZ = { hatch: [25, 70, 25], grown: 40 }; // 26-3 진동 (Android Chrome; iPhone browsers have no navigator.vibrate)
 export function sfx(name, delay = 0) {
   if (!FX[name]) return; // 28-3: a prop's own sound by its id (habitat.js), when it has one

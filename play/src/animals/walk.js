@@ -9,6 +9,7 @@ import { MODELS, UNIT, GROW_ACTS } from '../game/data.js';
 import { SP, gauge } from '../game/rules.js';
 import { now as clock } from '../game/clock.js';
 import { choose, start, pose as playPose, leave, due, duo } from './play.js';
+import { SOAK, poolAt } from '../habitat/zones.js';
 
 // inbox 63: a little darker (0.55 -> 0.68 in the middle, 0.42 half way out) so they stand out on the wide board
 const shadowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'); const gr = x.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(40,40,10,0.68)'); gr.addColorStop(0.55, 'rgba(40,40,10,0.42)'); gr.addColorStop(1, 'rgba(40,40,10,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
@@ -94,9 +95,9 @@ export function createActor(ctx, rec) {
     if (ctx.play?.length) { const m = me(); if (Math.random() < (due(ctx, h.now, m, st => !m.can || m.can(st.x, st.z)) ? 0.7 : 0.2) + 0.15 * (ctx.night || 0) && toPlay()) return; } // 28-2 소품 쓰기 (more by night: the campfire); inbox 42 C: 7 -> 20%, 70% while one of its kind waits (due)
     if (ctx.sets?.length && Math.random() < 0.3 && toSet()) return; // 23-2 세트 보너스: likes to play by a whole set
     if (ctx.spots?.length && Math.random() < (pe() === 'collector' ? 0.24 : 0.12)) { // 28-1: to a spot of a zone (zones.js: a bench, the hot spring, the sled hill's top) within 20
-      const q = ctx.spots.filter(s => Math.hypot(s.x - h.x, s.z - h.z) < 20 && home(s.x, s.z) && (s.act !== 'slide' || W.slide || Math.random() < 0.3) && (s.act !== 'dig' || Math.random() < 3 * (W.dig || 0)) && Math.random() < (s.w ?? 1)); // 14-3: the fossil site's dig spots by walk.dig
+      const q = ctx.spots.filter(s => Math.hypot(s.x - h.x, s.z - h.z) < 20 && home(s.x, s.z) && (s.act !== 'slide' || W.slide || Math.random() < 0.3) && (s.act !== 'dig' || Math.random() < 3 * (W.dig || 0)) && Math.random() < (s.w ?? 1) && (!s.who || s.who.includes(rec.species) && SOAK.size < 4)); // 14-3: the fossil site's dig spots by walk.dig; 129: who soaks
       if (q.length) { const s = q[Math.floor(Math.random() * q.length)], a = Math.random() * 6.28, d = Math.random() * s.r;
-        h.goal = { x: s.x + Math.cos(a) * d, z: s.z + Math.sin(a) * d, act: s.act, to: s.to, n: 4 }; if (toward()) return; }
+        h.goal = { x: s.x + Math.cos(a) * d, z: s.z + Math.sin(a) * d, act: s.act, to: s.to, soak: s.soak, n: 4 }; if (toward()) return; }
     }
     // now and then: hop to the nearer bridge landing (if the way is clear), then walk over to the other one
     if (!ctx.onBridge && !W.water && ctx.bridgeEnds.length && (r < 0.08 || Math.random() < 0.3 && over())) { // inbox 42 C: or a prop of its kind waits over the bridge
@@ -321,6 +322,9 @@ export function createActor(ctx, rec) {
     if (g.act === 'greet') { const o = g.o, b = o.body; h.state = 'idle'; h.t = 0; h.dur = 0.5; // inbox 42 C 코 맞대기: the other still waits for it: nose to nose
       if (o.soc?.kind === 'wait' && o.soc.o === api && Math.hypot(b.x - h.x, b.z - h.z) < g.D + 1) { h.face = Math.atan2(-(b.z - h.z), b.x - h.x); h.state = 'nuzzle'; h.dur = 1.8; o.nuzzle(h.x, h.z); say('greet', [o]); }
       else if (o.soc?.o === api) o.soc = null; return true; }
+    if (g.act === 'shake') { h.state = 'shake'; h.t = 0; h.dur = 1.3; return true; } // 129: out of the spring: shakes the water off
+    h.soak = g.act === 'bath' && g.soak || null; // 129: in to its chin, eyes shut (sleep; how deep: below)
+    if (h.soak && g.yaw == null) { const P = h.soak.pool, dx = h.x - P.x, dz = h.z - P.z; if (Math.hypot(dx, dz) > 0.8) h.face = h.soak.in ? Math.atan2(dz, -dx) : Math.atan2(-dz, dx); } // chin to the rim, its body out in the pool (139-3 in: back to the rim, face to the pool)
     if (g.yaw != null) h.face = g.yaw; // inbox 42 C 모여서 낮잠: side by side, facing as the first one does
     h.state = g.act === 'nap' || g.act === 'bath' ? 'sleep' : Math.random() < 0.6 ? 'graze' : 'idle'; h.t = 0;
     h.dur = g.dur ?? (g.act === 'bath' ? T(8, 12) : g.act === 'nap' ? T(6, 10) : T(4, 8)); g.done?.(true); return true;
@@ -372,7 +376,7 @@ export function createActor(ctx, rec) {
     rec, look, obj: root, pickTarget: root, position: root.position,
     hold: false, // true while it hatches: stands still where the egg is
     rest: () => new THREE.Vector3(h.x, ground(), h.z),
-    drop(x, z, from = 0) { endPlay(); h.soc = null; h.x = h.tx = x; h.z = h.tz = z; h.then = null; if (ctx.onBridge === h) ctx.onBridge = null; h.state = 'drop'; h.t = dropFrom(from); }, // out of the nest menu, onto this spot (inbox 42 E: from: let go that high up)
+    drop(x, z, from = 0) { endPlay(); h.soc = null; h.x = h.tx = x; h.z = h.tz = z; h.then = null; if (h.goal) h.goal.via = null; /* 129: sent, then put down elsewhere: its way from here */ if (ctx.onBridge === h) ctx.onBridge = null; h.state = 'drop'; h.t = dropFrom(from); }, // out of the nest menu, onto this spot (inbox 42 E: from: let go that high up)
     water: W.water, // inbox 42 E: where else it may be put down (habitat.js carry)
     // inbox 42 E 꾹 눌러 옮기기: held up over x, z (habitat.js); whatever it was doing or going to is dropped
     carry(x, z) { if (h.state !== 'carry') { endPlay(); h.goal?.done?.(false); h.goal = h.after = h.soc = h.shel = null; h.stuck = false; h.fail = 0; if (h.then || ctx.onBridge === h) { h.then = null; if (ctx.onBridge === h) ctx.onBridge = null; } h.state = 'carry'; }
@@ -393,10 +397,10 @@ export function createActor(ctx, rec) {
     },
     // 28-1: go to x, z (walking, fast: running) and do act there (toward / arrive above); done(ok) when there (eat: when eaten) or given up
     // (28-2 act 'play': q, the seat play.js choose kept for it)
-    send(x, z, act, { fast = false, done, to, q, yaw, dur } = {}) {
+    send(x, z, act, { fast = false, done, to, q, yaw, dur, soak } = {}) {
       if (api.hold || !['idle', 'graze', 'sleep', 'walk', 'hop'].includes(h.state)) return false;
       if (h.then) { h.then = null; ctx.onBridge = null; } h.goal?.done?.(false); h.after = null; h.soc = null;
-      h.goal = { x, z, act, to, fast, done, q, yaw, dur, n: 6 }; if (!toward()) { h.state = 'idle'; h.t = 0; h.dur = 0.4; } return true;
+      h.goal = { x, z, act, to, fast, done, q, yaw, dur, soak, n: 6 }; if (!toward()) { h.state = 'idle'; h.t = 0; h.dur = 0.4; } return true;
     },
     busy: () => !!h.goal || !!h.after || !!h.play,
     toProp(st, d) { // 17-1: to the seesaw its 단짝 is on (113 d: me.duo, play.js; called by it, it leaves a walk or hop, as send)
@@ -459,7 +463,8 @@ export function createActor(ctx, rec) {
         else if (W.rest === 'peck') rot = -(0.08 + 0.35 * Math.pow(Math.max(0, Math.sin(t * 8 + h.ph)), 6)) * g; // quick pecks at the ground
         else rot = -(0.16 + Math.sin(t * 3 + h.ph) * 0.03) * g;
         if (h.t >= h.dur) pick(); }
-      else if (h.state === 'sleep') { sq = 0.95 - Math.sin(t * 1.4 + h.ph) * 0.015; if (h.tuck) tuck = Math.min(1, h.t / 0.5, (h.dur - h.t) / 0.5); if (h.t >= h.dur) pick(); if (Math.random() < dt * 0.5) ctx.onSleepTick(root); }
+      else if (h.state === 'sleep') { sq = 0.95 - Math.sin(t * 1.4 + h.ph) * 0.015; if (h.tuck) tuck = Math.min(1, h.t / 0.5, (h.dur - h.t) / 0.5); if (h.soak) { shut = true; if (h.soak.rot) rot = h.soak.rot * smooth(Math.min(1, h.t / 1.5, Math.max(0, h.dur - h.t) / 1.5)); } // 139-3: leans back, head and shoulders out
+        if (h.t >= h.dur) { const o = h.soak?.out; h.soak = null; if (o) { h.goal = { x: o[0], z: o[1], act: 'shake', n: 4 }; if (!toward()) pick(); } else pick(); } if (Math.random() < dt * 0.5) ctx.onSleepTick(root); }
       else if (h.state === 'play') { const o = playPose(h.play, h.t, t); // 28-2 소품 쓰기 (play.js poses it: where, how high, how)
         h.x = o.x; h.z = o.z; h.yaw = h.face = o.yaw; py = o.y ?? null; lift = o.lift || 0; ({ sq, rot, gait, ph } = o); roll = o.roll || 0; lie = o.lie || 0; shut = !!o.shut;
         if (h.pk > 0) { h.pk -= dt; const b = Math.sin(Math.max(0, h.pk) / 0.5 * Math.PI) * 0.3; if (py != null) py += b; else lift += b; }
@@ -495,7 +500,11 @@ export function createActor(ctx, rec) {
       const gy = ground(bed); if (py != null) lift = py - gy;
       const wet = W.water && ctx.deckAt(h.x, h.z) === -Infinity && bed < ctx.water - 0.06; // in the pond: no shadow on the water
       if (wet && gy > bed + 0.01) lift += Math.sin(t * 2.2 + h.ph) * 0.04; // afloat: bobs like the ducks
-      root.position.set(h.x, gy + lift, h.z);
+      if (h.soak && h.state !== 'sleep') h.soak = null; // picked up, called away: out at once
+      { const S = M[look.stage]; const k = h.soak; if (k) k.lv ??= Math.min(...Array.from({ length: 32 }, (_, i) => { const [x, z] = poolAt(k.pool, i / 32, k.pool.r - 0.7); return heightAt(x, z); })) + 0.02; // 129: the pool's level (as water.js)
+        h.sd = (h.sd || 0) + ((k ? Math.max(0, gy + lift - k.lv + (k.d[rec.species] ?? 0.7) * S.h * S.s) : 0) - (h.sd || 0)) * Math.min(1, dt * 1.2); // sunk to d of it under the water, eased
+        if (h.soak) { const hd = body.seg[1] * Math.cos(rot); SOAK.set(rec.id, { x: h.x + Math.cos(h.yaw) * hd, y: gy + lift - h.sd + S.h * S.s + Math.sin(rot) * body.seg[1], z: h.z - Math.sin(h.yaw) * hd }); } else SOAK.delete(rec.id); } // (139-3: where the head is, leaned back)
+      root.position.set(h.x, gy + lift - h.sd, h.z);
       root.rotation.y = h.yaw + spin; root.rotation.x = roll; // roll: about its length (YXZ)
       rings(dt);
       Object.assign(pose, { sq, rot, gait, ph, tuck, lie, shut }); look.fig.pose(pose);
@@ -505,7 +514,7 @@ export function createActor(ctx, rec) {
       blob.set(sh, root.visible && !wet ? Math.max(0.25, 1 - lift * 0.8) : 0);
     },
     body,
-    dispose() { endPlay(); h.soc = null; for (const m of drops) { scene.remove(m); m.material.dispose(); } if (h.goal?.q) leave(h.goal.q); scene.remove(root); look.dispose(); blob.free(); if (ctx.onBridge === h) ctx.onBridge = null; ctx.crowd.delete(body); },
+    dispose() { endPlay(); h.soc = null; SOAK.delete(rec.id); for (const m of drops) { scene.remove(m); m.material.dispose(); } if (h.goal?.q) leave(h.goal.q); scene.remove(root); look.dispose(); blob.free(); if (ctx.onBridge === h) ctx.onBridge = null; ctx.crowd.delete(body); },
   };
   pick(); body.pal = api; body.duo = api; // inbox 42 C: others find it in ctx.crowd (its first pick once api is made: toPlay hands it on)
   return api;

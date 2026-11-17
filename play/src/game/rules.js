@@ -442,12 +442,12 @@ function enforceCap(S) {
   return ev;
 }
 
-// Next habitat's lock: the previous one's codex share + hearts (a threshold, not spent). Once open, open for good.
+// Next habitat's lock: a fixed number of the previous one's codex cells (138-A) + hearts (a threshold, not spent). Once open, open for good.
 export function unlockInfo(S, habId) {
   const i = HABITATS.findIndex(h => h.id === habId), prev = HABITATS[i - 1];
   if (i <= 0) return { open: true, met: true };
   const cells = codexCells(prev.id).length, have = codexCells(prev.id).filter(c => S.codex[c.key]).length;
-  const need = Math.ceil(cells * B.unlock.codex), friends = i === 1 ? B.unlock.friends : null, got = S.stats?.hatch || 0; // 92-2: the second habitat also at `friends` hatched
+  const need = B.unlock.need[habId], friends = i === 1 ? B.unlock.friends : null, got = S.stats?.hatch || 0; // 92-2: the second habitat also at `friends` hatched
   return { open: S.unlocked.includes(habId), met: cells > 0 && have >= need && S.hearts >= B.unlock.hearts || friends > 0 && got >= friends, prev, have, need, hearts: B.unlock.hearts, friends, got };
 }
 

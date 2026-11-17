@@ -328,7 +328,7 @@ export function finish(scene, L, { rand, occupied }) {
   scene.add(M.canopy, M.trunk, M.pine);
   if (L.snow.length) scene.add(M.snow = instanced(geo.snow, mat.snow, L.snow)); // 25-1: the snow's pines
   for (const o of occupied) if (o.fade) for (const p of o.fade) if (typeof p[0] === 'string') p[0] = M[p[0]];
-  scene.add(M.rock);
+  scene.add(M.rock); L.mesh = M; // 129: the opened zone's stones pop up (zoneprops.js)
   scene.add(instanced(geo.pebble, mat.plain, L.pebble, { cast: false }));
   scene.add(instanced(geo.post, mat.plain, L.post));
   scene.add(instanced(geo.rail, mat.plain, L.rail));
@@ -433,7 +433,7 @@ function fallGeo() {
 let haloTex = null;
 const haloT = () => haloTex ??= (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x2 = c.getContext('2d'), gr = x2.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x2.fillStyle = gr; x2.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
-function halo(g, color, size, x, y, z) {
+export function halo(g, color, size, x, y, z) {
   const m = decorMats['halo' + color] ??= Object.assign(new THREE.SpriteMaterial({ map: haloT(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
     { onBeforeCompile: sh => { NIGHT(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a *= 0.75 * uNight;\n#include <opaque_fragment>'); } });
   const sp = new THREE.Sprite(m); sp.position.set(x, y, z); sp.scale.setScalar(size); sp.renderOrder = 3; g.add(sp); return sp;

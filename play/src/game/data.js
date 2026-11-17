@@ -35,7 +35,7 @@ export const HOLD = { myth: false, dino: true }; // release build: the jungle he
 //           `pet` for each petting tap that gives a heart and `feed` for each feed (at most `feeds` a day per baby)
 //   heart:  temporary (19단계 특별 행동 replaces it): tap an animal, once per cooldown each, `daily` a day (refills at local midnight)
 //   sendBack: hearts for sending back a variant already in the codex (on the reveal card). Never shards
-//   unlock: next habitat: this share of the previous codex + this many hearts (a threshold, not spent); friends: the second
+//   unlock: next habitat: `need` cells of the previous codex (fixed per habitat, 138-A) + this many hearts (a threshold, not spent); friends: the second
 //           habitat also opens once this many eggs have hatched (92-2)
 //   nest.fast: hatch times of a new game's first eggs (92-1), then hatch × hatchScale
 //   expand: 땅 넓히기 prices;   xp: 정원사 레벨 XP (BALANCE.level.xp)
@@ -61,6 +61,9 @@ const SKY = { meteor: 0.25, aurora: 0.2, auroraSnow: 0.4, red: 0.05, comet: 0.07
 // 17-1 단짝 (game/pals.js, 가안): two friends whose 성격 go together, out in the same place `hours` in all (real time, the app shut
 // too) -> 단짝; one new pair a day, a place one pair per `per` friends out (1 at least)
 const PAL = { hours: 20, per: 6 };
+// 138-A 사용자 결정 (11/17): a habitat opens at this many cells of the one before's codex, fixed — the public codex's 20 % on
+// 11/17 (meadow 91 · pond 91 · snow 90 cells). New looks, legendaries or myths add cells, never more to open the next one
+export const UNLOCK_NEED = { pond: 19, snow: 19, dino: 18 };
 // 113 단짝 놀이 (game/pals.js duoOf, animals/play.js): each pair's prop (a play prop kind both species use, that its place can have;
 // none: the campfire), the two on it together: ♥first the first time, ♥hearts at most once a day after; max pairs at it at once a place
 export const DUO = { kinds: ['seesaw', 'swing', 'fountain', 'campfire', 'feeder'], first: 20, hearts: 3, max: 2 };
@@ -74,7 +77,7 @@ export const PACE = {
     heart: { perTap: 1, cooldown: 10 * 1000, daily: 20 },
     sendBack: { common: 2, rare: 5, heroic: 15, legendary: 50 },
     codexHeart: 0,
-    unlock: { codex: 0.2, hearts: 30 },
+    unlock: { need: UNLOCK_NEED, hearts: 30 },
     expand: [20, 45, 140, 200, 400, 650],
     priceX: { small: 1, big: 1 },                    // 42 F-1: prop prices as listed (PROPS price; the beta x is below)
     xp: { codex: 10, grown: 4, pet: 1, petDaily: 10, login: 5, achieve: 10 },
@@ -97,7 +100,7 @@ export const PACE = {
     heart: { perTap: 1, cooldown: 10 * 1000, daily: 120 },
     sendBack: { common: 6, rare: 15, heroic: 40, legendary: 120 },
     codexHeart: 3,                                   // inbox 38: hearts when a codex cell is filled for the first time
-    unlock: { codex: 0.2, hearts: 30, friends: 8 },  // 92-2: the second habitat (연못) also opens at `friends` hatched (sim-guests 3: 8th hatch at 2.6~7 min, middle ~4.5)
+    unlock: { need: UNLOCK_NEED, hearts: 30, friends: 8 },  // 92-2: the second habitat (연못) also opens at `friends` hatched (sim-guests 3: 8th hatch at 2.6~7 min, middle ~4.5)
     expand: [20, 45, 140, 200, 400, 650],
     priceX: { small: 0.75, big: 0.5 },               // 42 F-1: prop prices x (big: listed ♥100 and up), to 5 hearts. inbox 51: small 1 -> 0.75 (the player found props dear); sim: one every 10~20 min, a big one on day 2
     xp: { codex: 8, grown: 2, pet: 1, petDaily: 10, login: 5, achieve: 10 },
@@ -775,15 +778,23 @@ if (M89) {
   if (v) { const D = { a: { adult: { h: 2.268, r: 0.571, seg: [-1.877, 1.233], legs: { hip: 0.82, x: [0], z: 0.3 }, attach: { head: { p: [1.02, 2.27, 0], r: [0, 0, -0.1], s: 1.17 }, neck: { p: [0.64, 1.67, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.84, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.16, 2.04, 0], r: [0, 0, 0], s: 1.22 } } },
       baby: { h: 2.112, r: 0.571, seg: [-1.625, 1.375], legs: { hip: 0.6, x: [0], z: 0.3 }, attach: { head: { p: [1.02, 2.11, 0], r: [0, 0, -0.1], s: 1.38 }, neck: { p: [0.57, 1.4, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.61, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.18, 1.84, 0], r: [0, 0, 0], s: 1.44 } } } } }[v];
     Object.assign(MODELS.tRex, { files: { baby: `assets/models/pilot89_trex125${v}_baby.glb`, adult: `assets/models/pilot89_trex125${v}_adult.glb` }, ...D && { baby: sized('tRex', 'baby', D.baby), adult: sized('tRex', 'adult', D.adult) } }); }
+  // 125-C 프테라노돈 네 발 (tools/bake-dino.mjs pteranodon 125): &ptera=<size> the new body at that height against the horse
+  // (inbox: 0.75 / 0.90; public 0.45 on the old body); its wings walk as front legs (figure.js walk.fore)
+  const pt = +q.get('ptera');
+  if (pt > 0 && pt < 5) { SIZE.pteranodon = pt; const P = MODELS.pteranodon;
+    Object.assign(P, { walk: { ...P.walk, fore: 0.3 }, files: { baby: 'assets/models/pilot89_dino125_pteranodon_baby.glb', adult: 'assets/models/pilot89_dino125_pteranodon_adult.glb' },
+      baby: sized('pteranodon', 'baby', { h: 1.366, r: 0.32, seg: [-0.26, 0.54], legs: { hip: 0.32, x: [-0.22], z: 0.2 }, wing: [0.22, 0.76, 0.27], attach: { head: { p: [0.6, 1.29, 0], r: [0, 0, -0.1], s: 1.0 }, neck: { p: [0.42, 0.93, 0], r: [0, 0, -0.95], s: 1.1 }, back: { p: [-0.08, 0.93, 0], r: [0, 0, 0.08], s: 0.9 }, eye: { p: [0.7, 1.16, 0], r: [0, 0, 0], s: 1.0 } } }),
+      adult: sized('pteranodon', 'adult', { h: 1.522, r: 0.329, seg: [-0.387, 0.67], legs: { hip: 0.42, x: [-0.28], z: 0.2 }, wing: [0.3, 0.86, 0.27], attach: { head: { p: [0.76, 1.39, 0], r: [0, 0, -0.1], s: 0.8 }, neck: { p: [0.54, 1.06, 0], r: [0, 0, -0.95], s: 1.0 }, back: { p: [-0.1, 1.02, 0], r: [0, 0, 0.1], s: 0.9 }, eye: { p: [0.86, 1.27, 0], r: [0, 0, 0], s: 0.7 } } }) }); }
 }
 if (M89) {
   // 125-D 구미호 (pilot): two new arctic fox legendary slots on one legend file (tools/bake-pilot89.mjs gumiho125; materials.js
   // 125-D): 안1 gumiho125a (red cord and gold bell on the three outer tails), 안2 gumiho125b (none). &g121: 121 again in their
   // place, for the comparison photos only
   // 132-B 구미호 3차: &g132=w|n in their place (nine tails from one root, fanned 150 / 110 deg; tools/bake-pilot89.mjs gumiho132)
-  const G121 = /[?&]g121\b/.test(location.search), G132 = location.search.match(/[?&]g132=([wn])/)?.[1], f = G132 ? 'gumiho132' + G132 : G121 ? 'gumiho121' : 'gumiho125';
+  // 137-C 구미호 4차: &g132=4 (nine round tails apart in 3D; bake-pilot89.mjs gumiho137)
+  const G121 = /[?&]g121\b/.test(location.search), G132 = location.search.match(/[?&]g132=([wn4])/)?.[1], g = G132 && (G132 === '4' ? 'gumiho137' : 'gumiho132' + G132), f = g || (G121 ? 'gumiho121' : 'gumiho125');
   MODELS.arcticFox.legend = { baby: `assets/models/pilot89_${f}_baby.glb`, adult: `assets/models/pilot89_${f}_adult.glb` };
-  SPECIES.find(s => s.id === 'arcticFox').legendary.push(...G132 ? [{ id: 'gumiho132' + G132, name: $t('신수 구미호'), mat: 'gumiho132' + G132 }]
+  SPECIES.find(s => s.id === 'arcticFox').legendary.push(...g ? [{ id: g, name: $t('신수 구미호'), mat: g }]
     : G121 ? [{ id: 'gumiho121', name: $t('신수 구미호'), mat: 'gumiho121' }]
     : [{ id: 'gumiho125a', name: $t('신수 구미호'), mat: 'gumiho125a' }, { id: 'gumiho125b', name: $t('신수 구미호') + ' 2', mat: 'gumiho125b' }]);
 }
@@ -810,7 +821,8 @@ export const LEGEND134 = {
   pig: { id: 'watermelon', name: $t('수박 돼지'), mat: 'watermelon134', effect: 'drops' },
   cow: { id: 'berrycow', name: $t('딸기우유 소'), mat: 'berrycow134', effect: 'puffs' },
 };
-if (M89) for (const [sp, L] of Object.entries(LEGEND134)) SPECIES.find(s => s.id === sp).legendary.push(L);
+// 139 (user 11/17 20:15): these five dropped, only the vane chicken (LEGEND128) stays; the table and the looks kept, not pushed
+// if (M89) for (const [sp, L] of Object.entries(LEGEND134)) SPECIES.find(s => s.id === sp).legendary.push(L);
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
 export const WAVE127 = 0;
@@ -821,23 +833,24 @@ export const SHARED127 = [
   { id: 'chrome', rarity: 'rare', tier: 'seldom', wave: 2, name: $t('크롬'), colors: c3(
     { id: 'silver', name: $t('은'), body: '#eef2f6' }, { id: 'blue', name: $t('블루 크롬'), body: '#8fb4ee' }, { id: 'black', name: $t('블랙 크롬'), body: '#4a4c56' }) },
   { id: 'velvet', rarity: 'rare', tier: 'normal', wave: 1, name: $t('플로킹'), colors: c3(
-    { id: 'cream', name: $t('크림'), body: '#eadbbd' }, { id: 'pink', name: $t('연분홍'), body: '#eeb2c0' }, { id: 'sky', name: $t('하늘'), body: '#a6cbe8' }) },
+    { id: 'wine', name: $t('와인'), body: '#7a1f3a' }, { id: 'green', name: $t('짙은 초록'), body: '#1f5a40' }, { id: 'navy', name: $t('남색'), body: '#24336a' }) },
   { id: 'marble', rarity: 'rare', tier: 'normal', wave: 1, name: $t('대리석'), colors: c3(
     { id: 'ivory', name: $t('상아'), body: '#efe7d8', vein: '#5e534a' }, { id: 'bluegray', name: $t('회청'), body: '#c3ccd4', vein: '#34404e' }, { id: 'pink', name: $t('분홍'), body: '#f0d2cc', vein: '#8a4e50' }) },
   { id: 'dew', rarity: 'rare', tier: 'normal', wave: 2, name: $t('이슬 코팅'), colors: c3(
     { id: 'mint', name: $t('민트'), body: '#aee6d0' }, { id: 'lavender', name: $t('라벤더'), body: '#cbb8ee' }, { id: 'lemon', name: $t('레몬'), body: '#f2e48a' }) },
-  { id: 'buncheong', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('분청사기'), colors: c3(
-    { id: 'brush', name: $t('귀얄'), body: '#7e766a', ink: '#3a3530' }, { id: 'inlay', name: $t('상감'), body: '#6e7870', ink: '#24282a' }, { id: 'iron', name: $t('철화'), body: '#857560', ink: '#6a3216' }) },
-  { id: 'carved', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('목각'), colors: c3(
-    { id: 'walnut', name: $t('호두'), body: '#8e603c', grain: '#4a2c1c' }, { id: 'maple', name: $t('메이플'), body: '#e2bc84', grain: '#b07a40' }, { id: 'ebony', name: $t('흑단'), body: '#3a2e28', grain: '#16100c' }) },
-  { id: 'embroidery', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('자수'), colors: c3(
-    { id: 'cotton', name: $t('무명'), body: '#f1e8d6', t1: '#e0465a', t2: '#f6a8b8' }, { id: 'indigo', name: $t('쪽빛'), body: '#2e3f78', t1: '#f4f0e4', t2: '#f2c84a' }, { id: 'crimson', name: $t('홍'), body: '#b4283a', t1: '#f2c84a', t2: '#f6f0e0' }) },
-  { id: 'hanji', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('꽃잎 한지'), colors: c3(
-    { id: 'natural', name: $t('생지'), body: '#f1e9d6', p1: '#ef9ab0', p2: '#f2c45a' }, { id: 'mugwort', name: $t('쑥'), body: '#c9d4a8', p1: '#fbf6ee', p2: '#ee9cb4' }, { id: 'gardenia', name: $t('치자'), body: '#f0d07e', p1: '#e0503a', p2: '#f6f0e0' }) },
-  { id: 'copper', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('동판 부조'), colors: c3(
-    { id: 'copper', name: $t('구리'), body: '#d07a4c', pat: 0.3 }, { id: 'bronze', name: $t('청동'), body: '#b48c50', pat: 0.35 }, { id: 'verdigris', name: $t('녹청'), body: '#c87048', pat: 0.85 }) },
-  { id: 'cloisonne', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('칠보'), colors: c3(
-    { id: 'jade', name: $t('비취'), body: '#2fa08c', f1: '#f06a58', f2: '#fbf4e4' }, { id: 'lapis', name: $t('청금'), body: '#22398a', f1: '#e8424a', f2: '#5cc8c8' }, { id: 'coral', name: $t('산호'), body: '#e2603e', f1: '#2a58b8', f2: '#fbf4e4' }) },
+  // 138 B (inbox 138, 사용자: 「꽃무늬 남발, 더 기발하게」): the six heroic looks redone in place, no flowers (same slot, tier, wave)
+  { id: 'bunfish', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('분청 물고기'), colors: c3(
+    { id: 'brush', name: $t('귀얄'), body: '#7a7468', fill: '#ece6da', ink: '#46413a', slip: 1 }, { id: 'iron', name: $t('철화'), body: '#857560', fill: '#efe6d4', fish: '#a0522a', ink: '#5a2410', slip: 1.6 }, { id: 'black', name: $t('흑유'), body: '#2a221e', fill: '#e8e0d0', ink: '#2a221e', slip: 0 }) },
+  { id: 'marquetry', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('쪽매 나무'), colors: c3(
+    { id: 'maple', name: $t('메이플·호두'), light: '#e6c48e', dark: '#6e4528' }, { id: 'cherry', name: $t('체리·흑단'), light: '#c47a50', dark: '#2e221c' }, { id: 'birch', name: $t('자작·청록 물들임'), light: '#efe2c4', dark: '#2f7c78' }) },
+  { id: 'xstitch', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('십자수'), colors: c3(
+    { id: 'cotton', name: $t('무명'), body: '#f1e8d6', t1: '#d0343c', t2: '#2f7a4a' }, { id: 'gingham', name: $t('깅엄'), body: '#f6f4ef', check: '#a8c2ea', t1: '#2a3f8a', t2: '#d03a4a' }, { id: 'denim', name: $t('데님'), body: '#3d5a88', t1: '#f4efe4', t2: '#e8b13a', twill: 1 }) },
+  { id: 'marbled', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('마블링 종이'), colors: c3(
+    { id: 'indigo', name: $t('쪽빛'), body: '#ecdcbc', c1: '#26408a', c2: '#c4503a', c3: '#d8a040' }, { id: 'sunset', name: $t('노을'), body: '#f6e2c8', c1: '#e8664a', c2: '#d84a7a', c3: '#f2b440' }, { id: 'ink', name: $t('먹'), body: '#f2ede2', c1: '#1c1c20', c2: '#8a8e96', c3: '#c8ccd2' }) },
+  { id: 'hammered', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('두드린 동판'), colors: c3(
+    { id: 'copper', name: $t('구리'), body: '#d07a4c', pat: 0.3 }, { id: 'bronze', name: $t('청동'), body: '#b48c50', pat: 0.38 }, { id: 'verdigris', name: $t('녹청'), body: '#c87048', pat: 0.9 }) },
+  { id: 'beads', rarity: 'heroic', tier: 'seldom', wave: 3, name: $t('비즈 공예'), colors: c3(
+    { id: 'rainbow', name: $t('무지개'), b1: '#e8505a', body: '#f6f2ea', b2: '#3a8ad8', b3: '#1e2a6a', rain: 1 }, { id: 'pearl', name: $t('진주'), body: '#f2ece4', b1: '#c8963a', b2: '#d87890', b3: '#6a78a8' }, { id: 'ruby', name: $t('루비'), body: '#b0122a', b1: '#f2c050', b2: '#1a1418', b3: '#f6f0e6' }) },
 ];
 for (const v of SHARED127) if (M89 || v.wave <= WAVE127) SHARED_VARIANTS.splice(SHARED_VARIANTS.findLastIndex(x => x.rarity === v.rarity) + 1, 0, v);
 

@@ -308,6 +308,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
       // inbox 10: a waddle (M.waddle degrees; the penguin): the body rocks onto the standing foot, short steps, the flipper tips held out
       const wd = M.waddle && p.gait === 'walk' ? M.waddle * Math.PI / 180 : 0;
       if (M.waddle) { body.rotation.x = -wd * s; for (const w of wings) w.rotation.x = wd ? -w.scale.z * (0.16 + 0.1 * Math.abs(s)) : 0; }
+      if (M.walk?.fore) for (const w of wings) w.rotation.z = ((p.gait === 'walk' ? Math.max(0, w.scale.z * s) * M.walk.fore : 0) - p.rot) * (1 - lie) + lie * 0.85; // 125-C: wings on the ground as front legs (each with the hind leg across from it): the arm already leans forward, so it only steps forward (lifts) and back to planted (a swing back would push the knuckle into the ground); upright when the body tips; lying, folded forward on the ground (the long arms would go through it)
       for (const leg of legs) {
         const { front, pair } = leg.userData;
         let a = 0;
