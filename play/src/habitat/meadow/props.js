@@ -417,7 +417,7 @@ const beamMat = c => decorMats['beam' + c] ??= Object.assign(new THREE.MeshBasic
     sh.vertexShader = v + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvD = length(position); vN = normalMatrix * normal; vV = -mvPosition.xyz;');
     sh.fragmentShader = v + sh.fragmentShader.replace('#include <opaque_fragment>',
       'diffuseColor.a *= 0.3 * uNight * (1.0 - smoothstep(0.4, 2.65, vD)) * smoothstep(0.05, 0.55, abs(dot(normalize(vN), normalize(vV))));\n#include <opaque_fragment>'); } });
-const flowMat = fall => decorMats['flow' + fall] ??= Object.assign(toyMat('#8fd3f0', { roughness: 0.15, side: THREE.DoubleSide }), {
+export const flowMat = fall => decorMats['flow' + fall] ??= Object.assign(toyMat('#8fd3f0', { roughness: 0.15, side: THREE.DoubleSide }), {
   onBeforeCompile: sh => { sh.uniforms.uWind = windTime;
     sh.vertexShader = 'varying vec3 vP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvP = position;');
     sh.fragmentShader = 'uniform float uWind;\nvarying vec3 vP;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>

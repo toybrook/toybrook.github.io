@@ -234,8 +234,8 @@ function fork143() {
 export const otherWater = (W, f, x, z) => W.some(q => q !== f && q.even && (q.t === 'rill' ? polyD(x, z, q.pts) - q.w : Math.hypot(x - q.x, z - q.z) - q.r) < 0.6);
 // 150: the small wood's rise and the ground in front of it (zoneprops.js fore: its new natives stand back from there): off(x, z) in
 // world m, for rules.js clear143 (the old natives there go once)
-export const grove143off = () => { const H = grove143(strip('meadow', ZONES.meadow.findIndex(z => z.id === 'grove') + 1)).find(f => f.t === 'hill');
-  return (x, z) => Math.abs(x - H.x) < H.rx + 2 && z > H.z - H.rz - 3 && z < H.z + H.rz + 9; };
+export const grove143off = () => { const s = strip('meadow', ZONES.meadow.findIndex(z => z.id === 'grove') + 1), H = grove143(s).find(f => f.t === 'hill');
+  return (x, z) => inRect(s.r, x, z) && Math.abs(x - H.x) < H.rx + 2 && z > H.z - H.rz - 3 && z < H.z + H.rz + 9; };
 // the fork's middle (x across, the strip's own z): no trees, bushes or strewn rocks there (the cottage and the wheel stay in view)
 export const fore143 = (x, z) => x > -10 && x < 17 && z > 43.5;
 // 149: where the wide spring's pools (to 0.4 past the rim), deck and falls are: off(x, z, r) in world m, for rules.js clear149
@@ -287,6 +287,43 @@ export function sandbar143(s) {
 }
 // the sandbar's middle: no strewn natives there (zoneprops.js); the old ones there go once (rules.js clear143, the pond's)
 export const sand143fore = (x, z) => x > -18 && x < 17 && z > 43.5 && z < 55.5; // only the sandbar strip (the swamp at step 6 lies behind it)
+// 143 B the lotus marsh (?z143=1, the pond's step 4): the long pond made wider, three giant pads in it big enough to sit on (gpad143:
+// the landmark; zoneprops.js lotus floats them and dips one under its weight), lotus flowers standing on stems, small pads, reeds at
+// its ends, a little arched plank bridge across its middle. A turtle swims to a giant pad's rim, climbs on and lies there a while,
+// eyes shut, the pad sunk a little (pad, to: the pad: walk.js). The pond is swum in (swim143: pond/layout.js swimD, the pool's own
+// middle line). World m (the strip x 39..51)
+export function lotus143(s) {
+  const sp = (act, x, z, o) => ({ t: 'spot', x, z, act, ...o }), put = (t, x, z, o) => ({ t, x, z, ...o }), P = { t: 'pool', x: 45, z: 4, r: 3.6, len: 28 };
+  const G = [put('gpad143', 44.1, -5.2, { r: 1.35 }), put('gpad143', 46.0, 7.6, { r: 1.55, aim: 1.3 }), put('gpad143', 44.3, 14.6, { r: 1.25 })];
+  return [FACE(s, '#6f8c4c', 0.8, { pat: speck(['#5d7a3c', '#86a35a'], 0.3, 0.4) }), { t: 'flat', r: [s.r[0], s.r[1], P.z - 17, P.z + 17] }, P,
+    { t: 'swim143', pts: [[P.x, P.z - P.len / 2], [P.x, P.z + P.len / 2]], w: P.r, swim: 1 }, ...G, // the swimmers' water (as a channel's)
+    ...G.map((g, i) => { const a = [0.5, 2.6, -0.6][i], d = g.r + 0.45; return sp('pad', g.x + Math.cos(a) * d, g.z + Math.sin(a) * d, { r: 0.2, to: g, who: ['turtle'] }); }), // at its rim, in the water
+    sp('rest', 40.2, -9), sp('rest', 49.8, 2), sp('nap', 40.3, 12), sp('rest', 49.6, 20),
+    put('bridge143', 45, 1.2), put('heap143', 49.6, -11.5, { sc: 0.8 }), put('heap143', 40.3, 22.5, { sc: 0.7 }), put('sign143', 40.4, 25.5)];
+}
+// 143 B: the old natives in the marsh's (wider) water or at its rim go once (rules.js clear143, the pond's; the bridge's ends stand at the rim)
+export const lotus143off = () => { const s = strip('pond', ZONES.pond.findIndex(z => z.id === 'lotus') + 1), P = lotus143(s).find(f => f.t === 'pool');
+  return (x, z, r) => inRect(s.r, x, z) && pd(P, x, z) - P.r < 0.6 + r; };
+// 143 B the falls (?z143=1, the pond's step 2): the rock cliff as it was with a lower shoulder west of it (a wall, not a cone), the
+// fall wider into a wider pool, moss on the cliff's top; off its east face a mossy lip juts out over the ground (zoneprops.js lip143)
+// and a thin stream runs off it, the one an otter or a capybara stands under, the water on its back (shower, facing to: walk.js),
+// then walks into the spray by the pool and shakes like a wet dog (spray: walk.js), drops flying. Big rocks in heaps, a rainbow
+// over the pool by clear day (zoneprops.js bow143, the camera aims at it). World m (the strip x -39..-27)
+const FUR = ['otter', 'capybara']; // the wet-dog shake is a furry one's (the turtle has the reeds and the sandbar)
+export function falls143(s) {
+  const sp = (act, [x, z], o) => ({ t: 'spot', x, z, act, ...o }), put = (t, [x, z], o) => ({ t, x, z, ...o }), out = [-30.1, -4.3];
+  return [FACE(s, '#557f36', 0.85, { pat: speck(['#8e8a80', '#77736b', '#6b9640'], 0.35, 0.35) }), // moss and stones
+    { t: 'hill', x: -33, z: -12.18, rx: 5.7, rz: 6.3, h: 11, rock: 1, top: 0.3 }, { t: 'hill', x: -36.4, z: -15.2, rx: 2.7, rz: 4.2, h: 7, rock: 1, top: 0.2 }, // the cliff, its shoulder
+    { t: 'tint', x: -33, z: -12.18, rx: 6.0, rz: 6.6, c: ROCK, a: 1, steep: 1 }, { t: 'tint', x: -36.4, z: -15.2, rx: 3.0, rz: 4.5, c: ROCK, a: 1, steep: 1 },
+    { t: 'tint', x: -33, z: -12.6, rx: 2.6, rz: 2.6, c: '#5f8a3a', a: 0.9, fo: 0.5 }, { t: 'tint', x: -29.6, z: -6.7, rx: 1.3, rz: 1.1, c: '#4f6a44', a: 0.7, fo: 0.5 }, // moss on the top; the wet ground under the stream
+    { t: 'pool', x: -33, z: -1.6, r: 3.0 }, { t: 'fall', from: [-33, -12.18], to: [-33, -1.6], w: 1.8 },
+    sp('shower', [-29.6, -6.75], { r: 0.15, to: out, who: FUR }), sp('spray', out, { r: 0.3, to: [-33, -2.6], who: FUR }),
+    sp('rest', [-28.8, 2.5]), sp('rest', [-36.6, 10.44]), sp('nap', [-33, 21.75]), sp('rest', [-29.4, -24.36]),
+    put('lip143', [-30.6, -8.1], { to: [-29.6, -6.75] }), put('bow143', [-32.2, -2.4], { aim: 1.3 }),
+    put('heap143', [-28.6, -11.5], { sc: 1.2 }), put('heap143', [-37.2, -4.6], { sc: 1.0 }), put('heap143', [-35.6, 2.4], { sc: 0.8 })];
+}
+// the falls' cliff, pool and stream: no strewn natives there (zoneprops.js); the old ones there go once (rules.js clear143, the pond's)
+export const falls143fore = (x, z) => x > -39 && x < -27 && z > -20 && z < 2;
 const SHAPES = {
   meadow: {
     flowerhill: s => z143on('flowerhill') ? flowerhill143(s) : [FACE(s, '#93cf4c', 0.35), // inbox 67-3 the meadow's own green: the flowers stand in it (zoneprops.js drifts), none painted
@@ -311,12 +348,12 @@ const SHAPES = {
       { t: 'rill', pts: P([[22.5, -22], [21.5, -14], [23.6, -6], [21.6, 2], [23.6, 10], [21.8, 18], [22.6, 25]]), w: 0.9 }, // channels between the reeds
       { t: 'rill', pts: P([[21.6, 2], [19.8, 5.5], [20.2, 9]]), w: 0.9 }, { t: 'rill', pts: P([[21.5, -14], [19.8, -17.5], [20.2, -21]]), w: 0.9 },
       ...SP([[24, -14, 'rest'], [19.4, -6, 'rest'], [24.2, 2, 'nap'], [19.4, 13, 'rest'], [24.4, 22, 'rest']])],
-    falls: s => [FACE(s, '#557f36', 0.85, { pat: speck(['#8e8a80', '#77736b', '#6b9640'], 0.35, 0.35) }), // moss and stones
+    falls: s => Z143 ? falls143(s) : [FACE(s, '#557f36', 0.85, { pat: speck(['#8e8a80', '#77736b', '#6b9640'], 0.35, 0.35) }), // moss and stones
       H(s, 0.5, 0.36, 3.8, 4.2, 11, { rock: 1, top: 0.3 }), TINT(s, 0.5, 0.36, 4.0, 4.4, ROCK, 1, { steep: 1 }), POOL(s, 0.5, 0.47, 2.4), // a rock cliff, its pool at its foot (inbox 42 C2: 6.2 -> 11, 3.3H)
       { t: 'fall', from: at(s, 0.5, 0.36), to: at(s, 0.5, 0.47), w: 1.3 }, SPOT(s, 0.15, 0.5, 'rest'), SPOT(s, 0.8, 0.62, 'rest'), SPOT(s, 0.5, 0.75, 'nap'), SPOT(s, 0.2, 0.22, 'rest')],
     sandbar: s => Z143 ? sandbar143(s) : [FACE(s, SAND, 1, { pat: speck(['#f3e4b8', '#d9c088'], 0.4) }), H(s, 0.5, 0.35, 2.4, 9, 0.3), POOL(s, 0.5, 0.7, 2.2),
       SPOT(s, 0.5, 0.22, 'nap'), SPOT(s, 0.45, 0.4, 'nap'), SPOT(s, 0.55, 0.52, 'rest'), SPOT(s, 0.4, 0.85, 'rest')],
-    lotus: s => { const [x, z] = at(s, 0.5, 0.48); // one big pond, long down the strip
+    lotus: s => { if (Z143) return lotus143(s); const [x, z] = at(s, 0.5, 0.48); // one big pond, long down the strip
       return [FACE(s, '#6f8c4c', 0.8, { pat: speck(['#5d7a3c', '#86a35a'], 0.3, 0.4) }), { t: 'flat', r: [s.r[0], s.r[1], z - 15 * S, z + 15 * S] }, { t: 'pool', x, z, r: 2.9, len: 20 * S },
         SPOT(s, 0.5, 0.2, 'rest'), SPOT(s, 0.4, 0.12, 'rest'), SPOT(s, 0.5, 0.82, 'nap'), SPOT(s, 0.6, 0.94, 'rest')]; },
     isle: s => { const [x] = at(s, 0.5, 0); // a bigger island, its bridge long, to the front

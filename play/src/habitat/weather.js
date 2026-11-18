@@ -100,7 +100,7 @@ function auroraMesh() {
 }
 
 // the rainbow: a pale band arching over the top of the view, far off (only the board in front hides it)
-function rainbowMesh(rev = false) { // rev (16-2 쌍무지개): the outer, fainter one, its colours the other way round
+export function rainbowMesh(rev = false) { // 143 B: also the falls' little one (zoneprops.js) // rev (16-2 쌍무지개): the outer, fainter one, its colours the other way round
   const m = new THREE.Mesh(new THREE.RingGeometry(0.92, 1, 96, 1, 0, Math.PI), new THREE.ShaderMaterial({ transparent: true, depthWrite: false,
     uniforms: { uBow: { value: 0 }, uRev: { value: +rev } },
     vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',

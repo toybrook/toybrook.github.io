@@ -33,6 +33,7 @@ export function blobSlot(scene) { // 28-4: the train's cars take one too
 }
 const smooth = k => k * k * (3 - 2 * k);
 const ringGeo = new THREE.RingGeometry(0.4, 0.56, 32); ringGeo.rotateX(-Math.PI / 2);
+const beadGeo = new THREE.IcosahedronGeometry(0.045, 1), beadMat = new THREE.MeshStandardMaterial({ color: '#e6f6ff', roughness: 0.2, transparent: true, opacity: 0.85 }); // 143 B the falls' drops (wetUp; shared, as grainGeo)
 const grainGeo = new THREE.IcosahedronGeometry(0.06, 0), grainMat = new THREE.MeshStandardMaterial({ color: '#d9be86', roughness: 0.85 }), _gm = new THREE.Matrix4(); // 143 B 모래 파기: the grains off a digger's paws (shared, as ringGeo: as long as the page)
 export const ROOM = 12; // inbox 42 B: the least land (m²) to be left on: a 4 across ring's worth, room for a walk (less: unstick takes it out)
 
@@ -72,6 +73,19 @@ export function createActor(ctx, rec) {
     for (let i = grains.length - 1; i >= 0; i--) { const q = grains[i]; q.t += dt; q.vy -= 9.8 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; if (q.t > 0.8 || q.y < q.y0) grains.splice(i, 1); }
     grains.forEach((q, i) => sand.setMatrixAt(i, _gm.makeScale(q.k, q.k, q.k).setPosition(q.x, q.y, q.z)));
     sand.count = grains.length; sand.visible = grains.length > 0; sand.instanceMatrix.needsUpdate = true; };
+  // 143 B 폭포 물 맞기 / 물보라 속 몸 털기: drops off its back under the stream (up and out), or flung off its sides as it shakes;
+  // 20 at most, one InstancedMesh (made at its first, freed in dispose), as sandUp
+  let wetM = null; const beads = [];
+  const wetUp = (dt, gy) => {
+    const S = M[look.stage], on = h.sw ? h.state === 'graze' && h.t > 0.5 && h.t < h.dur - 0.3 : h.wet && h.state === 'shake' && h.t > 0.15 && h.t < h.dur - 0.25;
+    if (on && (h.wk = (h.wk ?? 0) - dt) < 0) { h.wk = h.sw ? 0.07 : 0.035; const c = Math.cos(h.yaw), s = Math.sin(h.yaw), y = gy + S.h * S.s * (h.sw ? 0.95 : 0.6);
+      for (let i = 0; i < 2 && beads.length < 20; i++) { const a = Math.random() * 6.283, u = (Math.random() - 0.5) * S.s * 0.6, w = h.sw ? 0.8 + Math.random() * 0.8 : (i ? 1 : -1) * (2.2 + Math.random() * 1.2), b = h.sw ? 0 : (Math.random() - 0.5) * 1.2;
+        beads.push(h.sw ? { x: h.x + c * u, y, z: h.z - s * u, vx: Math.cos(a) * w, vy: 1.2 + Math.random() * 0.8, vz: Math.sin(a) * w, y0: gy, t: 0, k: 0.6 + Math.random() * 0.5 } // forward (c, -s), its side (s, c)
+          : { x: h.x + c * u, y, z: h.z - s * u, vx: s * w + c * b, vy: 0.8 + Math.random() * 1.2, vz: c * w - s * b, y0: gy, t: 0, k: 0.7 + Math.random() * 0.6 }); } }
+    if (!wetM) { wetM = new THREE.InstancedMesh(beadGeo, beadMat, 20); wetM.frustumCulled = false; scene.add(wetM); }
+    for (let i = beads.length - 1; i >= 0; i--) { const q = beads[i]; q.t += dt; q.vy -= 9.8 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; if (q.t > 0.7 || q.y < q.y0) beads.splice(i, 1); }
+    beads.forEach((q, i) => wetM.setMatrixAt(i, _gm.makeScale(q.k, q.k, q.k).setPosition(q.x, q.y, q.z)));
+    wetM.count = beads.length; wetM.visible = beads.length > 0; wetM.instanceMatrix.needsUpdate = true; };
 
   // a place to head for: free now, and not by a bridge landing (whoever stands there would hold up the one crossing)
   // where it may go: dry ground, and for a water animal (walk.water 'swim' / 'wade') the pond as ctx.wet sees it
@@ -107,7 +121,7 @@ export function createActor(ctx, rec) {
     if (ctx.play?.length) { const m = me(); if (Math.random() < (due(ctx, h.now, m, st => !m.can || m.can(st.x, st.z)) ? 0.7 : 0.2) + 0.15 * (ctx.night || 0) && toPlay()) return; } // 28-2 소품 쓰기 (more by night: the campfire); inbox 42 C: 7 -> 20%, 70% while one of its kind waits (due)
     if (ctx.sets?.length && Math.random() < 0.3 && toSet()) return; // 23-2 세트 보너스: likes to play by a whole set
     if (ctx.spots?.length && Math.random() < (pe() === 'collector' ? 0.24 : 0.12)) { // 28-1: to a spot of a zone (zones.js: a bench, the hot spring, the sled hill's top) within 20
-      const q = ctx.spots.filter(s => Math.hypot(s.x - h.x, s.z - h.z) < 20 && (home(s.x, s.z) || s.act === 'sun' || s.act === 'sanddig') &&(s.act !== 'slide' || W.slide || Math.random() < 0.3) && (s.act !== 'dig' || Math.random() < 3 * (W.dig || 0)) && Math.random() < (s.w ?? 1) && (!s.who || s.who.includes(rec.species) && SOAK.size < (s.soak?.cap ?? 4))); // 14-3: the fossil site's dig spots by walk.dig; 129: who soaks (144 C cap: ?s129=4's wide spring, 6 at once; else 4)
+      const q = ctx.spots.filter(s => Math.hypot(s.x - h.x, s.z - h.z) < 20 && (home(s.x, s.z) || s.act === 'sun' || s.act === 'sanddig' || s.act === 'shower' || s.act === 'spray') && !(s.act === 'pad' && s.to.busy) &&(s.act !== 'slide' || W.slide || Math.random() < 0.3) && (s.act !== 'dig' || Math.random() < 3 * (W.dig || 0)) && Math.random() < (s.w ?? 1) && (!s.who || s.who.includes(rec.species) && SOAK.size < (s.soak?.cap ?? 4))); // 14-3: the fossil site's dig spots by walk.dig; 129: who soaks (144 C cap: ?s129=4's wide spring, 6 at once; else 4)
       if (q.length) { const s = q[Math.floor(Math.random() * q.length)], a = Math.random() * 6.28, d = Math.random() * s.r;
         h.goal = { x: s.x + Math.cos(a) * d, z: s.z + Math.sin(a) * d, act: s.act, to: s.to, soak: s.soak, n: 4 }; if (toward()) return; }
     }
@@ -341,12 +355,16 @@ export function createActor(ctx, rec) {
     if (g.act === 'drink' && g.to) { h.face = Math.atan2(-(g.to[1] - h.z), g.to[0] - h.x); h.dr = 1; h.state = 'graze'; h.t = 0; h.dur = T(5, 8); g.done?.(true); return true; } // 143: at the water's edge, head down to it, lapping
     if (g.act === 'sun') { if (g.to) h.face = Math.atan2(-(g.to[1] - h.z), g.to[0] - h.x); h.sun = 1; h.tuck = false; h.state = 'sleep'; h.t = 0; h.dur = g.dur ?? T(10, 16); g.done?.(true); return true; } // 143 B 모래톱: flat on its belly in the sun
     if (g.act === 'sanddig') { if (g.to) h.face = Math.atan2(-(g.to[1] - h.z), g.to[0] - h.x); h.dg = 1; h.gk = 0; h.state = 'graze'; h.t = 0; h.dur = T(5, 7); g.done?.(true); return true; } // 143 B 모래톱: paws at the sand, grains flying (sandUp)
+    if (g.act === 'shower') { if (g.to) h.face = Math.atan2(-(g.to[1] - h.z), g.to[0] - h.x); h.sw = g.to || 1; h.wk = 0; h.state = 'graze'; h.t = 0; h.dur = T(5, 8); g.done?.(true); return true; } // 143 B 폭포 물 맞기: under the lip's stream, eyes shut, drops off its back (wetUp); then out to shake (h.sw: where)
+    if (g.act === 'spray') { if (g.to) h.face = Math.atan2(-(g.to[1] - h.z), g.to[0] - h.x); h.wet = 1; h.wk = 0; h.state = 'shake'; h.t = 0; h.dur = 1.8; g.done?.(true); return true; } // 143 B 물보라 속 몸 털기: a wet dog's, drops flying
     if (g.act === 'tumble' && g.to) { go('walk', g.to[0], g.to[1], 2.2); h.tum = { n: Math.max(2, Math.round(Math.hypot(g.to[0] - h.x, g.to[1] - h.z) / 1.8)) }; h.ghost = true; return true; } // 143: rolls down the hill's lane, side over side (through the others), then shakes
     if (g.act === 'shade' && g.to) { const a = Math.atan2(h.z - g.to[1], h.x - g.to[0]) + (Math.random() < 0.5 ? 0 : Math.PI); h.face = Math.atan2(-Math.cos(a), -Math.sin(a)); // 143 작은 숲: lies down in the old tree's shade, side on round its trunk (a ring from afar)
       h.nap = 1; h.tuck = false; h.state = 'sleep'; h.t = 0; h.dur = g.dur ?? T(16, 24); g.done?.(true);
       if (g.dur == null) { const S = ctx.spots.filter(s => s.act === 'shade' && s.to?.[0] === g.to[0] && s.to[1] === g.to[1] && Math.hypot(s.x - h.x, s.z - h.z) > 1.5), used = []; // and calls two or three near by to the others (they come for a while: they call no more)
         for (const f of pals().slice(0, 3)) { const q = S.find(s => !used.includes(s) && free(ctx.crowd, f.body, s.x, s.z)); if (q && f.send(q.x, q.z, 'shade', { to: g.to, dur: T(14, 20) })) used.push(q); } }
       return true; }
+    if (g.act === 'pad' && g.to?.y != null && !g.to.busy) { const P = g.to; P.busy = api; h.pad = { P, x0: h.x, z0: h.z, y0: root.position.y }; // 143 B 연꽃 습지: from the rim up on to the giant pad (zoneprops.js: y its top),
+      h.face = Math.atan2(-(P.z - h.z), P.x - h.x); h.state = 'sleep'; h.t = 0; h.dur = g.dur ?? T(12, 18); g.done?.(true); return true; } // lies there eyes shut, the pad sunk a little, then back off where it came
     // 143 B 갈대밭: from the open channel on into a pocket in the tall reeds, and dozes there a while (hidden)
     if (g.act === 'reedswim' && g.to) { h.goal = { x: g.to[0], z: g.to[1], act: 'nap', dur: T(10, 16), n: 6 }; return toward(); }
     h.soak = g.act === 'bath' && g.soak || null; // 129: in to its chin, eyes shut (sleep; how deep: below)
@@ -397,6 +415,7 @@ export function createActor(ctx, rec) {
   // sinks to its float depth, half under even on the shallow rim (the rest of it is hidden under the bed)
   const ground = (b = heightAt(h.x, h.z)) => { const g = Math.max(b, ctx.deckAt(h.x, h.z)), S = M[look.stage];
     return W.water === 'swim' ? Math.max(g - (h.low || 0), ctx.water - W.float * S.h * S.s) : g; };
+  const unpad = () => { const P = h.pad.P; if (P.busy === api) { P.busy = null; P.dip = 0; } h.pad = null; }; // 143 B: off the giant pad (it floats up again)
 
   const api = {
     rec, look, obj: root, pickTarget: root, position: root.position,
@@ -449,13 +468,14 @@ export function createActor(ctx, rec) {
       let lift = 0, sq = 1, rot = 0, gait = 'still', ph = 0, tuck = 0, py = null, lie = 0, shut = false, roll = 0, spin = 0, ox = 0, oz = 0; // py: 28-2 on a prop, its height (world); spin: 69-2 a turn on top of its yaw
       if (api.hold) { endPlay(); h.soc = h.shel = null; h.state = 'idle'; h.t = 0; h.then = null; if (ctx.onBridge === h) ctx.onBridge = null; }
       h.t += dt; h.now = t; if (h.state !== 'graze') h.sn = h.dr = 0; if (h.state !== 'sleep') h.nap = 0; // 143: sniffing only while it grazes there, lying in the shade only while it sleeps there
-      let dig = 0, spr = 0; if (h.state !== 'graze') h.dg = 0; if (h.state !== 'sleep') h.sun = 0; // 143 B the sandbar: digging only while it grazes there, sunning only while it sleeps there
+      let dig = 0, spr = 0; if (h.state !== 'graze') h.dg = h.sw = 0; if (h.state !== 'sleep') h.sun = 0; if (h.state !== 'shake') h.wet = 0; // 143 B the sandbar: digging only while it grazes there, sunning only while it sleeps there
+      if (h.pad && h.state !== 'sleep') unpad(); // 143 B the lotus marsh: on the pad only while it sleeps there (picked up, sent off: off it)
       // inbox 42 B: what unstick watches. On the go (walk, hop, idle) the time since it was last 1.5 from a spot (a rest pauses it);
       // every 2 s: standing in a prop or wall, or on a pocket of land too small for a walk (ROOM)
       if (h.ax == null || Math.hypot(h.x - h.ax, h.z - h.az) > 1.5) { h.ax = h.x; h.az = h.z; h.lost = 0; }
       else if (!api.hold && ['walk', 'hop', 'idle'].includes(h.state) && (h.lost = (h.lost || 0) + dt) > 20) unstick();
       if ((h.chk = (h.chk ?? Math.random() * 2) - dt) < 0) { h.chk = 2; const R = land();
-        if (R && !api.hold && ['walk', 'idle', 'graze', 'sleep'].includes(h.state) && !(ctx.deckAt(h.x, h.z) > -Infinity) && (!ok(h.x, h.z) && !h.shel?.cover || R.area(R.id(h.x, h.z)) < ROOM)) unstick(); }
+        if (R && !api.hold && ['walk', 'idle', 'graze', 'sleep'].includes(h.state) && !h.pad && !(ctx.deckAt(h.x, h.z) > -Infinity) && (!ok(h.x, h.z) && !h.shel?.cover || R.area(R.id(h.x, h.z)) < ROOM)) unstick(); }
       if (h.state === 'hop') { const k = Math.min(1, h.t / h.dur), hops = Math.max(2, Math.round(h.dur / 0.32)), hp = (k * hops) % 1;
         if (!step(k)) { h.sx = h.tx = h.x; h.sz = h.tz = h.z; h.cut ??= (Math.floor(k * hops) + 1) / hops; if (h.then) { h.then = null; ctx.onBridge = null; } } // someone in the way: land this hop, then go round
         lift = Math.sin(hp * Math.PI) * 0.45; sq = 1 + (hp < 0.12 || hp > 0.88 ? -0.07 : 0.03); rot = Math.sin(hp * Math.PI * 2) * -0.05; gait = 'hop'; ph = hp; if (h.cut && k >= h.cut) detour(); else if (k >= 1) { if (h.then) { go('cross', h.then.x, h.then.z, 1.3); h.then = null; } else { h.state = 'idle'; h.t = 0; h.dur = 0.8 + Math.random() * 1.5; } } }
@@ -490,15 +510,20 @@ export function createActor(ctx, rec) {
         if (h.sn) { lie = g; rot = -(0.1 + 0.06 * Math.max(0, Math.sin(t * 9 + h.ph)) ** 4) * g; } // 143: lying down, nose to the flowers, sniffing
         else if (h.dr) rot = -(0.26 + 0.06 * Math.max(0, Math.sin(t * 6 + h.ph)) ** 3) * g; // 143: drinking, head down, lapping
         else if (h.dg) { rot = -0.2 * g; dig = g; ph = h.t * 3.2; sq = 1 + 0.02 * Math.sin(h.t * 20) * g; if (h.t >= h.dur) h.dg = 0; } // 143 B 모래 파기: nose down, the front paws scratching in turn (figure.js dig)
+        else if (h.sw) { rot = 0.07 * g; sq = 1 - 0.05 * g + Math.sin(t * 2.4 + h.ph) * 0.01 * g; roll = Math.sin(h.t * 26) * 0.03 * g * Math.max(0, Math.sin(h.t * 0.9)); shut = g > 0.4; } // 143 B 폭포 물 맞기: chin up, ducked a little under it, eyes shut, a shiver now and then
         else if (h.tuck) tuck = g; // stands still on one leg, head up
         else if (h.low > 0.05) rot = 0.04 * g; // lying in the water: chin up
         else if (W.rest === 'sit') { rot = 0.08 * g; sq = 1 + 0.05 * g; } // sits up tall (leans back: rotation.z + is nose up)
         else if (W.rest === 'peck') rot = -(0.08 + 0.35 * Math.pow(Math.max(0, Math.sin(t * 8 + h.ph)), 6)) * g; // quick pecks at the ground
         else rot = -(0.16 + Math.sin(t * 3 + h.ph) * 0.03) * g;
-        if (h.t >= h.dur) { h.sn = h.dr = 0; pick(); } } // 143: a plain graze picked next is not a sniff
+        if (h.t >= h.dur) { const o = Array.isArray(h.sw) && ctx.spots.find(s => s.act === 'spray' && s.x === h.sw[0] && s.z === h.sw[1]); h.sn = h.dr = h.sw = 0; // 143: a plain graze picked next is not a sniff
+          if (o) { h.goal = { x: o.x, z: o.z, act: 'spray', to: o.to, n: 4 }; if (!toward()) pick(); } else pick(); } } // 143 B: out of the stream into the spray, to shake
       else if (h.state === 'sleep') { sq = 0.95 - Math.sin(t * 1.4 + h.ph) * 0.015; if (h.tuck) tuck = Math.min(1, h.t / 0.5, (h.dur - h.t) / 0.5); if (h.soak) { shut = true; if (h.soak.rot) rot = h.soak.rot * smooth(Math.min(1, h.t / 1.5, Math.max(0, h.dur - h.t) / 1.5)); } // 139-3: leans back, head and shoulders out
         if (h.nap) { lie = smooth(Math.max(0, Math.min(1, h.t / 0.6, (h.dur - h.t) / 0.6))); shut = lie > 0.5; } // 143: lies down, eyes shut, gets up at the end
         if (h.sun) { const e = smooth(Math.max(0, Math.min(1, h.t / 0.6, (h.dur - h.t) / 0.6))); lie = spr = e; sq = 0.9 + 0.05 * (1 - e) - Math.sin(t * 1.4 + h.ph) * 0.01; rot = -0.05 * e; roll = Math.sin(h.t * 18) * 0.08 * Math.max(0, 1 - h.t / 1.2) * e; shut = e > 0.5; if (h.t >= h.dur) h.sun = 0; } // 143 B 일광욕: flat on its belly, legs stretched out front and back (figure.js spr), a wriggle into the sand first
+        if (h.pad) { const { P, x0, z0, y0 } = h.pad, e = smooth(Math.max(0, Math.min(1, h.t / 0.8, (h.dur - h.t) / 0.8))); // 143 B 연꽃 습지: a hop up on (0.8 s), lying on it, a hop back down
+          h.x = x0 + (P.x - x0) * e; h.z = z0 + (P.z - z0) * e; P.dip = 0.045 * e; py = y0 + (P.y - P.dip - y0) * e + Math.sin(e * Math.PI) * 0.3;
+          lie = e; shut = e > 0.6; if (h.t > h.dur - 0.8) h.face = Math.atan2(-(z0 - P.z), x0 - P.x); if (h.t >= h.dur) unpad(); }
         if (h.t >= h.dur) { const o = h.soak?.out; h.soak = null; h.nap = 0; if (o) { h.goal = { x: o[0], z: o[1], act: 'shake', n: 4 }; if (!toward()) pick(); } else pick(); } if (Math.random() < dt * 0.5) ctx.onSleepTick(root); }
       else if (h.state === 'play') { const o = playPose(h.play, h.t, t); // 28-2 소품 쓰기 (play.js poses it: where, how high, how)
         h.x = o.x; h.z = o.z; h.yaw = h.face = o.yaw; py = o.y ?? null; lift = o.lift || 0; ({ sq, rot, gait, ph } = o); roll = o.roll || 0; lie = o.lie || 0; shut = !!o.shut;
@@ -508,7 +533,8 @@ export function createActor(ctx, rec) {
       else if (h.state === 'nuzzle') { const k = Math.min(1, h.t / h.dur); rot = -0.12 * Math.sin(k * Math.PI * 3) ** 2; sq = 1 + 0.025 * Math.sin(k * Math.PI * 2); // inbox 42 C 코 맞대기: three little nose dips
         if (k >= 1) { h.state = 'idle'; h.t = 0; h.dur = 0.8 + Math.random(); } }
       else if (h.state === 'shake' || h.state === 'splash') { const k = Math.min(1, h.t / h.dur); // inbox 42 D 비 즐기기
-        if (h.state === 'shake') { const e = Math.sin(k * Math.PI); roll = Math.sin(h.t * 30) * 0.2 * e; sq = 1 + 0.03 * e; } // 몸 털기: a quick side to side shake
+        if (h.state === 'shake' && h.wet) { const e = Math.sin(k * Math.PI); roll = Math.sin(h.t * 34) * 0.34 * e; spin = Math.sin(h.t * 34 - 0.9) * 0.12 * e; sq = 1 + 0.05 * e; shut = e > 0.3; } // 143 B: a wet dog's, harder, the twist running head to tail
+        else if (h.state === 'shake') { const e = Math.sin(k * Math.PI); roll = Math.sin(h.t * 30) * 0.2 * e; sq = 1 + 0.03 * e; } // 몸 털기: a quick side to side shake
         else { const hp = (h.t / 0.45) % 1, n = Math.floor(h.t / 0.45); lift = Math.sin(hp * Math.PI) * 0.22 * M[look.stage].s; sq = hp < 0.15 || hp > 0.85 ? 0.95 : 1.02; gait = 'jump'; ph = hp * 0.999; // 첨벙: little hops
           if (n > h.spl) { h.spl = n; splash(); } } // a ring of water as it lands
         if (k >= 1) { h.state = 'idle'; h.t = 0; h.dur = 0.6 + Math.random(); } }
@@ -539,14 +565,14 @@ export function createActor(ctx, rec) {
         h.low = (h.low || 0) + (lie - (h.low || 0)) * Math.min(1, dt * 1.5); }
       const gy = ground(bed); if (py != null) lift = py - gy;
       const wet = W.water && ctx.deckAt(h.x, h.z) === -Infinity && bed < ctx.water - 0.06; // in the pond: no shadow on the water
-      if (wet && gy > bed + 0.01) lift += Math.sin(t * 2.2 + h.ph) * 0.04; // afloat: bobs like the ducks
+      if (wet && gy > bed + 0.01 && !h.pad) lift +=Math.sin(t * 2.2 + h.ph) * 0.04; // afloat: bobs like the ducks
       if (h.soak && h.state !== 'sleep') h.soak = null; // picked up, called away: out at once
       { const S = M[look.stage]; const k = h.soak; if (k) k.lv ??= Math.min(...Array.from({ length: 32 }, (_, i) => { const [x, z] = poolAt(k.pool, i / 32, k.pool.r - 0.7); return heightAt(x, z); })) + 0.02; // 129: the pool's level (as water.js)
         h.sd = (h.sd || 0) + ((k ? Math.max(0, gy + lift - k.lv + (k.d[rec.species] ?? 0.7) * S.h * S.s) : 0) - (h.sd || 0)) * Math.min(1, dt * 1.2); // sunk to d of it under the water, eased
         if (h.soak) { const hd = body.seg[1] * Math.cos(rot); SOAK.set(rec.id, { x: h.x + Math.cos(h.yaw) * hd, y: gy + lift - h.sd + S.h * S.s + Math.sin(rot) * body.seg[1], z: h.z - Math.sin(h.yaw) * hd }); } else SOAK.delete(rec.id); } // (139-3: where the head is, leaned back)
       root.position.set(h.x + ox, gy + lift - h.sd, h.z + oz);
       root.rotation.y = h.yaw + spin; root.rotation.x = roll; // roll: about its length (YXZ)
-      rings(dt); if (grains.length || h.dg) sandUp(dt, gy);
+      rings(dt); if (grains.length || h.dg) sandUp(dt, gy); if (beads.length || h.sw || h.wet) wetUp(dt, gy);
       pose.dig = dig; pose.spr = spr; // 143 B
       Object.assign(pose, { sq, rot, gait, ph, tuck, lie, shut }); look.fig.pose(pose);
       const lx = (body.seg[1] - body.seg[0] + 2 * body.r) / 3.47, lz = body.r / 0.56; // sized off the crowd capsule (the 17-1 adult horse's = 1)
@@ -555,7 +581,7 @@ export function createActor(ctx, rec) {
       blob.set(sh, root.visible && !wet ? Math.max(0.25, 1 - lift * 0.8) : 0);
     },
     body,
-    dispose() { endPlay(); h.soc = null; SOAK.delete(rec.id); for (const m of drops) { scene.remove(m); m.material.dispose(); } if (sand) { scene.remove(sand); sand.dispose(); } if (h.goal?.q) leave(h.goal.q); scene.remove(root); look.dispose(); blob.free(); if (ctx.onBridge === h) ctx.onBridge = null; ctx.crowd.delete(body); },
+    dispose() { endPlay(); h.soc = null; if (h.pad) unpad(); SOAK.delete(rec.id); for (const m of drops) { scene.remove(m); m.material.dispose(); } if (sand) { scene.remove(sand); sand.dispose(); } if (wetM) { scene.remove(wetM); wetM.dispose(); } if (h.goal?.q) leave(h.goal.q); scene.remove(root); look.dispose(); blob.free(); if (ctx.onBridge === h) ctx.onBridge = null; ctx.crowd.delete(body); },
   };
   pick(); body.pal = api; body.duo = api; // inbox 42 C: others find it in ctx.crowd (its first pick once api is made: toPlay hands it on)
   return api;

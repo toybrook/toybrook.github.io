@@ -42,7 +42,8 @@ import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVE
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
-import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore } from '../habitat/zones.js';
+import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore, falls143fore } from '../habitat/zones.js';
+import { lotus143off } from '../habitat/zones.js'; // 143 B the lotus marsh
 import { newlyDone } from './achieve.js';
 
 const byId = list => Object.fromEntries(list.map(x => [x.id, x]));
@@ -703,17 +704,19 @@ export function addNatives(S, habId, list, rings) {
 // lane go; a player's own things (not nat) and stored ones stay. 143 B the fork the same (zones.js fork143off: in its new water, a
 // tree, bush or rock in its middle, a strewn rock in its strip), once under its own flag; the pond's sandbar too (zones.js sand143fore,
 // its middle). How many went
-const clearOld = (S, f, hab, off) => { if (S.flags[f]) return; S.flags[f] = 1;
-  S.props = S.props.filter(p => !(p.nat && p.placed && p.hab === hab && NAT[p.prop] && off(p.x * UNIT, p.z * UNIT, NAT[p.prop].r * (p.s || 1), p.prop))); };
+// 150 (review): they go into storage, not away (one the player planted there itself is kept; inbox 42 A's refit the same). How many
+const clearOld = (S, f, hab, off) => { if (S.flags[f]) return 0; S.flags[f] = 1; let n = 0;
+  for (const p of S.props) if (p.nat && p.placed && p.hab === hab && NAT[p.prop] && off(p.x * UNIT, p.z * UNIT, NAT[p.prop].r * (p.s || 1), p.prop)) { p.placed = false; n++; }
+  return n; };
 export function clear143(S, pond = Z143) { // pond: the sandbar's too (a trial: ?z143=1; check-eggs passes true)
-  const n = S.props.length; clearOld(S, 'z143hill', 'meadow', hill143()); clearOld(S, 'z143fork', 'meadow', fork143off());
-  clearOld(S, 'z143grove', 'meadow', grove143off()); // 150: the small wood's rise and the ground in front of it
-  if (pond) clearOld(S, 'z143sand', 'pond', sand143fore); // 143 B (still a trial)
-  return n - S.props.length;
+  let n = clearOld(S, 'z143hill', 'meadow', hill143()) + clearOld(S, 'z143fork', 'meadow', fork143off());
+  n += clearOld(S, 'z143grove', 'meadow', grove143off()); // 150: the small wood's rise and the ground in front of it
+  if (pond) n += clearOld(S, 'z143sand', 'pond', sand143fore) + clearOld(S, 'z143lotus', 'pond', lotus143off()) + clearOld(S, 'z143falls', 'pond', falls143fore); // 143 B the sandbar, the lotus marsh, the falls (its cliff, pool and corner) (still trials)
+  return n;
 }
 // 149 (the wide spring, 144 C, released): a save that opened the hot spring before has its old natives where the new pools, deck
 // and falls are (zones.js spring149off); they go once (a new game starts with the flag: newGame). A player's own things and stored ones stay. How many went
-export function clear149(S) { const n = S.props.length; clearOld(S, 's149spring', 'snow', spring149off()); return n - S.props.length; }
+export function clear149(S) { return clearOld(S, 's149spring', 'snow', spring149off()); }
 // 143 B (the reeds, once per save): the old natives (nat: 1) in the pond's reeds strip go (they stood where the channel and the
 // reed beds are now); a player's own things and stored ones stay. How many went
 export function clear143reeds(S) {
