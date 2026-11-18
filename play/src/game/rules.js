@@ -38,7 +38,7 @@ import { blank as artBlank, tidyArt, artTick } from './art.js'; // 17-2
 import { blank as wildBlank, tidyWild, wildTick } from './wild.js'; // 17-3
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
 import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's name
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
@@ -51,7 +51,8 @@ export const SP = byId(SPECIES), HAB = byId(HABITATS), EGG = byId(EGG_TYPES), RA
 export const RANK = Object.fromEntries(RARITIES.map((r, i) => [r.id, i]));
 
 export const variantsOf = sp => [...SHARED_VARIANTS, ...(sp.extra || []), ...sp.legendary.map(l => ({ ...l, rarity: 'legendary' }))];
-export const variantOf = (spId, vId) => SP[spId] && variantsOf(SP[spId]).find(v => v.id === vId);
+const FIGS = new Set(MYTHIC152.map(m => m.fig.v)); // 158: only our own MYTHIC152 figure looks pass whole (a save's object never does)
+export const variantOf = (spId, vId) => typeof vId === 'object' ? (FIGS.has(vId) ? vId : undefined) : SP[spId] && variantsOf(SP[spId]).find(v => v.id === vId); // 158: a look given whole (MYTHIC152 fig: no SPECIES slot)
 // a variant's colours on a species: the species' own list (palette), else the variant's shared one; legendaries have none
 export const colorsOf = (spId, vId) => SP[spId]?.palette?.[vId] ?? variantOf(spId, vId)?.colors ?? [];
 export const colorOf = (spId, vId, cId) => { const cs = colorsOf(spId, vId); return cs.find(c => c.id === cId) ?? cs[0] ?? null; };
@@ -120,7 +121,7 @@ export function fromSave(raw, now) {
     S.scenes = Object.fromEntries(Object.entries(S.scenes).filter(([k, v]) => SCENES.some(s => s.id === k) && isObj(v) && Number.isFinite(v.at)).map(([k, v]) => [k, { at: v.at, sp: Object.hasOwn(SP, v.sp) ? v.sp : null }])); // 13-2
     for (const a of S.animals) if (a.stroll != null && !(isObj(a.stroll) && B.stroll.hours.includes(a.stroll.h) && Number.isFinite(a.stroll.end) && (PLACES.some(p => p.id === a.stroll.pl) || a.stroll.pl === MY.place.id))) { delete a.stroll; a.stored = true; } // a broken walk: it waits in storage
     S.fossil = { at: Number.isFinite(S.fossil.at) ? Math.min(S.fossil.at, now) : 0 }; // 14-3
-    S.myth = Object.fromEntries(MYTHIC.map(m => { const M = S.myth[m.id]; return [m.id, Object.fromEntries(Object.entries(isObj(M) ? M : {}).filter(([k, v]) => k === 'bondDay' ? typeof v === 'string' : (MYTH_T.includes(k) || m.clues.includes(k)) && Number.isFinite(v)))]; })); // 14-1; 152 D: one per MYTHIC id (an id this build doesn't know is dropped)
+    S.myth = Object.fromEntries(MYTHIC.map(m => { const M = S.myth[m.id]; return [m.id, Object.fromEntries(Object.entries(isObj(M) ? M : {}).filter(([k, v]) => k === 'bondDay' || k === 'pd' ? typeof v === 'string' && v.length < 40 : k === 'pn' ? Number.isInteger(v) && v >= 0 && v <= 9 : (MYTH_T.includes(k) || m.clues.includes(k)) && Number.isFinite(v)))]; })); // 14-1; 152 D: one per MYTHIC id (an id this build doesn't know is dropped); 158: pd / pn the unicorn's horn days
     { const n = v => Math.max(0, Math.floor(v) || 0); // 15-1: runs of events this build knows
       S.events = Object.fromEntries(Object.entries(S.events).filter(([, R]) => isObj(R) && EV[R.id] && Number.isFinite(R.start) && Number.isFinite(R.end)).map(([k, R]) => [k, { ...R,
         c: n(R.c), got: n(R.got), step: Math.min(n(R.step), EV[R.id].track.length), pets: n(R.pets), dayAt: n(R.dayAt), day: typeof R.day === 'string' ? R.day : '',
@@ -559,6 +560,8 @@ function strollBack(S, now, ev, rng) {
     S.cards.push(card); if (S.cards.length > R.cards) S.cards.splice(0, S.cards.length - R.cards);
     ev.push({ type: 'strollBack', animal: a, card });
     const F = S.myth[MY.id]; if (w.pl === MY.place.id && F.got && !F.hair) { F.hair = w.end; card.myth = MY.hair; ev.push({ type: 'myth', what: 'hair', id: MY.id }); } // 14-1
+    for (const m of MYTHIC) { const M = S.myth[m.id], k = m.clues[0]; // 158: a walk of one of its habitat's friends, sent after its 발견, brings the first clue
+      if (m !== MY && habitatOf(a) === m.habitat && w.start >= M.got && !M[k] && mythStage(S, now, m.id) === 'altar') { M[k] = w.end; card.myth = m.cl[0][0]; ev.push({ type: 'myth', what: k, id: m.id }); } }
   }
 }
 // 14-1 신수의 부름 (data.js MYTHIC, PACE myth). S.myth[id], one per MYTHIC (152 D; 12 and before: the firemane's right in S.myth,
@@ -567,7 +570,7 @@ function strollBack(S, now, ev, rng) {
 // 3 lit), called (부르기), arrive (that night), here (it came), shown (its coming seen: the cutscene or 돌아왔어요), bond, bondDay,
 // settled, read (pages read, bits). Timestamps but bond, read, bondDay. Not in S.animals: no seat, no 보관함, no walk, no
 // send-back, never from an egg. 152 D: one call at a time, in MYTHIC order (mythTurn); fire / trace and the altar's 3 are the
-// firemane's own, the others' 발견 is one tap for now (their calls: docs/reports/152d.md)
+// firemane's own; 158: the others' 발견 is one tap (seen and got), their clues MYTHIC152
 const MY = MYTHIC[0], BIG_IDS = BIGS.split(' ');
 const MYTH_T = ['seen', 'fire', 'trace', 'got', 'hair', 'play', 'big', 'called', 'arrive', 'here', 'shown', 'bond', 'settled', 'read'];
 function mythTo13(S) { if (Object.keys(S.myth).some(k => k === 'bondDay' || MYTH_T.includes(k))) S.myth = { [MY.id]: S.myth }; } // 12 -> 13 (152 D); a nested one has none of those keys: twice = once
@@ -590,9 +593,10 @@ export function mythStage(S, now, id = MY.id) {
 export const mythHill = S => !!S.myth[MY.id].got && !S.myth[MY.id].hair && !S.animals.some(a => a.stroll?.pl === MY.place.id); // 불의 언덕 open (one walk at a time)
 export const altarOf = S => S.props.find(p => p.prop === 'myth_altar' && p.placed && p.hab === MY.habitat);
 const playNear = S => { const A = altarOf(S); return !!A && S.props.some(p => p.placed && p.hab === MY.habitat && PROP[p.prop]?.use && Math.hypot(p.x - A.x, p.z - A.z) < 12); };
+const guestOf = m => m.guest ?? B.myth.guest; // 158: the new ones their own (6), the firemane PACE's
 function bondUp(S, now, ev, id) { // one a day (a pet, or a play prop near the altar on a day the game is open); days missed just wait
   const M = S.myth[id]; M.bondDay = dayOf(now); M.bond = (M.bond || 0) + 1; ev.push({ type: 'myth', what: 'bond', n: M.bond, id });
-  if (M.bond >= B.myth.guest) { M.settled = now; ev.push({ type: 'myth', what: 'settle', id }); }
+  if (M.bond >= guestOf(myOf(id))) { M.settled = now; ev.push({ type: 'myth', what: 'settle', id }); }
 }
 function mythTick(S, now, ev) {
   for (const m of MYTHIC) { if (!mythTurn(S, m)) continue; // inbox 65; 152 D: the ones before it settled
@@ -605,7 +609,11 @@ function mythTick(S, now, ev) {
       if (!M.play && Object.keys(S.scenes).length >= MY.scenes) { M.play = now; e('play'); }
       if (!M.big && S.props.some(p => p.placed && !p.nat && BIG_IDS.includes(p.prop))) { M.big = now; e('big'); }
     }
-    if (M.arrive && !M.here && now >= M.arrive) { M.here = M.arrive; e('arrive'); if (!C.guest) { M.settled = M.here; e('settle'); } }
+    if (m !== MY && M.got && !M.called) { // 158: props placed and scenes seen before count
+      if (m.ring && !M.ring && S.props.filter(p => p.placed && !p.nat && p.hab === m.habitat && m.ring.includes(p.prop)).length >= m.need) { M.ring = now; e('ring'); }
+      if (m.scenes && !M.frost && Object.values(S.scenes).filter(x => SP[x.sp]?.habitat === m.habitat).length >= m.scenes) { M.frost = now; e('frost'); }
+    }
+    if (M.arrive && !M.here && now >= M.arrive) { M.here = M.arrive; e('arrive'); if (!guestOf(m)) { M.settled = M.here; e('settle'); } }
     if (M.here && !M.settled && M.bondDay !== dayOf(now) && now >= M.here && m === MY && playNear(S)) bondUp(S, now, ev, m.id); // the altar's play props: the firemane's
   }
 }
@@ -616,7 +624,7 @@ export const putGift = (S, prop, at, ex = {}) => { // into the meadow's storage,
 export function mythSeen(S, now, at = null, id = MY.id) { // the fire prints tapped; a campfire given (nothing back for it) if the level doesn't sell one yet
   if (mythStage(S, now, id) !== 'prints') return null;
   S.myth[id].seen = now;
-  if (id !== MY.id) { S.myth[id].got = now; return { gift: null }; } // 152 D: the others' 발견 is this one tap till their calls are chosen
+  if (id !== MY.id) { S.myth[id].got = now; return { gift: null }; } // 152 D / 158: the others' 발견 is this one tap (their clues next)
   return { gift: !can(S, 'prop:campfire') && !S.props.some(p => p.prop === 'campfire') ? putGift(S, 'campfire', at, { cost: 0 }) : null };
 }
 export function mythTrace(S, now, at = null) { // the burnt hoofprints tapped: page 1 and the 옛 제단
@@ -625,9 +633,20 @@ export function mythTrace(S, now, at = null) { // the burnt hoofprints tapped: p
   return A ? { uid: A.uid, prop: A.prop, placed: A.placed } : putGift(S, 'myth_altar', at);
 }
 export function mythCall(S, now, id = MY.id) { // 부르기: it comes this night (20:00, or now if it is night already)
-  if (mythStage(S, now, id) !== 'ready') return null;
+  const m = myOf(id), night = mythNight(now); if (mythStage(S, now, id) !== 'ready' || (m !== MY && !night)) return null; // 158: the others only at night
   const t = new Date(now); t.setHours(20, 0, 0, 0);
-  const M = S.myth[id]; M.called = now; M.arrive = mythNight(now) ? now : +t; return M.arrive;
+  const M = S.myth[id]; M.called = now; M.arrive = m.dawn ? at6(now, new Date(now).getHours() < 6 ? 0 : 1) : night ? now : +t; return M.arrive; // 158 dawn: the unicorn at the next 06:00
+}
+// 158 the unicorn's horn: a pet of one of its habitat's friends rolls once a day (pd), `luck`; the pity-th day it rolls (pn) it is sure
+function mythLuck(S, a, now, rng, ev) {
+  for (const m of MYTHIC) { const M = S.myth[m.id], d = dayOf(now);
+    if (!m.luck || M.horn || M.pd === d || habitatOf(a) !== m.habitat || mythStage(S, now, m.id) !== 'altar') continue;
+    M.pd = d; M.pn = (M.pn || 0) + 1;
+    if (rng() < m.luck || M.pn >= m.pity) { M.horn = now; delete M.pd; delete M.pn; ev.push({ type: 'myth', what: 'horn', id: m.id }); } }
+}
+export function mythFind(S, now, id) { // 158 the white deer's jade: the glint by the snow drift tapped
+  const M = S.myth[id]; if (!myOf(id)?.clues.includes('jade') || M.jade || mythStage(S, now, id) !== 'altar') return null;
+  M.jade = now; return { events: [{ type: 'myth', what: 'jade', id }] };
 }
 export function mythPet(S, now, id = MY.id) { // a guest's bond, once a day
   const M = S.myth[id]; if (!M?.here || now < M.here) return null; const events = [];
@@ -933,12 +952,13 @@ export function feed(S, id, now) {
   bank(a, now); a.fed++; a.g = Math.min(1, a.g + B.grow.feed); bump(S, 'feed'); return true;
 }
 // petting: the heart rule (hearts.js); a tap that gives a heart also adds BALANCE.grow.pet to a growing baby
-export function tapHeart(S, id, now, rng = Math.random) {
+export function tapHeart(S, id, now, rng = Math.random, ev = null) { // ev: 158 the unicorn's horn (mythLuck) may fall
   const a = S.animals.find(a => a.id === id) ?? S.visit.guests.find(g => g.id === id), n = a ? heartFor(S, a, now) : 0; // 16-1: a guest too (the day's cap the same)
   if (n && growing(a)) { bank(a, now); a.g = Math.min(1, a.g + B.grow.pet); }
   if (n) { bump(S, 'pet'); const L = liveRun(S, now); if (L) { if (++L.R.pets % L.e.earn.pet === 0) evEarn(S, L.R, 1, now); // 15-1: a coin every earn.pet hearts
     if (L.e.earn.luck && rng() < L.e.earn.luck) { L.R.luck++; evEarn(S, L.R, 1, now); } } } // 15-2: now and then one more
   if (n && S.pet.n <= B.level.xp.petDaily) S.xp += B.level.xp.pet; // the day's first petDaily hearts (hearts.js counts them)
+  if (ev && a && S.animals.includes(a)) mythLuck(S, a, now, rng, ev);
   S.hearts += n; return n;
 }
 // ms till grown on time alone (null: not growing)
@@ -1136,7 +1156,8 @@ export function skip(S, ms, now, rng = Math.random) {
   for (const s of S.slots) if (s) { s.start -= ms; s.end -= ms; }
   for (const a of S.animals) { a.born -= ms; if (a.gAt != null) a.gAt -= ms; if (a.adultAt != null) a.adultAt -= ms; a.heartAt -= ms; if (a.stroll) { a.stroll.start -= ms; a.stroll.end -= ms; } }
   if (Number.isFinite(S.flags.lvCard?.at)) S.flags.lvCard.at -= ms; // 41 D: level.js's gap between level cards
-  for (const M of Object.values(S.myth)) for (const k in M) if (k !== 'bond' && k !== 'read' && Number.isFinite(M[k])) M[k] -= ms; // 14-1 (152 D: each)
+  for (const M of Object.values(S.myth)) for (const k in M) if (k !== 'bond' && k !== 'read' && k !== 'pn' && Number.isFinite(M[k])) M[k] -= ms; // 14-1 (152 D: each; 158: pn a count)
+  for (const M of Object.values(S.myth)) if (M.pd != null && ms >= 864e5) delete M.pd; // 158: a day or more skipped, today's horn roll is new
   for (const g of S.visit.guests) { g.at -= ms; g.until -= ms; } // 16-1
   if (S.pals.at) S.pals.at -= ms; for (const p of S.pals.list) p.at -= ms; // 17-1
   if (S.art.here) S.art.here -= ms; // 17-2: skipped time is time away

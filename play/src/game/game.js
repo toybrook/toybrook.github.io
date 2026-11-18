@@ -79,7 +79,7 @@ export const hatch = i => act(now => { // ?debug 「다음 알 시크릿」 (fla
 });
 export const release = id => act(now => R.release(S, id, now));
 export const feed = id => act(now => R.feed(S, id, now));
-export const tapHeart = id => act(now => R.tapHeart(S, id, now));
+export const tapHeart = id => act(now => { const events = []; return { n: R.tapHeart(S, id, now, Math.random, events), events }; }).n; // 158: events (the unicorn's horn)
 export const sendBack = id => act(() => R.sendBack(S, id));
 export const store = id => act(now => R.store(S, id, now));
 export const setFav = (id, on) => act(() => R.setFav(S, id, on));
@@ -89,13 +89,15 @@ export const sendStroll = (id, h, pl) => act(now => R.sendStroll(S, id, h, now, 
 export const cardsSeen = () => act(() => R.cardsSeen(S));
 export const seeScene = (id, sp) => act(now => R.seeScene(S, id, sp, now)); // 13-2
 // 14-1 신수의 부름 (rules.js mythTick): at [x, z] where the gift goes if there is room
-export const mythStage = () => S && R.mythStage(S, clock());
-export const mythSeen = at => act(now => R.mythSeen(S, now, at));
+// 158: id (none: the firemane) for the next ones
+export const mythStage = id => S && R.mythStage(S, clock(), id);
+export const mythSeen = (at, id) => act(now => R.mythSeen(S, now, at, id));
 export const mythTrace = at => act(now => R.mythTrace(S, now, at));
-export const mythCall = () => act(now => R.mythCall(S, now));
-export const mythPet = () => act(now => R.mythPet(S, now));
-export const mythRead = i => act(() => R.mythRead(S, i));
-export const mythShown = () => act(now => R.mythShown(S, now));
+export const mythCall = id => act(now => R.mythCall(S, now, id));
+export const mythPet = id => act(now => R.mythPet(S, now, id));
+export const mythRead = (i, id) => act(() => R.mythRead(S, i, id));
+export const mythShown = id => act(now => R.mythShown(S, now, id));
+export const mythFind = id => act(now => R.mythFind(S, now, id));
 export const buyCandy = () => act(() => R.buyCandy(S));
 export const holdBaby = id => act(now => R.holdBaby(S, id, now));
 export const letGrow = id => act(now => R.letGrow(S, id, now));

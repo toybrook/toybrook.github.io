@@ -324,6 +324,106 @@ export function falls143(s) {
 }
 // the falls' cliff, pool and stream: no strewn natives there (zoneprops.js); the old ones there go once (rules.js clear143, the pond's)
 export const falls143fore = (x, z) => x > -39 && x < -27 && z > -20 && z < 2;
+// q1 the orchard (?z143=1): the rows as they were; four of the trees (otree143: zoneprops.js lets one come up to the trunk) each
+// with a spot at its trunk, on the view's side, where one butts the trunk three times, the crown shakes and a fruit drops beside
+// it, and the nearest one (most often itself) eats it (treeshake, to: the tree: walk.js); wooden crates of apples in the lanes.
+// World m (the strip x 39..51; the rows at x 41.4, 45, 48.6, a tree every 7.2 from z -28.5)
+function orchard143(s) {
+  const sp = (act, x, z, o) => ({ t: 'spot', x, z, act, ...o }), put = (t, x, z, o) => ({ t, x, z, ...o });
+  const T = [[41.4, 0.3], [41.4, 14.7], [45, -6.9], [45, 21.9]].map(([x, z]) => put('otree143', x, z)); // not the ladder's (45, 7.5)
+  return [FACE(s, '#79b444', 0.9, { pat: mown(s.r[0], ORCHARD_ROWS) }), ...SP([[30, -2.2, 'rest'], [28.7, 7.4, 'nap'], [31.3, 21.8, 'rest']]), ...T,
+    ...T.map(f => sp('treeshake', f.x - 1.45, f.z + 0.25, { r: 0.15, to: f })), // toward the old ground: seen side on from the view
+    put('crates143', 43.2, 4.3, { n: 3 }), put('crates143', 43.2, 19.0, { n: 2 }), put('crates143', 46.8, -11.4, { n: 1 })];
+}
+// q1 the lookout (?z143=1): the hill as it was, its flat top a little wider (0.38 -> 0.46: room north of the gazebo); three spots
+// on the top's west edge where one lies down, eyes open, chin up, looking out west (the sunset's way, the board's edge) a while,
+// and by dusk calls two or three more to lie beside it (gaze, to: far west: walk.js); stone steps up the path's slope, a flag on
+// the top, a lantern where the path comes up (zoneprops.js). World m (the strip x -51..-39; the hill at (-45, -3.9))
+function lookout143(s) {
+  return [FACE(s, '#b9c45a', 0.55), H(s, 0.5, 0.4, 4.4, 9.5, 6.5, { top: 0.46 }),
+    { t: 'path', pts: P([[-29, 13], [-30.6, 9.5], [-29.3, 6], [-30.4, 3], [-30, 0.5]]), w: 0.7, c: '#c99a62' },
+    ...SP([[-30.3, 0.8, 'rest'], [-29.7, -6, 'nap'], [-29.5, 4, 'rest'], [-29.5, 15, 'rest']]),
+    ...[[-47.3, -2.0], [-47.0, 0.0], [-46.6, 2.0]].map(([x, z]) => ({ t: 'spot', x, z, act: 'gaze', r: 0.15, to: [-80, z] })),
+    { t: 'flag143', x: -43.4, z: -2.6 }, { t: 'lantern143', x: -43.9, z: 1.4 }];
+}
+// q1 the mushroom path (?z143=1): the floor, path and spots as they were; the giant toadstools shelter the animals in the rain
+// (zoneprops.js: their cover), one of them a little house (a door, a lit window); two big glowing toadstools in front of the
+// path that the animals lie round at night (spots shade, to: the lamp, night: walk.js picks them only by night), stumps,
+// toadstool rings and leaf piles. World m (the strip x -51..51, z 55.5..67.5; the path z 60..63)
+function mushroom143(s) {
+  const glow = (x, z) => [{ t: 'glow143', x, z }, ...[[1.6, 0.2], [-1.6, 0.2], [0, 1.6], [1.1, 1.2], [-1.1, 1.2]].map(([a, b]) => ({ t: 'spot', x: x + a, z: z + b, act: 'shade', r: 0.25, to: [x, z], night: 1 }))];
+  return [FACE(s, '#5a6a35', 0.85, { pat: speck(['#d0782f', '#a9532a', '#e0b040', '#8a5a2b'], 0.32, 0.3) }),
+    { t: 'path', pts: P([[-15.5, 41.6], [-8, 40.1], [0, 42], [8, 40.6], [16, 42.1], [24, 40.5], [31.5, 41.6]]), w: 0.9 },
+    ...SP([[-11, 42.6, 'rest'], [-3, 39.4, 'nap'], [12, 43.2, 'rest'], [20, 38.8, 'nap'], [28, 43.2, 'rest']]),
+    ...glow(-12, 63.3), ...glow(11, 63.3), { t: 'house143', x: 2 }, // the walkable ground ends at z ~65.3 (the bank)
+    ...[[-21, 64.6, 1], [27, 64.6, 0.9], [-38, 64.4, 1.1]].map(([x, z, sc]) => ({ t: 'stump143', x, z, sc })),
+    ...[[-7.6, 64.8], [15.6, 64.8], [-34, 64.8], [33, 64.9], [-1.5, 64.9]].map(([x, z]) => ({ t: 'shrooms143', x, z })),
+    ...[[-24, 64.7, 1], [4.5, 64.8, 1], [21.5, 64.6, 0.9], [-44, 64.6, 1], [39, 64.6, 1]].map(([x, z, sc]) => ({ t: 'leaves143', x, z, sc }))];
+}
+// q1 the conifer wood (?z143=1): the groves and spots as they were; three firs at the wood's front edge (spine143: zoneprops.js
+// lets one come up to the trunk) each with a spot on the view's side where one butts the trunk, the fir shivers, snow drops off
+// its boughs onto it, and it shakes the snow off (treeshake, to: the fir, snow: walk.js); a trail of little pawprints in from the
+// old ground to the middle fir, log piles and snowy stumps. World m (the strip x 27..39)
+function conifer143(s) {
+  const T = [[31, -9.5], [32, 1], [32.5, 17.5]].map(([x, z]) => ({ t: 'spine143', x, z, snow: 1 }));
+  const prints = [], pts = [[24.6, 6.4], [26.4, 4.4], [28.2, 3.4], [30.3, 1.4]]; // a fox's: one line of small round prints, a little left, a little right
+  for (let j = 0; j < pts.length - 1; j++) { const [x0, z0] = pts[j], [x1, z1] = pts[j + 1], L = Math.hypot(x1 - x0, z1 - z0), nx = -(z1 - z0) / L, nz = (x1 - x0) / L;
+    for (let d = 0; d < L; d += 0.42) { const w = (prints.length % 2 ? 0.09 : -0.09), t = d / L; prints.push({ t: 'print143', x: x0 + (x1 - x0) * t + nx * w, z: z0 + (z1 - z0) * t + nz * w, ry: Math.atan2(x1 - x0, z1 - z0) }); } } // little dents (zoneprops.js: the ground's tint is too coarse for them)
+  return [SPOT(s, 0.3, 0.42, 'rest'), SPOT(s, 0.7, 0.62, 'nap'), SPOT(s, 0.3, 0.9, 'rest'), SPOT(s, 0.6, 0.2, 'rest'), ...T,
+    ...T.map(f => ({ t: 'spot', x: f.x - 1.45, z: f.z + 0.25, act: 'treeshake', r: 0.15, to: f })), ...prints,
+    { t: 'logs143', x: 29.8, z: -19.3, ry: 0.25 }, { t: 'logs143', x: 31.6, z: 33.4, ry: -0.3 },
+    ...[[33.6, -26.2, 1], [33.4, 32.0, 0.85], [29.6, -1.2, 0.9]].map(([x, z, sc]) => ({ t: 'stump143', x, z, sc }))];
+}
+// q1 the sled hill (?z143=1): a real hill, higher (3.6 -> 5.5), its sides and back wider (e, b: the flanks no wall), a little
+// shorter (its foot still in the strip's view); the tracks down it; up its +x side (the view's) a lane of plank steps (steps143:
+// zoneprops.js) one walks back up. A slide spot's to carries up (the steps' foot and top): walk.js, slid down, walks to the steps,
+// climbs them and slides again (two more at most). A flag on the top, a snowman by the run-out (zoneprops.js). World m (x -39..-27)
+function sled143(s) {
+  const [x, z0] = at(s, 0.5, 0.32), z1 = at(s, 0.5, 0.56)[1], lx = x + 1.7, up = [lx, z1 + 0.2, lx, z0 + 0.9];
+  const to = (tx, tz) => Object.assign([tx, tz], { up }); // the run-out (an array, as before: walk.js slide)
+  return [{ t: 'ramp', x, z0, z1, rx: 3.4, h: 5.5, e: 2.2, b: 7 }, ...[-0.55, 0.55].map(d => ({ t: 'tint', x: x + d - 0.5, z: (z0 + z1) / 2 + 1.5, rx: 0.16, rz: (z1 - z0) / 2 + 1.5, c: '#c4d4e6', a: 0.7 })),
+    { t: 'tint', x: lx, z: (z0 + z1) / 2, rx: 0.5, rz: (z1 - z0) / 2, c: '#d3dde9', a: 0.6 }, { t: 'steps143', x: lx, z0: z0 + 0.6, z1: z1 + 0.4 }, // the trodden lane, its steps
+    { t: 'spot', x: x - 0.5, z: z0 + 1.0, act: 'slide', to: to(x - 0.5, z1 + 2) }, { t: 'spot', x: x - 1.3, z: z0 + 2.0, act: 'slide', to: to(x - 1.1, z1 + 2.6) },
+    { t: 'flag143', x: x - 2.0, z: z0 + 0.3 }, { t: 'snowman143', x: x + 2.4, z: z1 + 4.2 },
+    { t: 'spot', x: x + 1, z: z1 + 6, act: 'rest' }, { t: 'spot', x: x - 1.5, z: z1 + 7, act: 'nap' }, SPOT(s, 0.5, 0.86, 'rest')];
+}
+// q1 the ice plate (?z143=1): the ice and its slides as they were; an ice-fishing hole in front of a little wooden hut at the ice's
+// far edge (its door and window to the view), a smaller hole off west; by them spots to lie watching the hole, then a look down into
+// it as a fish leaps out and back, then a happy hop (fish, to: the hole: walk.js, zoneprops.js); a sled by the hut, its tracks over the ice
+const iceplate143 = () => { const A = { t: 'hole143', x: 14.2, z: 62.6, r: 0.42 }, B = { t: 'hole143', x: -10.5, z: 61.6, r: 0.34 };
+  return [{ t: 'flat', r: [-27, 27, 38.6, 44.2].map(v => v * S) }, RECT([-26, 26, 39.2, 43.6].map(v => v * S), ICE, 1),
+    ...SP([[-21, 40.5, 'slide', { to: [-11 * S, 42.4 * S] }], [-3, 42.4, 'slide', { to: [7 * S, 40.2 * S] }], [12, 40.4, 'slide', { to: [22 * S, 42.6 * S] }],
+      [-29.5, 41, 'rest'], [29.5, 41.2, 'rest'], [0, 38, 'nap']]),
+    A, B, { t: 'hut143', x: 14.6, z: 59.7 },
+    { t: 'spot', x: 12.95, z: 62.85, act: 'fish', r: 0.15, to: A }, { t: 'spot', x: 15.45, z: 62.95, act: 'fish', r: 0.15, to: A }, { t: 'spot', x: -11.6, z: 62.2, act: 'fish', r: 0.15, to: B }];
+};
+// q1 the ice pillar field (?z143=1): the mounds, pillars and spots as they were; two broad ice slabs, their faces smooth as glass
+// (zoneprops.js: a frosted lip, icicles under it), a spot before each: one sniffs at its face (its breath fogs it), starts back at
+// the face in the ice, then lies a while gazing at it (peek, to: the slab: walk.js); drifts and ice crystals at the pillars' feet
+const pillars143 = () => { const M = (x, z, ry) => ({ t: 'mirror143', x, z, ry, nx: Math.sin(ry), nz: Math.cos(ry) }), A = M(0, 49.6, -0.35), B = M(18, 49.3, 0.4);
+  return [A, B, ...[A, B].map(m => ({ t: 'spot', x: m.x + m.nx * 1.4, z: m.z + m.nz * 1.4, act: 'peek', r: 0.15, to: m }))];
+};
+// q1 the ice cave (?z143=1): the rock hill as it was; at its foot a real cave you see into (zoneprops.js: a rock hood out of the
+// hill, snow on it, icicles, blue ice crystals glowing at its back), its floor cut flat (the shelf, its blend under the hood);
+// inside, spots to curl up and sleep, nose to the mouth (den: walk.js), by night too; the naps out in front. World m (the hill
+// at (-46.2, -1.9), its foot at z ~5; the mouth at mz)
+function cave143(s) {
+  const h = H(s, 0.6, 0.42, 3.0, 4.6, 10, { rock: 1 }), mz = h.z + h.rz + 2.8, den =(x, z, n) => ({ t: 'spot', x, z, act: 'den', r: 0.15, to: [x, z + 8], night: n });
+  return [h, TINT(s, 0.6, 0.42, 3.2, 4.8, SNOWROCK, 1, { steep: 1 }), { t: 'shelf', x: h.x, z: mz - 1.8, r: 2.0, e: 0.9, y: 0 }, { t: 'cave143', x: h.x, z: mz },
+    ...[[-0.9, -1.1], [0.95, -1.3]].flatMap(([a, b]) => [den(h.x + a, mz + b), den(h.x + a, mz + b, 1)]),
+    { t: 'spot', x: h.x + 1.8, z: mz + 2.4, act: 'nap' }, { t: 'spot', x: h.x - 2.0, z: mz + 2.8, act: 'nap' }, SPOT(s, 0.25, 0.25, 'rest'), SPOT(s, 0.25, 0.7, 'rest')];
+}
+// q1 the fern wood (?z143=1): the low rise as it was, a giant tree fern on it and its deep shade (zoneprops.js); under its fronds on
+// the near side two beds of fallen fronds: one lies down on one and is heaped over with leaves, its head out (leafnap: walk.js,
+// the heap zoneprops.js), by night too; a fallen mossy log, a nest of eggs a dino lies by, nose to it (den). World m (the rise at (33, 0))
+function fernwood143(s) {
+  const bed = (x, z, fz) => ({ t: 'bed143', x, z, fx: x - 0.6, fz, bed: 1 }), A = bed(30.4, -4, -9), B = bed(30.4, 4, 9), N = { t: 'nest143', x: 31, z: 12.4 };
+  return [FACE(s, '#4e8a36', 0.85, { pat: speck(['#3f7a2c', '#5f9a3c', '#6aa640'], 0.35, 0.35) }), H(s, 0.5, 0.5, 2.8, 5, 0.6), TINT(s, 0.55, 0.5, 3.2, 3.2, '#2f5a22', 0.5),
+    { t: 'bigfern143', x: 33.6, z: 0 }, A, B, { t: 'log143', x: 30.6, z: -23, ry: 0.45 }, N,
+    ...[A, B].flatMap(b => [{ t: 'spot', x: b.x, z: b.z, act: 'leafnap', r: 0.15, to: b }, { t: 'spot', x: b.x, z: b.z, act: 'leafnap', r: 0.15, to: b, night: 1 }]),
+    { t: 'spot', x: N.x, z: N.z - 2.6, act: 'den', r: 0.15, to: [N.x, N.z] },
+    SPOT(s, 0.3, 0.3, 'rest'), SPOT(s, 0.35, 0.7, 'rest'), SPOT(s, 0.6, 0.9, 'rest')];
+}
 const SHAPES = {
   meadow: {
     flowerhill: s => z143on('flowerhill') ? flowerhill143(s) : [FACE(s, '#93cf4c', 0.35), // inbox 67-3 the meadow's own green: the flowers stand in it (zoneprops.js drifts), none painted
@@ -335,11 +435,11 @@ const SHAPES = {
     fork: s => z143on('fork') ? fork143(s) : [{ t: 'tint', pts: FORK, rw: 3.2, c: '#b8ad98', a: 0.9, pat: GRAVEL }, { t: 'tint', x: 14 * S, z: 33.5 * S, rx: 4.2, rz: 3.4, c: '#b8ad98', a: 0.9, pat: GRAVEL }, // gravel banks
       { t: 'rill', pts: FORK, w: 1.5 }, { t: 'pool', x: 14 * S, z: 33.5 * S, r: 2.3 }, // wider; the stepping stones where the path crosses (zoneprops.js)
       ...SP([[-9, 30.8, 'rest'], [-6.5, 30.9, 'nap'], [2.5, 30.8, 'rest'], [18, 33.4, 'rest']])],
-    orchard: s => [FACE(s, '#79b444', 0.9, { pat: mown(s.r[0], ORCHARD_ROWS) }), ...SP([[30, -2.2, 'rest'], [28.7, 7.4, 'nap'], [31.3, 21.8, 'rest']])], // in the lanes between the rows,
-    lookout: s => [FACE(s, '#b9c45a', 0.55), H(s, 0.5, 0.4, 4.4, 9.5, 6.5, { top: 0.38 }), // a high hill, flat on top for the gazebo (inbox 42 C2: 3.4 -> 6.5, with the gazebo 3H)
+    orchard: s => Z143 ? orchard143(s) : [FACE(s, '#79b444', 0.9, { pat: mown(s.r[0], ORCHARD_ROWS) }), ...SP([[30, -2.2, 'rest'], [28.7, 7.4, 'nap'], [31.3, 21.8, 'rest']])], // in the lanes between the rows,
+    lookout: s => Z143 ? lookout143(s) : [FACE(s, '#b9c45a', 0.55), H(s, 0.5, 0.4, 4.4, 9.5, 6.5, { top: 0.38 }), // a high hill, flat on top for the gazebo (inbox 42 C2: 3.4 -> 6.5, with the gazebo 3H)
       { t: 'path', pts: P([[-29, 13], [-30.6, 9.5], [-29.3, 6], [-30.4, 3], [-30, 0.5]]), w: 0.7, c: '#c99a62' }, // the dirt path up
       ...SP([[-30.3, 0.8, 'rest'], [-29.7, -6, 'nap'], [-29.5, 4, 'rest'], [-29.5, 15, 'rest']])],
-    mushroom: s => [FACE(s, '#5a6a35', 0.85, { pat: speck(['#d0782f', '#a9532a', '#e0b040', '#8a5a2b'], 0.32, 0.3) }), // fallen leaves on the forest floor
+    mushroom: s => Z143 ? mushroom143(s) : [FACE(s, '#5a6a35', 0.85, { pat: speck(['#d0782f', '#a9532a', '#e0b040', '#8a5a2b'], 0.32, 0.3) }), // fallen leaves on the forest floor
       { t: 'path', pts: P([[-15.5, 41.6], [-8, 40.1], [0, 42], [8, 40.6], [16, 42.1], [24, 40.5], [31.5, 41.6]]), w: 0.9 },
       ...SP([[-11, 42.6, 'rest'], [-3, 39.4, 'nap'], [12, 43.2, 'rest'], [20, 38.8, 'nap'], [28, 43.2, 'rest']])],
   },
@@ -364,27 +464,27 @@ const SHAPES = {
       ...SP([[-29, 41, 'rest'], [-18, 42.2, 'rest'], [-9, 39.6, 'nap'], [5, 42.6, 'rest'], [17.5, 39.2, 'nap'], [29, 40.6, 'rest']])],
   },
   snow: {
-    conifer: s => [SPOT(s, 0.3, 0.42, 'rest'), SPOT(s, 0.7, 0.62, 'nap'), SPOT(s, 0.3, 0.9, 'rest'), SPOT(s, 0.6, 0.2, 'rest')],
-    sled: s => { const [x, z0] = at(s, 0.5, 0.3), z1 = at(s, 0.5, 0.64)[1];
+    conifer: s => Z143 ? conifer143(s) : [SPOT(s, 0.3, 0.42, 'rest'), SPOT(s, 0.7, 0.62, 'nap'), SPOT(s, 0.3, 0.9, 'rest'), SPOT(s, 0.6, 0.2, 'rest')],
+    sled: s => Z143 ? sled143(s) : (() => { const [x, z0] = at(s, 0.5, 0.3), z1 = at(s, 0.5, 0.64)[1];
       return [{ t: 'ramp', x, z0, z1, rx: 2.6, h: 3.6 }, ...[-0.55, 0.55].map(d => ({ t: 'tint', x: x + d, z: (z0 + z1) / 2 + 1.5, rx: 0.16, rz: (z1 - z0) / 2 + 1.5, c: '#c4d4e6', a: 0.7 })), // sled tracks
         { t: 'spot', x, z: z0 + 1.2, act: 'slide', to: [x, z1 + 1.5] }, { t: 'spot', x: x + 0.8, z: z0 + 2.4, act: 'slide', to: [x - 0.6, z1 + 2] },
-        { t: 'spot', x: x + 1, z: z1 + 3.5, act: 'rest' }, { t: 'spot', x: x - 1.5, z: z1 + 5, act: 'nap' }, SPOT(s, 0.5, 0.86, 'rest')]; },
+        { t: 'spot', x: x + 1, z: z1 + 3.5, act: 'rest' }, { t: 'spot', x: x - 1.5, z: z1 + 5, act: 'nap' }, SPOT(s, 0.5, 0.86, 'rest')]; })(),
     pillars: () => [...P([[-20, 31.6, 1.0, 0.8], [-14.5, 34.6, 0.9, 0.6], [-9, 31.2, 1.1, 0.9], [-3, 34.4, 0.9, 0.7], [3, 31.6, 1.0, 0.85], [9, 34.6, 0.95, 0.65], [14.5, 31.2, 1.05, 0.8], [20, 34.2, 0.9, 0.7]])
         .flatMap(([x, z, r, h]) => [{ t: 'col', x, z, r, h }, { t: 'tint', x, z, rx: r + 1.4, rz: r + 1.4, c: ICE, a: 0.75 }]), // each pillar on a round of ice
-      ...SP([[-11.8, 33.2, 'rest'], [6, 33, 'nap'], [17.5, 32.8, 'rest']])],
+      ...SP([[-11.8, 33.2, 'rest'], [6, 33, 'nap'], [17.5, 32.8, 'rest']]), ...Z143 ? pillars143() : []],
     hotspring: s => S129 >= 3 ? spring139(s, S129) : S129 ? spring129(s, S129) : [POOL(s, 0.5, 0.5, 2.9, { hot: 1 }), TINT(s, 0.5, 0.5, 3.6, 3.6, SNOWROCK, 0.55),
       SPOT(s, 0.45, 0.48, 'bath', { r: 0.6 }), SPOT(s, 0.55, 0.53, 'bath', { r: 0.6 }), SPOT(s, 0.5, 0.42, 'bath', { r: 0.6 }), SPOT(s, 0.5, 0.25, 'rest'), SPOT(s, 0.5, 0.75, 'rest')],
-    cave: s => [H(s, 0.6, 0.42, 3.0, 4.6, 10, { rock: 1 }), // inbox 42 C2: 3.2 -> 10 (3H), its mouth at its foot (zoneprops.js)
+    cave: s => Z143 ? cave143(s) : [H(s, 0.6, 0.42, 3.0, 4.6, 10, { rock: 1 }), // inbox 42 C2: 3.2 -> 10 (3H), its mouth at its foot (zoneprops.js)
       TINT(s, 0.6, 0.42, 3.2, 4.8, SNOWROCK, 1, { steep: 1 }), // a round rock hill, the cave's mouth on its front (+z: toward the camera)
       SPOT(s, 0.52, 0.5, 'nap'), SPOT(s, 0.66, 0.5, 'nap'), SPOT(s, 0.25, 0.25, 'rest'), SPOT(s, 0.25, 0.7, 'rest')],
-    iceplate: () => [{ t: 'flat', r: [-27, 27, 38.6, 44.2].map(v => v * S) }, RECT([-26, 26, 39.2, 43.6].map(v => v * S), ICE, 1), // under the ice sheet (zoneprops.js)
+    iceplate: () => Z143 ? iceplate143() : [{ t: 'flat', r: [-27, 27, 38.6, 44.2].map(v => v * S) }, RECT([-26, 26, 39.2, 43.6].map(v => v * S), ICE, 1), // under the ice sheet (zoneprops.js)
       ...SP([[-21, 40.5, 'slide', { to: [-11 * S, 42.4 * S] }], [-3, 42.4, 'slide', { to: [7 * S, 40.2 * S] }], [12, 40.4, 'slide', { to: [22 * S, 42.6 * S] }],
       [-29.5, 41, 'rest'], [29.5, 41.2, 'rest'], [0, 38, 'nap']])],
   },
   // 14-3 the dino jungle. dig: an animal paws at the sand a while (walk.js), now and then turning up a fossil (rules.js dig);
   // roll: wallows in the mud (as the snow pile's roll)
   dino: {
-    fernwood: s => [FACE(s, '#4e8a36', 0.85, { pat: speck(['#3f7a2c', '#5f9a3c', '#6aa640'], 0.35, 0.35) }), H(s, 0.5, 0.5, 2.8, 5, 0.6), // fern shade on a low rise
+    fernwood: s => Z143 ? fernwood143(s) : [FACE(s, '#4e8a36', 0.85, { pat: speck(['#3f7a2c', '#5f9a3c', '#6aa640'], 0.35, 0.35) }), H(s, 0.5, 0.5, 2.8, 5, 0.6), // fern shade on a low rise
       SPOT(s, 0.3, 0.3, 'rest'), SPOT(s, 0.65, 0.5, 'nap'), SPOT(s, 0.35, 0.7, 'rest'), SPOT(s, 0.6, 0.9, 'rest')],
     cliffs: s => [FACE(s, '#7e8a58', 0.6), H(s, 0.55, 0.38, 3.4, 4.4, 9, { rock: 1, top: 0.3 }), TINT(s, 0.55, 0.38, 3.6, 4.6, ROCK, 1, { steep: 1 }), // a rock hill (3H)
       ...[[0.3, 0.66], [0.7, 0.8], [0.35, 0.93]].flatMap(([u, v]) => { const [x, z] = at(s, u, v); return [{ t: 'col', x, z, r: 1.1, h: 1.4 }, { t: 'tint', x, z, rx: 2.2, rz: 2.2, c: ROCK, a: 0.8 }]; }), // rock stacks: the pterosaur's perches
@@ -435,7 +535,7 @@ export function zoneSet(hab, top) {
     let h = 0;
     for (const f of hills) {
       if (f.t === 'hill') { const dx = (x - f.x) / f.rx, dz = (z - f.z) / f.rz; const q = Math.hypot(dx, dz); if (q < 1) h += f.h * sm(f.top ? (1 - q) / (1 - f.top) : 1 - q); }
-      else if (f.t === 'ramp') { const ax = Math.abs(x - f.x); if (ax < f.rx + 2.2 && z > f.z0 - 4 && z < f.z1) h += f.h * sm((f.rx + 1.1 - ax) / 2.2) * (z < f.z0 ? sm(1 - (f.z0 - z) / 4) : sm((f.z1 - z) / (f.z1 - f.z0))); }
+      else if (f.t === 'ramp') { const ax = Math.abs(x - f.x), e = f.e ?? 1.1, b = f.b ?? 4; if (ax < f.rx + 2 * e && z > f.z0 - b && z < f.z1) h += f.h * sm((f.rx + e - ax) / (2 * e)) * (z < f.z0 ? sm(1 - (f.z0 - z) / b) : sm((f.z1 - z) / (f.z1 - f.z0))); } // q1: e, b (the sides', the back's fall)
       else { const d = Math.hypot(x - f.x, z - f.z); if (d < f.r + 0.6) h += f.h * sm((f.r + 0.25 - d) / 0.5); }
     }
     return h;
@@ -451,7 +551,7 @@ export function zoneSet(hab, top) {
   const Z = {
     F, pools, rills, paths, top,
     falls: of('fall'),
-    spots: of('spot').map(f => ({ x: f.x, z: f.z, r: f.r ?? 1.2, act: f.act, to: f.to, zone: f.zone, k: f.k, soak: f.soak, who: f.who, ford: f.ford })), // 129: soak, who; 143: ford (the stones, walk.js)
+    spots: of('spot').map(f => ({ x: f.x, z: f.z, r: f.r ?? 1.2, act: f.act, to: f.to, zone: f.zone, k: f.k, soak: f.soak, who: f.who, ford: f.ford, night: f.night })), // 129: soak, who; 143: ford (the stones, walk.js); q1: night (only by night)
     perches: of('col').map(f => ({ x: f.x, z: f.z })),
     // how far to the nearest zone water (big when none near)
     wd(x, z, hot = false) { let m = 99; for (const f of water) if ((hot || !f.hot) && near(f, x, z, 6)) m = Math.min(m, wd1(f, x, z)); return m; },
@@ -468,7 +568,7 @@ export function zoneSet(hab, top) {
     flat(x, z) {
       let k = 0;
       for (const f of flats) k = Math.max(k, sm(edgeOf(f.r, x, z) / 1.5));
-      for (const f of ramps) if (Math.abs(x - f.x) < f.rx + 2 && z > f.z0 - 4 && z < f.z1 + 1) k = Math.max(k, 0.8);
+      for (const f of ramps) if (Math.abs(x - f.x) < f.rx + 2 * (f.e ?? 1) && z > f.z0 - (f.b ?? 4) && z < f.z1 + 1) k = Math.max(k, 0.8);
       return k;
     },
     // the water's hollows (subtracted from the ground)

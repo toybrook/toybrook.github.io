@@ -20,7 +20,7 @@ import { stamps, bump } from './stamps.js';
 import { linesLayer } from './lines.js';
 import { loadModel, loadAcc } from '../animals/figure.js';
 import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
-import { SPECIES, MODELS, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable } from '../game/data.js';
+import { SPECIES, MODELS, MYTHIC, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable } from '../game/data.js';
 import { SP, habitatOf, known, topAt, kindName } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
 import { ambience, sfx, music, playing, hear, pet, lilies } from '../ui/sound.js';
@@ -29,7 +29,7 @@ import { trainModel, recolor, treeCover } from './meadow/props.js';
 import { newPlay } from '../animals/play.js';
 import { blobSlot, ROOM } from '../animals/walk.js';
 import { landOf } from './land.js';
-import { mythLayer } from './myth.js';
+import { mythLayer, guestLayer } from './myth.js';
 import { skyLayer } from './skyfx.js';
 import { wildLayer } from './wildLayer.js';
 import { colOf, trailsOf, WILD } from '../game/wild.js';
@@ -950,8 +950,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     return k;
   }
   // 14-1 신수의 부름 (myth.js): the meadow's fire prints, burnt hoofprints, the altar's flames and the 불갈기 천리마 (ui/myth.js drives it)
-  const myth = habId === 'meadow' ? mythLayer({ scene, ctx: habitat.ctx, U, ui, open, nearest, gather, idle, placed, room: (r, x, z) => nearest((a, b) => fits({ r }, a, b), [x, z]),
-    puff: (x, z, c) => puffs.push({ x, z, t: 0, c }), view: (x, z, radius, phi) => { setFocus(null); goingHome = false; aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(x, ...panX), 0, THREE.MathUtils.clamp(z, ...panZ)), radius, phi }; } }) : null;
+  const puff = (x, z, c) => puffs.push({ x, z, t: 0, c }), view = (x, z, radius, phi) => { setFocus(null); goingHome = false; aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(x, ...panX), 0, THREE.MathUtils.clamp(z, ...panZ)), radius, phi }; };
+  const myth = habId === 'meadow' ? mythLayer({ scene, ctx: habitat.ctx, U, ui, open, nearest, gather, idle, placed, room: (r, x, z) => nearest((a, b) => fits({ r }, a, b), [x, z]), puff, view }) : null;
+  // 158 (?m89): the next 신수 of this habitat (MYTHIC152: the unicorn in the meadow, the white deer on the snow); none without the flag
+  const guests = MYTHIC.slice(1).filter(m => m.habitat === habId).map(m => guestLayer(m, { scene, ctx: habitat.ctx, ui, open, nearest, view, puff }));
   const label = a => `${a.rec.nm ? a.rec.nm + ' · ' : ''}${kindName(a.rec)} · ${STAGE_NAME[a.look.stage]}`;
   const height = a => new THREE.Box3().setFromObject(a.look.obj).max.y - a.obj.position.y;
 
@@ -971,7 +973,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       return;
     }
     if (fx.tap(ndc.x, ndc.y)) { sfx('place'); ui.onStar?.(e.clientX, e.clientY); return; } // 16-2 a falling star caught: 별 조각
-    if (myth?.tap(ray, hit, e)) return; // 14-1
+    if (myth?.tap(ray, hit, e) || guests.some(g => g.tap(ray, hit, e))) return; // 14-1, 158
     for (const [o, f] of [[site?.obj, siteTap], [pileObj, pileTap]]) if (o && ray.intersectObject(o, true).length) return void f(); // 15-2: tapped on purpose
     // 28-3: a prop that does something when tapped (props.js userData.tap), with no animal in front of it
     const toys = [...placed.values()].filter(p => p.obj.userData.tap), th = toys.length ? ray.intersectObjects(toys.map(p => p.obj), true)[0] : null;
@@ -1300,7 +1302,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     tie(); if (habitat.ctx.fresh[0]?.until < performance.now()) habitat.ctx.fresh.shift(); // 17-1
     if (t > homeAt && !decorOn) { homeAt = t + 1; penCheck(); }
     hear(camera, controls.target, actors, habitat.ctx, D.list, underfoot); // 13-0: the world's sounds where they are
-    updPuffs(dt); updSnow(dt); myth?.tick(dt, t);
+    updPuffs(dt); updSnow(dt); myth?.tick(dt, t); for (const g of guests) g.tick(dt, t);
     for (const e of placed.values()) e.obj.userData.tick?.(t); ed?.obj.userData.tick?.(t); // props that move (pinwheel, swing, boat...)
     if (ed && ed.on == null && fits(ed.P, ed.x, ed.z, SZ(ed)) !== ed.ok) moveEdit(ed.x, ed.z); // animals walk in and out of the held prop's spot (28-5: at its size; one on a top spot has none)
     if (grassDirty) { grassDirty = false; mask(hideGrass); }
@@ -1362,11 +1364,11 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       sfx('unveil'); const near = idle().sort((a, b) => far(a) - far(b)), e = { '+x': s.r[0] - 1.5, '-x': s.r[1] + 1.5, '+z': s.r[2] - 1.5, '-z': s.r[3] + 1.5 }[s.side];
       const from = p => p.act === 'tumble' && p.to ? p.to : s.side[1] === 'x' ? [e, p.z] : [p.x, e], used = []; let n = 0; // 145 B: the roller starts at the lane's foot (the roll's end), runs up it and rolls down; under the veil: put just outside the zone, level with its spot (the nearest spots first), so they run straight in while the camera looks
       const gap = p => (p.act === 'rest' ? 99 : 0) + Math.abs((s.side[1] === 'x' ? p.x : p.z) - e); // the zone's own thing first (a plain rest last)
-      for (const p of [...sp].sort((a, b) => gap(a) - gap(b))) {
+      for (const p of [...sp].sort((a, b) => gap(a) - gap(b))) { if (p.act === 'leafnap' && used.some(u => u.to === p.to)) continue; // q1: a bed's day and night spots: one sleeper
         let a; while ((a = n < 2 && near.find(a => !p.who || p.who.includes(a.rec.species))) && !(a.send(p.x, p.z, p.act, { fast: true, to: p.to, soak: p.soak }) && (a.busy() || a.state !== 'idle'))) near.splice(near.indexOf(a), 1); // 143 B: no way there from where it stands (another land, over a bridge): the next nearest
         if (!a) continue;
         const at = nearest((x, z) => habitat.ctx.walkable(x, z) && free(habitat.ctx.crowd, a.body, x, z) && used.every(([u, v]) => Math.hypot(u - x, v - z) > 2), from(p));
-        a.drop(...at, 1e-3); used.push(at); n++; near.splice(near.indexOf(a), 1); // 1e-3: on the ground at once (no fall)
+        a.drop(...at, 1e-3); at.to = p.to; used.push(at); n++; near.splice(near.indexOf(a), 1); // 1e-3: on the ground at once (no fall)
       }
     } else if (sp.length) idle().sort((a, b) => far(a) - far(b)).slice(0, 4).forEach((a, i) => { const p = sp[i % sp.length]; a.send(p.x + (Math.random() - 0.5) * 2, p.z + (Math.random() - 0.5) * 2, 'run', { fast: true }); });
   }
@@ -1402,7 +1404,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   return {
     resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, artSpot, // 17-2
     artView, syncWild, showZone, topView, setPals: (m, d) => { habitat.ctx.bf = m; habitat.ctx.duo = d; }, // 17-1; 113 d: id -> the prop the two like
-    myth, pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
+    myth, guests, pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw
     // 'isReady' of undefined there, uncaught, and the curtain never lifted. Here gone = ready, and it always ends (10 s at most)
@@ -1434,7 +1436,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       const c = document.createElement('canvas'); c.width = renderer.domElement.width; c.height = renderer.domElement.height; c.getContext('2d').drawImage(renderer.domElement, 0, 0);
       renderer.setPixelRatio(pr); renderer.setSize(W(), H()); renderer.render(scene, camera); return c; // drawn again: setSize cleared the screen
     },
-    dispose() { dead = true; ac.abort(); controls.dispose(); unhook(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); boxEl.remove(); perfEl?.remove(); }, // replaced (21-3b, main.js)
+    dispose() { dead = true; ac.abort(); for (const g of guests) g.dispose(); controls.dispose(); unhook(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); boxEl.remove(); perfEl?.remove(); }, // replaced (21-3b, main.js)
     look(id) { const a = actors.get(id); if (!a) return false; setFocus(a); front(); watch = true; return true; }, // inbox 20: follow one and turn to its face (friends list, 「연못에서 보기」); 26-4 a touch lets go
     unfollow: () => { trainCam = false; setFocus(null); }, followed: () => trainCam ? 'train' : focus?.rec.id ?? null, // 26-4 사진 모드 따라가기
     hasTrain: () => !!train, followTrain() { if (!train) return false; setFocus(null); Object.assign(trainAim, { radius: 9, phi: 1 }); goingHome = false; trainCam = true; return true; }, // 28-4

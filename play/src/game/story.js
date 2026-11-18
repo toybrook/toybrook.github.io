@@ -29,8 +29,8 @@ const card = (k, id, hab, t) => ({ k, id, hab, ...when(t), t });
 // every card the save holds, oldest first. k: 'm' it came (meet), 's' it settled, 'l' a legendary (id 'species:variant')
 export function storyCards(S) {
   const out = [];
-  for (const m of MYTHIC) { const M = S.myth?.[m.id] || {}; if (!m.tales) continue; // 152 D: each 신수 with its tales (the ?m89 ones have none yet)
-    if (Number.isFinite(M.here)) out.push(card('m', m.id, m.habitat, M.here));
+  for (const m of MYTHIC) { const M = S.myth?.[m.id] || {}; if (!m.tales) continue; // 152 D: each 신수 with its tales
+    if (Number.isFinite(M.here) && m.tales.meet) out.push(card('m', m.id, m.habitat, M.here)); // 158: the next ones one card each (their settling)
     if (Number.isFinite(M.settled)) out.push(card('s', m.id, m.habitat, M.settled)); }
   for (const [k, e] of Object.entries(S.codex || {})) {
     const [sp, v] = k.split(':');
@@ -59,7 +59,7 @@ export function decodeCard(text) {
   let p; try { p = atob(s.slice(TAG.length).replace(/-/g, '+').replace(/_/g, '/')).split('.'); } catch { return bad; }
   if (p.length !== 5) return bad;
   const [k, id, day, tod, hab] = p, [sp, v] = id.split(':'), y = +day.slice(0, 4), mo = +day.slice(4, 6), dd = +day.slice(6);
-  const who = k === 'l' ? !!RAR[variantOf(sp, v)?.rarity]?.story && !!HN[hab] : (k === 'm' || k === 's') && MY[id]?.habitat === hab;
+  const who = k === 'l' ? !!RAR[variantOf(sp, v)?.rarity]?.story && !!HN[hab] : (k === 'm' ? !!MY[id]?.tales?.meet : k === 's' && !!MY[id]?.tales) && MY[id]?.habitat === hab; // 158: no meet tale, no 'm' card
   const date = /^\d{8}$/.test(day) && y >= 2024 && mo >= 1 && mo <= 12 && dd >= 1 && dd <= new Date(Date.UTC(y, mo, 0)).getUTCDate();
   if (!who || !date || !/^[0-3]$/.test(tod)) return bad;
   return { k, id, hab, day, tod: +tod };

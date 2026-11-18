@@ -75,7 +75,7 @@ const mythRow = () => { if (HOLD.myth) return ''; const ms = MYTHIC.filter(m => 
 function mythBox(id) {
   const m = MYTHIC.find(m => m.id === id), M = m && G.S.myth[m.id], met = !!M?.here, box = document.createElement('div'), n = [...Array(5)].filter((_, i) => M?.read & 1 << i).length;
   box.className = 'cdet pop myth';
-  box.innerHTML = $t('<div><b>{0}</b>{1}<p class="from">{2}</p><button class="back" data-shut>닫기</button></div>', met ? m.name : $t('아직 못 만난 신수'), !m?.model ? '' : met ? mythCard() : $t('<p class="pair"><span><img alt="신수 실루엣"><small>?</small></span></p>'), !m ? $t('이 서식지의 신수는 아직 소문만 있어요') : !m.pages ? (met ? '' : $t('아직 아무 소식이 없어요')) : met ? $t('사는 곳: {0} · 신수는 자리를 차지하지 않아요<br>이야기 {1}/{2} · 옛 제단에서 다시 읽어요', HAB[m.habitat].name, n, m.pages.length) : mythHint());
+  box.innerHTML = $t('<div><b>{0}</b>{1}<p class="from">{2}</p><button class="back" data-shut>닫기</button></div>', met ? m.name : $t('아직 못 만난 신수'), !m?.model ? '' : met ? mythCard() : $t('<p class="pair"><span><img alt="신수 실루엣"><small>?</small></span></p>'), !m ? $t('이 서식지의 신수는 아직 소문만 있어요') : !m.pages ? (met ? '' : $t('아직 아무 소식이 없어요')) : met ? (m === MYTHIC[0] ? $t('사는 곳: {0} · 신수는 자리를 차지하지 않아요<br>이야기 {1}/{2} · 옛 제단에서 다시 읽어요', HAB[m.habitat].name, n, m.pages.length) : $t('사는 곳: {0} · 신수는 자리를 차지하지 않아요<br>이야기 {1}/{2} · {3}을 눌러 다시 읽어요', HAB[m.habitat].name, n, m.pages.length, m.name)) : esc(mythHint(m.id))); // 158: the next ones' own
   const img = box.querySelector('img'); if (img) mythThumb(!met, false, met ? 0 : 1).then(u => { img.src = u; }, () => {});
   el.append(box);
 }

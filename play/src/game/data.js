@@ -797,9 +797,6 @@ if (M89) {
   SPECIES.find(s => s.id === 'arcticFox').legendary.push(...g ? [{ id: g, name: $t('신수 구미호'), mat: g }]
     : G121 ? [{ id: 'gumiho121', name: $t('신수 구미호'), mat: 'gumiho121' }]
     : [{ id: 'gumiho125a', name: $t('신수 구미호'), mat: 'gumiho125a' }, { id: 'gumiho125b', name: $t('신수 구미호') + ' 2', mat: 'gumiho125b' }]);
-  // 152 B 신수 유니콘 (pilot, shown as the gumiho is: a horse legendary slot): the carousel horse with a horn and wings, 1.2x (materials.js 152 B)
-  // 152 D: kept to look at it (its MYTHIC entry, MYTHIC152 below, has no figure yet); late: after every look before it in VL
-  SPECIES.find(s => s.id === 'horse').legendary.push({ id: 'unicorn', name: $t('신수 유니콘'), mat: 'unicorn152', effect: 'goldglints', late: 152 });
 }
 // 128 전설 2번째 (?m89 시범): the meadow's second legendary set, a new slot after the first (tiers.md: only the parts the
 // animal has change, nothing added). Looks: materials.js 128; seeds / leaves / butterflies: figure.js FX (colours as parameters,
@@ -840,6 +837,9 @@ for (const [sp, L] of Object.entries(LEGEND141)) SPECIES.find(s => s.id === sp).
 // orange as the angle turns (materials.js 152). Appended last; late (153 A): visit.js VL puts it after the 150 wave looks, as LEGEND151
 export const LEGEND152 = { id: 'labradorite', name: $t('래브라도라이트 말'), mat: 'labradorite152', effect: 'twinkle', late: 152 };
 if (M89) SPECIES.find(s => s.id === 'horse').legendary.push(LEGEND152);
+// 157 A 말 전설 3번째 무지개 티타늄 (?m89 시범; materials.js 157 A): a new slot after the labradorite (kept as it is); late: last in VL
+export const LEGEND157 = { id: 'titanium', name: $t('무지개 티타늄 말'), mat: 'titanium157', effect: 'twinkle', late: 157 };
+if (M89) SPECIES.find(s => s.id === 'horse').legendary.push(LEGEND157);
 // 151 연못 전설 2번째 (?m89 시범; inbox 151): black pearl, cut emerald set in gold, gold leaf in resin, obsidian, neon glass, moonstone
 // (materials.js 151). Appended last; late: visit.js VL puts them after the 150 wave looks, so every link number made before stays
 export const LEGEND151 = {
@@ -848,14 +848,13 @@ export const LEGEND151 = {
   otter: { id: 'goldresin', name: $t('금박 레진 수달'), mat: 'resin151', effect: 'bubbles', late: 151 },
   swan: { id: 'obsidian', name: $t('흑요석 백조'), mat: 'obsidian151', effect: 'silversparks', late: 151 },
   flamingo: { id: 'neon', name: $t('네온 플라밍고'), mat: 'neon151', effect: 'twinkle', late: 151 },
-  capybara: { id: 'moonstone', name: $t('문스톤 카피바라'), mat: 'moonstone151', effect: 'moondust', late: 151 },
+  capybara: { id: 'moonstone', name: $t('문스톤 카피바라'), mat: 'moonstone151', effect: 'clearglints', late: 151 }, // 155 B2: six small glints, not the moondust's forty dots
 };
 if (M89) for (const [sp, L] of Object.entries(LEGEND151)) SPECIES.find(s => s.id === sp).legendary.push(L);
-// 152 C 신수 백록 (?m89 시범; inbox 152 C): the white deer of Halla, on the reindeer adult's own legend file (tools/bake-baengnok152.mjs:
-// slimmer, a big smooth antler, a silver cord and bell) in white porcelain, 1.15x, frost flowers at its feet (materials.js 152 C).
-// A reindeer legendary slot only to look at it for now (152 D: the call); appended last, so the variants before it stay as they are
-export const LEGEND152C = { id: 'baengnok', name: $t('신수 백록'), mat: 'baengnok152', late: 152 }; // 152 D: kept to look at it, as the unicorn
-if (M89) { MODELS.reindeer.legend = { adult: 'assets/models/pilot89_baengnok152_adult.glb' }; SPECIES.find(s => s.id === 'reindeer').legendary.push(LEGEND152C); }
+// 152 C 백록 (?m89 시범): the white deer of Halla, on the reindeer's own legend files (tools/bake-baengnok152.mjs: slimmer, a big
+// smooth antler, a silver cord and bell) in white porcelain, frost flowers at its feet (materials.js 152 C). 158: no longer a reindeer
+// legendary slot: the 신수 백록 (MYTHIC152 fig) wears it
+if (M89) MODELS.reindeer.legend = { adult: 'assets/models/pilot89_baengnok152_adult.glb', baby: 'assets/models/pilot89_baengnok152_baby.glb' }; // 156 C: the calf's own file too
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
 export const WAVE127 = 3; // 150 (user OK 11/18): all 11 public
@@ -917,9 +916,9 @@ export const ZONES = {
     { id: 'flowerhill', name: $t('꽃 언덕'), side: '+x', w: 8, line: $t('꽃이 가득한 언덕이에요. 동물들이 언덕 위에 올라와 쉬어요.'), line143: $t('꽃이 가득한 언덕이에요. 동물들이 꽃 냄새를 맡고 언덕을 굴러 내려와요.') }, // 145 B: line143 = the card under ?z143 (main.js zoneCard)
     { id: 'grove', name: $t('작은 숲'), side: '-x', w: 8, line: $t('나무가 모여 선 작은 숲이에요. 동물들이 나무 그늘에서 쉬어요.') },
     { id: 'fork', name: $t('개울 갈래와 징검다리'), side: '+z', w: 8, line: $t('넓어진 개울에 징검다리와 작은 물레방아가 있어요. 동물들이 물가에 와서 쉬어요.'), line143: $t('개울이 두 갈래로 갈라지고 가운데에 오두막과 큰 물레방아가 있어요. 동물들이 징검다리를 건너고 물을 마셔요.') },
-    { id: 'orchard', name: $t('과수원'), side: '+x', w: 8, line: $t('열매가 가끔 떨어지면 가까이 있던 동물이 와서 먹어요.') },
-    { id: 'lookout', name: $t('전망 언덕'), side: '-x', w: 8, line: $t('높은 언덕 꼭대기 정자와 망원경 옆에 동물들이 올라와 쉬어요.') },
-    { id: 'mushroom', name: $t('버섯 숲길'), side: '+z', w: 8, line: $t('숲길의 버섯이 밤이면 은은하게 빛나요. 동물들이 길가에서 쉬어요.') },
+    { id: 'orchard', name: $t('과수원'), side: '+x', w: 8, line: $t('열매가 가끔 떨어지면 가까이 있던 동물이 와서 먹어요.'), line143: $t('열매가 주렁주렁 달린 과수원이에요. 동물들이 나무를 툭툭 흔들어 떨어진 열매를 주워 먹어요.') },
+    { id: 'lookout', name: $t('전망 언덕'), side: '-x', w: 8, line: $t('높은 언덕 꼭대기 정자와 망원경 옆에 동물들이 올라와 쉬어요.'), line143: $t('높은 언덕 꼭대기에서 동물들이 엎드려 먼 곳을 바라봐요. 해 질 녘에는 여럿이 나란히 노을을 봐요.') },
+    { id: 'mushroom', name: $t('버섯 숲길'), side: '+z', w: 8, line: $t('숲길의 버섯이 밤이면 은은하게 빛나요. 동물들이 길가에서 쉬어요.'), line143: $t('비 오는 날엔 큰 버섯 갓 아래로 비를 피하고, 밤에는 빛나는 버섯 둘레에 모여 잠들어요. 버섯 집도 있어요.') },
   ],
   pond: [
     { id: 'reeds', name: $t('갈대밭'), side: '+x', w: 8, line: $t('키 큰 갈대 사이로 물길이 흘러요. 동물들이 물가에서 쉬어요.'), line143: $t('키 큰 갈대 숲 사이로 물길이 흘러요. 동물들이 갈대 사이로 헤엄쳐 숨고, 오리는 둥지에 앉아요.') }, // 143 B
@@ -930,15 +929,15 @@ export const ZONES = {
     { id: 'swamp', name: $t('물안개 늪'), side: '+z', w: 8, line: $t('물안개가 낮게 흐르는 늪이에요. 동물들이 그루터기 옆에서 쉬어요.') },
   ],
   snow: [
-    { id: 'conifer', name: $t('침엽수 숲'), side: '+x', w: 8, line: $t('눈 덮인 전나무 숲이에요. 동물들이 나무 밑에서 쉬어요.') },
-    { id: 'sled', name: $t('썰매 언덕'), side: '-x', w: 8, line: $t('펭귄이 언덕 위에 올라가 배로 미끄러져 내려와요.') },
-    { id: 'pillars', name: $t('얼음 기둥 들판'), side: '+z', w: 8, line: $t('파란 얼음 기둥 사이 낮은 얼음 둔덕 위에 흰올빼미가 올라가 앉아요.') },
+    { id: 'conifer', name: $t('침엽수 숲'), side: '+x', w: 8, line: $t('눈 덮인 전나무 숲이에요. 동물들이 나무 밑에서 쉬어요.'), line143: $t('눈 덮인 전나무를 동물들이 툭툭 밀면 가지에서 눈이 쏟아지고, 동물은 몸을 털어 눈을 털어내요. 통나무 더미와 작은 발자국도 있어요.') },
+    { id: 'sled', name: $t('썰매 언덕'), side: '-x', w: 8, line: $t('펭귄이 언덕 위에 올라가 배로 미끄러져 내려와요.'), line143: $t('꼭대기에 깃발이 선 높은 눈 언덕이에요. 펭귄이 배로 미끄러져 내려온 뒤 나무 계단으로 다시 올라가요. 아래엔 눈사람도 있어요.') },
+    { id: 'pillars', name: $t('얼음 기둥 들판'), side: '+z', w: 8, line: $t('파란 얼음 기둥 사이 낮은 얼음 둔덕 위에 흰올빼미가 올라가 앉아요.'), line143: $t('유리처럼 매끈한 얼음 판 앞에서 동물들이 킁킁 냄새를 맡다 입김에 화들짝 놀라 깡충 뛰고, 엎드려 가만히 들여다봐요.') },
     { id: 'hotspring', name: $t('김 나는 온천'), side: '+x', w: 8, line: $t('김이 나는 온천에 동물들이 들어가 졸아요.') },
-    { id: 'cave', name: $t('바위산 얼음 동굴'), side: '-x', w: 8, line: $t('바위산 아래 얼음 동굴 입구에서 동물들이 낮잠을 자요.') },
-    { id: 'iceplate', name: $t('얼음판'), side: '+z', w: 8, line: $t('꽁꽁 언 얼음판에서 펭귄이 배로 미끄럼을 타요.') },
+    { id: 'cave', name: $t('바위산 얼음 동굴'), side: '-x', w: 8, line: $t('바위산 아래 얼음 동굴 입구에서 동물들이 낮잠을 자요.'), line143: $t('바위산 아래 동굴 안쪽에서 푸른 얼음 결정이 빛나요. 동물들이 동굴 안에 들어가 몸을 웅크리고 잠들어요.') },
+    { id: 'iceplate', name: $t('얼음판'), side: '+z', w: 8, line: $t('꽁꽁 언 얼음판에서 펭귄이 배로 미끄럼을 타요.'), line143: $t('꽁꽁 언 얼음판 끝에 작은 낚시 오두막이 있어요. 동물들이 얼음 구멍 옆에 엎드려 기다리면 가끔 물고기가 튀어 올라요.') },
   ],
   dino: [ // 14-3
-    { id: 'fernwood', name: $t('고사리 숲'), side: '+x', w: 8, line: $t('키 큰 나무고사리 숲이에요. 동물들이 고사리 그늘에서 쉬어요.') },
+    { id: 'fernwood', name: $t('고사리 숲'), side: '+x', w: 8, line: $t('키 큰 나무고사리 숲이에요. 동물들이 고사리 그늘에서 쉬어요.'), line143: $t('커다란 나무고사리 아래 깊은 그늘에 고사리 잎 잠자리가 있어요. 공룡이 누우면 잎이 이불처럼 덮이고 머리만 쏙 나와요. 쓰러진 통나무와 알 둥지도 있어요.') },
     { id: 'cliffs', name: $t('익룡 바위'), side: '-x', w: 8, line: $t('바위 언덕 둘레의 돌기둥 위에 프테라노돈이 올라가 앉아요.') },
     { id: 'riverbed', name: $t('얕은 강'), side: '+z', w: 8, line: $t('정글 사이로 얕은 강이 흘러요. 동물들이 물가에 와서 쉬어요.') },
     { id: 'bigdig', name: $t('큰 발굴지'), side: '+x', w: 8, line: $t('커다란 공룡 뼈가 드러난 발굴지예요. 동물들이 와서 땅을 파요.') },
@@ -1223,12 +1222,44 @@ export const MYTHIC = [{
     [$t('불갈기 천리마가 들판에 머물기로 했어요.'), $t('아침이면 들판을 한 바퀴 달리고, 밤이면 들판을 환히 밝혀 줘요.')],
   ],
 }];
-// 152 D (?m89 시범): the next ones, after the firemane settled. Only the frame for now: no story, pages, tales or figure (their call is
-// a draft in docs/reports/152d.md for the user to choose); 발견 is one tap and nothing in the game lights their clues yet. check-eggs
-// pushes these to test the order
+// 152 D / 158 (?m89 시범): the next ones, after the firemane settled, each the firemane's steps in its own way (docs/reports/152d.md
+// 「부름 안」, inbox 158). 발견: its prints tapped (seen and got at once: their window opens from that spot, the snow has no altar).
+// clues (rules.js mythTick / strollBack / mythLuck / mythFind): [0] a walk of one of the habitat's friends; the unicorn's horn a pet
+// of a meadow friend (luck once a day, sure on the pity-th day: pd the day it rolled, pn the days rolled), its ring `need` of `ring`
+// props in the meadow; the white deer's frost `scenes` 놀이 장면 with a snow friend in them, its jade a tap on the glint by the snow
+// drift. 부르기 only at night (`dawn`: it comes at the next 06:00, else at once), a guest `guest` days, then it settles.
+// fig: the game figure it is (materials.js 152 B / 152 C looks; not a SPECIES variant, so no egg, no VL). cl: each clue's name,
+// hint and where its 「가 보기」 goes. say: its own lines. tales: one card, its settling
 export const MYTHIC152 = [
-  { id: 'unicorn', name: $t('유니콘'), habitat: 'meadow', clues: ['c1', 'c2', 'c3'] },
-  { id: 'baengnok', name: $t('백록'), habitat: 'snow', clues: ['c1', 'c2', 'c3'] },
+  { id: 'unicorn', name: $t('유니콘'), habitat: 'meadow', clues: ['feather', 'horn', 'ring'], guest: 6, dawn: true, luck: 0.25, pity: 3,
+    ring: ['flowers', 'tulips', 'flowermound', 'pinwheel', 'gazebo', 'carousel'], need: 3,
+    fig: { sp: 'horse', v: { id: 'unicorn', rarity: 'legendary', mat: 'unicorn152', effect: 'goldglints' } },
+    cl: [[$t('금빛 깃털'), $t('초원 친구를 산책 보내면 물어 와요'), 'walk'], [$t('진주 뿔 조각'), $t('초원 친구를 쓰다듬다 보면 반짝이며 떨어져요 (하루 한 번)'), ''],
+      [$t('꽃 고리'), $t('꽃밭·튤립·꽃 둔덕·바람개비·정자·회전 놀이기구를 초원에 3개 놓아요'), 'decor']],
+    say: { where: $t('새벽 꽃밭에 무언가 남아 있어요'), seen: $t('누군가 꽃을 밟지 않고 지나갔어요'), call: $t('오르골을 감는다'), night: $t('밤이 되면 오르골을 감을 수 있어요'),
+      called: $t('새벽에 꽃밭으로 찾아와요'), came: $t('유니콘이 꽃밭에 찾아왔어요'), happy: $t('유니콘이 기분 좋아해요') },
+    tales: { at: $t('꽃밭'), settle: [$t('오르골 소리를 따라 새벽 꽃밭에 왔어요.'), $t('엿새 동안 꽃밭을 함께 걸었어요.'), $t('이제 유니콘은 초원의 식구예요.')] },
+    pages: [
+      [$t('새벽 꽃밭에 진주빛 말굽 자국이 났어요.'), $t('자국 끝에 작은 무지개가 걸려 있었어요.'), $t('누군가 꽃을 하나도 밟지 않고 지나갔나 봐요.')],
+      [$t('산책 간 친구가 금빛 깃털 하나를 물고 왔어요.'), $t('햇빛에 비추니 무지갯빛이 돌아요. 첫 번째 단서예요.')],
+      [$t('쓰다듬던 친구 곁에 진주 뿔 조각이 반짝 떨어졌어요.'), $t('아주 작은데 따뜻해요. 두 번째 단서예요.')],
+      [$t('초원에 예쁜 것들이 동그랗게 모였어요.'), $t('꽃 고리를 좋아하는 손님이래요. 세 번째 단서예요.')],
+      [$t('유니콘이 초원에 머물기로 했어요.'), $t('날개를 접고 꽃밭 사이를 천천히 걸어요.')],
+    ] },
+  { id: 'baengnok', name: $t('백록'), habitat: 'snow', clues: ['bell', 'frost', 'jade'], guest: 6, scenes: 3,
+    fig: { sp: 'reindeer', v: { id: 'baengnok', rarity: 'legendary', mat: 'baengnok152' } },
+    cl: [[$t('은방울'), $t('설원 친구를 산책 보내면 주워 와요'), 'walk'], [$t('상고대 꽃'), $t('설원 친구가 나오는 놀이 장면을 3개 모아요 (본 것도 세요)'), 'scenes'],
+      [$t('옥빛 뿔 조각'), $t('눈 더미 곁에서 옥빛이 반짝이는 곳을 눌러 봐요'), '']],
+    say: { where: $t('새로 내린 눈 위에 무언가 남아 있어요'), seen: $t('흰 발자국이 숲 쪽으로 사라졌어요'), call: $t('방울을 흔든다'), night: $t('밤이 되면 방울을 흔들 수 있어요'),
+      called: $t('방울 소리를 따라 곧 찾아와요'), came: $t('백록이 설원에 찾아왔어요'), happy: $t('백록이 기분 좋아해요') },
+    tales: { at: $t('설원'), settle: [$t('방울 소리를 듣고 눈 덮인 밤길을 걸어왔어요.'), $t('옛이야기에서는 한라산 꼭대기 못에 흰 사슴이 물을 마시러 내려왔대요.'), $t('이제 백록은 설원의 식구예요.')] },
+    pages: [
+      [$t('새로 내린 눈 위에 흰 사슴 발자국이 줄지어 났어요.'), $t('발자국은 숲 쪽으로 가다 사라졌어요.'), $t('추운 곳을 잘 아는 누군가가 지나간 것 같아요.')],
+      [$t('산책 간 친구가 은방울 하나를 주워 왔어요.'), $t('흔들면 맑은 소리가 나요. 첫 번째 단서예요.')],
+      [$t('설원 친구들이 노는 모습이 사진첩에 쌓였어요.'), $t('그 위에 상고대 꽃이 피었어요. 두 번째 단서예요.')],
+      [$t('눈 더미 곁에서 옥빛 뿔 조각을 찾았어요.'), $t('차갑고 맑아요. 세 번째 단서예요.')],
+      [$t('백록이 설원에 머물기로 했어요.'), $t('밤이면 뿔 끝이 은은하게 빛나요.')],
+    ] },
 ];
 if (M89) MYTHIC.push(...MYTHIC152);
 // inbox 41 D 첫날 할 일: shown on the first `days` days of a game (dayOf, from S.since) as a small list under the top bar. Each

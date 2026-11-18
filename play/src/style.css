@@ -207,6 +207,7 @@ body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visi
 .nbtns button{flex:1;min-height:46px;border-radius:999px;font:inherit;font-weight:700;font-size:calc(15px*var(--fs));cursor:pointer}
 .nbtns .go{border:0;background:#e8805f;color:#fff}
 .nbtns .sb{flex:.8;border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b}
+.nbtns.callrow{flex-wrap:wrap}.nbtns.callrow .go{flex:1 0 100%;order:-1} /* 158: long call text gets its own row */
 /* bubble over an animal (fixed: placed by screen coordinates) */
 .bubble{position:fixed;z-index:1300;transform:translate(-50%,calc(-100% - 10px));background:#fffaf0;color:#4a3626;border-radius:14px;padding:8px 12px;font-size:calc(13px*var(--fs));line-height:1.4;box-shadow:0 4px 14px rgba(60,35,15,.25);text-align:center;width:max-content;max-width:240px}
 .bubble::after{content:'';position:absolute;left:clamp(14px,calc(50% + var(--tx,0px)),calc(100% - 14px));bottom:-6px;width:12px;height:12px;background:#fffaf0;transform:translateX(-50%) rotate(45deg)}

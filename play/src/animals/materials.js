@@ -2155,17 +2155,40 @@ const LAB152 = `vec3 vo_ = normalize(vdir * normalMatrix), q_ = p - vo_ * 0.045 
 NIGHT_LOOK.labradorite152 = 'totalEmissiveRadiance = totalEmissiveRadiance * (1.0 + uNight * 0.3) + uNight * vec3(0.12, 0.3, 0.45) * 0.25 * pow(1.0 - nv, 2.0);';
 LOOKS.labradorite152 = () => { const c = acc => L127(phys('#1a1f24', { roughness: 0.22, clearcoat: 0.4, clearcoatRoughness: 0.1 }), 'labradorite152', LAB152, { uAcc: acc }, { studio: 0.25 });
   return { body: c(0), accent: c(1), hoof: shine('#dfe3e8') }; };
+// ---- 157 A 무지개 티타늄 말 (?m89 시범; data.js LEGEND157): the horse's third legendary. Anodised titanium (a coloured-metal keyring):
+// a mirror metal whose tint (F0) runs smoothly round blue, purple, gold and teal. The phase t_ = how far a smoothed "whole body" normal
+// (mo_: from the body centre, so the colour sweeps over the figure as it turns instead of ringing each leg) and the true normal face away
+// from the eye, plus a drift tail to head (side on: teal, blue, purple, gold at the head). Smooth weights round the 4 keys, no noise: no
+// plates, blotches or lines. A little emission in the same tint, so the reflection's dark bands keep their colour. uAcc 1 (mane, tail):
+// one band deeper, navy to violet only. Hooves dark gunmetal. The chrome horse is the same metal untinted (silver)
+const TI157 = `vec3 mo_ = normalize(normalMatrix * (normalize((p - vec3(0.0, 0.55, 0.0)) * vec3(1.0, 1.5, 2.5)) + on * 0.5));
+  float t_ = -0.08 + 0.3 * (1.0 - dot(mo_, vdir)) + 0.22 * (1.0 - nv) + 0.9 * p.x + 0.1 * p.y;
+  vec4 w_ = max(0.5 + 0.5 * cos(6.2832 * (t_ - vec4(0.0, 0.25, 0.5, 0.75))), 0.0); w_ *= w_; w_ *= w_; w_ /= dot(w_, vec4(1.0));
+  vec3 col = vec3(0.0, 0.45, 1.0) * w_.x + vec3(0.42, 0.08, 0.9) * w_.y + vec3(0.88, 0.4, 0.015) * w_.z + vec3(0.0, 0.62, 0.5) * w_.w;
+  col = mix(col, mix(vec3(0.02, 0.035, 0.32), vec3(0.17, 0.04, 0.42), 0.5 + 0.5 * cos(6.2832 * t_)), uAcc);
+  diffuseColor.rgb = col; roughnessFactor = mix(0.22, 0.3, uAcc);
+  totalEmissiveRadiance += col * 0.06;`;
+NIGHT_LOOK.titanium157 = 'totalEmissiveRadiance += uNight * col * (0.04 + 0.3 * pow(1.0 - nv, 2.0));'; // by night a faint rim in its own tint keeps the outline
+LOOKS.titanium157 = () => { const c = acc => look(phys('#ffffff', { roughness: 0.22, metalness: 1 }), 'titanium157', TI157, { uAcc: acc }, { studio: 0.6 });
+  return { body: c(0), accent: c(1), hoof: shine('#6a6e76', 0.26) }; };
+// the set is made once and kept (as every look's); dispose157 frees it (no caller yet: nothing tears the looks down)
+export const dispose157 = () => { for (const [k, s] of cache) if (k.startsWith('titanium157{')) { for (const m of new Set(Object.values(s))) m.dispose(); cache.delete(k); } };
 
 // ---- 151 연못 전설 2번째 (?m89 시범; data.js LEGEND151): one more legendary for each pond species, in the 141 language (light: lit
 // from inside, gem, polished metal, sparkle; no painted pattern, no clear crystal body). Colour and material apart from each one's first
 // (무지개 진주, 별자리, 달빛 물결, 눈꽃 수정, 로즈골드, 유자 온천). uHab 1 (the habitat): the fine detail drops out.
-// 흑진주 오리: a black pearl: dark grey-black nacre, a soft deep lustre (a broad highlight under a sharp one), and over it the peacock
-// overtone: green, teal and aubergine sliding with the angle, strongest toward the outline. The beak polished silver
-const BPEARL151 = `vec3 o_ = normalize(normal * normalMatrix); float w_ = fbm3(p * 2.2 + 5.0);
-  float t_ = 0.5 + 0.5 * sin(((1.0 - nv) * 1.5 + dot(o_, vec3(0.5, 0.35, -0.4)) * 0.8 + w_ * 0.9 - uTime * 0.03) * 3.1416);
-  vec3 pk151 = mix(mix(vec3(0.06, 0.42, 0.22), vec3(0.04, 0.28, 0.45), smoothstep(0.0, 0.45, t_)), vec3(0.36, 0.08, 0.42), smoothstep(0.5, 0.95, t_));
-  diffuseColor.rgb = vec3(0.012, 0.013, 0.016) + pk151 * 0.02; roughnessFactor = 0.3; // the nacre's soft lustre; the clearcoat's sharp one on top
-  totalEmissiveRadiance += pk151 * (0.04 + 0.5 * pow(1.0 - nv, 1.5)) * (0.8 + 0.4 * w_);`;
+// 흑진주 오리 (156 A): a black pearl, not an oil film: a deep near-black middle; the peacock overtone (green, peacock blue, aubergine,
+// silver) only towards the outline and the edges of each round mass; soft satin highlights (a soft-edged window up-left of the view, a weak
+// one low right, no studio mirror, low clearcoat) with a thin overtone fringe; a very fine nacre shimmer that fades with distance. The beak polished silver
+const BPEARL151 = `float fz_ = 1.0 - smoothstep(0.3, 1.0, length(fwidth(p)) * 60.0), gn_ = vn3(p * 90.0) - 0.5;
+  float w_ = fbm3(p * 1.3 + 5.0), e_ = 1.0 - nv, ov_ = smoothstep(0.2, 0.68, e_) * (1.0 - 0.25 * smoothstep(0.85, 1.0, e_));
+  float lu_ = max(dot(normal, normalize(vdir + vec3(-0.55, 0.8, 0.0))), 0.0), l2_ = max(dot(normal, normalize(vdir + vec3(0.6, -0.35, 0.0))), 0.0);
+  float f_ = fract(0.35 * dot(normal.xy, vec2(-0.6, 0.8)) + 0.7 * w_ + 0.15 * p.y - uTime * 0.02) * 4.0;
+  vec3 G_ = vec3(0.04, 0.5, 0.28), B_ = vec3(0.02, 0.32, 0.5), A_ = vec3(0.3, 0.06, 0.26), S_ = vec3(0.55, 0.58, 0.64);
+  vec3 pk151 = f_ < 1.0 ? mix(G_, B_, f_) : f_ < 2.0 ? mix(B_, A_, f_ - 1.0) : f_ < 3.0 ? mix(A_, S_, f_ - 2.0) : mix(S_, G_, f_ - 3.0);
+  float co_ = smoothstep(0.88, 0.995, lu_), ha_ = pow(lu_, 6.0), sat_ = co_ * co_ * 0.7 + ha_ * 0.05 + smoothstep(0.95, 0.997, l2_) * 0.15;
+  diffuseColor.rgb = mix(vec3(0.01, 0.011, 0.013), pk151 * 0.05, ov_); roughnessFactor = 0.35;
+  totalEmissiveRadiance += pk151 * (ov_ * 0.5 + ha_ * 0.1 + smoothstep(0.82, 0.9, lu_) * (1.0 - smoothstep(0.9, 0.96, lu_)) * 0.22) * (0.94 + 0.12 * gn_ * fz_) + vec3(0.74, 0.75, 0.78) * sat_;`;
 // 에메랄드 등껍질 거북: each shell plate a cut emerald (step cut: a flat table, two rings of bevels round it, each facet flat, lit its own
 // way from inside, deep to bright green, flashing white when it meets the light), set in gold: gold seams between the plates. The plates
 // are the model's (a top one, a ring of six, and twelve round the edge, where the shell dome has none): q is the shell's ellipsoid,
@@ -2199,11 +2222,23 @@ const RESIN151 = `vec3 v151 = normalize(vViewPosition), fc151 = vec3(0.0); float
       float bub = step(0.8, bc.z) * (1.0 - smoothstep(br - bw, br + bw, bc.x)) * (1.0 - fa151), bring = bub * smoothstep(br * 0.5, br, bc.x); // a bubble: a thin bright ring, a clear middle
       gl_FragColor.rgb += ((fc151 - see * fa151) + vec3(1.0, 0.97, 0.9) * (bring * 0.45 + bub * 0.05)) * (1.0 - fr);
       gl_FragColor.rgb += vec3(1.0, 0.6, 0.2) * (0.06 + 0.14 * pow(nv, 2.0)) * (1.0 - fr) * (1.0 - fa151);`; // 155 B1: deeper honey by day
-// 흑요석 백조: obsidian, volcanic glass polished to a mirror: black, every studio light a crisp reflection, smoky where it is thin (toward
-// the outline). The wing tips silver (uWing 1: the back of the wing, a clean edge), the beak red coral, smooth and glossy
-const OBSIDIAN151 = AA127 + `diffuseColor.rgb = vec3(0.006, 0.006, 0.007); roughnessFactor = 0.05;
-  totalEmissiveRadiance += vec3(0.05, 0.048, 0.052) * pow(1.0 - nv, 2.5);
-  float tk_ = uWing * AA(-p.x, 0.14 + 0.03 * (p.y - 0.43));
+// 흑요석 백조 (155 B2): rainbow obsidian: a black mirror with violet, blue, green and gold bands rising round inside it (a little deeper than the
+// surface, seen through a window that moves with the view), a few shallow shell-like chips (rippled scoops, a faint edge; the tilt eases off at the edge and the ripple where it would
+// shimmer; the wing material skips the chips). Wing tips silver (uWing), the beak red
+const OBSIDIAN151 = AA127 + `vec3 i_ = floor(p * 6.5), f_ = fract(p * 6.5), d_ = vec3(9.0); float id_ = 0.0, e2_ = 9.0;
+  if (uWing < 0.5) for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec3 o = vec3(x, y, z), r = o + h33(i_ + o) * 0.85 + 0.075 - f_; float rr = dot(r, r); if (rr < dot(d_, d_)) { e2_ = dot(d_, d_); d_ = r; id_ = h31(i_ + o + 0.5); } else e2_ = min(e2_, rr); }
+  float cf_ = step(0.7, id_) * (1.0 - uWing), ce_ = cf_ * AA(sqrt(e2_) - length(d_), 0.06); vec3 dt_ = d_ - on * dot(d_, on); float rg_ = cf_ * (1.0 - AA(sqrt(e2_) - length(d_), 0.05));
+  normal = normalize(normal + normalMatrix * dt_ * ce_ * (1.2 + 0.6 * sin(length(d_) * 40.0) * (1.0 - smoothstep(0.5, 1.5, fwidth(length(d_)) * 40.0)))); nonPerturbedNormal = normal; nv = clamp(dot(normal, vdir), 0.0, 1.0);
+  vec3 vo_ = normalize(vdir * normalMatrix), q_ = p - vo_ * 0.06 + dt_ * cf_ * 0.06;
+  float r_ = length((q_ - vec3(-0.05, 0.42, 0.0)) / vec3(0.55, 0.4, 0.3)) + 0.18 * fbm3(q_ * 2.5 + 3.0);
+  vec3 h_ = normalize(normalize(vdir + normalize(vec3(-0.3, 0.45, 0.85))) * normalMatrix);
+  float sh_ = smoothstep(0.35, 0.9, dot(h_, normalize(on + (vec3(vn3(q_ * 2.0 + 1.0), vn3(q_ * 2.0 + 7.0), vn3(q_ * 2.0 + 13.0)) - 0.5) * 1.6)));
+  float bd_ = smoothstep(0.3, 0.85, 0.5 + 0.5 * cos(r_ * 6.2832 * 3.0));
+  float g_ = fract(r_ * 1.5 + dot(vo_, vec3(0.3, 0.15, 0.2))) * 4.0; vec3 V_ = vec3(0.5, 0.15, 1.0), U_ = vec3(0.05, 0.35, 1.0), E_ = vec3(0.1, 0.85, 0.4), Y_ = vec3(1.0, 0.7, 0.15);
+  vec3 rb151 = g_ < 1.0 ? mix(V_, U_, g_) : g_ < 2.0 ? mix(U_, E_, g_ - 1.0) : g_ < 3.0 ? mix(E_, Y_, g_ - 2.0) : mix(Y_, V_, g_ - 3.0);
+  diffuseColor.rgb = vec3(0.006, 0.006, 0.007); roughnessFactor = 0.05;
+  totalEmissiveRadiance += vec3(0.05, 0.048, 0.052) * pow(1.0 - nv, 2.5) + rb151 * (1.0 - exp(-1.8 * bd_ * sh_)) * 0.55 + vec3(0.75, 0.77, 0.82) * rg_ * (0.05 + 0.15 * sh_);
+  float tk_ = uWing * AA(-p.x, 0.05 + 0.03 * (p.y - 0.43));
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.93, 0.95), tk_); roughnessFactor = mix(roughnessFactor, 0.13, tk_); metalnessFactor = mix(metalnessFactor, 1.0, tk_); lookStudio = mix(lookStudio, 0.85, tk_);
   totalEmissiveRadiance *= 1.0 - tk_;`;
 // 네온 플라밍고: deep indigo-violet glass (opaque, glossy, a faint violet depth inside) and a pink neon tube: one runs along the midline (the
@@ -2215,25 +2250,30 @@ const NEON151 = `float z_ = abs(p.z), tw = 0.022, tb = fwidth(p.z) + 1e-4; // 15
   totalEmissiveRadiance += vec3(0.02, 0.008, 0.08) * (0.3 + 0.7 * nv) * (1.0 - tube151)
     + vec3(1.0, 0.16, 0.55) * (tube151 * 2.4 + rim151 * 1.3 + spill151 * 0.45) + vec3(1.0, 0.72, 0.9) * core * 1.1;
   diffuseColor.rgb *= 1.0 - tube151;`;
-// 문스톤 카피바라: moonstone: milky stone, a little translucent (soft light from inside, cooler toward the outline), and the blue moonlight
-// floating under the surface (adularescence): a broad soft glow where a light from the front meets the stone's inner layers, so it glides
-// over the body as it turns, billowing. uAcc 1 (the muzzle, the ears) a shade greyer. The hoof bands silver
-const MOON151 = `vec3 h_ = normalize(normalize(vdir + normalize(vec3(-0.2, 0.55, 0.8))) * normalMatrix), ax_ = on;
-  float bl_ = fbm3(p * 2.4 + h_ * 1.6 + vec3(0.0, uTime * 0.04, 0.0)), ad151 = pow(max(dot(h_, ax_), 0.0), 6.0) * smoothstep(0.2, 0.6, bl_);
-  vec3 milk = mix(vec3(0.8, 0.77, 0.72), vec3(0.94, 0.91, 0.86), smoothstep(0.3, 0.75, fbm3(p * 3.4 + 2.0))) * mix(1.0, 0.85, uAcc) * mix(0.75, 1.0, nv); // thin toward the outline: greyer
-  diffuseColor.rgb = milk * 0.55 * (1.0 - 0.8 * ad151); roughnessFactor = 0.16;
-  totalEmissiveRadiance += milk * 0.18 * (0.4 + 0.6 * nv) * (1.0 - ad151) + vec3(0.03, 0.2, 0.8) * ad151 * 1.25;`;
+// 문스톤 카피바라 (156 B): moonstone: warm milky stone, a little translucent (soft light from inside, its edges lit through, a cool pale rim),
+// and the blue adularescence as one broad soft band of light (155 B2's fbm billows read as mould): it runs along the body (x) over the
+// back and upper flanks, where the body's cross-section faces a light from the front-above (so it glides across as the body turns), its
+// edges a wide gaussian, drifting slowly (+-0.25 rad, ~52 s); the legs keep out of it. A soft milky glow by night, the band brighter.
+// uAcc 1 (the muzzle, the ears) a shade greyer. The hoof bands the same milky stone (silver read as plastic legs)
+const MOON151 = `vec3 h_ = normalize(normalize(vdir + normalize(vec3(-0.2, 0.55, 0.8))) * normalMatrix);
+  float a_ = 0.25 * sin(uTime * 0.12), ly_ = length(on.yz); vec2 c_ = normalize(h_.yz + vec2(0.05, 0.0));
+  c_ = vec2(c_.x * cos(a_) - c_.y * sin(a_), c_.x * sin(a_) + c_.y * cos(a_));
+  float ag_ = acos(clamp(dot(on.yz / max(ly_, 1e-3), c_), -1.0, 1.0)) / 0.66, ad151 = smoothstep(0.0, 0.9, exp(-ag_ * ag_)) * smoothstep(0.2, 0.75, ly_) * smoothstep(0.32, 0.5, p.y);
+  vec3 milk = mix(vec3(0.96, 0.87, 0.76), vec3(1.0, 0.95, 0.88), smoothstep(-0.6, 0.8, on.y)) * mix(1.0, 0.94, uAcc);
+  float th_ = 1.0 - nv, rm_ = smoothstep(0.35, 1.0, th_); vec3 mk151 = milk * (0.5 * (0.8 + 0.2 * nv) + 0.12 * th_ * th_) + vec3(0.9, 0.93, 1.0) * 0.16 * rm_ * rm_, bl151 = vec3(0.02, 0.12, 1.0) * 1.6;
+  diffuseColor.rgb = milk * mix(0.27, 0.17, rm_) * (1.0 - 0.9 * ad151); roughnessFactor = mix(0.2, 0.4, ad151);
+  totalEmissiveRadiance += mix(mk151, bl151, ad151);`;
 Object.assign(NIGHT_LOOK, {
   blackpearl151: 'totalEmissiveRadiance = totalEmissiveRadiance * (1.0 + uNight * 0.4) + uNight * pk151 * 0.15 * pow(1.0 - nv, 2.0);',
   emerald151: 1.0,
   obsidian151: 'totalEmissiveRadiance += uNight * vec3(0.3, 0.32, 0.4) * 0.25 * pow(1.0 - nv, 3.0) * (1.0 - tk_);', // a faint cool edge: the black keeps its outline
   neon151: 'totalEmissiveRadiance += uNight * (vec3(1.0, 0.16, 0.55) * (tube151 * 1.8 + rim151 * 1.2 + spill151 * 0.5) + vec3(0.1, 0.04, 0.3) * 0.3);',
-  moonstone151: 'totalEmissiveRadiance = totalEmissiveRadiance * (1.0 + uNight * 0.6) + uNight * vec3(0.3, 0.5, 1.0) * ad151 * 0.8;',
+  moonstone151: 'totalEmissiveRadiance += uNight * (bl151 * ad151 * 1.0 + mk151 * (1.0 - ad151) * 0.35);', // a soft milky glow by night, the band of blue brighter
 });
 NIGHT_CLEAR.resin151 = 'gl_FragColor.rgb += uNight * (vec3(1.0, 0.68, 0.28) * (0.12 + 0.3 * pow(nv, 2.0)) * (1.0 - fr) * (1.0 - fa151) + fc151 * 0.35);';
 Object.assign(LOOKS, {
   blackpearl151: () => { const s = shine('#dfe3e8');
-    return { body: look(phys('#1c1d22', { roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.06, iridescence: 0.6, iridescenceIOR: 1.6, iridescenceThicknessRange: [320, 560] }), 'blackpearl151', BPEARL151, {}, { studio: 0.45 }), accent: s, hoof: s }; },
+    return { body: look(phys('#1c1d22', { roughness: 0.35, clearcoat: 0.35, clearcoatRoughness: 0.3 }), 'blackpearl151', BPEARL151), accent: s, hoof: s }; },
   emerald151: () => { const g = shine('#f2dca0', 0.2);
     return { body: g, hoof: g, accent: hab89(look(phys('#0a5a2c', { roughness: 0.04, specularIntensity: 0.45 }), 'emerald151', EMERALD151, {}, { studio: 0.25 })), horn: shine('#ffc75a') }; },
   resin151: () => { const r = acc => fn141(C141({ key: 'resin151', tint: '#f7b858', absorb: 1.9, inner: '#9a5418', dark: 0.4, rough: 0.04, coat: 1, neutral: 0.8, rimK: 0.45, nrm: '/* 151: normalMatrix (the flakes) */', post: RESIN151, uniforms: { uAcc: acc } }));
@@ -2242,33 +2282,92 @@ Object.assign(LOOKS, {
     return { body: b, accent: b, hoof: b, nostril: b, wing: o(1), beak: phys('#d8402e', { roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.06 }) }; },
   neon151: () => { const n = look(phys('#120a2a', { roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.02 }), 'neon151', NEON151, {}, { studio: 0.4 });
     return { body: n, accent: n, hoof: n, beak: n, nostril: phys('#07040f', { roughness: 0.06, clearcoat: 1 }) }; },
-  moonstone151: () => { const m = acc => look(phys('#c8ccd4', { roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0.4, sheenRoughness: 0.4, sheenColor: new THREE.Color('#f0f2f6') }), 'moonstone151', MOON151, { uAcc: acc }, { studio: 0.3 });
-    return { body: m(0), accent: m(1), beak: phys('#3c4048', { roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.04 }), hoof: shine('#dfe3e8') }; },
+  moonstone151: () => { const m = acc => look(phys('#c8ccd4', { roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.08, sheen: 0.4, sheenRoughness: 0.4, sheenColor: new THREE.Color('#fff2e4') }), 'moonstone151', MOON151, { uAcc: acc }, { studio: 0.3 });
+    const b = m(0); return { body: b, accent: m(1), beak: phys('#3c4048', { roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.04 }), hoof: b }; },
 });
-// ---- 152 C 신수 백록 (?m89 시범; data.js 152 C): the reindeer adult with its own legend file (tools/bake-baengnok152.mjs: slimmer
-// body and legs, a big smooth antler, a silver cord and bell; head and ears the reindeer's, so its eyes and nose stay). Snow-white
-// porcelain (clearcoat gloss) with a faint cool light from within, a little more at the edges; the antler the same porcelain, each
-// tip turning a white jade that glows softly (more by night); cord, bell and hooves silver. 1.15x the reindeer (a wrapper, as 125-D).
-// Frost flowers bloom on the ground under its feet and fade (world-placed: a walk leaves a short trail)
+// ---- 152 C 신수 백록, 155 C 다시 (?m89 시범; data.js 152 C): the reindeer adult with its own legend file (tools/bake-baengnok152.mjs:
+// slimmer body and legs, a big smooth antler, a silver cord and bell, 155 C a silver bridle with jade beads and a small light bead on
+// each antler tip; head and ears the reindeer's, so its eyes and nose stay). 155 C (inbox: "흰 순록 색만 바꾼 것처럼 보임"):
+// body white porcelain (clearcoat gloss) with two cloud lines of raised silver inlay on each flank (as the kintsugi seams: metal,
+// not paint) and a very pale celadon toward the feet; the antler white jade turning blue-green jade upward, lit from inside by day,
+// its tips glowing; bridle, cord, bell and hooves silver. 1.3x the reindeer (a wrapper, as 125-D). Frost flowers bloom on the ground
+// under its feet and fade (world-placed: a walk leaves a short trail); by night a soft moonlight round the body
 const P152 = () => pale116(phys('#f7f8f7', { roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.14 }));
-const BODY152 = 'totalEmissiveRadiance += vec3(0.86, 0.93, 1.0) * (0.035 + 0.12 * pow(1.0 - nv, 2.0));';
-NIGHT_LOOK.baengnok152 = NIGHT_LOOK.baengnok152horn = 'totalEmissiveRadiance += uNight * vec3(0.86, 0.93, 1.0) * (0.24 + 0.32 * pow(1.0 - nv, 2.0));'; // by night a soft moon-white from within
-// the antler's _thickness = 2 x its tip number + how near that tip (0..1): vTip
-const HORN152C = BODY152 + `float tp = smoothstep(0.15, 0.95, vTip);
-  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.8, 0.95, 0.88), tp * 0.8);
-  totalEmissiveRadiance += vec3(0.62, 0.95, 0.8) * pow(tp, 1.5) * (0.22 + 0.9 * uNight);`;
+// the cloud lines, drawn in the side view (model units; both flanks): a turtle walking arcs [length, turn] from p, each point
+// [x, y, half width]. A cloud: a curl of n quarter arcs (r0 x g^k, counter-clockwise) ending heading hf, then its tail
+const W155C = 0.017, ramp155C = (t, a, b, e) => W155C * (t < a ? 0.55 + 0.45 * t / a : 1 - e * Math.max(0, t - b) / (1 - b));
+const curl155C = (n, r0, g, dir) => Array.from({ length: n }, (_, k) => [r0 * g ** k * Math.PI / 2, dir * Math.PI / 2]);
+const cloud155C = (p, n, r0, g, dir, hf, tail, w) => {
+  const arcs = [...curl155C(n, r0, g, dir), ...tail], tot = arcs.reduce((s, [l]) => s + l, 0), out = [[...p, w(0)]]; let h = hf - dir * n * Math.PI / 2, L = 0;
+  for (const [len, turn] of arcs) { const k = Math.max(1, Math.ceil(Math.max(Math.abs(turn) / 0.28, len / 0.035)));
+    for (let i = 0; i < k; i++) { h += turn / k / 2; p = [p[0] + Math.cos(h) * len / k, p[1] + Math.sin(h) * len / k]; h += turn / k / 2; L += len / k; out.push([...p, w(L / tot)]); } }
+  return out; };
+const LINES155C = [
+  // haunch: a curl, its tail forward along the lower flank, a small hook up at its end
+  cloud155C([-0.47, 1.33], 5, 0.026, 1.5, 1, 0, [[0.2, 0.15], [0.25, -0.35], [0.2, 0.25], ...curl155C(3, 0.05, 0.7, 1)], t => ramp155C(t, 0.12, 0.9, 0)),
+  // shoulder: a smaller curl, its tail back along the upper flank, thinning to its end
+  cloud155C([0.32, 1.31], 4, 0.026, 1.55, 1, Math.PI, [[0.2, 0.12], [0.25, -0.22], [0.12, -0.1]], t => ramp155C(t, 0.15, 0.6, 0.75)),
+];
+// GLSL: the nearest line (ld: distance past its edge, lo: offset from its middle, lw: its half width there), each run of 8 segments
+// only inside its own box (0.07 round it: past that nothing is drawn). q = the side view in model units (the reindeer adult's _op:
+// x / 2.0676 about 0.2615); fq, side before them, so all of it is skipped off the flanks
+const f155C = v => v.toFixed(4);
+const Q155C = '#define SEG155C(ax, ay, aw, bx, by, bw) { vec2 a_ = vec2(ax, ay), ab_ = vec2(bx, by) - a_; float h_ = clamp(dot(q - a_, ab_) / dot(ab_, ab_), 0.0, 1.0); vec2 o_ = q - a_ - ab_ * h_; float w_ = mix(aw, bw, h_), d_ = length(o_) - w_; if (d_ < ld) { ld = d_; lo = o_; lw = w_; } }\n'
+  + 'vec2 q = vec2(p.x * 2.0676 + 0.2615, p.y * 2.0676), lo = vec2(0.0); float ld = 9.0, lw = 0.01;\n'
+  + 'float fq = max(length(fwidth(q)), 1e-4), side = smoothstep(0.2, 0.45, abs(on.z)) * (1.0 - smoothstep(0.035, 0.07, fq));\n';
+const SEG155C = 'if (side > 0.0) {\n' + LINES155C.flatMap(L => Array.from({ length: Math.ceil((L.length - 1) / 8) }, (_, j) => L.slice(j * 8, j * 8 + 9))).map(C => {
+  const xs = C.map(v => v[0]), ys = C.map(v => v[1]), m = 0.07;
+  return `if (q.x > ${f155C(Math.min(...xs) - m)} && q.x < ${f155C(Math.max(...xs) + m)} && q.y > ${f155C(Math.min(...ys) - m)} && q.y < ${f155C(Math.max(...ys) + m)}) {\n`
+    + C.slice(1).map((b, i) => `SEG155C(${[...C[i], ...b].map(f155C).join(', ')})`).join('\n') + '\n}\n'; }).join('') + '}\n';
+// k: the silver (a pixel-wide edge; at least 0.6 px wide far off, gone past a size where it would only shimmer; flanks only, not where
+// the side view runs along the surface); gr: a fine dark groove just outside it (white on white: the wire reads by its seat).
+// Close up its normal leans out across it (a raised round wire catching the light on its sides). By night it shines moon-white.
+// The calf (seg ''): no lines (its rounder body is not the side view they were drawn on), porcelain and celadon only
+const body155C = seg => Q155C + seg + `float we = max(lw, 0.6 * fq), dW = ld - (we - lw);
+  float k =(1.0 - smoothstep(-0.5 * fq, 0.5 * fq, dW)) * side, gr = (1.0 - smoothstep(0.0, 0.006 + fq, dW)) * (1.0 - k) * side;
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.7, 0.88, 0.8), 0.85 * (1.0 - smoothstep(0.1, 0.95, q.y))) * (1.0 - 0.3 * gr); // 156 C: white at the belly, a pale celadon growing down the legs
+  totalEmissiveRadiance += vec3(0.86, 0.93, 1.0) * (0.035 + 0.12 * pow(1.0 - nv, 2.0));
+  float u = clamp(length(lo) / max(lw, 1e-4), 0.0, 1.0), tilt = k * (1.0 - smoothstep(0.4, 0.9, fq / lw));
+  vec3 o3 = vec3(lo / max(length(lo), 1e-5), 0.0); o3 -= on * dot(on, o3); normal = normalize(normal + normalMatrix * o3 * u * 0.9 * tilt);
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.92, 0.95), k); metalnessFactor = k; roughnessFactor = mix(roughnessFactor, 0.18, k); lookStudio = mix(lookStudio, 0.9, k);
+  totalEmissiveRadiance = totalEmissiveRadiance * (1.0 - k) + vec3(0.85, 0.93, 1.0) * k * uNight * 0.9;`;
+NIGHT_LOOK.baengnok152 = NIGHT_LOOK.baengnok152calf = 'totalEmissiveRadiance += uNight * vec3(0.86, 0.93, 1.0) * (0.24 + 0.32 * pow(1.0 - nv, 2.0)) * (1.0 - k);'; // by night a soft moon-white from within
+// the antler: white jade at its root turning blue-green jade toward the tips (drifts in it), lit from inside (most where we look in,
+// the drifts again deeper inside sliding as it turns, a soft light round its outline); each tip glowing (_thickness = 2 x its tip
+// number + how near that tip: vTip), much more by night
+const HORN155C = `float hy = smoothstep(0.88, 1.3, p.y), n = fbm3(p * 9.0 + 4.0), m = fbm3(p * 16.0 - 2.0 + vec3(0.0, uTime * 0.02, 0.0));
+  vec3 col = mix(vec3(0.84, 0.94, 0.9), vec3(0.05, 0.43, 0.46), clamp(hy + 0.3 * (n - 0.5), 0.0, 1.0)); // 156 C: a step deeper blue-green jade (read as jade from the house)
+  col = mix(col, vec3(0.97, 1.0, 0.98), smoothstep(0.6, 0.85, m) * 0.2);
+  diffuseColor.rgb = col * 0.5; roughnessFactor = 0.1;
+  totalEmissiveRadiance += col * (0.2 + 0.35 * pow(nv, 1.5));
+  vec3 vo = normalize(vdir * normalMatrix); float n2 = fbm3((p + vo * 0.05) * 14.0 + 7.0);
+  totalEmissiveRadiance += col * smoothstep(0.45, 0.75, n2) * 0.4 * nv + mix(vec3(0.75, 1.0, 0.9), vec3(0.3, 0.85, 0.78), hy) * pow(1.0 - nv, 2.5) * 0.35;\n`;
+const TIP155C = `float tp = smoothstep(0.35, 0.95, vTip); totalEmissiveRadiance += vec3(0.5, 0.95, 0.88) * pow(tp, 2.0) * (0.3 + 0.8 * uNight);`; // the calf's antler (its own SDF one): no tips marked, no tip light
+NIGHT_LOOK.baengnok152horn = NIGHT_LOOK.baengnok152calfhorn = 0.6;
 const tip152 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
   m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
     sh.vertexShader = 'attribute float _thickness;\nvarying float vTip;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvTip = _thickness - 2.0 * floor(_thickness * 0.5);');
     sh.fragmentShader = 'varying float vTip;\n' + sh.fragmentShader; };
   m.customProgramCacheKey = () => k + '-tip152'; return m; };
+// the light beads on the tips: pale jade-white lit from inside, each twinkling on its own; the bridle's beads: deep green jade, cloudy, lit inside
+const BEAD155C = `float tw = 0.8 + 0.2 * sin(uTime * 2.3 + p.x * 31.0 + p.z * 17.0);
+  diffuseColor.rgb = vec3(0.86, 1.0, 0.95) * 0.6; roughnessFactor = 0.12;
+  totalEmissiveRadiance += vec3(0.75, 1.0, 0.92) * (0.5 + 0.4 * pow(nv, 2.0)) * tw * (1.0 + 1.8 * uNight);`;
+const JADE155C = `float n = fbm3(p * 60.0 + 3.0); vec3 col = mix(vec3(0.04, 0.4, 0.28), vec3(0.42, 0.86, 0.64), smoothstep(0.3, 0.75, n));
+  diffuseColor.rgb = col * 0.5; roughnessFactor = 0.06;
+  totalEmissiveRadiance += col * (0.15 + 0.35 * pow(nv, 1.5)) + vec3(0.4, 1.0, 0.7) * pow(1.0 - nv, 2.5) * 0.35;`;
+NIGHT_LOOK.jade155C = 1.0;
 // frost flowers: N152 quads on the ground, each a six-armed crystal with side branches; uF[i] = its world place (xyz) and birth (w).
+// 155 C: bigger, longer-lived, crisp: ice blue by day with a white line down each arm (white alone was lost on the snow), glowing by night.
 // Every position is 0 (the corners are in aQ): Box3.setFromObject (thumbs, codex, cabinet, postcard framing) sees one point at the
 // feet's middle, and a shadow pass (postcard3d sets castShadow on every mesh) draws nothing
-const N152 = 8, LEGZ152 = 0.22; // LEGZ152: the legend file's legs stand 0.22 from the middle (the reindeer's 0.25)
-// lifetimes (as 125-D, no dispose): the flowers' geometry and material are one shared pair for the page (as the looks); the four
-// leg clones hang on G (G.legs152, the ready cache) and live as long as G's own geometries
-let frost152 = null;
+// 157 B: a small silver cloud (상운) under the feet too while it walks, in turn with the flowers: slot i holds a cloud when cloud157(i)
+// (each foot's own slots, every 4th, flower, cloud, flower, cloud: it never gets both at once); a cloud lives LIFE157 and stands with its
+// flat bottom toward the camera; standing still, only flowers (put skips the cloud slots)
+const N152 = 16, LEGZ152 = 0.22, LIFE155C = 3.4, LIFE157 = 1.7, cloud157 = i => (i + (i >> 2)) % 2; // LEGZ152: the legend file's legs stand 0.22 from the middle (the reindeer's 0.25)
+// lifetimes: the flowers' geometry and material and the two glow materials are shared for the page (as the looks); dispose155C frees
+// them (no caller yet: nothing tears the looks down). The four leg clones hang on G (G.legs152, the ready cache) and live as long as G's own geometries
+let frost152 = null, glow155C = null;
 const frostOf152 = () => frost152 ??= (() => {
   const g = new THREE.BufferGeometry(), q = [], ix = [];
   for (let i = 0; i < N152; i++) { for (const [x, y] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) q.push(x, y, i); ix.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3); }
@@ -2276,51 +2375,121 @@ const frostOf152 = () => frost152 ??= (() => {
   const m = new THREE.ShaderMaterial({ uniforms: { uF: { value: Array.from({ length: N152 }, () => new THREE.Vector4(0, 0, 0, -99)) }, uS: { value: 0.1 }, uTime: windTime, uNight: nightGlow },
     transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
     extensions: { derivatives: true }, // fwidth on a WebGL1 fallback (WebGL2 ignores it)
-    vertexShader: `uniform vec4 uF[${N152}]; uniform float uS, uTime; attribute vec3 aQ; varying vec2 vQ; varying float vA;
-      void main() { float aI = aQ.z; vec4 f = uF[int(aI + 0.5)]; float age = uTime - f.w, on = step(0.0, age) * step(age, 2.6);
-        vA = on * (1.0 - smoothstep(1.6, 2.6, age)); vQ = aQ.xy;
-        float r = f.w * 7.3 + aI * 1.7, c = cos(r), s = sin(r); vec2 q = mat2(c, s, -s, c) * aQ.xy * uS * (0.35 + 0.65 * smoothstep(0.0, 0.45, age)) * on;
+    vertexShader: `uniform vec4 uF[${N152}]; uniform float uS, uTime; attribute vec3 aQ; varying vec2 vQ; varying float vA, vK;
+      void main() { float aI = aQ.z, kc = mod(aI + floor(aI * 0.25), 2.0); vec4 f = uF[int(aI + 0.5)]; float life = mix(${LIFE155C.toFixed(1)}, ${LIFE157.toFixed(1)}, kc), age = uTime - f.w, on = step(0.0, age) * step(age, life);
+        vA = on * (1.0 - smoothstep(life - mix(1.2, 1.0, kc), life, age)); vQ = aQ.xy; vK = kc;
+        float r = f.w * 7.3 + aI * 1.7, c = cos(r), s = sin(r);
+        if (kc > 0.5) { vec2 dc = normalize(cameraPosition.xz - f.xz + vec2(1e-4)); c = dc.y; s = dc.x; } // the cloud's bottom (-y) toward the camera
+        vec2 q = mat2(c, s, -s, c) * aQ.xy * uS * mix(1.0, 0.6, kc) * (0.35 + 0.65 * smoothstep(0.0, mix(0.45, 0.25, kc), age)) * on;
         gl_Position = projectionMatrix * viewMatrix * vec4(f.xyz + vec3(q.x, 0.0, -q.y), 1.0); }`, // -q.y: the quads face up (front side)
-    fragmentShader: `uniform float uNight; varying vec2 vQ; varying float vA;
-      void main() { float r = length(vQ), k = 1.0471976, an = mod(atan(vQ.y, vQ.x) + k * 0.5, k) - k * 0.5; vec2 p = vec2(cos(an), abs(sin(an))) * r;
+    fragmentShader: `uniform float uNight; varying vec2 vQ; varying float vA, vK;
+      void main() { if (vK > 0.5) { // 157 B: three round puffs on a flat bottom, a curl in the big one; silver, a steel-blue line round it
+          vec2 p = vQ, cc = vec2(0.02, 0.06), u = p - cc;
+          float d = max(min(min(length(p - vec2(-0.44, -0.14)) - 0.32, length(p - vec2(0.04, 0.08)) - 0.46), length(p - vec2(0.48, -0.12)) - 0.3), -0.42 - p.y);
+          float cu = u.y > 0.0 ? abs(length(u) - 0.22) : abs(length(u - vec2(0.11, 0.0)) - 0.11); // the outer half up, the inner half down: a curl
+          float fw = fwidth(d) + 1e-4, fc = fwidth(cu) + 1e-4, fill = 1.0 - smoothstep(-fw, fw, d);
+          float ln = max(1.0 - smoothstep(0.04 - fw, 0.04 + fw, abs(d + 0.05)), 1.0 - smoothstep(0.035 - fc, 0.035 + fc, cu));
+          float a = fill * vA; if (a < 0.01) discard;
+          vec3 c = mix(vec3(0.9, 0.93, 0.98), vec3(0.32, 0.46, 0.74), ln);
+          gl_FragColor = vec4(c * a * (1.0 + 1.0 * uNight), a * (0.95 - 0.5 * uNight)); return; }
+        float r = length(vQ), k = 1.0471976, an = mod(atan(vQ.y, vQ.x) + k * 0.5, k) - k * 0.5; vec2 p = vec2(cos(an), abs(sin(an))) * r;
         vec2 e = vec2(0.5, 0.866), d1 = p - vec2(0.45, 0.0), d2 = p - vec2(0.7, 0.0);
         float d = min(length(p - vec2(clamp(p.x, 0.0, 0.92), 0.0)), min(length(d1 - e * clamp(dot(d1, e), 0.0, 0.26)), length(d2 - e * clamp(dot(d2, e), 0.0, 0.15))));
-        float w = 0.055 * (1.0 - 0.45 * r), arm = 1.0 - smoothstep(w, w + 1.5 * fwidth(d) + 0.01, d), core = 1.0 - smoothstep(0.0, 0.16, r);
-        float a = max(arm, core * 0.8) * vA; if (a < 0.01) discard;
-        gl_FragColor = vec4(mix(vec3(0.62, 0.84, 1.0), vec3(0.95, 0.98, 1.0), core) * a * (0.85 + 0.9 * uNight), a * (0.75 - 0.45 * uNight)); }` });
+        float fw = fwidth(d) + 1e-4, w = 0.06 * (1.0 - 0.4 * r), arm = 1.0 - smoothstep(w, w + 1.2 * fw, d), mid = 1.0 - smoothstep(0.3 * w, 0.3 * w + 1.2 * fw, d), core = 1.0 - smoothstep(0.0, 0.14, r);
+        float a = max(arm, core * 0.85) * vA; if (a < 0.01) discard;
+        vec3 c = mix(vec3(0.32, 0.62, 1.0), vec3(0.97, 0.99, 1.0), max(mid, core));
+        gl_FragColor = vec4(c * a * (1.0 + 1.2 * uNight), a * (0.92 - 0.5 * uNight)); }` });
   return { g, m }; })();
+// a soft light round a mesh (as figure.js haloMat: the mesh again blown up w along its normals, back faces, added on): (day + night x
+// uNight) of rgb; while that is 0 the shell folds to one point (nothing drawn)
+const halo155C = (rgb, w, day, night, mask = '1.0') => new THREE.ShaderMaterial({ uniforms: { uNight: nightGlow }, side: THREE.BackSide, transparent: true, depthWrite: false,
+  blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
+  vertexShader: `uniform float uNight; varying vec2 vF; void main() { float k = ${day.toFixed(2)} + ${night.toFixed(2)} * uNight; vec4 mv = modelViewMatrix * vec4(position + normal * ${w.toFixed(3)}, 1.0);
+    vF = vec2(abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz))), k * (${mask})); gl_Position = k > 0.001 ? projectionMatrix * mv : vec4(0.0, 0.0, 0.0, 1.0); }`,
+  fragmentShader: `varying vec2 vF; void main() { gl_FragColor = vec4(vec3(${rgb.map(v => v.toFixed(2)).join(', ')}) * pow(vF.x, 3.5) * vF.y, 1.0); }` });
+// (the moon's: not round the ears and the head's sides: thin flaps whose blown-up shell stands off the head as a pale box)
+const glowOf155C = () => glow155C ??= { moon: halo155C([0.78, 0.88, 1.0], 0.12, 0, 1.0, '1.0 - smoothstep(0.14, 0.2, abs(position.z)) * smoothstep(1.76, 1.84, position.y)'), bead: halo155C([0.75, 1.0, 0.95], 0.05, 0.14, 1.4) };
+// 157 B: the eyes (deep: black-navy, darker in the middle, a small four-pointed star of light high on the front, a little brighter by
+// night) and by night a very small moonlight bead between the antlers (a camera-facing quad, every position 0: Box3 sees its
+// middle, a shadow pass nothing; folded to a point by day), shared for the page as the flowers
+let orn157 = null;
+const ornOf157 = () => orn157 ??= (() => {
+  const eye = phys('#06070d', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03 });
+  eye.onBeforeCompile = sh => { sh.uniforms.uNight = nightGlow; sh.vertexShader = 'varying vec3 vOn;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvOn = normal;');
+    sh.fragmentShader = 'uniform float uNight;\nvarying vec3 vOn;\n' + sh.fragmentShader.replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{ vec3 on = normalize(vOn), f = normalize(vec3(0.5, 0.3, 0.81 * sign(on.z))), g = normalize(vec3(0.6, 0.65, 0.8 * sign(on.z))), sd = normalize(cross(vec3(0.0, 1.0, 0.0), g)), up = cross(g, sd);
+  diffuseColor.rgb = mix(vec3(0.035, 0.05, 0.11), vec3(0.006, 0.006, 0.01), smoothstep(0.35, 0.9, dot(on, f)));
+  float st = sqrt(abs(dot(on, sd))) + sqrt(abs(dot(on, up))), fw = fwidth(st) + 1e-4, k = (1.0 - smoothstep(0.4 - fw, 0.4 + fw, st)) * step(0.0, dot(on, g));
+  totalEmissiveRadiance += vec3(0.85, 0.92, 1.0) * k * (0.7 + 0.9 * uNight); }`); };
+  eye.customProgramCacheKey = () => 'eye157';
+  const moonG = new THREE.BufferGeometry();
+  moonG.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(12), 3)); moonG.setAttribute('aQ', new THREE.Float32BufferAttribute([-1, -1, 1, -1, 1, 1, -1, 1], 2)); moonG.setIndex([0, 1, 2, 0, 2, 3]);
+  const moonM = new THREE.ShaderMaterial({ uniforms: { uTime: windTime, uNight: nightGlow }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `uniform float uTime, uNight; attribute vec2 aQ; varying vec2 vQ; varying float vK;
+      void main() { vK = smoothstep(0.0, 0.6, uNight); vQ = aQ; vec4 mv = modelViewMatrix * vec4(0.0, 0.02 * sin(uTime * 1.1), 0.0, 1.0);
+        mv.xy += aQ * 0.11 * length(modelViewMatrix[0].xyz); gl_Position = uNight > 0.01 ? projectionMatrix * mv : vec4(0.0, 0.0, 0.0, 1.0); }`,
+    fragmentShader: `varying vec2 vQ; varying float vK;
+      void main() { float r = length(vQ), core = 1.0 - smoothstep(0.24, 0.32, r), glow = pow(max(0.0, 1.0 - r), 2.5) * 0.55;
+        gl_FragColor = vec4(vec3(0.86, 0.93, 1.0) * (core * 1.1 + glow) * vK, 1.0); }` });
+  return { eye, moonG, moonM }; })();
+export const dispose155C = () => { for (const v of [frost152?.g, frost152?.m, glow155C?.moon, glow155C?.bead, orn157?.eye, orn157?.moonG, orn157?.moonM]) v?.dispose(); frost152 = glow155C = orn157 = null; };
 // one figure's flowers: its own uF values put on the shared material before its draw. A new one every 0.45 s while it walks
 // (0.15 of its body unit since the last), else every 1.4 s, at the next foot; the first draw (and a jump in time) seeds all four
+// (157 B: walking, the clouds in their slots between; still, the cloud slots skipped)
 const frostMesh152 = (w, legs, S) => {
   const { g, m } = frostOf152(), o = new THREE.Mesh(g, m), F = Array.from({ length: N152 }, () => new THREE.Vector4(0, 0, 0, -99)), v = new THREE.Vector3(), at = new THREE.Vector3();
   let t0 = null, last = 0, slot = 0, foot = 0, sc = 1;
-  const put = t => { legs[foot++ % legs.length].localToWorld(v.set(0, -S.legs.hip, 0)); F[slot++ % N152].set(v.x, w.matrixWorld.elements[13] + 0.01 * sc, v.z, t); };
+  const put = (t, walk) => { let i = slot++ % N152; while (!walk && cloud157(i)) i = slot++ % N152;
+    legs[foot++ % legs.length].localToWorld(v.set(0, -S.legs.hip, 0)); F[i].set(v.x, w.matrixWorld.elements[13] + 0.01 * sc, v.z, t); };
   o.renderOrder = 5; o.frustumCulled = false; o.raycast = () => {};
   o.onBeforeRender = () => {
     const t = windTime.value; sc = w.matrixWorld.getMaxScaleOnAxis() * S.s;
     if (t !== t0) {
       const fresh = t0 === null || t < t0 || t - t0 > 5; t0 = t;
-      const due = fresh || t - last > (w.getWorldPosition(v).distanceTo(at) > 0.15 * sc ? 0.45 : 1.4);
-      if (fresh) for (let i = 0; i < 4; i++) put(t - 0.5 - 0.35 * i); else if (due) put(t);
+      const walk = w.getWorldPosition(v).distanceTo(at) > 0.15 * sc, due = fresh || t - last > (walk ? 0.45 : 1.4);
+      if (fresh) for (let i = 0; i < 4; i++) put(t - 0.5 - 0.35 * i, false); else if (due) put(t, walk);
       if (due) { last = t; w.getWorldPosition(at); }
     }
-    m.uniforms.uF.value.forEach((u, i) => u.copy(F[i])); m.uniforms.uS.value = 0.45 * sc; m.uniformsNeedUpdate = true; };
+    m.uniforms.uF.value.forEach((u, i) => u.copy(F[i])); m.uniforms.uS.value = 0.65 * sc; m.uniformsNeedUpdate = true; };
   return o; };
 // the reindeer's body, ruff and antler out, the legend file's in (figure.js adds them: the look has their materials); its thinner
-// leg on the four leg bones, set 0.22 out; then 1.15x and the frost flowers (the calf: no legend file, the reindeer calf in porcelain)
-const parts152C = (body, G, S) => {
+// leg on the four leg bones, set 0.22 out; the moonlight round the body and the glow round the tip beads; then 1.3x and the frost
+// flowers (the calf: 156 C its own legend file too, pilot89_baengnok152_baby: the calf's body without the collar, a small jade antler,
+// cord and bell, in the look as bn152calf / bn152calfhorn; its legs the reindeer calf's in `calf`, no cloud lines, no tip light)
+const parts152C = (body, G, S, mat, calf, horn, calfHorn) => {
   const L = G.legend, legs = body.children.filter(o => o.userData.front !== undefined);
-  if (L.bn152body) {
-    for (const o of [...body.children]) if (o.geometry === G.body || o.geometry === G.accent || o.geometry === G.horn) body.remove(o);
+  if (L.bn152body || L.bn152calf) for (const o of [...body.children]) if (o.geometry && (o.geometry === G.body || o.geometry === G.accent || o.geometry === G.horn)) body.remove(o);
+  const O = ornOf157(); for (const o of body.children) if (o.geometry === G.eye) o.material = O.eye; // 157 B: the starlit eyes (adult and calf)
+  if (!L.bn152body) body.traverse(o => { if (o.material === mat) o.material = calf; else if (o.material === horn) o.material = calfHorn; });
+  else {
     const H = G.body.boundingBox.max.y, mine = G.legs152 ??= G.legs.map(({ x, z }) => [L.bn152leg, L.bn152hoof].map(geo => { const c = geo.clone(), op = c.attributes._op;
       for (let i = 0; i < op.count; i++) op.setXYZ(i, op.getX(i) + x / H, op.getY(i) + S.legs.hip / H, op.getZ(i) + Math.sign(z) * LEGZ152 / H);
       return c; }));
     legs.forEach((g, i) => { g.position.z = Math.sign(G.legs[i].z) * LEGZ152; g.children[0].geometry = mine[i][0]; if (g.children[1]) g.children[1].geometry = mine[i][1]; });
+    const X = glowOf155C();
+    for (const [geo, hm] of [[L.bn152body, X.moon], [L.bn152bead, X.bead]]) if (geo) { const h = new THREE.Mesh(geo, hm); h.renderOrder = 5; h.raycast = () => {}; body.add(h); }
+    // 157 B: the night's moonlight bead between the antlers, 0.62 of the way up them, over their middle (the adult only: the calf's are small)
+    if (L.bn152horn) { const hb = L.bn152horn.boundingBox ?? (L.bn152horn.computeBoundingBox(), L.bn152horn.boundingBox), mb = new THREE.Mesh(O.moonG, O.moonM);
+      mb.position.set((hb.min.x + hb.max.x) / 2, hb.min.y + 0.62 * (hb.max.y - hb.min.y), 0); mb.renderOrder = 5; mb.frustumCulled = false; mb.raycast = () => {}; body.add(mb); }
   }
-  const root = body.parent, w = new THREE.Group(); w.scale.setScalar(1.15); root.remove(body); w.add(body); root.add(w); // 1.15x the reindeer
+  const root = body.parent, w = new THREE.Group(); w.scale.setScalar(1.3); root.remove(body); w.add(body); root.add(w); // 1.3x the reindeer
   if (legs.length) w.add(frostMesh152(w, legs, S));
 };
 const BELL152 = BELL116.replace('vec3(1.0, 0.85, 0.5)', 'vec3(0.9, 0.95, 1.0)'); // the silver bell: a cool glint, not the gold bell's warm one
-LOOKS.baengnok152 = () => { const body = look(P152(), 'baengnok152', BODY152, {}, { studio: 0.25 });
-  return { body, accent: body, horn: body, hoof: shine('#d6dae0', 0.38), beak: toyMat('#5f5658'), bn152body: body, bn152horn: tip152(look(P152(), 'baengnok152horn', HORN152C, {}, { studio: 0.25 })),
-    bn152cord: shine('#e4e8ee'), bn152bell: hab89(look(phys('#dde2e8', { roughness: 0.2, metalness: 1 }), 'bell152', BELL152, {}, { studio: 0.7 })), parts: parts152C }; };
+// 157 B: the 노리개 under the bell sways a little about its top (_thickness: how far below it), one slow swing, a smaller one sideways
+const sway157 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.uniforms.uTime = windTime;
+    sh.vertexShader = 'uniform float uTime;\nattribute float _thickness;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\ntransformed.xz += _thickness * vec2(0.12 * sin(uTime * 1.9), 0.07 * sin(uTime * 1.3 + 1.0));'); };
+  m.customProgramCacheKey = () => k + '-sway157'; return m; };
+NIGHT_LOOK.njade157 = 1.0;
+LOOKS.baengnok152 = () => { const body = look(P152(), 'baengnok152', body155C(SEG155C), {}, { studio: 0.25 }), calf = look(P152(), 'baengnok152calf', body155C(''), {}, { studio: 0.25 }),
+    jade = () => phys('#e8f4ee', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05 }),
+    horn = tip152(look(jade(), 'baengnok152horn', HORN155C + TIP155C, {}, { studio: 0.3 })), calfHorn = look(jade(), 'baengnok152calfhorn', HORN155C.replace('smoothstep(0.88, 1.3, p.y)', 'smoothstep(0.92, 1.16, p.y)'), {}, { studio: 0.3 }); // 156 C: its antler about 0.94..1.18 of its height, the jade ramp 0.92..1.16 (the adult's 0.96..1.43): white jade at the root to the deep jade at its tips, as the adult's
+  const silver = shine('#e8ecf2', 0.2); // the bridle's, and 157 B the antler rings' (one draw)
+  return { body, accent: body, horn, hoof: shine('#e2e6ec', 0.22), beak: toyMat('#5f5658'), bn152body: body, bn152horn: horn,
+    bn152cord: shine('#e4e8ee'), bn152bell: hab89(look(phys('#dde2e8', { roughness: 0.2, metalness: 1 }), 'bell152', BELL152, {}, { studio: 0.7 })),
+    bn152bridle: silver, bn157ring: silver,
+    bn157jade: sway157(look(phys('#2a8a6a', { roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.04 }), 'njade157', JADE155C, {}, { studio: 0.3 })),
+    bn157tassel: sway157(look(phys('#a3121c', { roughness: 0.55, sheen: 1, sheenColor: '#ff7a68', sheenRoughness: 0.45 }), 'tassel157', '')), bn152jade: look(phys('#2a8a6a', { roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.04 }), 'jade155C', JADE155C, {}, { studio: 0.3 }),
+    bn152bead: look(phys('#f0fff8', { roughness: 0.12, clearcoat: 1 }), 'bead155C', BEAD155C), bn152calf: calf, bn152calfhorn: calfHorn, parts: (b, G, S) => parts152C(b, G, S, body, calf, horn, calfHorn) }; };
