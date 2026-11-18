@@ -177,6 +177,11 @@ FX.goldsparks = { ...FX.sparks, frag: FX.sparks.frag.replace('vS < 0.34 ? vec3(1
 // 144 B (?m89): clearglints: the twinkle (cow) in clear glass colours, white and the palest sky (the crystal horse: no colours outside it)
 FX.clearglints = { ...FX.twinkle, frag: FX.twinkle.frag.replace('vS < 0.34 ? vec3(0.45, 0.75, 1.0) : vS < 0.67 ? vec3(0.5, 1.0, 0.7) : vec3(1.0, 0.72, 0.45)',
   'vS < 0.5 ? vec3(0.8, 0.92, 1.0) : vec3(1.0)') };
+// 152 B (?m89): goldglints: the twinkle in soft gold (the unicorn)
+FX.goldglints = { ...FX.twinkle, frag: FX.clearglints.frag.replace('vS < 0.5 ? vec3(0.8, 0.92, 1.0) : vec3(1.0)', 'vS < 0.5 ? vec3(1.0, 0.8, 0.36) : vec3(1.0, 0.93, 0.68)') };
+// 151 (?m89): silversparks: the sparks (chicken) as silver dust (the obsidian swan): smaller, a few more, cool white
+FX.silversparks = { ...FX.sparks, n: 24, size: 0.22, frag: FX.sparks.frag.replace('vS < 0.34 ? vec3(1.0, 0.55, 0.18) : vS < 0.67 ? vec3(1.0, 0.42, 0.62) : vec3(0.72, 0.42, 1.0)',
+  'vS < 0.5 ? vec3(0.78, 0.84, 0.95) : vec3(0.95, 0.97, 1.0)').replace('vec3(1.0, 0.95, 0.85), core * 0.6', 'vec3(1.0), core * 0.6') };
 const fxMats = {};
 const fxMat = kind => fxMats[kind] ??= new THREE.ShaderMaterial({
   uniforms: { uTime: windTime, uPx: { value: 800 } }, transparent: true, depthWrite: FX[kind].solid || false, blending: FX[kind].solid || FX[kind].soft ? THREE.NormalBlending : THREE.AdditiveBlending,
@@ -301,7 +306,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
     a.rotation.fromArray(fit.r || at.r); a.scale.setScalar(Math.max(at.s * (fit.s || 1), AC(acc).min || 0)); // min: 86-3마 the guest hat
     body.add(a);
   }
-  m.parts?.(body, G, S); // 89-4: a look's own parts (materials.js), before the merge
+  const own = m.parts?.(body, G, S); // 89-4: a look's own parts (materials.js), before the merge; 152 B: they may pose with it (own.pose)
   const skeleton = merge(body, [...(M.walk?.oneLeg ? [] : legs), ...wings]);
   const down = Math.max(0, belly(G.body) * S.s - (S.sink || 0)); // inbox 35: lying down, the belly comes down to the feet's level
   return {
@@ -326,6 +331,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
         const sp = p.spr || 0, fold = lie * (1 - sp); // 143 B 일광욕 (spr 0..1): lying, the legs stretched flat out instead of folded, front ones forward, hind ones back
         leg.scale.set(1 - 0.9 * fold, (1 - 0.65 * k) * (1 - 0.95 * fold) * (1 - 0.25 * sp), 1 - 0.9 * fold); leg.rotation.z = (p.gait === 'slide' ? 0 : a - p.rot - 0.5 * k) * (1 - lie) + fold * (front ? 1.3 : 1.5) + sp * (front ? 1.45 : -1.45); // legs stay upright when the body tips (grazing); 25-1 sliding on its belly they trail behind
       }
+      own?.pose?.(p);
     },
   };
 }

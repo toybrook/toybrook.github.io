@@ -16,7 +16,7 @@ const story = k => { if (G.S.flags['story_' + k]) return; G.flag('story_' + k); 
 const lit = M => !!M.hair + !!M.play + !!M.big;
 const H = () => at() === MY.habitat ? hab()?.myth : null;
 const busy = () => topWindow() || overlayOpen() || !$('loading').hidden || document.body.classList.contains('photo') || document.hidden || $('tabOff') || !box.hidden || !cutEl.hidden;
-const sync = () => { const M = G.S?.myth; if (M) H()?.set(G.mythStage(), lit(M), !!M.here && !M.shown); };
+const sync = () => { const M = G.S?.myth[MY.id]; if (M) H()?.set(G.mythStage(), lit(M), !!M.here && !M.shown); };
 // the 신수 card: on its stand, like a limited figure in its box
 export const mythCard = () => $t('<figure class="mcard"><div class="mstand"><img alt="{0}"></div><figcaption><b>{1}</b><small>신수 · {2}</small></figcaption></figure>', MY.name, MY.name, HAB[MY.habitat].name);
 const cardImg = el => { const img = el.querySelector('.mstand img'); if (img) import('./thumbs.js').then(t => t.mythThumb(false, false, 0)).then(u => { img.src = u; }, () => {}); };
@@ -32,7 +32,7 @@ function page(i, more = '') {
   cardImg(box); box.hidden = false;
 }
 function draw() {
-  const M = G.S.myth, s = G.mythStage(), sc = Math.min(Object.keys(G.S.scenes).length, MY.scenes), C = BALANCE.myth; view = 'altar';
+  const M = G.S.myth[MY.id], s = G.mythStage(), sc = Math.min(Object.keys(G.S.scenes).length, MY.scenes), C = BALANCE.myth; view = 'altar';
   const rows = [['hair', MY.hair, $t('친구를 「불의 언덕」에 산책 보내면 찾아와요'), 'walk', 1], ['play', $t('놀이 장면 {0}/{1}', sc, MY.scenes), $t('친구들이 노는 모습을 보면 담겨요 (본 것도 세요)'), 'scenes', 2],
     ['big', $t('큰 소품 하나'), $t('꾸미기 › 큰 소품에서 하나 놓아요 (놓은 것도 세요)'), 'big', 3]];
   const call = { altar: $t('<p class="sub">불 세 개가 다 켜지면 부를 수 있어요 ({0}/3)</p>', lit(M)), ready: $t('<p class="sub">부르면 오늘 밤 제단에 찾아와요</p>'),
@@ -68,24 +68,24 @@ export function onMyth(k, a) {
 export function mythCut() {
   const L = H(); if (!L) return false;
   G.mythShown(); cutEl.hidden = false; cutEl.querySelector('p').textContent = `${MY.name}${mythNight(G.now()) ? $t('가 제단에 내려왔어요') : $t('가 제단에 내려왔던 밤이에요')}`;
-  L.cut(() => { cutEl.hidden = true; story('m'); const M = G.S.myth; if (!M.settled) toast($t('손님으로 머물러요 · 하루에 한 번 쓰다듬으면 친해져요 ({0}/{1})', M.bond || 0, BALANCE.myth.guest), 3400); });
+  L.cut(() => { cutEl.hidden = true; story('m'); const M = G.S.myth[MY.id]; if (!M.settled) toast($t('손님으로 머물러요 · 하루에 한 번 쓰다듬으면 친해져요 ({0}/{1})', M.bond || 0, BALANCE.myth.guest), 3400); });
   return true;
 }
 cutEl.querySelector('button').onclick = () => H()?.skip();
 G.on(ev => {
   sync();
-  for (const e of ev) if (e.type === 'myth') {
+  for (const e of ev) if (e.type === 'myth' && e.id === MY.id) { // 152 D: the others' have no window yet
     if (e.what === 'trace' && H()) toast($t('모닥불 곁에 그을린 자국이 남았어요'), 2800, true);
-    if (['hair', 'play', 'big'].includes(e.what)) toast($t('옛 제단에 불이 켜졌어요 ({0}/3) · 제단을 눌러 이야기를 읽어요', lit(G.S.myth)), 3200);
-    if (e.what === 'bond' && !G.S.myth.settled) toast($t('{0}와 조금 더 친해졌어요 ({1}/{2})', MY.name, e.n, BALANCE.myth.guest), 2600);
+    if (['hair', 'play', 'big'].includes(e.what)) toast($t('옛 제단에 불이 켜졌어요 ({0}/3) · 제단을 눌러 이야기를 읽어요', lit(G.S.myth[MY.id])), 3200);
+    if (e.what === 'bond' && !G.S.myth[MY.id].settled) toast($t('{0}와 조금 더 친해졌어요 ({1}/{2})', MY.name, e.n, BALANCE.myth.guest), 2600);
   }
   if (!box.hidden && view === 'altar') draw();
 });
 // a quiet screen in the meadow: its coming not seen yet (the cutscene), then the last page and its card once it settled
 setInterval(() => {
-  sync(); const M = G.S?.myth, L = H(); if (!M || !L || L.cutting() || busy()) return;
+  sync(); const M = G.S?.myth[MY.id], L = H(); if (!M || !L || L.cutting() || busy()) return;
   if (M.here && !M.shown) mythCut();
   else if (M.settled && !(M.read & 16) && M.shown) { sfx('grown'); page(4); }
 }, 800);
-export const mythDue = () => { const M = G.S?.myth; return !!M?.here && !M.shown && M.here <= G.now(); }; // came, not seen
+export const mythDue = () => { const M = G.S?.myth[MY.id]; return !!M?.here && !M.shown && M.here <= G.now(); }; // came, not seen
 export function initMyth(cur, api) { at = cur; hab = api; }

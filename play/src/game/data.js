@@ -12,7 +12,7 @@
 import { $t } from '../i18n/i18n.js';
 
 import { GUEST_PROPS } from './guests-data.js'; // 66-1
-export const SCHEMA_VERSION = 12; // shape of the save; bump with a migration in rules.js (2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups; 12: 95 kept accessories S.accs, animal s = hatched secret)
+export const SCHEMA_VERSION = 13; // shape of the save; bump with a migration in rules.js (13: 152 D S.myth by MYTHIC id; 2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups; 12: 95 kept accessories S.accs, animal s = hatched secret)
 export const CONTENT_VERSION = 9; // bump when the lists below change (3: launch materials, one legendary each; marble and gold left the lists; 4: colour ids glitter gold -> violet, amber yellow -> honey; 5: meadow rabbit, pig, chicken; 6: meadow sheep, cow; 7: pond (turtle, otter, swan, flamingo, capybara; the duck moved from the meadow); 8: snow (penguin, polar bear, seal, arctic fox, reindeer, snowy owl); 9: dino (triceratops, brachiosaurus, stegosaurus, ankylosaurus, T. rex, pteranodon))
 
 const MIN = 60 * 1000;
@@ -797,6 +797,9 @@ if (M89) {
   SPECIES.find(s => s.id === 'arcticFox').legendary.push(...g ? [{ id: g, name: $t('신수 구미호'), mat: g }]
     : G121 ? [{ id: 'gumiho121', name: $t('신수 구미호'), mat: 'gumiho121' }]
     : [{ id: 'gumiho125a', name: $t('신수 구미호'), mat: 'gumiho125a' }, { id: 'gumiho125b', name: $t('신수 구미호') + ' 2', mat: 'gumiho125b' }]);
+  // 152 B 신수 유니콘 (pilot, shown as the gumiho is: a horse legendary slot): the carousel horse with a horn and wings, 1.2x (materials.js 152 B)
+  // 152 D: kept to look at it (its MYTHIC entry, MYTHIC152 below, has no figure yet); late: after every look before it in VL
+  SPECIES.find(s => s.id === 'horse').legendary.push({ id: 'unicorn', name: $t('신수 유니콘'), mat: 'unicorn152', effect: 'goldglints', late: 152 });
 }
 // 128 전설 2번째 (?m89 시범): the meadow's second legendary set, a new slot after the first (tiers.md: only the parts the
 // animal has change, nothing added). Looks: materials.js 128; seeds / leaves / butterflies: figure.js FX (colours as parameters,
@@ -833,6 +836,26 @@ export const LEGEND141 = {
   cow: { id: 'lapis', name: $t('청금석 소'), mat: 'lapis141', effect: 'twinkle' },
 };
 for (const [sp, L] of Object.entries(LEGEND141)) SPECIES.find(s => s.id === sp).legendary.push(L); // 144 A: public; 149: the crystal horse (145 A) too
+// 152 A 말 전설 2번째 (?m89 시범; inbox 152 A, 153 A 다시): polished dark slate stone with big plates flashing blue / teal / gold /
+// orange as the angle turns (materials.js 152). Appended last; late (153 A): visit.js VL puts it after the 150 wave looks, as LEGEND151
+export const LEGEND152 = { id: 'labradorite', name: $t('래브라도라이트 말'), mat: 'labradorite152', effect: 'twinkle', late: 152 };
+if (M89) SPECIES.find(s => s.id === 'horse').legendary.push(LEGEND152);
+// 151 연못 전설 2번째 (?m89 시범; inbox 151): black pearl, cut emerald set in gold, gold leaf in resin, obsidian, neon glass, moonstone
+// (materials.js 151). Appended last; late: visit.js VL puts them after the 150 wave looks, so every link number made before stays
+export const LEGEND151 = {
+  duck: { id: 'blackpearl', name: $t('흑진주 오리'), mat: 'blackpearl151', effect: 'twinkle', late: 151 },
+  turtle: { id: 'emerald', name: $t('에메랄드 등껍질 거북'), mat: 'emerald151', effect: 'twinkle', late: 151 },
+  otter: { id: 'goldresin', name: $t('금박 레진 수달'), mat: 'resin151', effect: 'bubbles', late: 151 },
+  swan: { id: 'obsidian', name: $t('흑요석 백조'), mat: 'obsidian151', effect: 'silversparks', late: 151 },
+  flamingo: { id: 'neon', name: $t('네온 플라밍고'), mat: 'neon151', effect: 'twinkle', late: 151 },
+  capybara: { id: 'moonstone', name: $t('문스톤 카피바라'), mat: 'moonstone151', effect: 'moondust', late: 151 },
+};
+if (M89) for (const [sp, L] of Object.entries(LEGEND151)) SPECIES.find(s => s.id === sp).legendary.push(L);
+// 152 C 신수 백록 (?m89 시범; inbox 152 C): the white deer of Halla, on the reindeer adult's own legend file (tools/bake-baengnok152.mjs:
+// slimmer, a big smooth antler, a silver cord and bell) in white porcelain, 1.15x, frost flowers at its feet (materials.js 152 C).
+// A reindeer legendary slot only to look at it for now (152 D: the call); appended last, so the variants before it stay as they are
+export const LEGEND152C = { id: 'baengnok', name: $t('신수 백록'), mat: 'baengnok152', late: 152 }; // 152 D: kept to look at it, as the unicorn
+if (M89) { MODELS.reindeer.legend = { adult: 'assets/models/pilot89_baengnok152_adult.glb' }; SPECIES.find(s => s.id === 'reindeer').legendary.push(LEGEND152C); }
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
 export const WAVE127 = 3; // 150 (user OK 11/18): all 11 public
@@ -1181,11 +1204,12 @@ export const PLACES = [
   { id: 'path', name: $t('들판 오솔길'), lines: [$t('{n}{은/는} 오솔길 끝까지 가 봤어요'), $t('{n}{이/가} 울타리 너머를 기웃거렸어요'), $t('{n}{은/는} 풀밭에서 네잎클로버를 찾았어요')] },
 ];
 // 14-1 신수 (神獸): its own rank, apart from RARITIES and SPECIES (so no nest egg, no 보관함, no seat, no walk: rules.js S.myth).
-// One per habitat, the meadow's first. 신수의 부름 (rules.js mythTick, ui/myth.js): fire prints -> a campfire's night -> burnt
+// 152 D: a habitat may have several; each its own call in S.myth[id], one call at a time in this order (rules.js mythTurn).
+// clues: its 단서 3 (the stage 'altar' till all are done). The meadow's first. 신수의 부름 (rules.js mythTick, ui/myth.js): fire prints -> a campfire's night -> burnt
 // hoofprints (page 1 + the 옛 제단) -> the altar's 3 (`hair` from a walk to `place`, `scenes` 놀이 장면, a 큰 소품 placed) -> 부르기
 // -> that night it comes -> a guest PACE myth.guest days -> it settles. pages: the story, page i shown when step i is done
 export const MYTHIC = [{
-  id: 'firemane', name: $t('불갈기 천리마'), habitat: 'meadow', hair: $t('붉은 갈기 털'), scenes: 3,
+  id: 'firemane', name: $t('불갈기 천리마'), habitat: 'meadow', clues: ['hair', 'play', 'big'], hair: $t('붉은 갈기 털'), scenes: 3,
   model: { file: 'assets/models/myth_firemane.glb', h: 2.517, r: 0.389, seg: [-0.43, 0.934], legs: { hip: 0.8432, foot: 0.165, x: [0.4, -0.42], z: 0.19 } }, // tools/bake-mythic.mjs prints these
   place: { id: 'firehill', name: $t('불의 언덕'), lines: [$t('{n}{은/는} 따뜻한 언덕에서 붉은 털 한 가닥을 물고 왔어요'), $t('{n}{이/가} 언덕의 그을린 풀밭을 한참 냄새 맡았어요'), $t('{n}{은/는} 언덕 꼭대기에서 불씨 같은 털을 찾았어요')] },
   tales: { at: $t('옛 제단'), // 14-2 이야기 카드 (game/story.js): its coming, its settling
@@ -1199,6 +1223,14 @@ export const MYTHIC = [{
     [$t('불갈기 천리마가 들판에 머물기로 했어요.'), $t('아침이면 들판을 한 바퀴 달리고, 밤이면 들판을 환히 밝혀 줘요.')],
   ],
 }];
+// 152 D (?m89 시범): the next ones, after the firemane settled. Only the frame for now: no story, pages, tales or figure (their call is
+// a draft in docs/reports/152d.md for the user to choose); 발견 is one tap and nothing in the game lights their clues yet. check-eggs
+// pushes these to test the order
+export const MYTHIC152 = [
+  { id: 'unicorn', name: $t('유니콘'), habitat: 'meadow', clues: ['c1', 'c2', 'c3'] },
+  { id: 'baengnok', name: $t('백록'), habitat: 'snow', clues: ['c1', 'c2', 'c3'] },
+];
+if (M89) MYTHIC.push(...MYTHIC152);
 // inbox 41 D 첫날 할 일: shown on the first `days` days of a game (dayOf, from S.since) as a small list under the top bar. Each
 // task done once gives its hearts; all of them the `prop` (a 선물 prop) and `candy`. What counts: rules.js FIRST_V
 // 꾸미기 › 큰 소품 탭 (ui/decor.js TABS; first.js 「다음은 큰 소품」)

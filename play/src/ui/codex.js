@@ -35,7 +35,7 @@ export const hasNew = () => HABITATS.some(h => open(h.id) && codexCells(h.id).so
 
 export function openCodex(habId, api) { G.note('codex', 1); if (habId) tab = habId; hab = api; night = false; el.hidden = false; draw(); tip('codex', '#codex .cbar'); } // G.note: 41 D 첫날 할 일
 // live while open: redraw when what it shows changes (a variant registered, a habitat opened, someone stored), keeping the scroll
-const sig = () => [Object.keys(G.S.scenes).length, Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length, G.S.myth?.here, G.S.myth?.settled, JSON.stringify(G.S.guests?.seen ?? 0), JSON.stringify(G.S.guests?.big ?? 0), JSON.stringify(G.S.whole ?? 0), Object.keys(G.S.wild.book).length].join(); // 66-3: guest progress and gifts redraw too
+const sig = () => [Object.keys(G.S.scenes).length, Object.keys(G.S.album).length, Object.keys(G.S.codex).length, Object.values(G.S.codex).filter(e => e.adult != null).length, Object.values(G.S.colors).flat().length, G.S.unlocked.length, G.S.animals.filter(a => a.stored).length, MYTHIC.map(m => [G.S.myth[m.id]?.here, G.S.myth[m.id]?.settled]).join(), JSON.stringify(G.S.guests?.seen ?? 0), JSON.stringify(G.S.guests?.big ?? 0), JSON.stringify(G.S.whole ?? 0), Object.keys(G.S.wild.book).length].join(); // 66-3: guest progress and gifts redraw too
 let shown = '';
 G.on(() => { if (el.hidden || sig() === shown) return; const body = el.querySelector('.cbody'), y = body?.scrollTop || 0, up = V?.box?.isConnected && V.box; draw(); el.querySelector('.cbody').scrollTop = y; if (up) el.append(up); }); // the 3D view stays up
 
@@ -67,12 +67,15 @@ el.addEventListener('click', e => {
 const foot = () => { const n = Object.keys(G.S.sky?.got ?? {}).length;
   return $t('<div class="cfoot"><button class="scards" data-cab>진열장으로 보기</button>{0}</div>', n ? $t('<button class="scards" data-sky>하늘 기록 <small>{0}/{1}</small></button>', n, SKY_N) : ''); };
 // 14-1 신수: its own row in each habitat (the meadow's 불갈기 천리마; the others' only a rumour yet), not in the count
-const mythRow = () => { if (HOLD.myth) return ''; const m = MYTHIC.find(m => m.habitat === tab), met = !!(m && G.S.myth?.here);
-  return $t('<h2 class="ctier myth">{0} <small>{1}/1</small></h2><div class="crow"><div class="cell myth{2}" role="button" data-m="{3}">{4}<span>{5}</span>{6}</div></div><button class="scards" data-story="{7}">이야기 카드 <b>{8}</b>장<small>신수·전설 친구를 만난 날</small></button>', EARNED.myth.name, +met, met ? '' : ' unk', m?.id || '', m ? `<img alt="${met ? m.name : $t('아직 못 만난 신수')}">` : '', met ? m.name : '?', m ? '' : $t('<small>소문만 있어요</small>'), tab, cardsIn(tab).length); }; // 14-2
+// 152 D: a cell for each 신수 of the habitat (MYTHIC order); one with no figure yet (?m89) shows its name or "?" only
+const mythRow = () => { if (HOLD.myth) return ''; const ms = MYTHIC.filter(m => m.habitat === tab), met = m => !!G.S.myth[m.id]?.here;
+  const cells = ms.length ? ms.map(m => `<div class="cell myth${met(m) ? '' : ' unk'}" role="button" data-m="${m.id}">${m.model ? `<img alt="${met(m) ? m.name : $t('아직 못 만난 신수')}">` : ''}<span>${met(m) ? m.name : '?'}</span></div>`).join('')
+    : `<div class="cell myth unk" role="button" data-m=""><span>?</span>${$t('<small>소문만 있어요</small>')}</div>`;
+  return $t('<h2 class="ctier myth">{0} <small>{1}/{2}</small></h2><div class="crow">{3}</div><button class="scards" data-story="{4}">이야기 카드 <b>{5}</b>장<small>신수·전설 친구를 만난 날</small></button>', EARNED.myth.name, ms.filter(met).length, ms.length || 1, cells, tab, cardsIn(tab).length); }; // 14-2
 function mythBox(id) {
-  const m = MYTHIC.find(m => m.id === id), met = !!(m && G.S.myth?.here), box = document.createElement('div'), n = [...Array(5)].filter((_, i) => G.S.myth?.read & 1 << i).length;
+  const m = MYTHIC.find(m => m.id === id), M = m && G.S.myth[m.id], met = !!M?.here, box = document.createElement('div'), n = [...Array(5)].filter((_, i) => M?.read & 1 << i).length;
   box.className = 'cdet pop myth';
-  box.innerHTML = $t('<div><b>{0}</b>{1}<p class="from">{2}</p><button class="back" data-shut>닫기</button></div>', met ? m.name : $t('아직 못 만난 신수'), met ? mythCard() : m ? $t('<p class="pair"><span><img alt="신수 실루엣"><small>?</small></span></p>') : '', !m ? $t('이 서식지의 신수는 아직 소문만 있어요') : met ? $t('사는 곳: {0} · 신수는 자리를 차지하지 않아요<br>이야기 {1}/{2} · 옛 제단에서 다시 읽어요', HAB[m.habitat].name, n, m.pages.length) : mythHint());
+  box.innerHTML = $t('<div><b>{0}</b>{1}<p class="from">{2}</p><button class="back" data-shut>닫기</button></div>', met ? m.name : $t('아직 못 만난 신수'), !m?.model ? '' : met ? mythCard() : $t('<p class="pair"><span><img alt="신수 실루엣"><small>?</small></span></p>'), !m ? $t('이 서식지의 신수는 아직 소문만 있어요') : !m.pages ? (met ? '' : $t('아직 아무 소식이 없어요')) : met ? $t('사는 곳: {0} · 신수는 자리를 차지하지 않아요<br>이야기 {1}/{2} · 옛 제단에서 다시 읽어요', HAB[m.habitat].name, n, m.pages.length) : mythHint());
   const img = box.querySelector('img'); if (img) mythThumb(!met, false, met ? 0 : 1).then(u => { img.src = u; }, () => {});
   el.append(box);
 }
@@ -135,7 +138,7 @@ function bar(habId, cells, n) {
   const gift = at ? $t('<small>모으기 선물까지 {0}칸: {1}</small>', at - W.got, R[i] === 'expand' ? $t('땅 넓히기 한 번 무료{0}', ZONES[habId]?.[levelOf(G.S, habId)] ? ` (${ZONES[habId][levelOf(G.S, habId)].name})` : '') : $t('큰 소품 「{0}」', PROP[R[i]]?.name)) : R ? $t('<small>모으기 선물을 다 받았어요</small>') : '';
   const ng = wanderersOf(habId).length, nm = W.all - cells.length - ng; // 133: what 모으기 counts besides the egg friends (the 도감 n/N above)
   const inc = ng && nm ? $t('· 손님·신수 포함') : ng ? $t('· 손님 포함') : nm ? $t('· 신수 포함') : '';
-  return $t('<div class="cbar">{0} 모으기 {1}/{2} ({3}%) <span style="white-space:nowrap">{4}</span><u><i style="width:{6}%"></i></u>{7}{8}</div>', HAB[habId].name, W.got, W.all, Math.round(W.got / W.all * 100), inc, cells.length, W.got / W.all * 100, gift, left ? `<small>${left}</small>` : '');
+  return $t('<div class="cbar">{0} 모으기 {1}% <span style="white-space:nowrap">{2}</span><u><i style="width:{3}%"></i></u>{4}{5}</div>', HAB[habId].name, Math.round(W.got / W.all * 100), inc, W.got / W.all * 100, gift, left ? `<small>${left}</small>` : ''); // inbox 154 C: its n/N is the head's now (shown once)
 }
 
 const tabs = () => $t('<div class="ctabs">{0}<button data-tab="album"{1}>치장 앨범</button></div>', HABITATS.map(h => `<button ${open(h.id) ? `data-tab="${h.id}"` : `data-lock="${h.id}" class="lock"`}${h.id === tab ? ' class="on"' : ''}>${h.name}${open(h.id) ? '' : ' 🔒'}</button>`).join(''), tab === 'album' ? ' class="on"' : '');
@@ -197,13 +200,14 @@ function draw() {
     return `<h3>${r.name} <small>${cs.filter(got).length}/${cs.length}</small></h3>${rows.join('')}`;
   }).join('');
   const egg = groups && $t('<h2 class="ctier">알 친구 <small>{0}/{1}</small></h2>', cells.filter(got).length, cells.length);
-  el.innerHTML = $t('<div class="chead"><b>도감</b><span>{0}/{1}</span>{2}<button class="back" data-close>닫기</button></div>\n{3}{4}\n<div class="cbody">{5}{6}{7}{8}</div>', cells.filter(got).length, cells.length, nightBtn(), tabs(), cells.length ? bar(tab, cells, cells.filter(got).length) : '', groups ? egg + groups : $t('<p class="cnote">준비 중이에요</p>'), groups ? guestRow() + mythRow() + scenesHtml() + artHtml() + (tab === 'dino' ? '' : wildHtml()) : '', stored ? $t('<p class="cnote">보관함에 {0}마리 있어요</p>', stored) : '', foot());
+  const W = wholeOf(G.S, tab); // inbox 154 C: the head counts as 모으기 does (egg friends, guests, mythics); the rows below count only their own
+  el.innerHTML = $t('<div class="chead"><b>도감</b><span>{0}/{1}</span>{2}<button class="back" data-close>닫기</button></div>\n{3}{4}\n<div class="cbody">{5}{6}{7}{8}</div>', W.got, W.all, nightBtn(), tabs(), cells.length ? bar(tab, cells, cells.filter(got).length) : '', groups ? egg + groups : $t('<p class="cnote">준비 중이에요</p>'), groups ? guestRow() + mythRow() + scenesHtml() + artHtml() + (tab === 'dino' ? '' : wildHtml()) : '', stored ? $t('<p class="cnote">보관함에 {0}마리 있어요</p>', stored) : '', foot());
   if (groups) fillScenes(), fillArt(); el.querySelector('.cscenes:not(.cart):not(.cwild)')?.addEventListener('toggle', e => { sceneOpen = e.target.open; });
   el.querySelector('.cart')?.addEventListener('toggle', e => { artOpen = e.target.open; }); // 17-2
   el.querySelector('.cwild')?.addEventListener('toggle', e => { wildOpen = e.target.open; }); // 17-3
   for (const d of el.querySelectorAll('.cell[data-g]')) { const R = wanderersOf(tab).find(R => R.k === d.dataset.g), acc = guestWear(R);
     (d.classList.contains('unk') ? silhouetteThumb(R.sp, acc, night) : figureThumb(R.sp, 'solid', colorsOf(R.sp, 'solid')[0]?.id ?? null, acc, 'adult', night)).then(u => { d.firstChild.src = u; }, () => {}); }
-  const mi = el.querySelector('.cell.myth img'); if (mi) mythThumb(!G.S.myth?.here, night).then(u => { mi.src = u; }, () => {});
+  const mi = el.querySelector('.cell.myth img'); if (mi) mythThumb(!G.S.myth[MYTHIC[0].id]?.here, night).then(u => { mi.src = u; }, () => {});
   for (const d of el.querySelectorAll('.cell[data-k]')) {
     const c = vis.find(c => c.key === d.dataset.k), img = d.firstChild;
     const stage = G.S.codex[c.key]?.adult == null ? 'baby' : 'adult'; // registered, not seen grown up yet: its baby

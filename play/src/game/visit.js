@@ -111,7 +111,8 @@ export const guestName = g => $t('{0}의 {1}', gardenName(g.g), kindName(g));
 // colour 1 (+1, 0 none) · accessory 1 (+1, 0 none)) · then the 꾸미기 코드's bytes (layout.js). No names, hearts or anything else.
 // ponytail: indexes into SPECIES, variantsOf, colorsOf and ACCESSORIES (append only, as layout.js KINDS); a reorder there needs TH2
 // 150: the 127 shared looks (wave) went public in the middle of variantsOf; links made before keep their indexes: those at the end here
-const VL = sp => { const a = variantsOf(sp); return [...a.filter(v => !v.wave), ...a.filter(v => v.wave)]; };
+// 151: looks added after 150 (late: the second pond legendaries) go after those, so 150's numbers (the wave looks too) stay
+export const VL = sp => { const a = variantsOf(sp); return [...a.filter(v => !v.wave && !v.late), ...a.filter(v => v.wave), ...a.filter(v => v.late)]; };
 const SEE = 'TH1.', ACC = Object.keys(ACCESSORIES), FR = 24;
 const sum4 = bytes => { let h = 0x811c9dc5; for (const b of bytes) h = Math.imul(h ^ b, 0x01000193); h >>>= 0; return [h >>> 24, h >>> 16 & 255, h >>> 8 & 255, h & 255]; };
 export function seeCode(S, habId) { // S.visit.garden set first (ui/visit.js)

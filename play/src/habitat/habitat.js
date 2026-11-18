@@ -1040,6 +1040,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   let watch = false; // 26-4 보러 가기 (look): following until the screen is touched (사진 모드: drags circle it, as a tapped one)
   let focus = null, near = 6, lift = 0.8, glide = null, facing = false, goingHome = false, aim = null, tw = null; // aim: a point to glide to { at, radius, phi? }; tw: the 정면 move
   let extra = 0, zoomed = false, rEnd = 0; // following: distance added so a side view fits the screen; off once the user pinches
+  let clear = 0, in154 = false; const box154 = new THREE.Box3(); // inbox 154 D: how far the camera keeps from the followed one's middle till the user takes the camera (its box's diagonal: 2x its half size)
+  // inbox 154 D: along the unit ray o + s dir, where it enters the ball (c, m); NaN if it misses
+  const meet = (o, dir, c, m) => { const b = dir.dot(v3.subVectors(o, c)); return -b - Math.sqrt(b * b - v3.lengthSq() + m * m); };
   const off = new THREE.Vector3(), sph = new THREE.Spherical(), want = new THREE.Vector3();
   const FRONT_PHI = deg(74), FRONT_FILL = 0.4, NEAR_FILL = 0.7, FRONT_T = 0.7; // 정면: 16 deg above, 40% of the screen height, over 0.7 s
   const faceOf = a => Math.atan2(Math.cos(a.obj.rotation.y), -Math.sin(a.obj.rotation.y)); // the angle round to its face (models face +x)
@@ -1063,7 +1066,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   function setFocus(a) {
     if (a && a === focus) return; // a pat while following keeps the view
     focus = a; watch = false; trainCam = false; if (a) homeOn = false; goingHome = false; facing = false; glide = tw = null; zoomed = false; extra = 0; // the camera stays put: its side room becomes plain distance
-    if (a) { lift = 0.5 * height(a); near = fit(a, NEAR_FILL, FRONT_PHI, faceOf(a)); glide = { radius: 1.4 * near }; }
+    if (a) { lift = 0.5 * height(a); near = fit(a, NEAR_FILL, FRONT_PHI, faceOf(a)); glide = { radius: 1.4 * near }; clear = box154.setFromPoints(pts).getSize(v3).length(); } // fit's corners: its body, not its FX
     controls.zoomToCursor = !a; // following: zoom toward the animal
   }
   function overview(w = false) { skyOn = false; setFocus(null); aim = null; goingHome = true; wide = w; homeOn = !w; setHome(); } // inbox 63: w, the whole board (전체 보기); else on the friends
@@ -1120,7 +1123,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // 67-2: the floor under a tree or a prop, kept till it moves or the stamps change (asked for each animal every frame: 2% of a frame)
   const floorOf = o => o.fy?.[0] === o.x && o.fy[1] === o.z && o.fy[2] === stampSig ? o.fy[3] : (o.fy = [o.x, o.z, stampSig, habitat.floor(o.x, o.z)])[3];
   function guard() {
-    const C = camera.position, T = controls.target; real.copy(C);
+    const C = camera.position, T = controls.target; real.copy(C); let hard = false;
     for (let pass = 0; pass < 3; pass++) {
       let moved = false;
       for (const L of [habitat.solid, D.list]) for (const o of L) { // 67-2: not spread into a new array (every frame)
@@ -1132,9 +1135,17 @@ export async function startHabitat(container, ui, habId, records = [], { level =
         const R = up > 0 ? Math.sqrt(R0 * R0 - up * up) : R0, c = dx * dx + dz * dz - R * R;
         if (c >= -1e-6) continue; // outside
         const ex = T.x - C.x, ez = T.z - C.z, a = ex * ex + ez * ez, b = 2 * (ex * dx + ez * dz);
-        C.lerp(T, (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)); moved = true; // where the line to the target leaves the circle
+        C.lerp(T, (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a)); moved = true; if (!o.fade) hard = true; // where the line to the target leaves the circle
       }
       if (!moved) break;
+    }
+    // inbox 154 D: glided to one that stands by a tree, the camera behind the tree was drawn right next to it (inside its body): no
+    // nearer than its size, where the line to it enters that ball; the tree there fades at once (fadeProps). Not past a solid that
+    // can't fade (a post, the volcano); after a touch too (a pat ends the glide), unless the camera itself is that near (zoomed in)
+    in154 = false;
+    if (focus && !hard) {
+      at.set(focus.position.x, focus.position.y + lift, focus.position.z); const m = Math.min(clear, 1.4 * near); // no farther than a tap's glide ends
+      if (C.distanceTo(at) < m && real.distanceTo(at) > m - 0.01) { off.subVectors(T, real).normalize(); const s = meet(real, off, at, m); if (s === s) { C.copy(real).addScaledVector(off, Math.max(0, s)); in154 = true; } }
     }
     const f = habitat.floor(C.x, C.z) + 0.8; if (C.y < f) { C.y = f; camera.lookAt(T); }
     shown.copy(C);
@@ -1201,6 +1212,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       if (want === 1 && !o.twin?.on) continue;
       const tw = twinOf(o);
       if (!tw.on) { tw.on = true; scene.add(tw.g); tw.swap.forEach(f => f(false)); }
+      if (want === FADE && in154 && (camera.position.x - o.x) ** 2 + (camera.position.z - o.z) ** 2 < (o.r + 0.5) ** 2) tw.k = FADE; // 154 D: the camera drawn inside it (guard), no 0.3 s of its inside
       tw.k = want < tw.k ? Math.max(want, tw.k - dt * 2.5) : Math.min(want, tw.k + dt * 2.5); // 1 <-> 0.25 in 0.3 s
       for (const m of tw.mats) m.opacity = tw.k;
       if (tw.k === 1) { tw.on = false; scene.remove(tw.g); tw.swap.forEach(f => f(true)); }
@@ -1231,6 +1243,11 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       controls.target.lerp(want, k);
     }
     camera.position.copy(controls.target).add(off.setFromSpherical(sph));
+    // inbox 154 D: the glide in (보러 가기, a tap) eases the target and the distance apart, so a camera starting near it (it behind
+    // the camera, another one followed close by) went through its body; till the user takes the camera it stays outside (never past the glide's end),
+    // pushed straight out from its middle (along its own line of sight it flickered between near and far side frame to frame)
+    const m154 = focus && glide ? Math.min(clear, glide.radius) : 0;
+    if (m154 && camera.position.distanceTo(want) < m154) { const d = camera.position.sub(want); (d.lengthSq() > 1e-6 ? d : d.set(0, 1, 0)).setLength(m154).add(want); }
     if (aim && goal && Math.abs(sph.radius - goal.radius) < 0.2 && controls.target.distanceTo(aim.at) < 0.1 && (aim.theta == null || Math.abs(wrap(sph.theta - aim.theta)) < 0.01)) aim = null;
     if (goingHome && goal && Math.abs(sph.radius - goal.radius) < 0.2 && Math.abs(sph.phi - goal.phi) < 0.01 && Math.abs(wrap(sph.theta - (goal.theta ?? 0))) < 0.01 && controls.target.distanceTo(HOME.target) < 0.1) goingHome = false;
   }
@@ -1259,7 +1276,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }
 
   let active = true, lastTag = '', noteAt = 0;
-  function setActive(on) { if (!on) flushSteps(); active = on; renderer.domElement.style.display = on ? '' : 'none'; clock.getDelta(); fN = fT = slow = 0; camState = null; if (!on) ambience(null); else if (DEBUG) window.__hab = dbg; } // paused (and hidden: another habitat may share the container) while the world map is shown
+  function setActive(on) { if (!on) flushSteps(); lastTag = null; active = on; renderer.domElement.style.display = on ? '' : 'none'; clock.getDelta(); fN = fT = slow = 0; camState = null; if (!on) ambience(null); else if (DEBUG) window.__hab = dbg; } // paused (and hidden: another habitat may share the container) while the world map is shown; inbox 154 B: lastTag null makes the next frame send this board's tag (or none) again
   const clock = new THREE.Clock();
   function tick(id = loop) {
     if (dead || id !== loop) return;

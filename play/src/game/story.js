@@ -1,5 +1,5 @@
 // 14-2 신수·전설 이야기 카드: the day a 신수 came to its altar, the day it settled, the day a legendary hatched. Nothing new in
-// the save: the cards are read from what it already keeps (S.myth here / settled, the codex's first day of each legendary
+// the save: the cards are read from what it already keeps (S.myth[id] here / settled, the codex's first day of each legendary
 // look), so an old save has its cards too. A card's code (TS1.<base64url>) holds only its kind, who, the day and the part of
 // the day (한국 시간) and the habitat: no names given, no device, no place, nothing else about the player.
 import { $t, LANG } from '../i18n/i18n.js';
@@ -28,9 +28,10 @@ const card = (k, id, hab, t) => ({ k, id, hab, ...when(t), t });
 
 // every card the save holds, oldest first. k: 'm' it came (meet), 's' it settled, 'l' a legendary (id 'species:variant')
 export function storyCards(S) {
-  const out = [], M = S.myth || {}, m = MYTHIC[0];
-  if (Number.isFinite(M.here)) out.push(card('m', m.id, m.habitat, M.here));
-  if (Number.isFinite(M.settled)) out.push(card('s', m.id, m.habitat, M.settled));
+  const out = [];
+  for (const m of MYTHIC) { const M = S.myth?.[m.id] || {}; if (!m.tales) continue; // 152 D: each 신수 with its tales (the ?m89 ones have none yet)
+    if (Number.isFinite(M.here)) out.push(card('m', m.id, m.habitat, M.here));
+    if (Number.isFinite(M.settled)) out.push(card('s', m.id, m.habitat, M.settled)); }
   for (const [k, e] of Object.entries(S.codex || {})) {
     const [sp, v] = k.split(':');
     if (RAR[variantOf(sp, v)?.rarity]?.story && Number.isFinite(e?.at)) out.push(card('l', k, HN[e.h] ? e.h : SP[sp].habitat, e.at));

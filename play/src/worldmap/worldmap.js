@@ -50,6 +50,7 @@ export function initWorldMap(root, { enter }) {
       add('label', P.label, `${h.name} · ${word}`);
       spot.setAttribute('aria-label', $t('{0} 서식지, {1}', h.name, word));
       spot.onclick = state === 'in' ? () => enter(h.id) : state === 'soon' ? () => toast($t('준비 중이에요')) : () => lockToast(h.id);
+      made.at(-1).onclick = spot.onclick; // inbox 154 A: the name tag says 「들어가기」, so tapping it works like the pin
     }
   }
   // inbox 40: the map covers the stage like a picture, so a tall narrow screen (Fold cover, Flip) loses its sides;

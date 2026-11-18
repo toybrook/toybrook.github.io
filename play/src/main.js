@@ -63,7 +63,7 @@ $('overview').onclick = () => api?.overview(); $('frontBtn').onclick = () => api
 // inbox 20: going straight to a habitat (the 「연못에서 보기」 button, the habitat menu, the 「자리 비운 사이」 card), and to one animal there
 const nav = {
   async go(id, aid) {
-    if (cur !== id) { if (cur) { api?.setActive(false); play?.leave(); } if (!await enter(id)) return false; }
+    if (cur !== id) { if (cur) { api?.unfollow(); api?.setActive(false); play?.leave(); } if (!await enter(id)) return false; }
     if (aid != null && !api?.look(aid)) toast($t('지금은 볼 수 없어요'));
   },
 };
@@ -190,7 +190,7 @@ const glFail = e => { console.warn('rebuild', e); if ($('glFail')) return; const
 const level = initLevel(() => api); level.events(offline); // 23-1 정원사 레벨
 const snap = initPhoto(() => api, () => cur); // 24-1 사진 모드
 initSky(() => api, () => cur);
-$('back').onclick = () => { mapUp(); snap.leave(); hab.classList.add('hidden'); world.classList.remove('hidden'); api?.setActive(false); api = cur = null; play?.leave(); };
+$('back').onclick = () => { mapUp(); snap.leave(); hab.classList.add('hidden'); world.classList.remove('hidden'); api?.unfollow(); api?.setActive(false); api = cur = null; play?.leave(); }; // inbox 154 B: leaving a habitat stops 보는 중 (its tag goes)
 
 // 74: one button (the habitat's name, ‹) back to the world map; the map moves between habitats
 $('habName').onclick = () => $('back').click();

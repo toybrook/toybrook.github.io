@@ -34,7 +34,7 @@ html.ja *{word-break:normal!important;line-break:strict} /* 119: keep-all keeps 
 .toast{position:absolute;left:50%;top:calc(112px + var(--sa-t));transform:translateX(-50%);width:max-content;max-width:min(320px,86%);text-align:center;word-break:keep-all;line-height:1.45;background:rgba(20,24,20,.75);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:10px 14px;font-size:calc(14px*var(--fs));z-index:1400;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.on{opacity:1}
 .toast.small{font-size:calc(12px*var(--fs));padding:6px 11px;background:rgba(20,24,20,.6)}
-.label{position:absolute;transform:translate(-50%,-50%);background:rgba(20,24,20,.55);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 10px;font-size:calc(12px*var(--fs));pointer-events:none;white-space:nowrap}
+.label{position:absolute;transform:translate(-50%,-50%);background:rgba(20,24,20,.55);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 10px;font-size:calc(12px*var(--fs));cursor:pointer;white-space:nowrap}
 #habitat{background:radial-gradient(120% 80% at 50% 30%,#fbe9d0 0%,#f1d3ae 55%,#e2b98c 100%)}
 #gl{position:absolute;inset:0}
 #gl canvas{display:block;width:100%!important;height:100%!important}
