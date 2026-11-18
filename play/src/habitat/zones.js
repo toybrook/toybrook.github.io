@@ -424,6 +424,90 @@ function fernwood143(s) {
     { t: 'spot', x: N.x, z: N.z - 2.6, act: 'den', r: 0.15, to: [N.x, N.z] },
     SPOT(s, 0.3, 0.3, 'rest'), SPOT(s, 0.35, 0.7, 'rest'), SPOT(s, 0.6, 0.9, 'rest')];
 }
+// q1 B the cliffs (?z143=1): the rock as it was with a shoulder either side of it (a ridge, a wall, not a lone cone), vines down
+// its faces to the view, a pterosaur's twig nest of eggs on its top; the three rock stacks as they were, a twig nest on each (the
+// pterosaur's perches: it sits in one); before the rock a low flat warm ledge where one lies flat in the sun (sun: walk.js);
+// fallen stones in heaps at the foot (zoneprops.js). clr: no strewn trees, bushes or rocks that near. World m (the strip x -39..-27)
+function cliffs143(s) {
+  const h = H(s, 0.55, 0.38, 3.4, 4.4, 9, { rock: 1, top: 0.3 }), L = { t: 'hill', x: -29.6, z: -1.6, rx: 2.3, rz: 3.7, h: 0.75, rock: 1, top: 0.55, clr: 3.4 }, sun = (x, z) => ({ t: 'spot', x, z, act: 'sun', r: 0.2, to: [x + 6, z + 2], who: SOAKERS143 }); // not the pterosaur
+  const sh = [{ t: 'hill', x: -35.1, z: -19.6, rx: 3.6, rz: 5.0, h: 6.2, rock: 1, top: 0.2 }, { t: 'hill', x: -35.6, z: -1.8, rx: 3.4, rz: 4.4, h: 4.6, rock: 1, top: 0.2 }];
+  return [FACE(s, '#7e8a58', 0.6), h, ...sh, ...[h, ...sh].map(f => ({ t: 'tint', x: f.x, z: f.z, rx: f.rx + 0.3, rz: f.rz + 0.3, c: ROCK, a: 1, steep: 1 })),
+    { t: 'tint', x: h.x, z: h.z, rx: 1.9, rz: 2.4, c: '#6f8a44', a: 0.85, fo: 0.5 }, // moss on the top, round the nest
+    L, { t: 'tint', x: L.x, z: L.z, rx: L.rx + 0.15, rz: L.rz + 0.15, c: '#ada395', a: 1, fo: 0.15 }, sun(-29.4, -3.8), sun(-29.8, 0.6), { t: 'heap143', x: -32.5, z: -1.4, sc: 0.75 },
+    ...[[0.3, 0.66], [0.7, 0.8], [0.35, 0.93]].flatMap(([u, v]) => { const [x, z] = at(s, u, v); return [{ t: 'col', x, z, r: 1.1, h: 1.4 }, { t: 'tint', x, z, rx: 2.2, rz: 2.2, c: ROCK, a: 0.8 }]; }),
+    SPOT(s, 0.55, 0.6, 'rest'), SPOT(s, 0.55, 0.87, 'nap'), SPOT(s, 0.25, 0.18, 'rest'),
+    { t: 'heap143', x: -29.0, z: -13.2, sc: 1.0, clr: 2.2 }, { t: 'heap143', x: -30.6, z: -24.6, sc: 0.85, clr: 2 }, { t: 'heap143', x: -31.6, z: 3.6, sc: 0.7, clr: 1.8 },
+    { t: 'sign143', x: -28.3, z: 4.4 }];
+}
+// q1 B the riverbed (?z143=1): the stream as it was, a little wider (w 1.4 -> 1.8) in a broader gravel bed; four stepping stones
+// over it where one hops across (ford: walk.js, zoneprops.js writes their tops), two quiet places where one lies on the far bank
+// with its eyes on the water till a fish leaps (fish, to: the leap143: walk.js, zoneprops.js), a drink at the water's edge, a
+// mossy log fallen across it, stone heaps, a sign. World m (the strip z 43.5..55.5; the stream's line at z 47.4..51.6)
+function riverbed143() {
+  const pts = P([[-24, 33.4], [-16, 31.6], [-8, 34.2], [0, 32.2], [8, 34.4], [16, 32.4], [24, 33.8]]), a = [6.69, 47.44], b = [5.31, 52.46];
+  const ford = [[6.40, 48.50], [6.13, 49.47], [5.87, 50.43], [5.60, 51.40]], A = { t: 'leap143', x: -14, z: 50.65, r: 1.6 }, B = { t: 'leap143', x: 28, z: 49.3, r: 1.6 }; // ford: across its line (a normal to it); r: the nose stops at the water's edge (walk.js)
+  return [{ t: 'tint', pts, rw: 3.6, c: '#b8ad98', a: 0.9, pat: GRAVEL }, { t: 'rill', pts, w: 1.8 },
+    ...SP([[-20, 30.8, 'rest'], [-4, 30.6, 'nap'], [12, 35.8, 'rest'], [20, 30.8, 'rest'], [4, 36.1, 'rest']]),
+    { t: 'spot', x: a[0], z: a[1], act: 'ford', r: 0.3, to: b, ford, clr: 1.6 }, { t: 'spot', x: b[0], z: b[1], act: 'ford', r: 0.3, to: a, ford: [...ford].reverse(), clr: 1.6 },
+    A, B, { t: 'spot', x: -14.87, z: 53.3, act: 'fish', r: 0.15, to: A, clr: 2 }, { t: 'spot', x: 27.5, z: 52.06, act: 'fish', r: 0.15, to: B, clr: 2 }, // on the far bank, facing the view over the water
+    { t: 'spot', x: -3.9, z: 46.6, act: 'drink', r: 0.2, to: [-3.4, 48.4], clr: 1.4 },
+    { t: 'log143', x: -34, z: 49.65, ry: 1.79, len: 5.2, clr: 2.6 }, // fallen across the stream (its line there runs at 0.22 rad)
+    { t: 'heap143', x: 13.6, z: 54.0, sc: 0.8, clr: 1.8 }, { t: 'heap143', x: -23.5, z: 52.6, sc: 0.7, clr: 1.6 }, { t: 'sign143', x: 9.0, z: 45.6 }];
+}
+// q1 B the big dig (?z143=1): a shallow pit (darker) where a whole skeleton lies half dug out, its skull to the view, the back
+// of it still deeper in the sand; a string grid on stakes round it; a spoil heap of sand beside it; the dig's camp at its front
+// (a canvas tent, its lantern lit by night, crates, a bucket, a shovel, a sieve). One digging by the bones scratches a hole
+// open and a bone shows in it, then the sand slides back (dig, to: the find143: walk.js, zoneprops.js). World m (the strip x 39..51)
+function bigdig143(s) {
+  const A = { t: 'find143', dg: 1, fx: 45.2, fz: 12.4 }, B = { t: 'find143', dg: 1, fx: 45.1, fz: 4.2 }; // fx, fz: one digs facing the bones (and the view)
+  return [FACE(s, SAND, 1, { pat: speck(['#d9c088', '#f0ddb0', '#c8a870'], 0.4, 0.4) }), { t: 'flat', r: s.r },
+    { t: 'hill', x: 45, z: 8, rx: 3.6, rz: 7.6, h: -0.45, top: 0.6 }, { t: 'tint', x: 45, z: 8, rx: 3.9, rz: 7.9, c: '#c29a62', a: 0.9, fo: 0.3, bare: [3.9, 7.9] }, // the pit
+    { t: 'hill', x: 50.1, z: 13.2, rx: 1.3, rz: 2.4, h: 0.6 }, { t: 'tint', x: 50.1, z: 13.2, rx: 1.5, rz: 2.6, c: '#ead6a4', a: 0.8 }, // the spoil heap
+    { t: 'bones143', x: 45, z: 8, clr: 8.6 }, { t: 'grid143', r: [41.1, 48.3, -0.1, 16.1] },
+    { t: 'camp143', x: 47.2, z: 25, ry: -1.1, clr: 4.5 }, A, B, // its door to the view
+    { t: 'spot', x: 48.0, z: 12.4, act: 'dig', r: 0.4, to: A }, { t: 'spot', x: 47.5, z: 4.2, act: 'dig', r: 0.4, to: B }, // by the neck, by the tail (the far side: in by the grid's gap)
+    SPOT(s, 0.3, 0.88, 'rest'), SPOT(s, 0.72, 0.12, 'nap'), SPOT(s, 0.3, 0.62, 'rest'),
+    { t: 'heap143', x: 49.6, z: -6, sc: 0.8, clr: 1.8 }, { t: 'heap143', x: 41.6, z: 36, sc: 0.7, clr: 1.6 }, { t: 'sign143', x: 41.2, z: 19.5 }];
+}
+// q1 B the mudflat (?z143=1): the two pools as they were, their water brown mud now (mud: water.js), bubbling and steaming a
+// little; a wallow between them, a shallow dip of wet dark mud (bare: no grass in it) where one rolls longer and the mud flies
+// (roll, to: the wal143: walk.js, zoneprops.js leaves its print in it); three-toed tracks in the mud from pool to wallow to
+// pool; cattails thick on the pools' far sides; a half-sunk log; puddles that grow in the rain. World m (the strip x -51..-39)
+function mudflat143(s) {
+  const W = { t: 'wal143', mud: 1, x: -44.9, z: 5.2, clr: 5.2 };
+  return [FACE(s, '#6e5a3a', 0.85, { pat: speck(['#5e4a30', '#7a6440', '#56703a'], 0.4, 0.5) }), POOL(s, 0.5, 0.28, 2.4, { murk: 1, mud: 1 }), POOL(s, 0.45, 0.72, 2.6, { murk: 1, mud: 1 }),
+    { t: 'hill', x: -44.9, z: 5.2, rx: 3.0, rz: 4.4, h: -0.28, top: 0.6 }, { t: 'tint', x: -44.9, z: 5.2, rx: 3.4, rz: 4.8, c: '#4a3220', a: 0.95, fo: 0.35, bare: [3.6, 5.0] }, { t: 'tint', x: -44.9, z: 5.2, rx: 1.9, rz: 3.0, c: '#38241a', a: 0.9, fo: 0.5 }, // the wallow, wetter in its middle
+    W, { t: 'spot', x: -45.0, z: 7.9, act: 'roll', r: 1.0, to: W }, { t: 'spot', x: -44.8, z: 2.5, act: 'roll', r: 1.0, to: W },
+    { t: 'track143', pts: [[-42.6, 25.2], [-42.4, 20.5], [-43.2, 15.5], [-43.0, 10.4]] }, { t: 'track143', pts: [[-43.2, 0.2], [-42.6, -4.6], [-43.1, -9.5], [-43.6, -13.2]] }, // pool to wallow to pool
+    { t: 'mudlog143', x: -48.6, z: -4.2, ry: 1.25, clr: 2.4 }, { t: 'puddle143', pts: [[-41.6, 12.6, 0.7], [-47.6, 13.4, 0.55], [-41.4, -1.6, 0.6], [-48.3, 1.6, 0.5], [-46.8, 35.6, 0.6], [-42.2, -24.4, 0.55]] },
+    SPOT(s, 0.3, 0.9, 'rest'), SPOT(s, 0.7, 0.14, 'nap'),
+    { t: 'heap143', x: -49.6, z: 19.5, sc: 0.75, clr: 1.8 }, { t: 'heap143', x: -40.6, z: -33.5, sc: 0.7, clr: 1.6 }, { t: 'sign143', x: -40.4, z: 8.8 }];
+}
+// q1 B the springs (?z143=1): as the snow's hot spring A (139/140), three pools stepping down a dark volcanic rise (on ledges:
+// shelf; each spills into the next: chute, fall), jade water; an ochre mineral crust round each, dark wet stone under the rim,
+// bare rock down the falls; heaps of dark lava stones on the rims, basalt columns behind, a steaming vent with sulphur on it;
+// one more pool on its own farther along. Thick slow steam (zoneprops.js steam129). Dinos bathe in them (bath). World m (the
+// strip z 55.5..67.5, x -51..51; the home view looks in from +z: the rise behind the pools toward the river, -z)
+const LAVA = speck(['#4a4542', '#625a54'], 0.5, 0.5), SOAKD143 = { triceratops: 0.28, stegosaurus: 0.3, ankylosaurus: 0.35, tRex: 0.35, brachiosaurus: 0.25 }, SOAKERS143 = Object.keys(SOAKD143); // no pterosaur
+function springs143(s) {
+  const cx = -8, cz = 61.5, wl = q => q.r - 0.7, pool = (x, z, r) => ({ t: 'pool', x, z, r, hot: 1, jade: 1, clr: r + 1.6 });
+  const ring = (q, c, full, out, a, pat) => ({ t: 'tint', x: q.x, z: q.z, rx: q.r + out, rz: q.r + out, fo: (out - full) / (q.r + out), c, a, pat });
+  const spill = (a, b) => { const L = Math.hypot(b.x - a.x, b.z - a.z), ux = (b.x - a.x) / L, uz = (b.z - a.z) / L;
+    return [{ t: 'chute', from: [a.x, a.z], to: [b.x - ux * (wl(b) - 0.3), b.z - uz * (wl(b) - 0.3)], d: 0.7 },
+      { t: 'fall', from: [a.x + ux * wl(a), a.z + uz * wl(a)], to: [b.x - ux * wl(b), b.z - uz * wl(b)], w: 0.55, jade: 1 }]; };
+  const Ht = { t: 'hill', x: cx - 9, z: cz - 1.5, rx: 6.5, rz: 4.2, h: 3.2, clr: 6 }, Hb = { t: 'hill', x: cx - 5, z: cz - 0.8, rx: 9, rz: 5.2, h: 1.6, clr: 7 };
+  const A = pool(cx - 9.5, cz - 1.8, 1.9), B = pool(cx - 3.4, cz - 0.2, 2.4), C = pool(cx + 3.6, cz + 1.6, 3.3), D = pool(25.5, 62.4, 2.4), sp = spill(A, B).concat(spill(B, C));
+  // in to the shoulders (soak: walk.js, as the snow's spring; d how much of it under the water), then out toward the open +z side
+  const bath = (q, dx, dz) => ({ t: 'spot', x: q.x + dx, z: q.z + dz, act: 'bath', r: 0.4, soak: { d: SOAKD143, out: [q.x + dx, q.z + q.r + 0.6], pool: q }, who: SOAKERS143 });
+  return [FACE(s, '#7a8a5a', 0.5), Ht, Hb, A, B, C, D, { t: 'shelf', x: A.x, z: A.z, r: A.r + 0.4, e: 1.6 }, { t: 'shelf', x: B.x, z: B.z, r: B.r + 0.4, e: 1.8, ex: 2.8, up: Math.atan2(A.z - B.z, A.x - B.x) }, ...sp,
+    { t: 'tint', x: Ht.x, z: Ht.z, rx: Ht.rx + 0.4, rz: Ht.rz + 0.4, c: '#5e5853', a: 1, steep: 1, pat: LAVA }, { t: 'tint', x: Hb.x, z: Hb.z, rx: Hb.rx + 0.4, rz: Hb.rz + 0.4, c: '#5e5853', a: 0.9, steep: 1, pat: LAVA }, // the rise's dark rock where it is steep
+    ...[A, B, C, D].flatMap(q => [ring(q, '#c79a58', 0.35, 1.2, 0.75), ring(q, '#5a534d', -0.3, 0.3, 0.85, LAVA)]), // an ochre crust, then dark wet stone under the rim
+    ...sp.filter(f => f.t === 'fall').map(f => ({ t: 'tint', pts: [f.from, f.to], rw: 1.8, c: '#55504b', a: 0.9, pat: LAVA })), // bare wet rock down each fall
+    bath(C, -1.3, 0.2), bath(C, 1.4, -0.3), bath(B, 0, 0), bath(A, 0, 0), bath(D, 0, 0),
+    { t: 'col143', x: cx - 12.6, z: cz - 4.0, sc: 1.1, clr: 2.4 }, { t: 'col143', x: cx - 6.2, z: cz - 4.4, sc: 0.8, clr: 2 }, { t: 'col143', x: 29.2, z: 58.6, sc: 0.75, clr: 2 }, // basalt columns behind
+    { t: 'vent143', x: 20.4, z: 59.4, clr: 2.4 }, // a steaming vent
+    SPOT(s, 0.5, 0.1, 'rest'), SPOT(s, 0.5, 0.92, 'rest'), SPOT(s, 0.4, 0.65, 'nap'), { t: 'sign143', x: cx + 8.4, z: 65.6 }];
+}
 const SHAPES = {
   meadow: {
     flowerhill: s => z143on('flowerhill') ? flowerhill143(s) : [FACE(s, '#93cf4c', 0.35), // inbox 67-3 the meadow's own green: the flowers stand in it (zoneprops.js drifts), none painted
@@ -486,18 +570,18 @@ const SHAPES = {
   dino: {
     fernwood: s => Z143 ? fernwood143(s) : [FACE(s, '#4e8a36', 0.85, { pat: speck(['#3f7a2c', '#5f9a3c', '#6aa640'], 0.35, 0.35) }), H(s, 0.5, 0.5, 2.8, 5, 0.6), // fern shade on a low rise
       SPOT(s, 0.3, 0.3, 'rest'), SPOT(s, 0.65, 0.5, 'nap'), SPOT(s, 0.35, 0.7, 'rest'), SPOT(s, 0.6, 0.9, 'rest')],
-    cliffs: s => [FACE(s, '#7e8a58', 0.6), H(s, 0.55, 0.38, 3.4, 4.4, 9, { rock: 1, top: 0.3 }), TINT(s, 0.55, 0.38, 3.6, 4.6, ROCK, 1, { steep: 1 }), // a rock hill (3H)
+    cliffs: s => Z143 ? cliffs143(s) : [FACE(s, '#7e8a58', 0.6), H(s, 0.55, 0.38, 3.4, 4.4, 9, { rock: 1, top: 0.3 }), TINT(s, 0.55, 0.38, 3.6, 4.6, ROCK, 1, { steep: 1 }), // a rock hill (3H)
       ...[[0.3, 0.66], [0.7, 0.8], [0.35, 0.93]].flatMap(([u, v]) => { const [x, z] = at(s, u, v); return [{ t: 'col', x, z, r: 1.1, h: 1.4 }, { t: 'tint', x, z, rx: 2.2, rz: 2.2, c: ROCK, a: 0.8 }]; }), // rock stacks: the pterosaur's perches
       SPOT(s, 0.55, 0.6, 'rest'), SPOT(s, 0.55, 0.87, 'nap'), SPOT(s, 0.25, 0.18, 'rest')],
-    riverbed: () => { const pts = P([[-24, 33.4], [-16, 31.6], [-8, 34.2], [0, 32.2], [8, 34.4], [16, 32.4], [24, 33.8]]);
+    riverbed: () => { if (Z143) return riverbed143(); const pts = P([[-24, 33.4], [-16, 31.6], [-8, 34.2], [0, 32.2], [8, 34.4], [16, 32.4], [24, 33.8]]);
       return [{ t: 'tint', pts, rw: 2.8, c: '#b8ad98', a: 0.9, pat: GRAVEL }, { t: 'rill', pts, w: 1.4 },
         ...SP([[-20, 30.8, 'rest'], [-4, 30.6, 'nap'], [12, 35.8, 'rest'], [20, 30.8, 'rest'], [4, 36.1, 'rest']])]; },
-    bigdig: s => [FACE(s, SAND, 1, { pat: speck(['#d9c088', '#f0ddb0', '#c8a870'], 0.4, 0.4) }), { t: 'flat', r: s.r }, TINT(s, 0.5, 0.5, 2.6, 7, '#c8a870', 0.7), // the dug ground, darker
+    bigdig: s => Z143 ? bigdig143(s) : [FACE(s, SAND, 1, { pat: speck(['#d9c088', '#f0ddb0', '#c8a870'], 0.4, 0.4) }), { t: 'flat', r: s.r }, TINT(s, 0.5, 0.5, 2.6, 7, '#c8a870', 0.7), // the dug ground, darker
       SPOT(s, 0.35, 0.45, 'dig', { r: 1.6 }), SPOT(s, 0.62, 0.75, 'dig', { r: 1.6 }), SPOT(s, 0.3, 0.88, 'rest'), SPOT(s, 0.72, 0.12, 'nap')],
-    mudflat: s => [FACE(s, '#6e5a3a', 0.85, { pat: speck(['#5e4a30', '#7a6440', '#56703a'], 0.4, 0.5) }), POOL(s, 0.5, 0.28, 2.4, { murk: 1 }), POOL(s, 0.45, 0.72, 2.6, { murk: 1 }),
+    mudflat: s => Z143 ? mudflat143(s) : [FACE(s, '#6e5a3a', 0.85, { pat: speck(['#5e4a30', '#7a6440', '#56703a'], 0.4, 0.5) }), POOL(s, 0.5, 0.28, 2.4, { murk: 1 }), POOL(s, 0.45, 0.72, 2.6, { murk: 1 }),
       TINT(s, 0.5, 0.5, 2.6, 4, '#5e4028', 0.8), // the wallow between the pools
       SPOT(s, 0.55, 0.5, 'roll', { r: 1.4 }), SPOT(s, 0.4, 0.48, 'roll', { r: 1.4 }), SPOT(s, 0.3, 0.9, 'rest'), SPOT(s, 0.7, 0.14, 'nap')],
-    springs: s => [FACE(s, '#7a8a5a', 0.5), ...[[0.5, 0.25, 2.4], [0.45, 0.52, 2.8], [0.55, 0.78, 2.4]].flatMap(([u, v, r]) => [POOL(s, u, v, r, { hot: 1 }), TINT(s, u, v, r / S + 0.8, r / S + 0.8, '#a39a8a', 0.6)]),
+    springs: s => Z143 ? springs143(s) : [FACE(s, '#7a8a5a', 0.5), ...[[0.5, 0.25, 2.4], [0.45, 0.52, 2.8], [0.55, 0.78, 2.4]].flatMap(([u, v, r]) => [POOL(s, u, v, r, { hot: 1 }), TINT(s, u, v, r / S + 0.8, r / S + 0.8, '#a39a8a', 0.6)]),
       SPOT(s, 0.4, 0.52, 'bath', { r: 0.6 }), SPOT(s, 0.52, 0.525, 'bath', { r: 0.6 }), SPOT(s, 0.5, 0.25, 'bath', { r: 0.6 }), SPOT(s, 0.55, 0.78, 'bath', { r: 0.6 }),
       SPOT(s, 0.5, 0.1, 'rest'), SPOT(s, 0.5, 0.92, 'rest'), SPOT(s, 0.5, 0.38, 'nap'), SPOT(s, 0.5, 0.65, 'nap')],
   },

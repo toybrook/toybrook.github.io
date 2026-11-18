@@ -836,11 +836,11 @@ for (const [sp, L] of Object.entries(LEGEND141)) SPECIES.find(s => s.id === sp).
 // 152 A 말 전설 2번째 (?m89 시범; inbox 152 A, 153 A 다시): polished dark slate stone with big plates flashing blue / teal / gold /
 // orange as the angle turns (materials.js 152). Appended last; late (153 A): visit.js VL puts it after the 150 wave looks, as LEGEND151
 export const LEGEND152 = { id: 'labradorite', name: $t('래브라도라이트 말'), mat: 'labradorite152', effect: 'twinkle', late: 152 };
-if (M89) SPECIES.find(s => s.id === 'horse').legendary.push(LEGEND152);
-// 157 A 말 전설 3번째 무지개 티타늄 (?m89 시범; materials.js 157 A): a new slot after the labradorite (kept as it is); late: last in VL
+// 157 A 말 전설 3번째 무지개 티타늄 (160 A 공개; materials.js 157 A): a new slot after the labradorite (kept as it is); late: last in VL
 export const LEGEND157 = { id: 'titanium', name: $t('무지개 티타늄 말'), mat: 'titanium157', effect: 'twinkle', late: 157 };
-if (M89) SPECIES.find(s => s.id === 'horse').legendary.push(LEGEND157);
-// 151 연못 전설 2번째 (?m89 시범; inbox 151): black pearl, cut emerald set in gold, gold leaf in resin, obsidian, neon glass, moonstone
+SPECIES.find(s => s.id === 'horse').legendary.push(LEGEND157); // 160 A: public (user OK 11/19)
+if (M89) SPECIES.find(s => s.id === 'horse').legendary.push(LEGEND152); // 160 A: kept (catalog-candidates.md), still ?m89; after the titanium so its link number stays
+// 151 연못 전설 2번째 (160 A 공개; inbox 151): black pearl, cut emerald set in gold, gold leaf in resin, obsidian, neon glass, moonstone
 // (materials.js 151). Appended last; late: visit.js VL puts them after the 150 wave looks, so every link number made before stays
 export const LEGEND151 = {
   duck: { id: 'blackpearl', name: $t('흑진주 오리'), mat: 'blackpearl151', effect: 'twinkle', late: 151 },
@@ -850,11 +850,11 @@ export const LEGEND151 = {
   flamingo: { id: 'neon', name: $t('네온 플라밍고'), mat: 'neon151', effect: 'twinkle', late: 151 },
   capybara: { id: 'moonstone', name: $t('문스톤 카피바라'), mat: 'moonstone151', effect: 'clearglints', late: 151 }, // 155 B2: six small glints, not the moondust's forty dots
 };
-if (M89) for (const [sp, L] of Object.entries(LEGEND151)) SPECIES.find(s => s.id === sp).legendary.push(L);
-// 152 C 백록 (?m89 시범): the white deer of Halla, on the reindeer's own legend files (tools/bake-baengnok152.mjs: slimmer, a big
+for (const [sp, L] of Object.entries(LEGEND151)) SPECIES.find(s => s.id === sp).legendary.push(L); // 160 A: public (user OK 11/19)
+// 152 C 백록 (160 A 공개): the white deer of Halla, on the reindeer's own legend files (tools/bake-baengnok152.mjs: slimmer, a big
 // smooth antler, a silver cord and bell) in white porcelain, frost flowers at its feet (materials.js 152 C). 158: no longer a reindeer
 // legendary slot: the 신수 백록 (MYTHIC152 fig) wears it
-if (M89) MODELS.reindeer.legend = { adult: 'assets/models/pilot89_baengnok152_adult.glb', baby: 'assets/models/pilot89_baengnok152_baby.glb' }; // 156 C: the calf's own file too
+MODELS.reindeer.legend = { adult: 'assets/models/baengnok152_adult.glb', baby: 'assets/models/baengnok152_baby.glb' }; // 160 A: public (the pilot89 files renamed) // 156 C: the calf's own file too
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
 export const WAVE127 = 3; // 150 (user OK 11/18): all 11 public
@@ -938,11 +938,11 @@ export const ZONES = {
   ],
   dino: [ // 14-3
     { id: 'fernwood', name: $t('고사리 숲'), side: '+x', w: 8, line: $t('키 큰 나무고사리 숲이에요. 동물들이 고사리 그늘에서 쉬어요.'), line143: $t('커다란 나무고사리 아래 깊은 그늘에 고사리 잎 잠자리가 있어요. 공룡이 누우면 잎이 이불처럼 덮이고 머리만 쏙 나와요. 쓰러진 통나무와 알 둥지도 있어요.') },
-    { id: 'cliffs', name: $t('익룡 바위'), side: '-x', w: 8, line: $t('바위 언덕 둘레의 돌기둥 위에 프테라노돈이 올라가 앉아요.') },
-    { id: 'riverbed', name: $t('얕은 강'), side: '+z', w: 8, line: $t('정글 사이로 얕은 강이 흘러요. 동물들이 물가에 와서 쉬어요.') },
-    { id: 'bigdig', name: $t('큰 발굴지'), side: '+x', w: 8, line: $t('커다란 공룡 뼈가 드러난 발굴지예요. 동물들이 와서 땅을 파요.') },
-    { id: 'mudflat', name: $t('진흙 늪'), side: '-x', w: 8, line: $t('넓은 진흙 늪에서 동물들이 데굴데굴 뒹굴어요.') },
-    { id: 'springs', name: $t('김 나는 웅덩이'), side: '+z', w: 8, line: $t('화산 옆 따뜻한 웅덩이에 동물들이 들어가 졸아요.') },
+    { id: 'cliffs', name: $t('익룡 바위'), side: '-x', w: 8, line: $t('바위 언덕 둘레의 돌기둥 위에 프테라노돈이 올라가 앉아요.'), line143: $t('바위 언덕 양옆으로 절벽이 이어지고 덩굴이 늘어져 있어요. 꼭대기에는 익룡 알 둥지가 있고, 돌기둥 위 둥지에 프테라노돈이 앉아요. 절벽 앞 따뜻한 바위에서는 공룡들이 배를 깔고 햇볕을 쬐어요.') },
+    { id: 'riverbed', name: $t('얕은 강'), side: '+z', w: 8, line: $t('정글 사이로 얕은 강이 흘러요. 동물들이 물가에 와서 쉬어요.'), line143: $t('정글 사이로 얕은 강이 흘러요. 징검돌을 깡충깡충 건너고, 건너편 물가에 엎드려 물을 지켜보면 물고기가 펄쩍 뛰어올라요. 강 위로는 이끼 낀 통나무가 걸쳐 있어요.') },
+    { id: 'bigdig', name: $t('큰 발굴지'), side: '+x', w: 8, line: $t('커다란 공룡 뼈가 드러난 발굴지예요. 동물들이 와서 땅을 파요.'), line143: $t('커다란 공룡 뼈대가 구덩이에 드러나 있고 줄과 말뚝으로 칸을 나눴어요. 공룡이 땅을 파면 작은 뼈가 나와요. 옆에는 텐트와 체, 상자가 있는 발굴 캠프가 있고 밤에는 등불이 켜져요.') },
+    { id: 'mudflat', name: $t('진흙 늪'), side: '-x', w: 8, line: $t('넓은 진흙 늪에서 동물들이 데굴데굴 뒹굴어요.'), line143: $t('김이 나는 진흙 웅덩이에서 거품이 퐁퐁 올라오고 둘레에는 부들이 자라요. 공룡이 진흙에 뒹굴면 진흙이 튀고 몸 자국이 남아요. 길에는 발자국이 찍혀 있고, 비가 오면 웅덩이가 넓어져요.') },
+    { id: 'springs', name: $t('김 나는 웅덩이'), side: '+z', w: 8, line: $t('화산 옆 따뜻한 웅덩이에 동물들이 들어가 졸아요.'), line143: $t('검은 화산 돌 비탈에 따뜻한 물웅덩이가 계단처럼 이어지고 작은 폭포로 흘러내려요. 김이 피어오르는 웅덩이에 공룡이 몸을 담그고 졸아요. 옆에는 현무암 기둥과 노란 유황이 묻은 김 구멍도 있어요.') },
   ],
 };
 
@@ -1222,7 +1222,7 @@ export const MYTHIC = [{
     [$t('불갈기 천리마가 들판에 머물기로 했어요.'), $t('아침이면 들판을 한 바퀴 달리고, 밤이면 들판을 환히 밝혀 줘요.')],
   ],
 }];
-// 152 D / 158 (?m89 시범): the next ones, after the firemane settled, each the firemane's steps in its own way (docs/reports/152d.md
+// 152 D / 158 (160 A 공개): the next ones, after the firemane settled, each the firemane's steps in its own way (docs/reports/152d.md
 // 「부름 안」, inbox 158). 발견: its prints tapped (seen and got at once: their window opens from that spot, the snow has no altar).
 // clues (rules.js mythTick / strollBack / mythLuck / mythFind): [0] a walk of one of the habitat's friends; the unicorn's horn a pet
 // of a meadow friend (luck once a day, sure on the pity-th day: pd the day it rolled, pn the days rolled), its ring `need` of `ring`
@@ -1261,7 +1261,7 @@ export const MYTHIC152 = [
       [$t('백록이 설원에 머물기로 했어요.'), $t('밤이면 뿔 끝이 은은하게 빛나요.')],
     ] },
 ];
-if (M89) MYTHIC.push(...MYTHIC152);
+MYTHIC.push(...MYTHIC152); // 160 A: public (user OK 11/19), the call 158
 // inbox 41 D 첫날 할 일: shown on the first `days` days of a game (dayOf, from S.since) as a small list under the top bar. Each
 // task done once gives its hearts; all of them the `prop` (a 선물 prop) and `candy`. What counts: rules.js FIRST_V
 // 꾸미기 › 큰 소품 탭 (ui/decor.js TABS; first.js 「다음은 큰 소품」)

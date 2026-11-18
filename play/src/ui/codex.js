@@ -67,7 +67,7 @@ el.addEventListener('click', e => {
 const foot = () => { const n = Object.keys(G.S.sky?.got ?? {}).length;
   return $t('<div class="cfoot"><button class="scards" data-cab>진열장으로 보기</button>{0}</div>', n ? $t('<button class="scards" data-sky>하늘 기록 <small>{0}/{1}</small></button>', n, SKY_N) : ''); };
 // 14-1 신수: its own row in each habitat (the meadow's 불갈기 천리마; the others' only a rumour yet), not in the count
-// 152 D: a cell for each 신수 of the habitat (MYTHIC order); one with no figure yet (?m89) shows its name or "?" only
+// 152 D: a cell for each 신수 of the habitat (MYTHIC order); one with no codex picture yet (unicorn, baengnok) shows its name or "?" only
 const mythRow = () => { if (HOLD.myth) return ''; const ms = MYTHIC.filter(m => m.habitat === tab), met = m => !!G.S.myth[m.id]?.here;
   const cells = ms.length ? ms.map(m => `<div class="cell myth${met(m) ? '' : ' unk'}" role="button" data-m="${m.id}">${m.model ? `<img alt="${met(m) ? m.name : $t('아직 못 만난 신수')}">` : ''}<span>${met(m) ? m.name : '?'}</span></div>`).join('')
     : `<div class="cell myth unk" role="button" data-m=""><span>?</span>${$t('<small>소문만 있어요</small>')}</div>`;

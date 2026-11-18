@@ -346,8 +346,10 @@ export function createActor(ctx, rec) {
       const U = g.to.up, lap = g.lap ?? 0; if (U && lap < 2 && Math.random() < 0.85) h.after = () => { h.goal = { x: U[0], z: U[1], act: 'climb', to: g.to, lap: lap + 1, top: [g.x, g.z], n: 4 }; }; return true; }
     if (g.act === 'climb') { const U = g.to.up; go('walk', U[2], U[3], 0.75); h.after = () => { h.goal = { x: g.top[0], z: g.top[1], act: 'slide', to: g.to, lap: g.lap, n: 4 }; }; return true; } // up the plank steps, slowly
     if (g.act === 'run') { h.state = 'jump'; h.t = 0; h.dur = 0.55; return true; }
-    if (g.act === 'dig') { h.state = 'graze'; h.t = 0; h.dur = T(4, 6); ctx.onDig?.(h.x, h.z); g.done?.(true); return true; } // 14-3 화석 발굴: paws at the sand a while (habitat.js: a puff, now and then a fossil)
-    if (g.act === 'roll') { h.state = 'roll'; h.t = 0; h.dur = 2.6; g.done?.(true); return true; } // 15-2: by the snow pile, a roll in the snow
+    if (g.act === 'dig') { h.state = 'graze'; h.t = 0; h.dur = T(4, 6); ctx.onDig?.(h.x, h.z);
+      if (g.to?.dg) { const F = g.to, a = h.face = Math.atan2(-(F.fz - h.z), F.fx - h.x), d = body.seg[1] + body.r * 0.3; h.dg = 1; h.gk = 0; F.hit = [h.x + Math.cos(a) * d, h.z - Math.sin(a) * d, h.dur, body.r]; } // q1 B 큰 발굴터: paws at it, sand flying (sandUp); zoneprops.js opens a hole there, a bone in it
+      g.done?.(true); return true; } // 14-3 화석 발굴: paws at the sand a while (habitat.js: a puff, now and then a fossil)
+    if (g.act === 'roll') { h.state = 'roll'; h.t = 0; h.dur = g.to?.mud ? 4 : 2.6; if (g.to?.mud) g.to.hit = [h.x, h.z, h.dur, body.r, h.yaw]; g.done?.(true); return true; } // 15-2: by the snow pile, a roll in the snow; q1 B the mudflat's wallow (to.mud): longer, zoneprops.js splashes the mud, leaves its print
     if (g.act === 'bridge') { if (ctx.onBridge) { h.state = 'idle'; h.t = 0; h.dur = 1; } else { ctx.onBridge = h; go('cross', g.far.x, g.far.z, 1.3); } return true; } // inbox 42 C: at the landing: over (one at a time)
     if (g.act === 'eat') { h.after = g.done; h.state = 'graze'; h.t = 0; h.dur = pe() === 'glutton' ? 7 : 3; return true; } // 17-1 먹보: at the fruit a long while
     if (g.act === 'greet') { const o = g.o, b = o.body; h.state = 'idle'; h.t = 0; h.dur = 0.5; // inbox 42 C 코 맞대기: the other still waits for it: nose to nose

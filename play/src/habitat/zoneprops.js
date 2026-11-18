@@ -91,6 +91,10 @@ export function zoneProps(scene, hab, o) {
     // 14-3: d0..d1 out from a rill (either side), n times: fn(x, z)
     const banks = (f, n, d0, d1, fn) => { for (let i = 0; i < n; i++) { const P = f.pts, j = Math.floor(rnd() * (P.length - 1)), dx = P[j + 1][0] - P[j][0], dz = P[j + 1][1] - P[j][1], l = Math.hypot(dx, dz), t = rnd(), sg = rnd() < 0.5 ? -1 : 1, d = d0 + rnd() * (d1 - d0);
       fn(P[j][0] + dx * t - dz / l * sg * d, P[j][1] + dz * t + dx / l * sg * d); } };
+    const lv = (f, x, z) => { let m = Infinity, q = null; const P = f.pts, w = f.w - 0.4; // a rill's water there (meadow/water.js: the lower waterline across at its nearest point, its own banks)
+      for (let i = 1; i < P.length; i++) { const [ax, az] = P[i - 1], dx = P[i][0] - ax, dz = P[i][1] - az, l = Math.hypot(dx, dz), e = Math.max(0, Math.min(l, ((x - ax) * dx + (z - az) * dz) / l)), px = ax + dx / l * e, pz = az + dz / l * e, d = Math.hypot(x - px, z - pz);
+        if (d < m) { m = d; q = [[px - dz / l * w, pz + dx / l * w], [px + dz / l * w, pz - dx / l * w]]; } }
+      const own = q.filter(([a, b]) => !otherWater(WA, f, a, b)); return Math.min(...(own.length ? own : q).map(([a, b]) => heightAt(a, b))) + 0.03; };
     const stump = (x, z) => { L.trunk.push({ x, y: heightAt(x, z) - 0.05, z, s: [0.95, 0.3 + rnd() * 0.12, 0.95], ry: rnd() * 6, c: jitter('#6e4a2e', 0.05) }); occupied.push({ x, z, r: 0.6, h: 0.6 }); };
     // 143: the ground's lowest round a thing (sunk to it: no edge in the air on a slope); heaps of half sunk stones (141 D's flat
     // ones: a big one, mid and small ones at its feet), on the zone's own stream r3
@@ -112,7 +116,9 @@ export function zoneProps(scene, hab, o) {
     const b3 = Z143 && s.id === 'sandbar', w3 = Z143 && s.id === 'falls', m3 = Z143 && s.id === 'mushroom' && Z.F.filter(f => f.zone === s.id && (f.t === 'house143' || f.t === 'glow143')); // q1: and none in front of the mushroom house or the glowing toadstools
     const d3 = Z143 && s.id === 'sled' && Z.F.find(f => f.zone === s.id && f.t === 'ramp'); // q1: and none on the sled hill's run, its steps or its run-out
     const e3 = Z143 && s.id === 'fernwood' && Z.F.filter(f => f.zone === s.id && (f.t === 'bigfern143' || f.t === 'bed143')), clear3 = (x, z) => e3.some(f => Math.hypot(x - f.x, z - f.z) < (f.bed ? 4.5 : 7)); // q1: a clearing round the giant fern and its leaf beds
-    const fore4 = (x, z) => b3 ? sand143fore(x, z) : w3 ? falls143fore(x, z) : m3 ? m3.some(f => Math.abs(x - f.x) < 4.5 && z > (f.z ?? 61.5) - 2) : d3 ? Math.abs(x - d3.x) < 3 && z > d3.z0 - 1.5 && z < d3.z1 + 6 : e3 ? clear3(x, z) : fore3(x, z); // 143 B the sandbar: no bushes or strewn rocks in its middle; the falls: no trees either before the cliff
+    const c3 = Z143 && dino && Z.F.filter(f => f.zone === s.id && f.clr), cl3 = c3?.length ? (x, z) => c3.some(f => Math.hypot(x - f.x, z - f.z) < f.clr) : null; // q1 B the dino zones: a clearing round each thing with clr
+    const b4 = Z143 && dino && Z.F.filter(f => f.zone === s.id && f.bare), bare3 = b4?.length ? (x, z) => b4.some(f => ((x - f.x) / f.bare[0]) ** 2 + ((z - f.z) / f.bare[1]) ** 2 < 1) : null;
+    const fore4 = (x, z) => b3 ? sand143fore(x, z) : w3 ? falls143fore(x, z) : m3 ? m3.some(f => Math.abs(x - f.x) < 4.5 && z > (f.z ?? 61.5) - 2) : d3 ? Math.abs(x - d3.x) < 3 && z > d3.z0 - 1.5 && z < d3.z1 + 6 : e3 ? clear3(x, z) : cl3 ? cl3(x, z) : fore3(x, z); // 143 B the sandbar: no bushes or strewn rocks in its middle; the falls: no trees either before the cliff
     // the zone's own things first (the mix fills round them)
     const own = {
       // 143 (?z143=1, zones.js flowerhill143): three rings of tall flower bushes round the hill (a green mound, its top all blooms:
@@ -204,10 +210,6 @@ export function zoneProps(scene, hab, o) {
       fork() { if (on3) {
         let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, R3 = kit(Lr, { rand: r3, heightAt, occupied });
         const F = Z.F.filter(f => f.zone === s.id), one = t => F.find(f => f.t === t), [fA, fB] = Z.rills.filter(f => f.zone === s.id), wood = '#8a5a34', ball = new THREE.SphereGeometry(1, 10, 8);
-        const lv = (f, x, z) => { let m = Infinity, q = null; const P = f.pts, w = f.w - 0.4; // a rill's water there (meadow/water.js: the lower waterline across at its nearest point, its own banks)
-          for (let i = 1; i < P.length; i++) { const [ax, az] = P[i - 1], dx = P[i][0] - ax, dz = P[i][1] - az, l = Math.hypot(dx, dz), e = Math.max(0, Math.min(l, ((x - ax) * dx + (z - az) * dz) / l)), px = ax + dx / l * e, pz = az + dz / l * e, d = Math.hypot(x - px, z - pz);
-            if (d < m) { m = d; q = [[px - dz / l * w, pz + dx / l * w], [px + dz / l * w, pz - dx / l * w]]; } }
-          const own = q.filter(([a, b]) => !otherWater(WA, f, a, b)); return Math.min(...(own.length ? own : q).map(([a, b]) => heightAt(a, b))) + 0.03; };
         { const c = one('cottage143'), g = new THREE.Group(), ph = new THREE.Shape(), fz = 1.4; // the cottage, its gable to the view (the front wall at z 1.38)
           part(g, roundedBox(4.3, 0.9, 3.1, 0.08), '#bdb6a9', 0, -0.3, 0, { mat: { roughness: 0.55 } }); // its stone foot
           [[-1.9, 0], [1.9, 0], [1.9, 2.0], [0, 3.2], [-1.9, 2.0]].forEach(([x, y], i) => i ? ph.lineTo(x, y) : ph.moveTo(x, y));
@@ -642,18 +644,175 @@ export function zoneProps(scene, hab, o) {
         for (const [u, v] of [[0.3, 0.15], [0.7, 0.3], [0.35, 0.5], [0.7, 0.68], [0.3, 0.84], [0.6, 0.97]]) { const [cx, cz] = at(u, v); // thick groves of tree ferns
           for (let i = 0; i < 4; i++) { const x = cx + (rnd() - 0.5) * 3.4, z = cz + (rnd() - 0.5) * 3.4; if (low(1.3, x, z) && !(e3 && clear3(x, z))) tree(x, z, 0.9 + rnd() * 0.45); } } },
       cliffs() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id); occupied.push({ x: h.x, z: h.z, r: 0.7 * Math.min(h.rx, h.rz), h: h.h }); // no one climbs the rock
+        if (Z143) { // q1 B (zones.js cliffs143): its shoulders (no one climbs them either), vines down the faces to the view, the twig nests, the stone heaps. Its own stream
+          let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id);
+          const g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 10, 8), leaf = new THREE.SphereGeometry(1, 7, 5), twig = new THREE.CylinderGeometry(0.03, 0.04, 1, 5), LV = ['#4e8a36', '#5fa83c', '#3f7a2c', '#6aa640'], RK = F.filter(q => q.t === 'hill' && q.h > 4);
+          const V = THREE.Vector3, up = new V(0, 1, 0), nrm = (x, z) => new V(heightAt(x - 0.1, z) - heightAt(x + 0.1, z), 0.2, heightAt(x, z - 0.1) - heightAt(x, z + 0.1)).normalize(); // the rock's face there
+          for (const f of RK) { if (f !== h) occupied.push({ x: f.x, z: f.z, r: 0.7 * Math.min(f.rx, f.rz), h: f.h });
+            const n = Math.round(f.rz * 0.8); for (let i = 0; i < n; i++) { const a = -1.1 + 2.2 * (i + 0.2 + r3() * 0.6) / n, t1 = 0.78 + r3() * 0.2, P = []; let last = null; // a vine down the face to the view (+x) from the top's edge: a stem on the rock, leaves either side of it
+              for (let t = f.top + 0.03 + r3() * 0.08; t < t1; t += 0.006) { const w = Math.sin(t * 22 + i * 1.7) * 0.16, x = f.x + Math.cos(a) * f.rx * t - Math.sin(a) * w, z = f.z + Math.sin(a) * f.rz * t + Math.cos(a) * w, p = new V(x, heightAt(x, z), z);
+                if (!last || p.distanceTo(last) > 0.22) { P.push(p.clone().addScaledVector(nrm(x, z), 0.04)); last = p; } }
+              if (P.length < 3) continue; part(g, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(P), P.length * 2, 0.035, 5), '#3f6e2a');
+              P.forEach((p, j) => { const N = nrm(p.x, p.z), tg = (P[j + 1] || p).clone().sub(P[j - 1] || p).normalize(), sd = tg.cross(N).multiplyScalar(j % 2 ? 0.1 : -0.1), q = 0.8 + r3() * 0.45;
+                const m = part(g, leaf, j3(LV[(i + j) % 4], 0.06), p.x + sd.x + N.x * 0.02, p.y + sd.y + N.y * 0.02, p.z + sd.z + N.z * 0.02); m.quaternion.setFromUnitVectors(up, N); m.rotateY(r3() * 3); m.scale.set(0.16 * q, 0.045, 0.11 * q); }); } }
+          const nest = (x, z, sc, eggs) => { const q = new THREE.Group(); // a ring of woven twigs, sticks laid round it, eggs in it
+            part(q, new THREE.TorusGeometry(0.42, 0.15, 6, 18), '#8a6238', 0, 0.08, 0, { rx: Math.PI / 2 }).scale.z = 0.6;
+            for (let i = 0; i < 11; i++) { const a = i / 11 * 6.283 + r3() * 0.3; part(q, twig, j3(i % 3 ? '#9a7044' : '#6e4a2e', 0.06), Math.cos(a) * 0.45, 0.1 + r3() * 0.08, Math.sin(a) * 0.45, { ry: Math.PI / 2 - a, rz: Math.PI / 2 + (r3() - 0.5) * 0.4 }).scale.y = 0.55 + r3() * 0.3; }
+            for (let i = 0; i < eggs; i++) { const a = i * 2.1; part(q, ball, '#f1e8d2', Math.cos(a) * 0.15, 0.13, Math.sin(a) * 0.15, { rz: (r3() - 0.5) * 0.5 }).scale.set(0.11, 0.14, 0.11); }
+            q.position.set(x, heightAt(x, z) - 0.03, z); q.scale.setScalar(sc); g.add(q); };
+          nest(h.x, h.z, 1.5, 3); for (const c of F.filter(q => q.t === 'col')) nest(c.x, c.z, 1.05, 0); // on the top, its eggs; on each stack (the pterosaur's perch: it sits in it)
+          put(bake(g), 0, 0, 0, 0, 0, 0); occupied.pop(); heaps(F, r3, j3); } // then the stones round the rock and the stacks, as before
         for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + rnd() * 0.3, x = h.x + Math.cos(a) * h.rx * 1.02, z = h.z + Math.sin(a) * h.rz * 0.98; if (free(x, z, 0.4) && !nearSpot(x, z, 0.3)) rock(x, z, 0.5 + rnd() * 0.5); }
         for (const f of Z.F.filter(q => q.t === 'col' && q.zone === s.id)) for (let j = 0; j < 3; j++) { const a = rnd() * 6.283, x = f.x + Math.cos(a) * (f.r + 0.6), z = f.z + Math.sin(a) * (f.r + 0.6); if (free(x, z, 0.3)) rock(x, z, 0.28 + rnd() * 0.22); } }, // the pterosaur's rock stacks: stones at their feet
       riverbed() { const f = Z.rills.find(q => q.zone === s.id);
+        if (Z143) { // q1 B (zones.js riverbed143): the stepping stones (their tops to the ford spots), the fish that leap, the log over the stream, the heaps. Its own stream
+          let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id), ball = new THREE.SphereGeometry(1, 14, 10);
+          for (const p of F.find(q => q.act === 'ford').ford) { const [x, z] = p, wet = polyD(x, z, f.pts) < f.w - 0.4, top = wet ? Math.max(lv(f, x, z) + 0.18, heightAt(x, z) + 0.1) : heightAt(x, z) + 0.1; // as the fork's (both spots share the stones)
+            const sx = 0.5 + r3() * 0.12, sy = wet ? 1.3 : 0.45; slabs.push({ x, y: top - 0.48 * sy, z, s: [sx, sy, sx * (0.85 + r3() * 0.15)], ry: r3() * 6.283, c: j3('#b3ada1', 0.05) }); if (k === popK) pop.slabs.push(slabs.length - 1);
+            p[2] = top; p[3] = wet ? 1 : 0; }
+          const lp = F.filter(q => q.t === 'leap143'); // a fish leaps out of the water and back as one looks down into it (walk.js sets bite), a ring spreading where it went in
+          for (const H of lp) { const mv = new THREE.Group(), fish = new THREE.Group(), ring = part(mv, new THREE.TorusGeometry(1, 0.05, 5, 20), '#eaf6fd', 0, 0, 0, { rx: Math.PI / 2 });
+            part(fish, ball, '#8fa6b8', 0, 0, 0).scale.set(0.17, 0.08, 0.06); part(fish, new THREE.ConeGeometry(0.08, 0.13, 4), '#7a92a6', -0.19, 0, 0, { rz: Math.PI / 2 }).scale.z = 0.4; // a silver-grey river fish
+            for (const sz of [-1, 1]) part(fish, ball, '#1d1d1d', 0.1, 0.02, sz * 0.05).scale.setScalar(0.015);
+            mv.add(fish); mv.position.set(H.x, lv(f, H.x, H.z) + 0.01, H.z); mv.visible = false; scene.add(mv); H.mv = { mv, fish, ring, a: r3() * 6.283 }; }
+          ups.push(t => { for (const H of lp) { const M = H.mv, R = 0.7; if (H.bite) { H.bite = 0; H.t0 = t + 0.7; M.a += 1.3; } const e = H.t0 == null ? 9 : t - H.t0; M.mv.visible = e > 0 && e < 1.7; if (!M.mv.visible) continue; // as the ice hole's
+            const q = Math.min(1, e), c = e < 1 ? e / 0.6 : (e - 1) / 0.6; M.fish.visible = e < 1; M.mv.rotation.y = M.a; M.fish.position.set((q - 0.5) * R * 1.3, Math.sin(q * Math.PI) * 0.6, 0); M.fish.rotation.z = (0.5 - q) * 2.6;
+            M.ring.visible = c < 1; M.ring.scale.setScalar(0.08 + c * (R - 0.1)); } });
+          const g = new THREE.Group();
+          for (const o of F.filter(q => q.t === 'log143')) { const ux = Math.cos(o.ry), uz = -Math.sin(o.ry), hl = o.len / 2, ya = heightAt(o.x - ux * hl, o.z - uz * hl), yb = heightAt(o.x + ux * hl, o.z + uz * hl), lg = new THREE.Group(); // a log fallen over the stream, bank to bank, moss on its back
+            part(lg, new THREE.CylinderGeometry(0.36, 0.4, o.len, 16), '#7a5232', 0, 0, 0, { rz: Math.PI / 2 });
+            for (const sd of [-1, 1]) { part(lg, new THREE.CylinderGeometry(0.34, 0.34, 0.04, 16), '#d8b27a', sd * (hl + 0.01), 0, 0, { rz: Math.PI / 2 }); part(lg, new THREE.TorusGeometry(0.19, 0.022, 6, 20), '#b88a54', sd * (hl + 0.03), 0, 0, { ry: Math.PI / 2 }); }
+            for (const [u, w] of [[-1.5, 0.55], [-0.3, 0.8], [0.9, 0.6], [1.9, 0.35]]) part(lg, ball, j3('#6aa640', 0.05), u, 0.33, (r3() - 0.5) * 0.12, { ry: r3() * 0.4 }).scale.set(w, 0.13, 0.3);
+            part(lg, new THREE.CylinderGeometry(0.08, 0.11, 0.6, 8), '#7a5232', -0.6, 0.3, -0.25, { rx: 0.9 }); // a broken off branch stub
+            lg.position.set(o.x, Math.max(ya, yb) + 0.2, o.z); lg.rotation.set(0, o.ry, Math.atan2(yb - ya, o.len) * 0.6); g.add(lg);
+            for (const d of [-hl + 0.6, hl - 0.6]) occupied.push({ x: o.x + ux * d, z: o.z + uz * d, r: 0.6, h: 0.8 }); // its ends on the banks (its middle is over the water)
+            for (const sd of [-1, 1]) K3.fern(o.x + ux * sd * (hl + 0.7), o.z + uz * sd * (hl + 0.7), 1.2); }
+          put(bake(g), 0, 0, 0, 0, 0, 0); occupied.pop(); heaps(F, r3, j3); }
         banks(f, 18, f.w + 0.3, f.w + 0.8, (x, z) => { if (free(x, z, 0.3) && !nearSpot(x, z, 0)) rock(x, z, 0.25 + rnd() * 0.3); }); // stones on the gravel banks
         banks(f, 26, f.w - 0.3, f.w + 0.2, (x, z) => { if (!nearSpot(x, z, 0.2)) R.tuft(x, z); }); }, // reeds at the water's edge
       bigdig() { // the dig: a huge rib cage standing in the sand, a horned skull and leg bones lying about (the fossil props, bigger)
-        { const [x, z] = at(0.62, 0.3); fixture('ribs', x, z, 0.3, 2.5, undefined, 2.3).scale.setScalar(1.6); }
-        { const [x, z] = at(0.5, 0.58); fixture('fos_skull', x, z, -0.6, 1.4, heightAt(x, z) - 0.08, 1).scale.setScalar(1.4); }
-        for (const [u, v, ry] of [[0.25, 0.22, 0.4], [0.75, 0.62, 2.0], [0.3, 0.7, -0.8]]) { const [x, z] = at(u, v); if (free(x, z, 0.8)) fixture('fos_bone', x, z, ry, 0.8, heightAt(x, z) - 0.05, 0.4); }
+        if (Z143) { // q1 B (zones.js bigdig143): the whole skeleton in its pit, the string grid, the camp, the holes one digs open. Its own stream
+          let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id), one = t => F.find(q => q.t === t);
+          const B = one('bones143'), G = one('grid143').r, C = one('camp143'), g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 12, 9), cyl = new THREE.CylinderGeometry(1, 1, 1, 12), BN = '#efe4cc', bn = { mat: { roughness: 0.7 } };
+          const V = THREE.Vector3, up = new V(0, 1, 0), rod = (G0, a, b, r, c) => { const d = new V().subVectors(b, a), m = part(G0, new THREE.CylinderGeometry(r, r, 1, 5), c, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); m.scale.y = d.length(); m.quaternion.setFromUnitVectors(up, d.normalize()); return m; };
+          const sp = u => [B.x + Math.sin(u * 3.2) * 0.45, B.z + 4.6 - u * 11.6]; // the spine: the neck (u 0) by the skull, the tail (u 1) going down into the sand
+          fixture('ribs', B.x, B.z + 1.1, 0, 2.0, heightAt(B.x, B.z + 1.1) - 0.2, 2.4).scale.setScalar(1.6); // the rib cage standing (its own spine on top), z 7.0..11.2
+          fixture('fos_skull', B.x + 0.3, B.z + 6.0, -0.9, 1.1, lowest(B.x + 0.3, B.z + 6.0, 1) - 0.1, 1).scale.setScalar(1.8); // at the neck, turned to the view
+          for (const [x, z, ry] of [[43.3, 12.9, -0.3], [43.5, 5.4, 0.5], [46.4, 6.3, -0.4]]) fixture('fos_bone', x, z, ry, 0.5, heightAt(x, z) - 0.05, 0.4).scale.setScalar(1.3); // leg bones by it
+          for (let i = 0; i < 27; i++) { const u = i / 26, [x, z] = sp(u), w = 0.26 * (1 - 0.7 * u), y = heightAt(x, z) + w * 0.3 - Math.max(0, u - 0.6) * 0.45; // the vertebrae on the ground (none in the cage: its own)
+            if (z > 6.8 && z < 11.4) continue;
+            part(g, cyl, j3(BN, 0.03), x, y, z, { rx: Math.PI / 2, ...bn }).scale.set(w, w * 0.7, w); part(g, ball, BN, x, y + w * 0.85, z, bn).scale.set(w * 0.3, w * 0.5, w * 0.28);
+            if (i % 4 === 2 && u > 0.4) occupied.push({ x, z, r: 0.45, h: 0.3 }); }
+          { const [x0, x1, z0, z1] = G, P = [], gap = (a, b) => a[0] === x1 && b[0] === x1 && (a[1] + b[1]) / 2 > 2.3 && (a[1] + b[1]) / 2 < 13.7; // the string grid: stakes, orange tape, a string round at knee height, open on the far side (the dig spots)
+            for (const [a, b] of [[[x0, z0], [x1, z0]], [[x1, z0], [x1, z1]], [[x1, z1], [x0, z1]], [[x0, z1], [x0, z0]]]) { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2.4); for (let i = 0; i < n; i++) P.push([a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n]); }
+            const top = ([x, z]) => new V(x, heightAt(x, z) + 0.45, z);
+            P.forEach((p, i) => { const q = P[(i + 1) % P.length], o = P[(i + P.length - 1) % P.length]; if (gap(p, q)) { if (gap(o, p)) return; } else rod(g, top(p), top(q), 0.012, '#f4efe2');
+              const y = heightAt(p[0], p[1]); part(g, cyl, '#9a7044', p[0], y + 0.28, p[1]).scale.set(0.035, 0.62, 0.035); part(g, new THREE.BoxGeometry(0.08, 0.06, 0.08), '#e8743a', p[0], y + 0.5, p[1]); occupied.push({ x: p[0], z: p[1], r: 0.15, h: 0.6 }); }); }
+          { const sh = new THREE.Group(), [x, z] = [50.0, 13.6], y = heightAt(x, z); // a shovel stuck in the spoil heap
+            part(sh, cyl, '#a07848', 0, 0.62, 0).scale.set(0.035, 1.0, 0.035); part(sh, new THREE.BoxGeometry(0.24, 0.04, 0.04), '#a07848', 0, 1.12, 0); part(sh, roundedBox(0.26, 0.34, 0.04, 0.02), '#8a8f96', 0, 0.06, 0);
+            sh.position.set(x, y - 0.12, z); sh.rotation.set(0.25, 0.6, 0.3); g.add(sh); }
+          { const cg = new THREE.Group(), cs = Math.cos(C.ry), sn = Math.sin(C.ry), W = (lx, lz) => [C.x + lx * cs + lz * sn, C.z - lx * sn + lz * cs]; // the camp (its door to local +z)
+            const tri = (w, h) => { const t = new THREE.Shape(); t.moveTo(-w, 0); t.lineTo(w, 0); t.lineTo(0, h); t.closePath(); return t; }, te = new THREE.ExtrudeGeometry(tri(1, 1.45), { depth: 2.2, bevelEnabled: false }); te.translate(0, 0, -1.1);
+            part(cg, te, '#d9c99a', 0, 0, 0); part(cg, new THREE.ShapeGeometry(tri(0.42, 0.95)), '#5a4630', 0, 0, 1.106); // the canvas tent, its dark door
+            part(cg, cyl, '#8a6238', 0, 1.47, 0, { rx: Math.PI / 2 }).scale.set(0.04, 2.7, 0.04); for (const sz of [-1, 1]) { part(cg, cyl, '#8a6238', 0, 0.74, sz * 1.18).scale.set(0.035, 1.48, 0.035); // its ridge pole, the poles, the guy lines and pegs
+              rod(cg, new V(0, 1.47, sz * 1.33), new V(0, 0.05, sz * 2.15), 0.01, '#e8e0cc'); part(cg, cyl, '#8a6238', 0, 0.06, sz * 2.18).scale.set(0.03, 0.14, 0.03); }
+            part(cg, roundedBox(0.7, 0.5, 0.55, 0.04), '#b5874f', -1.65, 0.25, 0.4); part(cg, roundedBox(0.55, 0.42, 0.45, 0.04), '#c29558', -1.62, 0.71, 0.42, { ry: 0.3 }); // two crates, slats, a bone on top
+            for (const y of [0.13, 0.37]) part(cg, new THREE.BoxGeometry(0.72, 0.06, 0.02), '#8f6538', -1.65, y, 0.68);
+            part(cg, new THREE.CapsuleGeometry(0.05, 0.36, 4, 10), '#f4ead2', -1.6, 0.97, 0.42, { rz: Math.PI / 2, ry: 0.5 }); for (const sx of [-0.21, 0.21]) part(cg, ball, '#f4ead2', -1.6 + sx * 0.88, 0.97, 0.42 - sx * 0.48).scale.setScalar(0.075);
+            part(cg, new THREE.CylinderGeometry(0.17, 0.13, 0.3, 14), '#6f8fa8', -0.95, 0.15, 1.6); part(cg, new THREE.TorusGeometry(0.17, 0.015, 6, 16), '#4f6f88', -0.95, 0.3, 1.6, { rx: Math.PI / 2 }); // a bucket
+            part(cg, new THREE.TorusGeometry(0.32, 0.035, 6, 20), '#9a7044', 1.85, 0.55, 0.5, { rx: Math.PI / 2 }); part(cg, new THREE.CircleGeometry(0.3, 20), '#cfc6b0', 1.85, 0.545, 0.5, { rx: -Math.PI / 2 }); // a sieve on three legs
+            for (let i = 0; i < 3; i++) { const a = i * 2.094 + 0.3; rod(cg, new V(1.85 + Math.cos(a) * 0.3, 0.55, 0.5 + Math.sin(a) * 0.3), new V(1.85 + Math.cos(a) * 0.45, 0, 0.5 + Math.sin(a) * 0.45), 0.02, '#8a6238'); }
+            part(cg, cyl, '#8a6238', 1.35, 0.7, 1.45).scale.set(0.04, 1.4, 0.04); part(cg, cyl, '#8a6238', 1.2, 1.38, 1.45, { rz: Math.PI / 2 }).scale.set(0.025, 0.34, 0.025); // the lantern on its post, lit by night
+            part(cg, cyl, '#ffd27a', 1.07, 1.17, 1.45, { lit: true }).scale.set(0.08, 0.17, 0.08); part(cg, new THREE.ConeGeometry(0.11, 0.1, 10), '#3a3a40', 1.07, 1.3, 1.45); part(cg, cyl, '#3a3a40', 1.07, 1.075, 1.45).scale.set(0.09, 0.03, 0.09);
+            halo(cg, '#ffd27a', 2.2, 1.07, 1.17, 1.45);
+            cg.position.set(C.x, lowest(C.x, C.z, 1.2), C.z); cg.rotation.y = C.ry; g.add(cg);
+            for (const [lx, lz, r] of [[0, 0, 1.4], [0, 1.3, 0.7], [-1.65, 0.45, 0.55], [1.85, 0.5, 0.45], [1.35, 1.45, 0.2]]) { const [x, z] = W(lx, lz); occupied.push({ x, z, r, h: 1.4 }); } }
+          put(bake(g), 0, 0, 0, 0, 0, 0); occupied.pop();
+          for (const H of F.filter(q => q.t === 'find143')) { const mv = new THREE.Group(), bone = new THREE.Group(); // one digging (walk.js sets hit: where its nose is, how long): a hole opens there, a bone comes up in it; a while, then the sand slides back
+            part(mv, new THREE.CircleGeometry(1, 20), '#7d5f38', 0, 0.02, 0, { rx: -Math.PI / 2 }); part(mv, new THREE.TorusGeometry(1.05, 0.16, 6, 20), '#e0c895', 0, 0.02, 0, { rx: Math.PI / 2 }).scale.z = 0.5;
+            part(bone, new THREE.CapsuleGeometry(0.06, 0.34, 4, 10), '#f4ead2', 0, 0, 0, { rz: Math.PI / 2, ...bn }); for (const sx of [-0.22, 0.22]) for (const sz of [-0.05, 0.05]) part(bone, ball, '#f4ead2', sx, 0, sz, bn).scale.setScalar(0.08);
+            mv.add(bone); mv.traverse(m => { if (m.isMesh) m.castShadow = false; }); mv.visible = false; scene.add(mv); H.mv = { mv, bone }; }
+          ups.push(t => { for (const H of F) { if (H.t !== 'find143') continue; const M = H.mv; if (H.hit) { const [x, z, d, r] = H.hit; H.hit = null; H.t0 = t; H.d = d; H.R = Math.min(0.75, Math.max(0.38, r * 0.6)); M.mv.position.set(x, heightAt(x, z), z); M.mv.rotation.y = r3() * 6.283; }
+            const e = H.t0 == null ? -1 : t - H.t0, o = sm(e / (H.d * 0.8)) * (1 - sm((e - H.d - 14) / 2)), b = sm((e - H.d * 0.45) / (H.d * 0.5)), q = H.R / 0.38, w = 0.05 + (H.R - 0.05) * o; M.mv.visible = e >= 0 && o > 0.001; if (!M.mv.visible) continue; // open as it paws (as wide as its paws: r), a while, filled in over 2 s
+            M.mv.scale.set(w, 1, w); M.bone.visible = b > 0; M.bone.scale.set(q / w, q, q / w); M.bone.position.y = (-0.1 + 0.12 * b * o) * q; } });
+          heaps(F, r3, j3); }
+        else { { const [x, z] = at(0.62, 0.3); fixture('ribs', x, z, 0.3, 2.5, undefined, 2.3).scale.setScalar(1.6); }
+          { const [x, z] = at(0.5, 0.58); fixture('fos_skull', x, z, -0.6, 1.4, heightAt(x, z) - 0.08, 1).scale.setScalar(1.4); }
+          for (const [u, v, ry] of [[0.25, 0.22, 0.4], [0.75, 0.62, 2.0], [0.3, 0.7, -0.8]]) { const [x, z] = at(u, v); if (free(x, z, 0.8)) fixture('fos_bone', x, z, ry, 0.8, heightAt(x, z) - 0.05, 0.4); } }
         for (let i = 0; i < 60; i++) { const [x, z] = at(0.1 + rnd() * 0.8, 0.12 + rnd() * 0.85); if (free(x, z, 0)) L.pebble.push({ x, y: heightAt(x, z) + 0.02, z, s: [0.14 + rnd() * 0.14, 0.07, 0.12 + rnd() * 0.1], ry: rnd() * 6, c: jitter(pickOf(['#c8a870', '#a89070', '#e2cfa0']), 0.08) }); } },
-      mudflat() { for (const p of pools) ringOf(p, 7, wl(p) - 0.4, wl(p) + 0.2, (x, z) => R.tuft(x, z)); place(4, (x, z) => ok(x, z, 0.6), stump); },
-      springs() { for (const p of pools) { for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + rnd() * 0.15, d = p.r - 0.15; K.rock(p.x + Math.cos(a) * d, p.z + Math.sin(a) * d, 0.3 + rnd() * 0.2); occupied.pop(); }
+      mudflat() {
+        if (Z143) { // q1 B (zones.js mudflat143): the tracks, the wallow's wet mud, its print and splash, the bubbles, the puddles that grow in the rain, the log. Its own stream
+          let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id), one = t => F.find(q => q.t === t);
+          const W = one('wal143'), g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 12, 9), disc = new THREE.CircleGeometry(1, 16), flat = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
+          const print = (x, z, a) => { const q = new THREE.Group(), c = j3('#3e2b1d', 0.04); // a three-toed print pressed into the mud, its toes along the way it went
+            part(q, disc, c, 0, 0, 0, { rx: -Math.PI / 2, mat: { roughness: 0.35 } }).scale.set(0.2, 0.16, 1);
+            for (const t of [-0.55, 0, 0.55]) part(q, disc, c, 0.27 * Math.cos(t), 0, -0.27 * Math.sin(t), { rx: -Math.PI / 2, rz: t, mat: { roughness: 0.35 } }).scale.set(0.22, 0.065, 1);
+            q.position.set(x, heightAt(x, z) + 0.012, z); q.rotation.y = a; g.add(q); };
+          for (const T of F.filter(q => q.t === 'track143')) { const P = T.pts; let sd = 1; // in pairs, left and right of its line
+            for (let i = 1; i < P.length; i++) { const [x0, z0] = P[i - 1], [x1, z1] = P[i], D = Math.hypot(x1 - x0, z1 - z0), ux = (x1 - x0) / D, uz = (z1 - z0) / D, n = Math.round(D / 1.0);
+              for (let j = 0; j < n; j++) { const u = (j + 0.5) * D / n; print(x0 + ux * u - uz * sd * 0.36, z0 + uz * u + ux * sd * 0.36, Math.atan2(-uz, ux) + (r3() - 0.5) * 0.25); sd = -sd; } } }
+          for (const o of F.filter(q => q.t === 'mudlog143')) { const lg = new THREE.Group(), y = lowest(o.x, o.z, 1.6) - 0.24; // a log half sunk in the mud, moss on its back, mud caked along its foot
+            part(lg, new THREE.CylinderGeometry(0.42, 0.46, 3.4, 16), '#6e4a2e', 0, 0.36, 0, { rz: Math.PI / 2 });
+            for (const sd of [-1, 1]) { part(lg, new THREE.CylinderGeometry(0.4, 0.4, 0.04, 16), '#c9a470', sd * 1.71, 0.36, 0, { rz: Math.PI / 2 }); part(lg, new THREE.TorusGeometry(0.22, 0.025, 6, 20), '#a87e4c', sd * 1.735, 0.36, 0, { ry: Math.PI / 2 }); }
+            for (const [u, w] of [[-0.9, 0.6], [0.2, 0.75], [1.0, 0.45]]) part(lg, ball, j3('#6aa640', 0.05), u, 0.72, (r3() - 0.5) * 0.15, { ry: r3() }).scale.set(w, 0.16, 0.36);
+            for (const sz of [-1, 1]) for (const u of [-1.1, 0, 1.1]) part(lg, ball, j3('#4e3622', 0.04), u + (r3() - 0.5) * 0.3, 0.2, sz * 0.4, { mat: { roughness: 0.3 } }).scale.set(0.6, 0.16, 0.28);
+            lg.position.set(o.x, y, o.z); lg.rotation.y = o.ry; g.add(lg);
+            for (const d of [-1.2, 0, 1.2]) occupied.push({ x: o.x + Math.cos(o.ry) * d, z: o.z - Math.sin(o.ry) * d, r: 0.6, h: 0.6 });
+            R.tuft(o.x + Math.cos(o.ry) * 2.1, o.z - Math.sin(o.ry) * 2.1); }
+          put(bake(g), 0, 0, 0, 0, 0, 0); occupied.pop();
+          for (const p of pools) { ringOf(p, 16, wl(p) - 0.4, wl(p) + 0.3, (x, z) => { if (x < p.x + 0.6) R.tuft(x, z); }); steam(p.x, waterAt(p), p.z, wl(p) * 0.7); } // cattails thick on the far side (the view open), a little steam
+          const PD = one('puddle143').pts, pm = new THREE.InstancedMesh(flat, toyMat('#3d2b1c', { roughness: 0.08 }), PD.length); pm.frustumCulled = false; pm.receiveShadow = true; scene.add(pm); // the puddles: small and dull dry, wide in the rain
+          const rim = pools.map(p => { const w0 = wl(p), wy = waterAt(p), G = new THREE.RingGeometry(w0 - 0.1, w0 + 0.9, 40, 3), a = G.attributes.position; G.rotateX(-Math.PI / 2); // the pools spill over their banks in the rain (a wet ring, its edge ragged)
+            for (let i = 0; i < a.count; i++) { const x = a.getX(i), z = a.getZ(i), d = Math.hypot(x, z), an = Math.atan2(z, x), e = w0 - 0.1 + (d - w0 + 0.1) * (0.75 + 0.25 * Math.sin(an * 5 + p.x) + 0.15 * Math.sin(an * 9)), X = p.x + x * e / d, Z0 = p.z + z * e / d;
+              a.setXYZ(i, X, Math.max(heightAt(X, Z0), wy) + 0.02, Z0); }
+            G.computeVertexNormals(); return G; }), rm = new THREE.Mesh(mergeGeometries(rim), toyMat('#47301e', { roughness: 0.3, transparent: true, opacity: 0, depthWrite: false })); rim.forEach(G => G.dispose());
+          rm.visible = false; scene.add(rm);
+          const NB = 10, bub = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 5, 0, 6.283, 0, Math.PI / 2), toyMat('#5c4129', { roughness: 0.12 }), NB), rg = new THREE.InstancedMesh(new THREE.TorusGeometry(1, 0.05, 4, 18).rotateX(Math.PI / 2), toyMat('#6b4d31', { roughness: 0.3 }), NB);
+          const BB = Array.from({ length: NB }, (_, i) => { const p = pools[i % pools.length]; return { p, y: waterAt(p), T: 3 + r3() * 3.5, ph: r3() * 9, sz: 0.09 + r3() * 0.08, d: wl(p) * 0.75 }; }); // bubbles swell on the mud and pop, a ring spreading
+          const SN = 64, spl = new THREE.InstancedMesh(ball, toyMat('#4a3220', { roughness: 0.2 }), SN), DR = Array.from({ length: SN }, () => ({ a: r3() * 6.283, v: 0.8 + r3() * 1.2, vy: 1.8 + r3() * 1.4, s: 0.08 + r3() * 0.07, k: r3() })); // mud flying as one rolls
+          const imp = [0, 1].map(() => { const m = new THREE.Mesh(flat, toyMat('#2a1a0e', { roughness: 0.45, map: softTex(), transparent: true, opacity: 0, depthWrite: false })); m.visible = false; scene.add(m); return { m }; }); let ni = 0; // its print left in the mud
+          for (const m of [bub, rg, spl]) { m.frustumCulled = false; m.castShadow = false; scene.add(m); }
+          const M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), S0 = new THREE.Vector3(), O = new THREE.Vector3(1e-4, 1e-4, 1e-4), set = (im, i, x, y, z, s) => im.setMatrixAt(i, M4.compose(V.set(x, y, z), Q, s === 0 ? O : S0.setScalar(s)));
+          let rn = 0, tl = 0;
+          ups.push((t, ctx) => { const dt = Math.min(0.1, Math.max(0, t - tl)); tl = t; rn += (Math.min(1, ctx?.rain || 0) - rn) * Math.min(1, dt / 6); // the rain in over some seconds
+            PD.forEach(([x, z, r], i) => { const s = r * (0.3 + 0.9 * sm(rn)); pm.setMatrixAt(i, M4.compose(V.set(x, heightAt(x, z) + 0.014, z), Q, S0.set(s, 1, s * 0.8))); }); pm.instanceMatrix.needsUpdate = true;
+            rm.material.opacity = 0.8 * sm(rn); rm.visible = rn > 0.02;
+            BB.forEach((b, i) => { const n = Math.floor((t + b.ph) / b.T), c = (t + b.ph) / b.T - n, h = Math.sin(n * 12.9898 + i * 78.233) * 43758.5453, u = h - Math.floor(h), a = u * 6.283, d = b.d * Math.sqrt((u * 7) % 1), x = b.p.x + Math.cos(a) * d, z = b.p.z + Math.sin(a) * d;
+              set(bub, i, x, b.y, z, c < 0.5 ? b.sz * sm(c / 0.5) : 0); set(rg, i, x, b.y + 0.01, z, c >= 0.5 && c < 0.85 ? 0.08 + 0.45 * (c - 0.5) / 0.35 : 0); });
+            bub.instanceMatrix.needsUpdate = rg.instanceMatrix.needsUpdate = true;
+            if (W.hit) { const [x, z, d, r, yaw] = W.hit; W.hit = null; const I = imp[ni++ % 2]; Object.assign(I, { t0: t, x, z, d, r }); I.m.position.set(x, heightAt(x, z) + 0.022, z); I.m.rotation.y = yaw; I.m.scale.set(r * 2.6, 1, r * 1.7); }
+            let any = false; imp.forEach((I, j) => { const e = I.t0 == null ? -1 : t - I.t0, o = e < 0 ? 0 : sm((e - I.d * 0.4) / 1.5) * (1 - sm((e - I.d - 24) / 6)); I.m.visible = o > 0.01; I.m.material.opacity = 0.95 * o;
+              for (let i = 0; i < SN / 2; i++) { const D = DR[j * SN / 2 + i], q = e - D.k * I.d * 0.9, R0 = I.r ?? 0; // each drop off at its own moment while it rolls, up and out and down
+                if (e < 0 || q < 0 || q > 0.65) { set(spl, j * SN / 2 + i, 0, 0, 0, 0); continue; }
+                const x = I.x + Math.cos(D.a) * (R0 * 0.6 + D.v * q), z = I.z - Math.sin(D.a) * (R0 * 0.6 + D.v * q), y = heightAt(I.x, I.z) + 0.2 + D.vy * q - 6 * q * q, up = y > heightAt(x, z); any ||= up; set(spl, j * SN / 2 + i, x, y, z, up ? D.s * Math.max(1, R0 / 0.6) : 0); } });
+            spl.visible = any; if (any) spl.instanceMatrix.needsUpdate = true; });
+          heaps(F, r3, j3); place(3, (x, z) => ok(x, z, 0.6) && Math.hypot(x - W.x, z - W.z) > 5.5, stump); }
+        else { for (const p of pools) ringOf(p, 7, wl(p) - 0.4, wl(p) + 0.2, (x, z) => R.tuft(x, z)); place(4, (x, z) => ok(x, z, 0.6), stump); } },
+      springs() {
+        if (Z143) { // q1 B (zones.js springs143): heaps of dark lava stones on the pools' far rims (none at a fall's lip or foot), basalt columns, the vent; the steam thick and slow (as hot spring A). Its own stream
+          let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, j3 = kit(L, { rand: r3, heightAt, occupied }).jitter, F = Z.F.filter(q => q.zone === s.id), falls = F.filter(q => q.t === 'fall');
+          const gap = (x, z) => falls.some(f => Math.hypot(x - f.from[0], z - f.from[1]) < 1.3 || Math.hypot(x - f.to[0], z - f.to[1]) < 1.2);
+          const lava = (x, z, sc, big) => { const sx = sc * (1.05 + r3() * 0.35), sy = sc * (0.6 + r3() * 0.25), sz = sc * (0.8 + r3() * 0.25), y = Math.max(lowest(x, z, 0.7 * Math.max(sx, sz)), heightAt(x, z) - 0.4 * sy) - 0.05 * sy; // half sunk
+            slabs.push({ x, y, z, s: [sx, sy, sz], ry: r3() * 6.283, rx: big ? 0 : (r3() - 0.5) * 0.3, rz: big ? 0 : (r3() - 0.5) * 0.3, c: j3(big ? '#4f4844' : sc > 0.3 ? '#5c544e' : '#45403d', 0.06) });
+            if (k === popK) pop.slabs.push(slabs.length - 1); if (big) occupied.push({ x, z, r: 0.8 * Math.max(sx, sz), h: 0.6 * sy }); };
+          const heap = (x, z, sc, ux, uz) => { lava(x, z, sc, true); for (const [a, b, q] of HEAP) { if (r3() < 0.2) continue; const s2 = q * sc * (0.85 + r3() * 0.3), px = x + (ux * a - uz * b) * sc, pz = z + (uz * a + ux * b) * sc; if (s2 >= 0.2 && !gap(px, pz)) lava(px, pz, s2, false); } }; // no small chips (dark specks)
+          for (const p of pools) { const n = p.r > 3 ? 3 : 2; let t = r3(); // on the far half only (-z: the home view looks in from +z): the near rim open to the view and the way in
+            for (let i = 0; i < n; i++, t += (0.8 + r3() * 0.4) / n) for (let j = 0; j < 5; j++, t += 0.05) { const a = -(0.08 + 0.84 * (t % 1)) * Math.PI, sc = 0.8 + r3() * 0.35 + (p.r > 3 ? 0.15 : 0), d = wl(p) + 0.45 + sc * 0.3, x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d;
+              if (gap(x, z)) continue; heap(x, z, sc, -Math.sin(a), Math.cos(a)); break; } }
+          for (const f of falls) { const dx = f.to[0] - f.from[0], dz = f.to[1] - f.from[1], l = Math.hypot(dx, dz), sd = dx > 0 ? 1 : -1; lava(f.from[0] + dx * 0.4 + dz / l * sd * 1.4, f.from[1] + dz * 0.4 - dx / l * sd * 1.4, 0.55, true); } // one by each fall, on its far side
+          const g = new THREE.Group(), hex = new THREE.CylinderGeometry(0.34, 0.36, 1, 6), cap = new THREE.CylinderGeometry(0.31, 0.31, 0.04, 6);
+          for (const f of F.filter(q => q.t === 'col143')) { const cg = new THREE.Group(); // basalt columns: six-sided, packed, stepped (the tallest at the back)
+            for (const [dx, dz, h] of [[0, 0, 2.5], [0.6, 0, 1.9], [-0.3, 0.52, 2.2], [0.3, 0.52, 1.6], [-0.6, 0, 1.4], [-0.3, -0.52, 1.0], [0.3, -0.52, 0.75], [0.9, 0.52, 1.2], [-0.9, 0.52, 0.9]]) {
+              const hh = h * (0.9 + r3() * 0.2); part(cg, hex, j3('#504a46', 0.05), dx, hh / 2, dz, { ry: Math.PI / 6 }).scale.y = hh; part(cg, cap, j3('#6b635d', 0.04), dx, hh + 0.01, dz, { ry: Math.PI / 6 }); }
+            cg.scale.setScalar(f.sc); cg.position.set(f.x, lowest(f.x, f.z, 1.2 * f.sc) - 0.15, f.z); cg.rotation.y = r3() * 6.283; g.add(cg); occupied.push({ x: f.x, z: f.z, r: 1.2 * f.sc, h: 2.4 * f.sc }); }
+          for (const f of F.filter(q => q.t === 'vent143')) { const vg = new THREE.Group(), y = lowest(f.x, f.z, 1.2) - 0.05; // a low cone of dark rock, sulphur yellow round its mouth and down its sides
+            part(vg, lathe([[0, 0], [1.2, 0], [1.0, 0.2], [0.55, 0.52], [0.3, 0.6], [0.2, 0.45], [0, 0.42]], 16), '#57504b');
+            part(vg, new THREE.TorusGeometry(0.3, 0.07, 6, 16), '#e6c64e', 0, 0.58, 0, { rx: Math.PI / 2 }).scale.z = 0.6;
+            for (let i = 0; i < 5; i++) { const a = i * 1.3 + r3(), d = 0.45 + r3() * 0.35; part(vg, new THREE.SphereGeometry(1, 10, 6), j3('#dcbc46', 0.05), Math.cos(a) * d, 0.52 - d * 0.42, Math.sin(a) * d).scale.set(0.16, 0.05, 0.11); }
+            vg.position.set(f.x, y, f.z); g.add(vg); occupied.push({ x: f.x, z: f.z, r: 1.1, h: 0.6 }); steam(f.x, y + 0.5, f.z, 0.2); }
+          put(bake(g), 0, 0, 0, 0, 0, 0); occupied.pop();
+          steam129(true, true); return; }
+        for (const p of pools) { for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + rnd() * 0.15, d = p.r - 0.15; K.rock(p.x + Math.cos(a) * d, p.z + Math.sin(a) * d, 0.3 + rnd() * 0.2); occupied.pop(); }
         steam(p.x, waterAt(p), p.z, wl(p)); } },
     };
     function bigShroom(h, red) { // a giant toadstool: cream stem, a wide domed cap (red with cream dots, or tan)
@@ -853,11 +1012,11 @@ void main() { ${V4 ? 'vec2 p = vUv * 2.0 - 1.0; float r2 = dot(p, p); if (r2 > 1
       signs.push({ x, z, y: heightAt(x, z), ry: s.side === '+x' ? -0.4 : s.side === '-x' ? 0.4 : 0, name: ZONES[hab][k - 1].name }); occupied.push({ x, z, r: 0.9, h: 1.4 }); break sign; }
     // the mix (a side strip's front part, or the whole of a +z strip)
     const n = v => Math.round(A / 100 * (v || 0));
-    if (mix.tree) place(n(mix.tree), (x, z) => low(1.5, x, z) && !(w3 || m3 || d3 || e3 ? fore4 : fore3)(x, z), (x, z) => tree(x, z, (snow ? 0.85 : 1) + rnd() * 0.35));
+    if (mix.tree) place(n(mix.tree), (x, z) => low(1.5, x, z) && !(w3 || m3 || d3 || e3 || cl3 ? fore4 : fore3)(x, z), (x, z) => tree(x, z, (snow ? 0.85 : 1) + rnd() * 0.35));
     if (mix.bush && !z3) place(n(mix.bush), (x, z) => low(0.9, x, z) && !fore4(x, z), (x, z) => N.add('bush', nk.bush, x, z, 0.9 + rnd() * 0.4));
     if (mix.rock && !z3 && !f3 && !(S129 === 4 && s.id === 'hotspring')) place(n(mix.rock), // 141 D: no strewn rocks round the spring (its stones are in heaps)
        (x, z) => low(1, x, z) && !fore4(x, z), (x, z) => snow ? rock(x, z, 0.4 + rnd() * 0.45) : N.add('rock', nk.rock, x, z, 0.55 + rnd() * 0.5));
-    if (mix.fern) place(n(mix.fern), (x, z) => low(0.5, x, z), (x, z) => K.fern(x, z, 0.8 + rnd() * 0.5)); // 14-3
+    if (mix.fern) place(n(mix.fern), (x, z) => low(0.5, x, z) && !cl3?.(x, z), (x, z) => K.fern(x, z, 0.8 + rnd() * 0.5)); // 14-3
     if (z3) { /* own.flowerhill has its own */ } else if (mix.fl && mix.drift) { // inbox 67-3 the flower hill: no carpet. Drifts of small flower bushes in the grass, one colour
       // each (of three), thick at a drift's middle and thinning out, sparse toward the strip's edges
       const z0 = Math.max(r[2], back + 2.4), D = Array.from({ length: mix.drift }, (_, i) => ({ x: r[0] + 2 + rnd() * (r[1] - r[0] - 4), z: z0 + 2 + rnd() * (r[3] - z0 - 4), pi: DRIFT_PAL[i % DRIFT_PAL.length] }));
@@ -867,6 +1026,7 @@ void main() { ${V4 ? 'vec2 p = vUv * 2.0 - 1.0; float r2 = dot(p, p); if (r2 > 1
     } else if (mix.fl) place(n(mix.fl), (x, z) => low(0.4, x, z) && !fore(x, z), (cx, cz) => { const pi = Math.floor(rnd() * flowerPal.length); N.flowers(cx, cz, pi); flowerCluster(N.Ls, cx, cz, flowerPal[pi], free, rnd, jitter, heightAt); });
     if (mix.grass) N.bare(() => place(Math.round(A * 1.1 * mix.grass), (x, z) => inRect(r, x, z, 0.4), (x, z) => {
       const w = Z.wd(x, z), bank = w > -0.1 && w < 0.7;
+      if (bare3?.(x, z)) return; // q1 B (?z143=1): none in the mudflat's wallow or the dig's pit
       if ((!bank && !free(x, z, 0)) || (bank && rnd() < 0.6)) return;
       L.grass.push({ x, y: heightAt(x, z) - 0.03, z, s: bank ? 1.6 + rnd() * 0.6 : 0.8 + rnd() * 0.6, big: bank, ry: rnd() * 6, c: jitter(bank ? '#4f9032' : pickOf(GREENS), 0.06) });
     }));

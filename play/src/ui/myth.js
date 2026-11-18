@@ -102,7 +102,7 @@ setInterval(() => {
 export const mythDue = () => { const M = G.S?.myth[MY.id]; return !!M?.here && !M.shown && M.here <= G.now(); }; // came, not seen
 export function initMyth(cur, api) { at = cur; hab = api; }
 
-// ---- 158 유니콘·백록 (?m89 시범): the next ones (data.js MYTHIC152), each with its window built from its data (textContent only):
+// ---- 158 유니콘·백록 (160 A 공개): the next ones (data.js MYTHIC152), each with its window built from its data (textContent only):
 // its 3 clues (each with its hint and 「가 보기」), the story pages, its call (at night); its prints are where it opens from
 // (habitat/myth.js guestLayer), then a tap on it once it came (a pet; petted today: the window)
 const NEXT = MYTHIC.slice(1), byId = id => NEXT.find(m => m.id === id);

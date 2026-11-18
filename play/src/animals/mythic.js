@@ -1,7 +1,8 @@
 // 14-1 신수: the 불갈기 천리마's figure (data.js MYTHIC, baked by tools/bake-mythic.mjs). Not a SPECIES, so not figure.js's
 // makeFigure: one model, its own materials (matte vinyl coat, gold harness, a 단청 saddle cloth) and its fire, a translucent
 // resin in three layers (white core, yellow, orange outside: a fresnel ramp), embers and, at night, a warm pool of light.
-// Rearing pivots the body on the hind hips (hinge); the front legs paw, the mane flares (inbox 66-0: A, no wings, for good).
+// Rearing pivots the body on the hind hips (hinge); the front legs paw, the mane flares (inbox 66-0: A, no wings, for good;
+// the ?m89 pilot below has wings again only because inbox 159 A asks for them).
 import * as THREE from 'three';
 import { MYTHIC, sized, M89 } from '../game/data.js';
 import { meshes } from './figure.js';
@@ -89,9 +90,14 @@ export function makeMyth() {
 // light goes further through the layers there; an ember faintly lit inside it, more at night); gilt tack: the bridle, breast
 // collar, girth, spine and haunch straps gold inlaid in the lacquer (평탈, STRAP157), gilt-bronze bosses and 행엽, and on each flank
 // a 말다래 with a flying horse raised on it (the 천마총 천마도's motif drawn anew);
-// gold hooves (an ember at each step: habitat/myth.js); the mane and tail glass flames, 4 + 3 masses each its own piece
+// gold hooves (an ember at each step: habitat/myth.js); the mane and tail glass flames, each mass its own piece
 // (_thickness = its number + root 0 .. tip 1), white-hot inside cooling to red at the tips, rippling slowly, drawn with depth so
 // they stay apart; small sparks drifting up off the tips (more at night); the warm pool at night as before.
+// 159 A (inbox 159 A, 157 C read as 「a red horse with gold bands」): a 천마 — a pair of spread glass flame wings on the shoulders
+// (5 feathers each), the crest 6 longer flames from the forehead to the withers, a long streaming tail, the flame cuffs back (glass
+// now); the lacquer a deep oxblood under a mirror coat (MIRROR157: a studio softbox, a strip light and the horizon in it, so it reads as a
+// polished lacquer ware, not red paint), the inlaid gold brighter with a dark hairline; at night the gilt keeps its colour (a
+// faint glow only, the relief's shading stays); more sparks, off the wing tips too.
 // The same pose() as the figure above (kept apart so the public one is untouched; on the user's OK it replaces that one).
 const FILE157 = 'assets/models/pilot89_firemane157.glb';
 // the gilt straps, gold inlaid flush in the lacquer (평탈), drawn per pixel so their edges are clean: the bands
@@ -107,11 +113,21 @@ float strap157(vec3 p) { return ${[...STRAP157[0].map(([c, a, R, r]) => `tor157(
 `;
 // the hooves: gold below the leg's hoof line, per pixel too (the bake's leg/hoof split followed its triangles: a sawtooth edge)
 const HOOF_GLSL = `float strap157(vec3 p) { return p.y + ${(M.legs.hip - 0.1).toFixed(4)}; }\n`; // leg-local (pivot at the hip): -(len - hoof) of bake-firemane157.mjs's leg
+// 159 A the mirror coat: what the clearcoat mirrors besides the scene's soft sky — a softbox up and left of the viewer and a strip light
+// overhead (fixed to the view, as a studio's: every pose shows them, crisp-edged), and a sharp horizon (world: sky above, ground
+// dark below), the lights times a Fresnel kept at a quarter face-on (a polished lacquer box's look, not the thin physical 4 %). uR157 their light
+const MIRROR157 = `{ vec3 rv = reflect(-geometryViewDir, geometryClearcoatNormal), rw = (vec4(rv, 0.0) * viewMatrix).xyz; // view, world
+  float fr = (0.25 + 0.75 * pow(1.0 - dotNVcc, 4.0)) * material.clearcoat;
+  vec2 q = abs(rv.xy - vec2(-0.36, 0.5)) - vec2(0.07, 0.15); float sb = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 0.04, fs = fwidth(sb) + 0.003;
+  float key = (1.0 - smoothstep(-0.09, fs, sb)) * step(0.0, rv.z); // brightest in its middle, its rim still crisp
+  float strip = smoothstep(0.85, 0.9, rv.y) * (1.0 - smoothstep(0.92, 0.96, rv.y)) * (1.0 - smoothstep(0.18, 0.3, abs(rv.x + 0.05))) * step(0.0, rv.z); // a bar of finite length: an arc on a dome, not a ring
+  float fe = fwidth(rw.y) + 0.004, sky = smoothstep(-fe, fe, rw.y) * (0.2 + 0.3 * rw.y) * pow(1.0 - dotNVcc, 2.0); // toward the outline only: the red stays deep
+  outgoingLight += uR157 * (fr * (1.5 * key + 0.7 * strip) + sky * material.clearcoat); }`;
 const lacquer157 = (s, u, key, sdf) => { // s: the figure's scale; u: uniforms shared by the coat and the legs; sdf: where the gold is (strap157 < 0), key its name
-  const m = new THREE.MeshPhysicalMaterial({ color: '#8e0f0a', roughness: 0.6, clearcoat: 1, clearcoatRoughness: 0.03, emissive: '#ff4a14' });
+  const m = new THREE.MeshPhysicalMaterial({ color: '#700c10', roughness: 0.6, clearcoat: 1, clearcoatRoughness: 0.02, emissive: '#ff4a14' }); // 159 A: oxblood (157: '#8e0f0a')
   m.onBeforeCompile = sh => { Object.assign(sh.uniforms, u);
     sh.vertexShader = 'varying vec3 vP157;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvP157 = position;');
-    sh.fragmentShader = 'uniform float uT157, uE157, uG157;\nvarying vec3 vP157;\n' + sdf + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+    sh.fragmentShader = 'uniform float uT157, uE157, uG157;\nuniform vec3 uR157;\nvarying vec3 vP157;\n' + sdf + sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
       float g157 = 0.0;
       { float fv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
         diffuseColor.rgb *= mix(vec3(0.42, 0.07, 0.05), vec3(1.0), smoothstep(0.0, 0.85, fv)); // deeper, darker red toward the outline
@@ -122,9 +138,11 @@ const lacquer157 = (s, u, key, sdf) => { // s: the figure's scale; u: uniforms s
         vec3 dpx = dFdx(-vViewPosition), dpy = dFdy(-vViewPosition), r1 = cross(dpy, normal), r2 = cross(normal, dpx);
         float det = dot(dpx, r1);
         if (abs(det) > 1e-20) { vec3 sg = (dFdx(hb) * r1 + dFdy(hb) * r2) / det; normal = normalize(normal - sg); clearcoatNormal = normalize(clearcoatNormal - sg); }
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.79, 0.42, 0.065), g157); metalnessFactor = mix(metalnessFactor, 1.0, g157); roughnessFactor = mix(roughnessFactor, 0.26, g157);
-        totalEmissiveRadiance = mix(totalEmissiveRadiance, vec3(1.0, 0.45, 0.12) * uG157, g157); }`) // at night the gold catches the fire's light
-      .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\nmaterial.clearcoat *= 1.0 - 0.7 * g157;'); // the gold: a thinner coat
+        diffuseColor.rgb *= 1.0 - 0.6 * (1.0 - g157) * (1.0 - smoothstep(0.004, 0.004 + 2.0 * w, d)); // 159 A: a dark hairline round the gold, so its edge reads
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.52, 0.1), g157); metalnessFactor = mix(metalnessFactor, 1.0, g157); roughnessFactor = mix(roughnessFactor, 0.2, g157);
+        totalEmissiveRadiance = mix(totalEmissiveRadiance, vec3(1.0, 0.62, 0.25) * uG157, g157); }`) // at night the gold catches the fire's light
+      .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\nmaterial.clearcoat *= 1.0 - 0.7 * g157;') // the gold: a thinner coat
+      .replace('#include <opaque_fragment>', MIRROR157 + '\n#include <opaque_fragment>');
   };
   m.customProgramCacheKey = () => 'lacquer157' + key;
   return m;
@@ -150,20 +168,23 @@ const glass157 = () => new THREE.ShaderMaterial({
 function make157() {
   const s = MS.s, L = M.legs, root = new THREE.Group(), body = new THREE.Group(), hinge = new THREE.Group(), inner = new THREE.Group();
   body.scale.setScalar(s); root.add(body); hinge.position.set(L.x[1], L.hip, 0); inner.position.set(-L.x[1], -L.hip, 0); hinge.add(inner); body.add(hinge);
-  const u = { uT157: windTime, uE157: { value: 0 }, uG157: { value: 0 } }, coat = lacquer157(s, u, 'coat', STRAP_GLSL), legCoat = lacquer157(s, u, 'leg', HOOF_GLSL), gilt = new THREE.MeshStandardMaterial({ color: '#e6ad48', metalness: 1, roughness: 0.24, emissive: '#ff8a30', emissiveIntensity: 0 });
-  const plate = new THREE.MeshStandardMaterial({ color: '#c08a3c', metalness: 1, roughness: 0.5, emissive: '#ff8a30', emissiveIntensity: 0 }), fire = glass157();
-  const mat = { body: coat, leg: legCoat, gilt, hoof: legCoat, plate, eye: eyeMat, fire };
-  const mesh = k => { const o = new THREE.Mesh(G[k], mat[k]); if (k === 'fire') o.renderOrder = 3; else o.castShadow = o.receiveShadow = true; return o; };
+  const u = { uT157: windTime, uE157: { value: 0 }, uG157: { value: 0 }, uR157: { value: new THREE.Color(1, 1, 1) } }, coat = lacquer157(s, u, 'coat', STRAP_GLSL), legCoat = lacquer157(s, u, 'leg', HOOF_GLSL);
+  const gilt = new THREE.MeshStandardMaterial({ color: '#e6ad48', metalness: 1, roughness: 0.24, emissive: '#ffb050', emissiveIntensity: 0 }); // 159 A: a golden glow at night, not orange
+  const plate = new THREE.MeshStandardMaterial({ color: '#c08a3c', metalness: 1, roughness: 0.5, emissive: '#ffb050', emissiveIntensity: 0 }), fire = glass157();
+  const mat = { body: coat, leg: legCoat, gilt, hoof: legCoat, plate, eye: eyeMat, fire, hooffire: fire };
+  const mesh = k => { const o = new THREE.Mesh(G[k], mat[k]); if (mat[k] === fire) o.renderOrder = 3; else o.castShadow = o.receiveShadow = true; return o; };
   for (const k of ['body', 'eye', 'plate', 'gilt', 'fire']) inner.add(mesh(k));
-  const legs = [L.x[0], L.x[1]].flatMap(x => [L.z, -L.z].map(z => { const g = new THREE.Group(); g.position.set(x, L.hip, z); g.add(mesh('leg'), mesh('hoof'));
+  const legs = [L.x[0], L.x[1]].flatMap(x => [L.z, -L.z].map(z => { const g = new THREE.Group(); g.position.set(x, L.hip, z); g.add(mesh('leg'), mesh('hoof'), mesh('hooffire')); // 159 A: the flame cuff back
     g.userData = { front: x > 0, pair: (x > 0) === (z > 0) }; (x > 0 ? inner : body).add(g); return g; }));
-  // sparks: off the flames' tips, drifting up and back, twinkling out (fewer when motion is calmed); brighter at night
+  // sparks: off the flames' tips (the wings' too), drifting up and back, twinkling out (fewer when motion is calmed); brighter at night
   const th = G.fire.attributes._thickness, fp = G.fire.attributes.position, tips = [];
-  for (let i = 0; i < th.count; i++) if (th.getX(i) % 1 > 0.7) tips.push(i);
-  const N = !tips.length ? 0 : calm() ? 10 : 30, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
-  const seed = Array.from({ length: N }, () => { const i = tips[Math.random() * tips.length | 0]; return [Math.random(), fp.getX(i), fp.getY(i), fp.getZ(i), 1.6 + Math.random() * 1.4]; });
+  for (let i = 0; i < th.count; i++) if (th.getX(i) % 1 > 0.7) (tips[th.getX(i) | 0] ||= []).push(i);
+  // each flame its share (by vertex count the finely baked feathers would take four in five), the crest's and tail's (near the midline) twice
+  const slots = tips.filter(Boolean).flatMap(t => Math.abs(fp.getZ(t[0])) < 0.3 ? [t, t] : [t]);
+  const N = !slots.length ? 0 : calm() ? 16 : 56, pos = new Float32Array(N * 3), col = new Float32Array(N * 3);
+  const seed = Array.from({ length: N }, (_, j) => { const t = slots[j % slots.length], i = t[Math.random() * t.length | 0]; return [Math.random(), fp.getX(i), fp.getY(i), fp.getZ(i), 1.6 + Math.random() * 1.4]; });
   const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pg.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const embers = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.17, map: dot('rgba(255,250,225,1)', 'rgba(255,150,50,0)'), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const embers = new THREE.Points(pg, new THREE.PointsMaterial({ size: 0.19, map: dot('rgba(255,250,225,1)', 'rgba(255,150,50,0)'), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
   embers.frustumCulled = false; embers.renderOrder = 4; inner.add(embers);
   const pool = new THREE.Mesh(new THREE.PlaneGeometry(13, 13), new THREE.MeshBasicMaterial({ map: dot('rgba(255,190,110,1)', 'rgba(255,150,70,0)'), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   pool.rotation.x = -Math.PI / 2; pool.position.y = 0.06; pool.renderOrder = 1; root.add(pool);
@@ -189,7 +210,9 @@ function make157() {
       fire.uniforms.uF.value = fl; fire.uniforms.uW.value = calm() ? 0.3 : 1 + fl;
     },
     tick(t, n = night) {
-      night = n; u.uE157.value = 0.03 + 0.25 * n; u.uG157.value = gilt.emissiveIntensity = plate.emissiveIntensity = 0.32 * n; // the gold catching the fire's light at night
+      night = n; u.uE157.value = 0.03 + 0.07 * n; // 159 A: the ember inside dimmer (157: 0.25; 0.15 still read cherry), so the oxblood stays deep at night
+      u.uG157.value = gilt.emissiveIntensity = plate.emissiveIntensity = 0.1 * n; // the gold catching the fire's light at night (159 A: 0.32 smeared it orange)
+      u.uR157.value.setRGB(1 - 0.55 * n, 1 - 0.7 * n, 1 - 0.8 * n); // the mirror coat's reflection: a dim warm one at night
       fire.uniforms.uN.value = n; pool.material.opacity = 0.55 * n; pool.visible = n > 0;
       for (let i = 0; i < N; i++) { const [o, x, y, z, per] = seed[i], k = (t / per + o) % 1, f = Math.sin(Math.PI * k) ** 2 * (0.75 + 0.25 * Math.sin(t * 13 + i * 2.7)) * (0.4 + 0.6 * n);
         pos[i * 3] = x - 0.3 * k + 0.05 * Math.sin(t * 2.1 + i); pos[i * 3 + 1] = y + 0.9 * k; pos[i * 3 + 2] = z + 0.06 * Math.cos(t * 1.7 + i * 2);

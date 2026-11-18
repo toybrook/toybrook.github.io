@@ -952,7 +952,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // 14-1 신수의 부름 (myth.js): the meadow's fire prints, burnt hoofprints, the altar's flames and the 불갈기 천리마 (ui/myth.js drives it)
   const puff = (x, z, c) => puffs.push({ x, z, t: 0, c }), view = (x, z, radius, phi) => { setFocus(null); goingHome = false; aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(x, ...panX), 0, THREE.MathUtils.clamp(z, ...panZ)), radius, phi }; };
   const myth = habId === 'meadow' ? mythLayer({ scene, ctx: habitat.ctx, U, ui, open, nearest, gather, idle, placed, room: (r, x, z) => nearest((a, b) => fits({ r }, a, b), [x, z]), puff, view }) : null;
-  // 158 (?m89): the next 신수 of this habitat (MYTHIC152: the unicorn in the meadow, the white deer on the snow); none without the flag
+  // 158 (160 A: public): the next 신수 of this habitat (MYTHIC152: the unicorn in the meadow, the white deer on the snow)
   const guests = MYTHIC.slice(1).filter(m => m.habitat === habId).map(m => guestLayer(m, { scene, ctx: habitat.ctx, ui, open, nearest, view, puff }));
   const label = a => `${a.rec.nm ? a.rec.nm + ' · ' : ''}${kindName(a.rec)} · ${STAGE_NAME[a.look.stage]}`;
   const height = a => new THREE.Box3().setFromObject(a.look.obj).max.y - a.obj.position.y;
