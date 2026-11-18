@@ -826,7 +826,7 @@ export const LEGEND134 = {
 // 141 B 전설 2번째 「빛 재질」 (?m89 시범; inbox 141 B): the first legendaries' language (clear, lit from inside, gem, gold, sparkle),
 // no painted pattern, colour and material apart from each one's first. With the vane chicken the meadow's second set. Looks: materials.js 141
 export const LEGEND141 = {
-  horse: { id: 'crystalglass', name: $t('수정 유리 말'), mat: 'crystal145', effect: 'clearglints' }, // 145 A: clear cut crystal (144 B crystal144, 141 crystal141 + twinkle)
+  horse: { id: 'crystalglass', name: $t('수정 유리 말'), mat: 'crystal145', effect: 'clearglints', gone: true }, // 150 (user 11/18 「저게 전설이냐」): out of the eggs, kept (gone, 125-A) for who has it; 145 A: clear cut crystal (144 B crystal144, 141 crystal141 + twinkle)
   sheep: { id: 'kintsugi', name: $t('금 이음 양'), mat: 'kintsugi141', effect: 'goldsparks' },
   rabbit: { id: 'rubygem', name: $t('루비 토끼'), mat: 'ruby141', effect: 'twinkle' },
   pig: { id: 'piggybank', name: $t('유리 저금통 돼지'), mat: 'piggy141', effect: 'coins' },
@@ -835,7 +835,7 @@ export const LEGEND141 = {
 for (const [sp, L] of Object.entries(LEGEND141)) SPECIES.find(s => s.id === sp).legendary.push(L); // 144 A: public; 149: the crystal horse (145 A) too
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
-export const WAVE127 = 0;
+export const WAVE127 = 3; // 150 (user OK 11/18): all 11 public
 const c3 = (a, b, c) => [a, b, { ...c, seldom: true }];
 export const SHARED127 = [
   { id: 'wood', rarity: 'rare', tier: 'normal', wave: 1, name: $t('원목'), colors: c3(
@@ -899,9 +899,9 @@ export const ZONES = {
     { id: 'mushroom', name: $t('버섯 숲길'), side: '+z', w: 8, line: $t('숲길의 버섯이 밤이면 은은하게 빛나요. 동물들이 길가에서 쉬어요.') },
   ],
   pond: [
-    { id: 'reeds', name: $t('갈대밭'), side: '+x', w: 8, line: $t('키 큰 갈대 사이로 물길이 흘러요. 동물들이 물가에서 쉬어요.') },
+    { id: 'reeds', name: $t('갈대밭'), side: '+x', w: 8, line: $t('키 큰 갈대 사이로 물길이 흘러요. 동물들이 물가에서 쉬어요.'), line143: $t('키 큰 갈대 숲 사이로 물길이 흘러요. 동물들이 갈대 사이로 헤엄쳐 숨고, 오리는 둥지에 앉아요.') }, // 143 B
     { id: 'falls', name: $t('바위 폭포'), side: '-x', w: 8, line: $t('바위에서 물이 떨어져 작은 못이 생겼어요. 동물들이 물가에 와서 쉬어요.') },
-    { id: 'sandbar', name: $t('모래톱'), side: '+z', w: 8, line: $t('햇볕 드는 모래밭에서 동물들이 낮잠을 자요.') },
+    { id: 'sandbar', name: $t('모래톱'), side: '+z', w: 8, line: $t('햇볕 드는 모래밭에서 동물들이 낮잠을 자요.'), line143: $t('모래 둔덕에 큰 유목이 누워 있고 작은 웅덩이가 있어요. 동물들이 배를 깔고 햇볕을 쬐고 모래를 파요.') }, // 143 B
     { id: 'lotus', name: $t('연꽃 습지'), side: '+x', w: 8, line: $t('연잎과 연꽃이 가득한 큰 연못이에요. 동물들이 물가에서 쉬어요.') },
     { id: 'isle', name: $t('나무다리 섬'), side: '-x', w: 8, line: $t('긴 나무다리를 건너 섬에 가서 낮잠을 자요.') },
     { id: 'swamp', name: $t('물안개 늪'), side: '+z', w: 8, line: $t('물안개가 낮게 흐르는 늪이에요. 동물들이 그루터기 옆에서 쉬어요.') },

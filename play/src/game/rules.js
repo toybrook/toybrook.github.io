@@ -42,7 +42,7 @@ import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVE
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
-import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, Z143, spring149off, S129 } from '../habitat/zones.js';
+import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore } from '../habitat/zones.js';
 import { newlyDone } from './achieve.js';
 
 const byId = list => Object.fromEntries(list.map(x => [x.id, x]));
@@ -73,7 +73,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: { s149spring: 1 }, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: { s149spring: 1, z143hill: 1, z143fork: 1, z143grove: 1 }, myth: {}, visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   S.guests = guestsBlank(S); // 66-1
@@ -129,8 +129,9 @@ export function fromSave(raw, now) {
       for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
     S.accs = Object.fromEntries(Object.entries(S.accs).filter(([k, n]) => ACCESSORIES[k] && Number.isInteger(n) && n > 0)); // 95: kept secret accessories, by name
     tidyVisit(S); tidySky(S); tidyPals(S); tidyGuests(S); tidyArt(S); tidyWild(S); // 16-1, 16-2, 17-1, 66-1, 17-2, 17-3
-    if (Z143) clear143(S); // 145 B
+    clear143(S); // 145 B; 150: public
     if (S129 === 4) clear149(S); // 149
+    if (Z143) clear143reeds(S); // 143 B
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -700,16 +701,26 @@ export function addNatives(S, habId, list, rings) {
 }
 // 145 B (143's flower hill, once per save): the old natives (nat: 1, addNatives) standing on the new hill, its flower bands or its
 // lane go; a player's own things (not nat) and stored ones stay. 143 B the fork the same (zones.js fork143off: in its new water, a
-// tree, bush or rock in its middle, a strewn rock in its strip), once under its own flag. How many went
+// tree, bush or rock in its middle, a strewn rock in its strip), once under its own flag; the pond's sandbar too (zones.js sand143fore,
+// its middle). How many went
 const clearOld = (S, f, hab, off) => { if (S.flags[f]) return; S.flags[f] = 1;
   S.props = S.props.filter(p => !(p.nat && p.placed && p.hab === hab && NAT[p.prop] && off(p.x * UNIT, p.z * UNIT, NAT[p.prop].r * (p.s || 1), p.prop))); };
-export function clear143(S) {
+export function clear143(S, pond = Z143) { // pond: the sandbar's too (a trial: ?z143=1; check-eggs passes true)
   const n = S.props.length; clearOld(S, 'z143hill', 'meadow', hill143()); clearOld(S, 'z143fork', 'meadow', fork143off());
+  clearOld(S, 'z143grove', 'meadow', grove143off()); // 150: the small wood's rise and the ground in front of it
+  if (pond) clearOld(S, 'z143sand', 'pond', sand143fore); // 143 B (still a trial)
   return n - S.props.length;
 }
 // 149 (the wide spring, 144 C, released): a save that opened the hot spring before has its old natives where the new pools, deck
 // and falls are (zones.js spring149off); they go once (a new game starts with the flag: newGame). A player's own things and stored ones stay. How many went
 export function clear149(S) { const n = S.props.length; clearOld(S, 's149spring', 'snow', spring149off()); return n - S.props.length; }
+// 143 B (the reeds, once per save): the old natives (nat: 1) in the pond's reeds strip go (they stood where the channel and the
+// reed beds are now); a player's own things and stored ones stay. How many went
+export function clear143reeds(S) {
+  if (S.flags.z143reeds) return 0; S.flags.z143reeds = 1; const off = reeds143off(), n = S.props.length;
+  S.props = S.props.filter(p => !(p.nat && p.placed && p.hab === 'pond' && NAT[p.prop] && off(p.x * UNIT, p.z * UNIT)));
+  return n - S.props.length;
+}
 // 22-1 땅 칠하기: cell i, j (the grid of the first board's units) of a habitat to brush b (BRUSHES index), or null: bare again
 export function paintCell(S, habId, i, j, b) {
   const P = S.paint[habId] ??= {}, k = `${i},${j}`;

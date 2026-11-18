@@ -39,21 +39,23 @@ export function createActor(ctx, rec) {
   const me = () => { const S = M[look.stage]; return { sp: rec.species, swim: true, s: S.s, reach: body.seg[1] + body.r, back: body.r - body.seg[0], w: 2 * body.r, L: body.seg[1] - body.seg[0] + 2 * body.r, h: S.h * S.s, fig: look.fig }; };
   const home = (x, z) => { place(); const p = at(); land = { x, z, t: DROP.end, dur: DROP.end + Math.max(0.6, Math.hypot(p.x - x, p.z - z) / 3.2) }; }; // hop back to the water
   const unplay = () => { if (play) { leave(play.q); play = null; } };
+  // 143 B 갈대밭 (?z143=1): { s (the zone's nest spot, held: s.busy), x, z (from), t, dur (the hops), sit }: up to the duck's nest by the reeds
+  let nest = null; const unnest = () => { if (nest) { nest.s.busy = null; nest = null; } }, NESTS = ctx.spots?.filter(q => q.act === 'nest' && q.who?.includes(rec.species)) || [];
   const api = {
     rec, look, obj: root, pickTarget: root, position: root.position,
     hold: false, // true while it hatches: stays put
     rest: () => at(),
-    drop(x, z, from = 0) { unplay(); held = null; place();
+    drop(x, z, from = 0) { unplay(); unnest(); held = null; place();
       // inbox 42 E: carried and let go: its place on the water nearest there (on the water: the lane under it), if free
       const k = pond.k ?? 0.9, A = Math.atan2((z - pond.z) / k, x - pond.x), R = THREE.MathUtils.clamp((Math.hypot(x - pond.x, (z - pond.z) / k) - 1.2) / pond.r, L0, L1);
       if (from) for (let j = 0; j < 21; j++) { const B = A + (j % 2 ? 1 : -1) * Math.ceil(j / 2) * 0.1; if (free(ctx.crowd, body, ...spot(B, R), yawAt(B))) { a = B; rr = lane = R; break; } } // or a little round
       const p = at(), t0 = dropFrom(from); land = { x, z, t: t0, dur: DROP.end + Math.max(0.6, Math.hypot(p.x - x, p.z - z) / 3.2) }; },
     water: 'swim',
-    carry(x, z) { unplay(); land = null; held = { x, z, t: now }; }, // t: 69-2 moved last at (it wriggles while moved, then settles)
+    carry(x, z) { unplay(); unnest(); land = null; held = { x, z, t: now }; }, // t: 69-2 moved last at (it wriggles while moved, then settles)
     spin(d) { if (held) root.rotation.y += d; }, // 69-1: held up, turned round by the finger
     use(st) { const q = land && choose({ play: [st], night: ctx.night }, api, { ...me(), T: now }, land.x, land.z, 99); if (q) land.q = q; return q ? [land.x, land.z] : null; },
     poke() { poke = 0.6; },
-    toProp(st, d) { if (api.hold || held || land || play) return false; const q = choose({ play: [st], night: ctx.night }, api, { ...me(), T: now, duo: d }, root.position.x, root.position.z, 40); // 113: to its 단짝 on the fountain
+    toProp(st, d) { if (api.hold || held || land || play || nest) return false; const q = choose({ play: [st], night: ctx.night }, api, { ...me(), T: now, duo: d }, root.position.x, root.position.z, 40); // 113: to its 단짝 on the fountain
       if (q) play = { q, x: root.position.x, z: root.position.z, t: 0, dur: Math.max(0.6, Math.hypot(q.ax - root.position.x, q.az - root.position.z) / 3.2) }; return !!q; },
     pat(z) { if (z === 'dislike' && !held) { snub = 1.1; side = Math.random() < 0.5 ? 1 : -1; } else poke = 0.6; }, // 69-2 쓰다듬기: 싫은 곳은 고개 돌림
     // on the camera's line to the followed animal (habitat.js; n: the line's side normal, d: how far off it, signed): swim on
@@ -90,6 +92,18 @@ export function createActor(ctx, rec) {
         Object.assign(body, { x, z, yaw: root.rotation.y }); fit(); // on the grass others step round it too
         return;
       }
+      if (nest) { // 143 B: hops over to the nest, sits down in it a while (eyes shut), then hops back to the water
+        const { s } = nest; nest.t += dt;
+        if (nest.t < nest.dur) { const k = nest.t / nest.dur, hops = Math.max(2, Math.round(nest.dur / 0.32)), x = nest.x + (s.x - nest.x) * k, z = nest.z + (s.z - nest.z) * k;
+          root.position.set(x, Math.max(ctx.heightAt(x, z), water) + Math.sin(((k * hops) % 1) * Math.PI) * 0.45, z); root.rotation.set(0, Math.atan2(-(s.z - nest.z), s.x - nest.x), 0);
+          look.fig.pose({ sq: 1, rot: 0, gait: 'still', ph: 0 }); Object.assign(body, { x, z, yaw: root.rotation.y }); fit(); return; }
+        root.position.set(s.x, ctx.heightAt(s.x, s.z) + 0.1, s.z); root.rotation.x = root.rotation.z = 0; look.fig.pose({ sq: 0.97 - Math.sin(t * 1.4) * 0.015, rot: 0, gait: 'still', ph: 0, lie: 1, shut: true });
+        Object.assign(body, { x: s.x, z: s.z, yaw: root.rotation.y }); fit();
+        if (nest.t > nest.dur + nest.sit) { unnest(); home(s.x, s.z); }
+        return;
+      }
+      const ns = NESTS.length && !api.hold && rush <= 0 && NESTS.find(q => !q.busy), p0 = root.position; // 143 B: the reeds' nest (no draw of the random without one)
+      if (ns && Math.hypot(ns.x - p0.x, ns.z - p0.z) < 22 && Math.random() < dt / 45) { ns.busy = api; nest = { s: ns, x: p0.x, z: p0.z, t: 0, dur: Math.max(0.6, Math.hypot(ns.x - p0.x, ns.z - p0.z) / 3.2), sit: 12 + Math.random() * 8 }; return; }
       if (!api.hold && rush <= 0 && ctx.play?.length && Math.random() < dt / (due(ctx, t, me()) ? 10 : 40)) { // 28-2: a fountain within 18 (with room): off it goes
         const q = choose(ctx, api, { ...me(), T: t }, root.position.x, root.position.z, 18);
         if (q) { play = { q, x: root.position.x, z: root.position.z, t: 0, dur: Math.max(0.6, Math.hypot(q.ax - root.position.x, q.az - root.position.z) / 3.2) }; return; }
@@ -113,7 +127,7 @@ export function createActor(ctx, rec) {
       }
     },
     body,
-    dispose() { unplay(); ctx.crowd.delete(body); scene.remove(root); look.dispose(); for (const rp of ripples) { scene.remove(rp.m); rp.m.material.dispose(); } },
+    dispose() { unplay(); unnest(); ctx.crowd.delete(body); scene.remove(root); look.dispose(); for (const rp of ripples) { scene.remove(rp.m); rp.m.material.dispose(); } },
   };
   body.duo = api; // 113 (play.js duo)
   return api;

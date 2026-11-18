@@ -1415,7 +1415,7 @@ const big = g => { for (const c of g.children) { c.position.multiplyScalar(1.25)
 // into the vertices (tint) on one white vertex-colour material: a prop is about one draw per surface finish, not per colour.
 // The model is a fresh group at the origin, so each part's matrixWorld is its place in the model
 const plain = m => m.isMeshStandardMaterial && !m.map && !m.vertexColors && !m.transparent && !m.emissive.getHex() && !Object.hasOwn(m, 'onBeforeCompile');
-function bake(g) {
+export function bake(g) { // 143 B: zoneprops.js too (the sandbar's fixtures)
   g.updateMatrixWorld(true);
   const by = new Map(), inv = new THREE.Matrix4();
   g.traverse(o => { if (!o.isMesh) return; let own = g; for (let p = o.parent; p !== g; p = p.parent) if (p.userData.moves) { own = p; break; }

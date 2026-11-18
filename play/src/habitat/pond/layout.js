@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { bump } from '../stamps.js';
 import { dist2D, WATER_Y } from '../meadow/layout.js';
-import { BOARD0, rectAt, zoneSet, edgeOf, inRect } from '../zones.js';
+import { BOARD0, rectAt, zoneSet, edgeOf, inRect, polyD } from '../zones.js';
 import { UNIT } from '../../game/data.js';
 export { WATER_Y };
 
@@ -109,7 +109,7 @@ export const mainland = (x, z) => shore(x, z) > 1.3 && walkable(x, z);
 // where a water animal may also go (MODELS walk.water): the bank and the pond ('swim'), or the bank and the shallow water
 // ('wade', the rim and round the islands). Never the stream.
 export function wet(x, z, kind) {
-  if (!inBoard(x, z) || shore(x, z) > 1.4 || !clearOf(x, z)) return false;
+  if (!inBoard(x, z) || shore(x, z) > 1.4 && !(swimD(x, z) < 1.1) || !clearOf(x, z)) return false; // 143 B: or in a zone's swim channel
   return kind === 'swim' || depthAt(x, z) < 0.45;
 }
 // a spot in the water for one heading in from (x, z): off the shelf ('swim'), or on the shallow shelf ('wade'); round the
@@ -156,5 +156,10 @@ export function setLevel(L, top = L) {
   bP = stream.getPointAt(bridgeT); bTan = stream.getTangentAt(bridgeT); bN = new THREE.Vector3(-bTan.z, 0, bTan.x).normalize();
   BL = 5.2 * S; BRIDGE_END = 3.4 * S; bridgeEnds = [-1, 1].map(s => bP.clone().addScaledVector(bN, s * BRIDGE_END));
   occupied.length = 0; decor.length = 0; seed = 11;
+  SWIM = Z.F.filter(f => f.swim && f.k <= L);
 }
+// 143 B (?z143=1): the open zones' channels the swimmers go in (zones.js swim: the reeds'), how far into one's water x, z is (< 0: in it)
+let SWIM = [];
+const swimD = (x, z) => { let m = Infinity; for (const f of SWIM) m = Math.min(m, polyD(x, z, f.pts) - (f.w - 0.4)); return m; };
+export const swimIn = (x, z) => swimD(x, z) < 3;
 setLevel(0);

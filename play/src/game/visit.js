@@ -110,11 +110,13 @@ export const guestName = g => $t('{0}의 {1}', gardenName(g.g), kindName(g));
 // Bytes: FNV sum 4 · 정원사 레벨 1 (its 명성 look) · garden name 2 · friends n 1 · n × (species 1, +128 a baby · variant 1 ·
 // colour 1 (+1, 0 none) · accessory 1 (+1, 0 none)) · then the 꾸미기 코드's bytes (layout.js). No names, hearts or anything else.
 // ponytail: indexes into SPECIES, variantsOf, colorsOf and ACCESSORIES (append only, as layout.js KINDS); a reorder there needs TH2
+// 150: the 127 shared looks (wave) went public in the middle of variantsOf; links made before keep their indexes: those at the end here
+const VL = sp => { const a = variantsOf(sp); return [...a.filter(v => !v.wave), ...a.filter(v => v.wave)]; };
 const SEE = 'TH1.', ACC = Object.keys(ACCESSORIES), FR = 24;
 const sum4 = bytes => { let h = 0x811c9dc5; for (const b of bytes) h = Math.imul(h ^ b, 0x01000193); h >>>= 0; return [h >>> 24, h >>> 16 & 255, h >>> 8 & 255, h & 255]; };
 export function seeCode(S, habId) { // S.visit.garden set first (ui/visit.js)
   const fr = outIn(S, habId).slice(0, FR).map(a => { const sp = SPECIES.findIndex(s => s.id === a.species);
-    return [sp | (a.stage === 'baby' ? 128 : 0), variantsOf(SP[a.species]).findIndex(v => v.id === a.variant), colorsOf(a.species, a.variant).findIndex(c => c.id === a.color) + 1, ACC.indexOf(a.acc) + 1]; });
+    return [sp | (a.stage === 'baby' ? 128 : 0), VL(SP[a.species]).findIndex(v => v.id === a.variant), colorsOf(a.species, a.variant).findIndex(c => c.id === a.color) + 1, ACC.indexOf(a.acc) + 1]; });
   const [ga, gb] = S.visit.garden ?? [0, 0], body = [Math.min(255, S.lv || 1), ga, gb, fr.length, ...fr.flat(), ...unb64(encode(S, habId).slice(TAG.length))];
   return SEE + b64([...sum4(body), ...body]);
 }
@@ -126,7 +128,7 @@ export function readSee(text) {
   if (!(lv >= 1) || !okG(ga, gb) || n > FR || body.length < 4 + 4 * n) return null;
   const friends = [];
   for (let i = 4; i < 4 + 4 * n; i += 4) {
-    const [s0, v, c, a] = body.slice(i, i + 4), sp = SPECIES[s0 & 127], vr = sp && variantsOf(sp)[v], cs = vr ? colorsOf(sp.id, vr.id) : [];
+    const [s0, v, c, a] = body.slice(i, i + 4), sp = SPECIES[s0 & 127], vr = sp && VL(sp)[v], cs = vr ? colorsOf(sp.id, vr.id) : [];
     if (!vr || !HAB[sp.habitat]?.ready || c > cs.length || a > ACC.length) return null;
     friends.push({ species: sp.id, variant: vr.id, color: c ? cs[c - 1].id : null, acc: a ? ACC[a - 1] : null, stage: s0 & 128 ? 'baby' : 'adult' });
   }

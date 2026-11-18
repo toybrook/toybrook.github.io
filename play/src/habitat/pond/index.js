@@ -16,7 +16,7 @@ export function buildPond(scene, ui, sunDir, level = 0, top = level) {
   // as the meadow's ctx (meadow/index.js), plus wet / waterSpot for the animals that go into the water (walk.js)
   const ctx = {
     scene, heightAt: layout.heightAt, walkable: layout.walkable, pathClear: layout.pathClear, bridgeEnds: layout.bridgeEnds, deckAt: layout.deckAt,
-    onSleepTick: ui.zzz, pond: layout.pond, water: layout.WATER_Y + 0.04, wet: layout.wet, waterSpot: layout.waterSpot, shore: layout.shore,
+    onSleepTick: ui.zzz, pond: layout.pond, water: layout.WATER_Y + 0.04, wet: layout.wet, waterSpot: layout.waterSpot, shore: layout.shore, swimIn: layout.swimIn,
     shelter: layout.occupied.filter(o => o.cover && o.z > -22 * layout.S), // 21-2: trees and roofs for the rain (walk.js)
     spawn: () => { const O = layout.O; for (let k = 0; ; k++) { const x = O[0] + 2 + Math.random() * (O[1] - O[0] - 4), z = -22 * layout.S + Math.random() * (O[3] - 2 + 22 * layout.S); if (layout.mainland(x, z) || k > 200) return [x, z]; } },
     spots: layout.Z.spots.filter(s => s.k <= level), // 28-1: the open zones' spots (walk.js)

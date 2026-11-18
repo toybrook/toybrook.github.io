@@ -89,6 +89,8 @@ export const REVEAL = { k: 0, skip: null }; // 129 넓히는 순간 (?s129, ?z14
 // with a landmark read from the home view, its own fixtures and a thing only the animals there do, opened with 129's 넓히는 순간.
 // Now the flower hill (flowerhill143), the small wood (grove143) and the fork (fork143); the reeds and the sandbar come under this flag next
 export const Z143 = 0; // release build: the 143 zone trial stays off
+// 150 (user OK 11/18): the flower hill, the small wood and the fork are public (no flag); the others still under ?z143=1
+export const PUB143 = new Set(['flowerhill', 'grove', 'fork']), z143on = id => Z143 || PUB143.has(id);
 const SOAKD = { polarBear: 0.78, seal: 0.71, arcticFox: 0.63, reindeer: 0.63 }, SOAKERS = Object.keys(SOAKD), // how much of each is under the water: to just under its eyes (measured: the eyes' bottom x the sleep's squash - 0.05)
   MOSS = speck(['#6d8a4a', '#5f7d44', '#8a8580'], 0.45, 0.55);
 function spring129(s, v) {
@@ -230,6 +232,10 @@ function fork143() {
 // In another even water's hollow (W: the zone set's pools and rills; round pools only): such a water's level is taken from its
 // banks out of it (meadow/water.js, zoneprops.js)
 export const otherWater = (W, f, x, z) => W.some(q => q !== f && q.even && (q.t === 'rill' ? polyD(x, z, q.pts) - q.w : Math.hypot(x - q.x, z - q.z) - q.r) < 0.6);
+// 150: the small wood's rise and the ground in front of it (zoneprops.js fore: its new natives stand back from there): off(x, z) in
+// world m, for rules.js clear143 (the old natives there go once)
+export const grove143off = () => { const H = grove143(strip('meadow', ZONES.meadow.findIndex(z => z.id === 'grove') + 1)).find(f => f.t === 'hill');
+  return (x, z) => Math.abs(x - H.x) < H.rx + 2 && z > H.z - H.rz - 3 && z < H.z + H.rz + 9; };
 // the fork's middle (x across, the strip's own z): no trees, bushes or strewn rocks there (the cottage and the wheel stay in view)
 export const fore143 = (x, z) => x > -10 && x < 17 && z > 43.5;
 // 149: where the wide spring's pools (to 0.4 past the rim), deck and falls are: off(x, z, r) in world m, for rules.js clear149
@@ -245,15 +251,51 @@ export const fork143off = () => {
   return (x, z, r, prop) => W.some(f => (f.t === 'rill' ? polyD(x, z, f.pts) - f.w : Math.hypot(x - f.x, z - f.z) - f.r) < 0.4 + r) // to its water's rim (wd 0.8 off)
     || prop !== 'wildflowers' && inRect(s.r, x, z) && (prop === 'rock' || fore143(x, z));
 };
+// 143 B the reeds (?z143=1, the pond's step 1): one wide channel down the strip's length (swim: the swimmers go in it, pond/layout.js
+// wet; ends: its dead ends, meadow/water.js), two short pockets off it east (side: from inside its water, square to it, meadow/water.js lays their water) into the tall reed wall (zoneprops.js reeds143z: reeds 2.4-3.4 m, cattails) where a turtle,
+// an otter or a capybara swims in and hides a while (reedswim, to: the pocket's end: walk.js); a zigzag boardwalk over it, a dock
+// with a little boat at the front, a duck's nest on a low mound on the west bank (nest: swim.js, the duck or swan hops up and sits),
+// heaps of half sunk stones. World metres (the strip x 27..39)
+function reeds143(s) {
+  const sp = (act, x, z, o) => ({ t: 'spot', x, z, act, ...o }), put = (t, x, z, o) => ({ t, x, z, ...o }), SWIMMERS = ['turtle', 'otter', 'capybara'];
+  return [FACE(s, '#7b6a44', 0.8, { pat: speck(['#6a5a38', '#8d7d52', '#5f7f3a'], 0.35, 0.3) }),
+    { t: 'rill', pts: [[33.6, -28.5], [32.4, -22], [34.0, -14], [32.6, -6], [32.0, 2], [33.4, 10], [34.2, 18], [33.2, 26], [32.6, 34], [33.0, 39]], w: 1.7, swim: 1, ends: 1 },
+    { t: 'rill', pts: [[34.04, -8.428], [35.124, -8.238], [36.2, -8.7]], w: 1.3, swim: 1, side: 1 }, { t: 'rill', pts: [[34.892, 20.524], [35.885, 20.648], [36.55, 21.3]], w: 1.3, swim: 1, side: 1 },
+    { t: 'hill', x: 29.6, z: 8.6, rx: 2.4, rz: 3.4, h: 0.6, top: 0.4 }, { t: 'hill', x: 36.7, z: 4.5, rx: 1.5, rz: 7, h: 0.5 }, // the nest's mound; a low rise under the reed wall
+    sp('reedswim', 33.3, -8.3, { r: 0.4, to: [35.95, -8.5], who: SWIMMERS }), sp('reedswim', 33.8, 21.6, { r: 0.4, to: [36.3, 21.0], who: SWIMMERS }),
+    sp('nest', 29.6, 8.6, { r: 0.3, who: ['duck', 'swan'] }), sp('rest', 30.0, -14), sp('rest', 30.2, 28),
+    { t: 'walk143', pts: [[28.4, 13.0], [31.4, 15.4], [34.4, 13.2], [36.4, 15.0]] }, put('dock143', 30.2, 33.0), put('boat143', 32.7, 35.6),
+    put('nest143', 29.6, 8.6), put('heap143', 30.0, -21.5, { sc: 1.2 }), put('heap143', 29.0, -5.5, { sc: 0.9 }), put('heap143', 29.2, 24.4, { sc: 0.85 })];
+}
+// 143 B: where the reeds zone is (the strip): rules.js clear143reeds (the old natives in it go once)
+export const reeds143off = () => { const r = strip('pond', ZONES.pond.findIndex(z => z.id === 'reeds') + 1).r; return (x, z) => inRect(r, x, z); };
+// 143 B the sandbar (?z143=1, the pond's step 3): a broad low dune across the strip's middle, one big bleached driftwood log lying
+// on its west shoulder, a small tide pool to the east in a wet ring; on the dune a parasol leaf (the landmark the camera aims at),
+// by the pool a sandcastle, three little heaps of shells (zoneprops.js). Animals lie on their bellies in the sun (sun, facing to)
+// and dig in the sand with their front paws, a few grains flying (sanddig, facing to: walk.js). In world m (the strip is z 43.5-55.5)
+export function sandbar143(s) {
+  const sp = (act, [x, z], o) => ({ t: 'spot', x, z, act, ...o }), put = (t, [x, z], o) => ({ t, x, z, ...o });
+  const sun = ['turtle', 'otter', 'capybara'], dig = ['otter', 'capybara', 'turtle'];
+  return [FACE(s, SAND, 1, { pat: speck(['#f3e4b8', '#d9c088'], 0.4) }),
+    { t: 'hill', x: -3, z: 49.2, rx: 11, rz: 4.2, h: 1.1, top: 0.4 }, { t: 'tint', x: -3, z: 49.0, rx: 7.5, rz: 2.6, c: '#f2e2b4', a: 0.7, fo: 0.5 }, // the dune, its dry crest paler
+    { t: 'tint', x: 13, z: 49.4, rx: 3.9, rz: 3.6, c: '#c4a46c', a: 0.85, fo: 0.45 }, { t: 'pool', x: 13, z: 49.4, r: 2.1 }, // the tide pool in its wet ring
+    sp('sun', [-1.4, 49.9], { r: 0.3, to: [0.3, 54], who: sun }), sp('sun', [3.8, 50.3], { r: 0.3, to: [5.5, 54], who: sun }),
+    sp('sanddig', [6.2, 51.4], { r: 0.3, to: [8.6, 52.0], who: dig }), sp('sanddig', [-14.6, 49.0], { r: 0.3, to: [-12.5, 50.6], who: dig }),
+    sp('rest', [-24, 50.5]), sp('rest', [20.5, 48.5]),
+    put('drift143', [-12.5, 50.6], { to: [-5, 49.4] }), put('parasol143', [1, 48.4], { aim: 1.4 }), put('castle143', [8.6, 52.0], { sc: 1.2 }),
+    put('shells143', [-8.6, 52.4]), put('shells143', [16.2, 51.6]), put('shells143', [3.2, 52.9]), put('sign143', [-17, 46.5])];
+}
+// the sandbar's middle: no strewn natives there (zoneprops.js); the old ones there go once (rules.js clear143, the pond's)
+export const sand143fore = (x, z) => x > -18 && x < 17 && z > 43.5 && z < 55.5; // only the sandbar strip (the swamp at step 6 lies behind it)
 const SHAPES = {
   meadow: {
-    flowerhill: s => Z143 ? flowerhill143(s) : [FACE(s, '#93cf4c', 0.35), // inbox 67-3 the meadow's own green: the flowers stand in it (zoneprops.js drifts), none painted
+    flowerhill: s => z143on('flowerhill') ? flowerhill143(s) : [FACE(s, '#93cf4c', 0.35), // inbox 67-3 the meadow's own green: the flowers stand in it (zoneprops.js drifts), none painted
       H(s, 0.5, 0.6, 3.6, 6.5, 2.8), H(s, 0.42, 0.22, 2.6, 3.4, 1.2), // the hill twice as high, its outline seen from the side
       SPOT(s, 0.5, 0.56, 'rest'), SPOT(s, 0.5, 0.62, 'nap'), SPOT(s, 0.42, 0.22, 'rest'), SPOT(s, 0.6, 0.75, 'rest')],
-    grove: s => Z143 ? grove143(s) : [FACE(s, '#4b7a30', 0.85, { pat: speck(['#6f9a3c', '#3b6326', '#5a8a34'], 0.35, 0.3) }), H(s, 0.55, 0.55, 2.8, 5, 0.5), // moss under the trees
+    grove: s => z143on('grove') ? grove143(s) : [FACE(s, '#4b7a30', 0.85, { pat: speck(['#6f9a3c', '#3b6326', '#5a8a34'], 0.35, 0.3) }), H(s, 0.55, 0.55, 2.8, 5, 0.5), // moss under the trees
       TINT(s, 0.55, 0.52, 3.4, 9, '#34562a', 0.5), // the old tree's shade
       SPOT(s, 0.25, 0.32, 'rest'), SPOT(s, 0.7, 0.45, 'nap'), SPOT(s, 0.3, 0.62, 'rest'), SPOT(s, 0.65, 0.86, 'rest')],
-    fork: s => Z143 ? fork143(s) : [{ t: 'tint', pts: FORK, rw: 3.2, c: '#b8ad98', a: 0.9, pat: GRAVEL }, { t: 'tint', x: 14 * S, z: 33.5 * S, rx: 4.2, rz: 3.4, c: '#b8ad98', a: 0.9, pat: GRAVEL }, // gravel banks
+    fork: s => z143on('fork') ? fork143(s) : [{ t: 'tint', pts: FORK, rw: 3.2, c: '#b8ad98', a: 0.9, pat: GRAVEL }, { t: 'tint', x: 14 * S, z: 33.5 * S, rx: 4.2, rz: 3.4, c: '#b8ad98', a: 0.9, pat: GRAVEL }, // gravel banks
       { t: 'rill', pts: FORK, w: 1.5 }, { t: 'pool', x: 14 * S, z: 33.5 * S, r: 2.3 }, // wider; the stepping stones where the path crosses (zoneprops.js)
       ...SP([[-9, 30.8, 'rest'], [-6.5, 30.9, 'nap'], [2.5, 30.8, 'rest'], [18, 33.4, 'rest']])],
     orchard: s => [FACE(s, '#79b444', 0.9, { pat: mown(s.r[0], ORCHARD_ROWS) }), ...SP([[30, -2.2, 'rest'], [28.7, 7.4, 'nap'], [31.3, 21.8, 'rest']])], // in the lanes between the rows,
@@ -265,14 +307,14 @@ const SHAPES = {
       ...SP([[-11, 42.6, 'rest'], [-3, 39.4, 'nap'], [12, 43.2, 'rest'], [20, 38.8, 'nap'], [28, 43.2, 'rest']])],
   },
   pond: {
-    reeds: s => [FACE(s, '#7b6a44', 0.8, { pat: speck(['#6a5a38', '#8d7d52', '#5f7f3a'], 0.35, 0.3) }), // wet earth
+    reeds: s => Z143 ? reeds143(s) : [FACE(s, '#7b6a44', 0.8, { pat: speck(['#6a5a38', '#8d7d52', '#5f7f3a'], 0.35, 0.3) }), // wet earth
       { t: 'rill', pts: P([[22.5, -22], [21.5, -14], [23.6, -6], [21.6, 2], [23.6, 10], [21.8, 18], [22.6, 25]]), w: 0.9 }, // channels between the reeds
       { t: 'rill', pts: P([[21.6, 2], [19.8, 5.5], [20.2, 9]]), w: 0.9 }, { t: 'rill', pts: P([[21.5, -14], [19.8, -17.5], [20.2, -21]]), w: 0.9 },
       ...SP([[24, -14, 'rest'], [19.4, -6, 'rest'], [24.2, 2, 'nap'], [19.4, 13, 'rest'], [24.4, 22, 'rest']])],
     falls: s => [FACE(s, '#557f36', 0.85, { pat: speck(['#8e8a80', '#77736b', '#6b9640'], 0.35, 0.35) }), // moss and stones
       H(s, 0.5, 0.36, 3.8, 4.2, 11, { rock: 1, top: 0.3 }), TINT(s, 0.5, 0.36, 4.0, 4.4, ROCK, 1, { steep: 1 }), POOL(s, 0.5, 0.47, 2.4), // a rock cliff, its pool at its foot (inbox 42 C2: 6.2 -> 11, 3.3H)
       { t: 'fall', from: at(s, 0.5, 0.36), to: at(s, 0.5, 0.47), w: 1.3 }, SPOT(s, 0.15, 0.5, 'rest'), SPOT(s, 0.8, 0.62, 'rest'), SPOT(s, 0.5, 0.75, 'nap'), SPOT(s, 0.2, 0.22, 'rest')],
-    sandbar: s => [FACE(s, SAND, 1, { pat: speck(['#f3e4b8', '#d9c088'], 0.4) }), H(s, 0.5, 0.35, 2.4, 9, 0.3), POOL(s, 0.5, 0.7, 2.2),
+    sandbar: s => Z143 ? sandbar143(s) : [FACE(s, SAND, 1, { pat: speck(['#f3e4b8', '#d9c088'], 0.4) }), H(s, 0.5, 0.35, 2.4, 9, 0.3), POOL(s, 0.5, 0.7, 2.2),
       SPOT(s, 0.5, 0.22, 'nap'), SPOT(s, 0.45, 0.4, 'nap'), SPOT(s, 0.55, 0.52, 'rest'), SPOT(s, 0.4, 0.85, 'rest')],
     lotus: s => { const [x, z] = at(s, 0.5, 0.48); // one big pond, long down the strip
       return [FACE(s, '#6f8c4c', 0.8, { pat: speck(['#5d7a3c', '#86a35a'], 0.3, 0.4) }), { t: 'flat', r: [s.r[0], s.r[1], z - 15 * S, z + 15 * S] }, { t: 'pool', x, z, r: 2.9, len: 20 * S },

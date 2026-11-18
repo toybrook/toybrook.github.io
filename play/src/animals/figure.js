@@ -306,7 +306,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
   const down = Math.max(0, belly(G.body) * S.s - (S.sink || 0)); // inbox 35: lying down, the belly comes down to the feet's level
   return {
     obj: root, skeleton, under: () => underOf(G.body, S, down),
-    // p: { sq (squash), rot (nose up +), gait: 'walk' | 'hop' | 'jump' | 'slide' | 'still', ph (cycles), tuck, lie (0..1: down on its belly, legs folded forward), shut (eyes closed) }
+    // p: { sq (squash), rot (nose up +), gait: 'walk' | 'hop' | 'jump' | 'slide' | 'still', ph (cycles), tuck, lie (0..1: down on its belly, legs folded forward), shut (eyes closed), dig (0..1: front paws scratching), spr (0..1: lying, legs stretched out) }
     pose(p) {
       const lie = p.lie || 0; body.position.y = -(S.sink || 0) - lie * down; eyes.geometry = p.shut ? shutEye(G.eye) : G.eye;
       body.scale.set(S.s * (2 - p.sq), S.s * p.sq, S.s * (2 - p.sq)); body.rotation.z = p.rot;
@@ -321,8 +321,10 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
         if (p.gait === 'walk') a = (pair ? 1 : -1) * s * (wd ? 0.2 : 0.38);
         else if (p.gait === 'hop') a = (front ? 1 : -1) * up * 0.55; // reach out in the air, under the body on the ground
         else if (p.gait === 'jump') a = (front ? 1 : -1) * up * 0.75;
+        else if (p.dig) a = front ? (pair ? 1 : -1) * s * 0.55 * p.dig : 0; // 143 B 모래 파기: the front paws scratch in turn, the hind ones planted
         const k = p.tuck && leg.position.z > 0 ? p.tuck : 0; // tuck (0..1): this leg folds up under the body (the flamingo on one leg)
-        leg.scale.set(1 - 0.9 * lie, (1 - 0.65 * k) * (1 - 0.95 * lie), 1 - 0.9 * lie); leg.rotation.z = (p.gait === 'slide' ? 0 : a - p.rot - 0.5 * k) * (1 - lie) + lie * (front ? 1.3 : 1.5); // legs stay upright when the body tips (grazing); 25-1 sliding on its belly they trail behind
+        const sp = p.spr || 0, fold = lie * (1 - sp); // 143 B 일광욕 (spr 0..1): lying, the legs stretched flat out instead of folded, front ones forward, hind ones back
+        leg.scale.set(1 - 0.9 * fold, (1 - 0.65 * k) * (1 - 0.95 * fold) * (1 - 0.25 * sp), 1 - 0.9 * fold); leg.rotation.z = (p.gait === 'slide' ? 0 : a - p.rot - 0.5 * k) * (1 - lie) + fold * (front ? 1.3 : 1.5) + sp * (front ? 1.45 : -1.45); // legs stay upright when the body tips (grazing); 25-1 sliding on its belly they trail behind
       }
     },
   };

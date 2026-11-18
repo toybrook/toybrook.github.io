@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { R, SW, streamLine, pond, waterY, edgeRound, CLIFF_Z, WATER_Y } from './layout.js';
 import { toyMat, instanced, skyLit, nightGlow, rainNow, snowNow } from '../toyKit.js';
-import { poolAt, otherWater } from '../zones.js';
+import { poolAt, otherWater, polyD } from '../zones.js';
 
 export const vert = `
 attribute float aFall; varying vec2 vUv; varying vec3 vW; varying float vFall;
@@ -142,11 +142,32 @@ export function zoneWater(scene, sunDir, heightAt, Z, { cold = false } = {}) {
     return add(vtx, uv, fall, idx, mat);
   };
   // rills: the water at the lower of the two waterlines across (its bed is bank(): the waterline 0.4 in from w)
+  // 143 B (?z143=1 only, zones.js reeds143): a side pocket (f.side) off a channel. Near its mouth the channel's waterline sample fell in the
+  // pocket's deep bed (and the pocket's in the channel's), dropping that ribbon below the other: a step with a white foam edge. So a channel
+  // leaves out a sample in a pocket's water (dry), and a pocket is laid after, flat at the channel's water where it starts. A rill
+  // that ends on dry ground (f.ends, a pocket's far end) runs on there (capped). No side pockets and no ends (every other zone): dry is
+  // heightAt and the ribbon the same as before
+  const sides = Z.rills.filter(f => f.side), dry = (x, z) => sides.some(s => polyD(x, z, s.pts) < s.w - 0.4) ? Infinity : heightAt(x, z);
+  const across = (wl, x, z, nx, nz) => Math.min(dry(x + nx * wl, z + nz * wl), dry(x - nx * wl, z - nz * wl)) + 0.03;
   for (const f of Z.rills) {
+    if (f.side) continue;
     const wl = f.w - 0.4; let last = null;
     const lv = f.even ? (x, z, nx, nz) => { const P = [[x + nx * wl, z + nz * wl], [x - nx * wl, z - nz * wl]], own = P.filter(([u, v]) => !inOther(f, u, v)); // 143: its own banks only (none: as the last point)
-      return (last = own.length ? Math.min(...own.map(([u, v]) => heightAt(u, v))) + 0.03 : last ?? Math.min(...P.map(([u, v]) => heightAt(u, v))) + 0.03); } : null;
-    ribbon(f.pts, wl + 0.2, wl, lv ?? ((x, z, nx, nz) => Math.min(heightAt(x + nx * wl, z + nz * wl), heightAt(x - nx * wl, z - nz * wl)) + 0.03), false, mk(cold ? { COLD: 1 } : {}));
+      return (last = own.length ? Math.min(...own.map(([u, v]) => heightAt(u, v))) + 0.03 : last ?? Math.min(...P.map(([u, v]) => heightAt(u, v))) + 0.03); } : (x, z, nx, nz) => across(wl, x, z, nx, nz);
+    if (f.ends) capped(f, [0, f.pts.length - 1], lv); else ribbon(f.pts, wl + 0.2, wl, lv, false, mk(cold ? { COLD: 1 } : {}));
+  }
+  // a pocket is drawn before its channel (renderOrder) a hair above it, so over their overlap only the pocket shows (no doubled water, the
+  // channel's bank foam hidden across the mouth). Its water is laid on back to the channel's middle; there its rows' sides take the
+  // channel's cross-section (uv.y: the distance from its middle over its waterline) and its own middle stays deep, so no seam on the
+  // channel and the deep water runs on into the pocket, its bank foam turning the corner (a pale shallow line once crossed the mouth)
+  for (const f of sides) {
+    const [y, g, px, pz] = mouth(f), m = capped({ ...f, pts: [[px, pz], ...f.pts] }, [f.pts.length], () => y + 0.02), U = m.geometry.attributes.uv, P = m.geometry.attributes.position;
+    for (let i = 0; i < U.count; i += 2) {
+      const k = polyD((P.getX(i) + P.getX(i + 1)) / 2, (P.getZ(i) + P.getZ(i + 1)) / 2, g.pts) / (g.w - 0.4);
+      if (k >= 1) break;
+      U.setY(i, -k); U.setY(i + 1, k);
+    }
+    m.renderOrder = 0.9;
   }
   // falls: down the rock from its top into the pool below, a little over the ground
   for (const f of Z.falls) {
@@ -156,4 +177,27 @@ export function zoneWater(scene, sunDir, heightAt, Z, { cold = false } = {}) {
     ribbon([[x1, z1], [x2, z2]], f.w, f.w * 0.75, (x, z) => Math.max(heightAt(x, z) + 0.07, low + 0.03), true, mk(f.jade ? { HOT: 1 } : cold ? { COLD: 1 } : {}));
   }
   return t => { uTime.value = t; };
+  // 143 B a side pocket starts inside its channel's water (1.0 from its middle, before its foam), square to it. Its level: the channel's
+  // there (its cross-section at the nearest point, as above); and that channel and its middle there
+  function mouth(f) {
+    const [x0, z0] = f.pts[0]; let best = Infinity, y = 0, ch = null, mx = 0, mz = 0;
+    for (const g of Z.rills) if (!g.side) for (let i = 1; i < g.pts.length; i++) {
+      const [x1, z1] = g.pts[i - 1], [x2, z2] = g.pts[i], dx = x2 - x1, dz = z2 - z1, L = Math.hypot(dx, dz), t = C(((x0 - x1) * dx + (z0 - z1) * dz) / (L * L), 0, 1);
+      const px = x1 + dx * t, pz = z1 + dz * t, d = Math.hypot(x0 - px, z0 - pz);
+      if (d < best) { best = d; y = across(g.w - 0.4, px, pz, -dz / L, dx / L); ch = g; mx = px; mz = pz; }
+    }
+    return [y, ch, mx, mz];
+  }
+  // 143 B a rill's dead ends (ends: the indices of the pts to cap, not the f.ends flag): its water runs on 0.1 past its waterline into the bank, flat at its end's level, so the
+  // ground cuts it round (a square end left a half circle of bare bed beyond it)
+  function capped(f, ends, y) {
+    const wl = f.w - 0.4, pts = [...f.pts], ex = [];
+    for (const i of ends) {
+      const a = f.pts[i ? i - 1 : 1], b = f.pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]), e = (wl + 0.1) / L, c = [b[0] + (b[0] - a[0]) * e, b[1] + (b[1] - a[1]) * e];
+      ex.push([c, y(b[0], b[1], -(b[1] - a[1]) / L, (b[0] - a[0]) / L)]);
+      if (i) pts.push(c); else pts.unshift(c);
+    }
+    const at = (x, z, nx, nz) => { for (const [c, h] of ex) if (Math.hypot(x - c[0], z - c[1]) < wl + 0.11 && polyD(x, z, f.pts) > 1e-6) return h; return y(x, z, nx, nz); };
+    return ribbon(pts, wl + 0.2, wl, at, false, mk(cold ? { COLD: 1 } : {}));
+  }
 }
