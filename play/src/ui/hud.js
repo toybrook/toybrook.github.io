@@ -13,6 +13,13 @@ export function toast(text, ms = 2200, small = false) {
     const t = toastEl.getBoundingClientRect(), b = btns.find(r => r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top); if (!b) break;
     toastEl.style.top = (b.bottom - sr.top) / s + 6 + 'px';
   }
+  // 176: not over an open window's head row (the nest's 「둥지 · 정리 · 닫기」): below the window if it fits above the bottom
+  // buttons, else above it if there is room under the top bar, else at the bottom edge (over the window's foot, not its head)
+  const w = topWindow()?.firstElementChild?.getBoundingClientRect(), t = toastEl.getBoundingClientRect();
+  if (w?.height && t.top < w.bottom && t.bottom > w.top) {
+    const foot = sr.bottom - 84 * s, y = w.bottom + 6 * s + t.height <= foot ? w.bottom + 6 * s : w.top - 6 * s - t.height >= sr.top + 60 * s ? w.top - 6 * s - t.height : sr.bottom - 14 * s - t.height;
+    toastEl.style.top = (y - sr.top) / s + 'px';
+  }
   clearTimeout(toastT); if (ms) toastT = setTimeout(hideToast, ms);
 }
 export const hideToast = () => toastEl.classList.remove('on');
@@ -25,7 +32,7 @@ function fx(cls, text, x, y, ms) {
   e.style.left = x + 'px'; e.style.top = y + 'px'; document.body.appendChild(e); setTimeout(() => e.remove(), ms);
 }
 
-export const heart = (x, y) => fx('heart', '♥', x, y, 1300);
+export const heart = (x, y, cls = '') => fx('heart ' + cls, '♥', x, y, 1300); // cls 'rim': 176 the 정 레벨-up hearts, a white rim over pink friends
 export const zzz = ([x, y]) => fx('zz', 'z', x, y, 2300);
 // a sheet (nest, codex, storage, cabinet...) is open over the habitat: nothing floats over animals then
 // a window opened on a 3D tap's pointerup: the click that follows lands on it (a phone hit-tests the click after the window is up), so eat it
@@ -40,7 +47,8 @@ export const josa = (w, a, b) => { if (LANG !== 'ko') return ''; const c = w.cha
 
 // ---- inbox 20 편의성: a yes/no question, closing the top window (Esc / back / a tap outside), first-time tips
 import * as G from '../game/game.js';
-import { unlockInfo } from '../game/rules.js';
+import { unlockInfo, step181 } from '../game/rules.js';
+import { TUT181 } from '../game/data.js'; // 182 ②
 const stageEl = () => document.getElementById('stage');
 // why a habitat is shut, and how far along: "초원 도감 8칸 + 하트 30개면 열려요 (지금 3칸 · ♥12)"
 export const lockText = id => { const L = unlockInfo(G.S, id); return L.friends ? $t('{0} 친구 {1}마리가 태어나면 열려요 (지금 {2}마리)', L.prev.name, L.friends, Math.min(L.got, L.friends)) : L.need ? $t('{0} 도감 {1}칸 + 하트 {2}개면 열려요 (지금 {3}칸 · ♥{4})', L.prev.name, L.need, L.hearts, L.have, G.S.hearts) : $t('아직 잠겨 있어요'); };
@@ -57,7 +65,7 @@ export function ask(text, ok = $t('확인'), no = $t('취소')) {
 }
 
 // the windows, top first; each closes with its own close button (so its own code runs)
-const TOPS = ['#desk', '#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#artCard', '#story', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#visit', '#skySheet', '#event', '#prefs', '#help', '#habMenu', '#ret', '#myth', '#grown', '#homeHint', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
+const TOPS = ['#desk', '#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#artCard', '#story', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#visit', '#skySheet', '#oddsSheet', '#event', '#prefs', '#help', '#habMenu', '#ret', '#myth', '#grown', '#homeHint', '#n170', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
 const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden') && !el.closest('[data-lock]'); // 64-A: ui/first.js locks
 export const topWindow = (skip) => { for (const q of TOPS) { if (q === skip) continue; const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };
@@ -85,10 +93,12 @@ export function tip(k, anchor) { // anchor: an element or a selector; shown once
   if (G.S.flags.tipsOff || G.S.flags['tip_' + k] || waiting.some(w => w.k === k) || tipEl?.dataset.k === k) return;
   waiting.push({ k, anchor }); nextTip();
 }
+const TUT_SAYS = ['nest', 'next', 'hatch', 'decor']; // 182 ②: the tutorial points there itself; these tips wait (not dropped: next61 asks once) until it is done or skipped
 function nextTip() {
+  if (document.body.classList.contains('tut181')) return; // 182 ②: not over the tutorial's bubble
   if (tipEl || G.S.flags.tipsOff || Date.now() < calm || resting() || document.querySelector('.rate')) return; // 26-11: not while the tap that closed the last one is still landing; 64-A: nor under a band (어때요·이어서 하기)
   const over = topWindow(), el = w => typeof w.anchor === 'string' ? document.querySelector(w.anchor) : w.anchor;
-  const wait = noted(), i = waiting.findIndex(w => shown(el(w)) && (!over || over.contains(el(w))) && (!wait || over)); if (i < 0) return; // not under another window; 102: a minute after a card only a sheet's own (one the player opened)
+  const wait = noted(), held = TUT181 && step181(G.S, G.now()), i = waiting.findIndex(w => shown(el(w)) && (!over || over.contains(el(w))) && (!wait || over) && !(held && TUT_SAYS.includes(w.k))); if (i < 0) return; // not under another window; 102: a minute after a card only a sheet's own (one the player opened)
   const [{ k, anchor }] = waiting.splice(i, 1), a = typeof anchor === 'string' ? document.querySelector(anchor) : anchor;
   const st = stageEl(), s = window.__stageScale || 1, sr = st.getBoundingClientRect(), r = a.getBoundingClientRect();
   tipEl = document.createElement('div'); tipEl.className = 'tip'; tipEl.dataset.k = k; tipEl.setAttribute('role', 'status');

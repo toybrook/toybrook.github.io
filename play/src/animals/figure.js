@@ -55,7 +55,7 @@ export const loadModel = id => loading[id] ??= (async () => {
   // the legendary items this model's species hold, loaded with it
   const items = [...new Set(Object.values(SP).filter(s => s.model === id).flatMap(s => (s.legendary || []).map(l => l.item)).filter(k => LEGEND_ITEMS[k]))];
   const [itemGeo, geos, legendGeos] = await Promise.all([Promise.all(items.map(async k => [k, await meshes(LEGEND_ITEMS[k].file)])).then(Object.fromEntries), Promise.all(stages.map(st => meshes(M.files[st]))),
-    Promise.all(stages.map(st => M.legend?.[st] && meshes(M.legend[st])))]); // 71-2: one legendary's own parts (MODELS legend): the amber rex's bones, crystals
+    Promise.all(stages.map(st => M.legend?.[st] && Promise.all([].concat(M.legend[st]).map(meshes)).then(a => Object.assign({}, ...a))))]); // 71-2: one legendary's own parts (MODELS legend): the amber rex's bones, crystals; 183 B: a list of files for one stage
   for (const [i, stage] of stages.entries()) {
     const g = geos[i], S = M[stage];
     g.body.computeBoundingBox(); const b = g.body.boundingBox, H = b.max.y, cx = (b.min.x + b.max.x) / 2;
@@ -63,9 +63,9 @@ export const loadModel = id => loading[id] ??= (async () => {
     for (const k of M.paints || []) if (g[k]) withOp(g[k], H, cx); // more painted colour layers on the body (the penguin's face and ear patches)
     if (g.spike) withOp(g.spike, H, cx); // 163 A (?m89): the stegosaurus' tail spikes, their own mesh
     // 163 A (?m89): S.fade {o, n, w}: _fade 0 -> 1 across the plane through o (normal n, soft over +-w) on the body (the dinosaurs'
-    // beak, ivory on materials.js dino163); 0 on every other part, so the parts sharing the body's material still merge
+    // beak, ivory on materials.js dino163; 171 A: the pteranodon's beak its own 'beak' mesh, faded the same); 0 on every other part, so the parts sharing the body's material still merge
     if (S.fade) for (const [k, geo] of Object.entries(g)) if (geo.isBufferGeometry) { const p = geo.attributes.position, f = new Float32Array(p.count), { o, n, w } = S.fade;
-      if (k === 'body') for (let i = 0; i < p.count; i++) f[i] = THREE.MathUtils.smoothstep((p.getX(i) - o[0]) * n[0] + (p.getY(i) - o[1]) * n[1] + (p.getZ(i) - o[2]) * n[2], -w, w);
+      if (k === 'body' || k === 'beak') for (let i = 0; i < p.count; i++) f[i] = THREE.MathUtils.smoothstep((p.getX(i) - o[0]) * n[0] + (p.getY(i) - o[1]) * n[1] + (p.getZ(i) - o[2]) * n[2], -w, w);
       geo.setAttribute('_fade', new THREE.BufferAttribute(f, 1)); }
     // one leg geometry per leg position (its _op differs)
     g.legs = !S.legs ? [] : S.legs.x.flatMap(x => [S.legs.z, -S.legs.z].map(z => ({ x, z,
@@ -74,7 +74,7 @@ export const loadModel = id => loading[id] ??= (async () => {
     g.legend = Object.fromEntries(Object.entries(legendGeos[i] || {}).filter(([k]) => k !== 'legbone').map(([k, geo]) => [k, withOp(geo, H, cx)]));
     // a bird's wings: their own parts, pivot at the shoulder (so a short flight can flap them); the -z one mirrors the +z one
     const at = k => [S.wing[0], S.wing[1], S.wing[2] * k];
-    g.wings = !S.wing ? [] : [1, -1].map(k => ({ k, geo: withOp(g.wing.clone(), H, cx, at(k), k), spot: g.wingSpot && withOp(g.wingSpot.clone(), H, cx, at(k), k) })); // spot: the accent on it (the snowy owl's)
+    g.wings = !S.wing ? [] : [1, -1].map(k => ({ k, geo: withOp(g.wing.clone(), H, cx, at(k), k), spot: g.wingSpot && withOp(g.wingSpot.clone(), H, cx, at(k), k), claw: g.wingClaw && withOp(g.wingClaw.clone(), H, cx, at(k), k) })); // spot: the accent on it (the snowy owl's); claw: 171 A the pteranodon's wrist claws
     // items: moved to their slot here, so their pattern space runs on from the body's (the otter's paws in its look)
     g.items = {};
     for (const k of items) {
@@ -286,13 +286,13 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
   const eyes = mesh(G.eye, eyeMat, 4); body.add(mesh(G.body, skin), eyes); // eyes after glass: not doubled in its screen copy (alone in their material: merge leaves them)
   if (m.wall) body.add(mesh(G.body, m.wall)); if (m.noEye) eyes.visible = false; // 84 amber: its glowing far wall; no bead (the skull's socket)
   if (G.accent) body.add(mesh(G.accent, m.accent)); // none on an all-one-colour body (swan, flamingo)
-  if (G.beak) body.add(mesh(G.beak, m.beak || m.hoof)); // a bird's beak (the hoof colour, like its feet), a pig's nostrils, a cow's nose (colors.beak)
+  if (G.beak) body.add(mesh(G.beak, m.beak || m.hoof)); // a bird's beak (the hoof colour, like its feet), a pig's nostrils, a cow's nose (colors.beak); 171 A ?m89 the pteranodon's beak sheath
   if (G.horn) body.add(mesh(G.horn, m.horn || m.body)); // a cow's horns (colors.horn)
   if (G.spike) body.add(mesh(G.spike, m.spike || m.horn || m.body)); // 163 A (?m89): the stegosaurus' tail spikes (colors.paint.spike; else as its plates)
   if (G.nostril) body.add(mesh(G.nostril, m.nostril || m.hoof)); // a cow's nostrils (in its nose mesh); the penguin's dark upper beak (colors.nostril)
   for (const k of M.paints || []) if (G[k]) body.add(mesh(G[k], m[k] || m.body)); // colors.paint[k]
   for (const [k, geo] of Object.entries(G.legend)) if (m[k]) body.add(mesh(geo, m[k])); // 71-2 MODELS legend, on the look that has a material for it (bone, gem)
-  const wings = G.wings.map(({ k, geo, spot }) => { const w = new THREE.Group(); w.position.set(S.wing[0], S.wing[1], S.wing[2] * k); w.scale.z = k; w.add(mesh(geo, m.wing || m.body)); if (spot) w.add(mesh(spot, m.accent)); body.add(w); return w; });
+  const wings = G.wings.map(({ k, geo, spot, claw }) => { const w = new THREE.Group(); w.position.set(S.wing[0], S.wing[1], S.wing[2] * k); w.scale.z = k; w.add(mesh(geo, m.wing || m.body)); if (spot) w.add(mesh(spot, m.accent)); if (claw) w.add(mesh(claw, m.hoof)); body.add(w); return w; });
   const legs = G.legs.map(({ x, z, leg, hoof, bone }) => {
     const g = new THREE.Group(); g.position.set(x, S.legs.hip, z); g.add(mesh(leg, m[M.legMat] || m.body)); if (hoof) g.add(mesh(hoof, m.hoof)); if (bone && m.bone) g.add(mesh(bone, m.bone));
     g.userData = { front: x > 0, pair: (x > 0) === (z > 0) }; // diagonal pairs move together at a walk
@@ -315,7 +315,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
     a.rotation.fromArray(fit.r || at.r); a.scale.setScalar(Math.max(at.s * (fit.s || 1), AC(acc).min || 0)); // min: 86-3마 the guest hat
     body.add(a);
   }
-  const own = m.parts?.(body, G, S); // 89-4: a look's own parts (materials.js), before the merge; 152 B: they may pose with it (own.pose)
+  const own = m.parts?.(body, G, S, taken); // 89-4: a look's own parts (materials.js), before the merge; 152 B: they may pose with it (own.pose); 172 B: taken = slots a worn accessory has
   const skeleton = merge(body, [...(M.walk?.oneLeg ? [] : legs), ...wings]);
   const down = Math.max(0, belly(G.body) * S.s - (S.sink || 0)); // inbox 35: lying down, the belly comes down to the feet's level
   return {
@@ -328,7 +328,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
       // inbox 10: a waddle (M.waddle degrees; the penguin): the body rocks onto the standing foot, short steps, the flipper tips held out
       const wd = M.waddle && p.gait === 'walk' ? M.waddle * Math.PI / 180 : 0;
       if (M.waddle) { body.rotation.x = -wd * s; for (const w of wings) w.rotation.x = wd ? -w.scale.z * (0.16 + 0.1 * Math.abs(s)) : 0; }
-      if (M.walk?.fore) for (const w of wings) w.rotation.z = ((p.gait === 'walk' ? Math.max(0, w.scale.z * s) * M.walk.fore : 0) - p.rot) * (1 - lie) + lie * 0.85; // 125-C: wings on the ground as front legs (each with the hind leg across from it): the arm already leans forward, so it only steps forward (lifts) and back to planted (a swing back would push the knuckle into the ground); upright when the body tips; lying, folded forward on the ground (the long arms would go through it)
+      if (M.walk?.fore) for (const w of wings) { w.rotation.z = ((p.gait === 'walk' ? Math.max(0, w.scale.z * s) * M.walk.fore : 0) - p.rot) * (1 - lie) + lie * (M.walk.lie?.[0] ?? 0.85); w.scale.y = 1 - lie * (M.walk.lie?.[1] || 0); } // 125-C: wings on the ground as front legs (each with the hind leg across from it): the arm already leans forward, so it only steps forward (lifts) and back to planted (a swing back would push the knuckle into the ground); upright when the body tips; lying, folded forward on the ground (the long arms would go through it); 176: walk.lie [angle, y squash] instead (the pteranodon pilot: 0 and half its height, its membrane reaching the hind ankle would go through the ground swung forward)
       for (const leg of legs) {
         const { front, pair } = leg.userData;
         let a = 0;

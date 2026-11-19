@@ -14,17 +14,25 @@
 // 169: load (the first screen up, in time bands, with src) and d0_last (the first time away: where, and how long), the first day only, once ever.
 // No names, mail, device id or save. The service worker leaves other hosts alone (dist-web/sw.js), so the script is never stored.
 // report.js imports this before the game: nothing here may import the game.
-import { UMAMI_ID, STATS_HOST, PREFS } from '../config.js';
+import { UMAMI_ID, STATS_HOST, PREFS, TOSS } from '../config.js';
 import { dayOf } from '../game/clock.js';
+import { F170, TUT181 } from '../game/data.js'; // 170 A; 182 ②
 
 const KEY = 'toyhabitat.stats', DAY = 86400000;
 let st = {}; try { st = JSON.parse(localStorage.getItem(KEY)) || {}; } catch { /* private mode: counted for this visit only */ }
 const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch { /* full */ } };
+// 174 앱인토스: no script there (no outside scripts): each event is one HTTPS POST to Umami's own endpoint (post), only inside the
+// real Toss app: dist-toss's allowed() asks for operationalEnvironment 'toss' (not the sandbox, not a browser) in place of the
+// host (tools/build-web.mjs toss()), the same events and the same off switches
 export const allowed = () => !!UMAMI_ID && PREFS.stats !== false && location.hostname === STATS_HOST
   && navigator.doNotTrack !== '1' && window.doNotTrack !== '1' && navigator.globalPrivacyControl !== true;
 let tag = null, failed = false; const queue = []; // failed: not reached (blocked, no network): not asked again till the browser is back online
-const send = (name, data) => { try { if (allowed()) window.umami?.track(name, { ...data, lang: document.documentElement.lang || 'ko' }); } catch { /* the script's trouble, never the game's */ } };
+const post = (name, data) => fetch('https://gateway.umami.is/api/send', { method: 'POST', keepalive: true, credentials: 'omit', referrerPolicy: 'no-referrer',
+  headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'event', payload: { website: UMAMI_ID, hostname: 'toss.' + STATS_HOST, url: '/toss',
+    language: navigator.language, screen: `${screen.width}x${screen.height}`, title: 'toybrook', referrer: '', name, data } }) }).catch(() => {});
+const send = (name, data) => { try { if (allowed()) TOSS ? post(name, { ...data, lang: document.documentElement.lang || 'ko' }) : window.umami?.track(name, { ...data, lang: document.documentElement.lang || 'ko' }); } catch { /* the script's trouble, never the game's */ } };
 function load() {
+  if (TOSS) return; // 174: no script in Toss (post)
   if (tag || failed || !allowed() || !navigator.onLine) return;
   tag = Object.assign(document.createElement('script'), { src: 'https://cloud.umami.is/script.js', defer: true });
   Object.assign(tag.dataset, { websiteId: UMAMI_ID, autoTrack: 'false', doNotTrack: 'true', domains: STATS_HOST, excludeSearch: 'true', excludeHash: 'true' });
@@ -41,7 +49,7 @@ export function track(name, data, key = name) {
   const err = key.startsWith('error:'); // errors: 5 kinds a day at most, the rest 25 (30 a device a day)
   if (st.sent.includes(key) || st.sent.filter(k => k.startsWith('error:') === err).length >= (err ? 5 : 25)) return;
   st.sent.push(key); keep();
-  if (window.umami) send(name, data); else { queue.push([name, data]); load(); }
+  if (window.umami || TOSS) send(name, data); else { queue.push([name, data]); load(); }
 }
 // inbox 61 C: seconds on the game screen today; rateDay(): true the first time a day (the 「어때요?」 bar, kept even while off)
 export const playedToday = () => st.pv?.day === dayOf(Date.now()) ? st.pv.s : 0;
@@ -67,6 +75,8 @@ export function loaded() {
 // 바로 깨기 or the nest sheet, a hatch going) / card (the hatch card) / decor / codex / pet (the habitat, a pet in the last 60 s) / habitat / other
 const shown = id => { const e = document.getElementById(id); return !!e && !e.hidden; };
 function where(petAt) {
+  if (F170 && shown('intro')) return 'intro'; // 170 A: the start cover stays under the intro card
+  if (TUT181 && document.body.dataset.tut) return 'tut:' + document.body.dataset.tut; // 182 ②: the tutorial's step or decor cell (ui/tut181.js), no event of its own
   if (document.getElementById('boot') && !document.getElementById('boot').classList.contains('done')) return 'loading';
   if (shown('intro')) return 'intro';
   if (shown('nest')) return shown('ncard') ? 'card' : 'egg';
@@ -103,7 +113,7 @@ export function watch(G) {
     if (st.t0 !== 'old' && !st.return_d7 && today !== dayOf(st.t0) && today !== dayOf(st.t0 + DAY)) { if ([6, 7, 8].some(k => today === dayOf(st.t0 + k * DAY))) { st.return_d7 = 1; keep(); track('return_d7'); } } // 66-1: back on day 7 (the 6th~8th day after, a day's slack each side)
     if (st.t0 !== 'old' && st.g1 != null && !st.g1s && today !== dayOf(st.t0)) { st.g1s = 1; keep(); track('great_d1', { n: st.g1 >= 6 ? '6+' : st.g1 >= 3 ? '3~5' : String(st.g1) }); }
     // inbox 54: the first day only; once ever, marked even when nothing went (a later day, or off)
-    const first = (name, done) => { if (!done || st[name]) return; st[name] = 1; keep(); if (st.t0 !== 'old' && today === dayOf(st.t0)) track(name); };
+    const first = (name, done) => { if (!done || st[name]) return; st[name] = 1; keep(); if (TUT181 && (name === 'first_nest' || name === 'first_pet')) return; /* 182 ②: tut:nest·tut:pet count those */ if (st.t0 !== 'old' && today === dayOf(st.t0)) track(name); };
     first('first_nest', G.S.flags.nestTapped); first('first_decor', G.S.props.some(p => p.placed && !p.nat)); first('hatch_3', G.S.stats.hatch >= 3);
     first('first_drag', G.S.flags.carried); // 66-1
     first('first_pet', G.S.stats.pet > 0); // 92-3

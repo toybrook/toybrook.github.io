@@ -3,7 +3,7 @@ import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // f
 import { $t, LANG, LANGS, localize, ko, SEP, esc } from './i18n/i18n.js';
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
-import { BALANCE, HABITATS, ZONES, PROPS } from './game/data.js';
+import { BALANCE, HABITATS, ZONES, PROPS, F170, TUT181 } from './game/data.js';
 import { initWorldMap } from './worldmap/worldmap.js';
 import { z143on } from './habitat/zones.js'; // 145 B: the new zone cards under ?z143
 import { zzz, heart, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
@@ -12,7 +12,7 @@ import { initLevel } from './ui/level.js';
 import * as BK from './ui/backup.js';
 import { iosSafariTab } from './game/backup.js';
 import { initPhoto } from './ui/photo.js';
-import { ASSETS, DEBUG, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, savePrefs, OFFLINE, calm, applyLook } from './config.js';
+import { ASSETS, DEBUG, TOSS, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, savePrefs, OFFLINE, calm, applyLook } from './config.js';
 import { applySound, sfx } from './ui/sound.js';
 import { watch, track, loaded } from './ui/stats.js';
 import { openCode } from './ui/mail.js'; // inbox 41 B 우편함
@@ -86,8 +86,11 @@ const fresh = firstEgg(G.S), mapUp = () => mapUp.p ??= (mapImg.src = ASSETS.worl
 // 76: a player back (past the intro card) opens straight into the habitat they were in last (the map is fetched after it)
 const backTo = !fresh && (G.S.flags.betaIntro || PREFS.introAt === VERSION) && (h => HAB[h]?.ready && G.S.unlocked.includes(h) ? h : HABITATS[0].id)(G.S.flags.lastHab);
 if (fresh) code().catch(() => {}).then(() => cur || mapUp());
+// 170 A (?f170): a new player's start cover (the meadow still and the egg) stays under the intro card until the habitat's loading screen, the same still, takes over
+const bootOff = () => { const boot = $('boot'); if (!boot || boot.classList.contains('done')) return; boot.classList.add('done'); setTimeout(() => boot.remove(), 400); };
 (fresh || backTo ? Promise.resolve() : mapUp()).then(() => {
-  const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400); if (!SEE) loaded(); // 169
+  if (!(F170 && fresh && !$('intro').hidden)) bootOff(); // 170 A: kept only under the intro card (its 시작 goes to the habitat, whose loading screen takes it off)
+  if (!SEE) loaded(); // 169
   idle(() => code().then(h => { // then the models of the habitat opened last (a new player: none, above)
     if (!fresh && !backTo) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.withGuests()).catch(() => {}));
     if (OFFLINE && !SEE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
@@ -136,12 +139,17 @@ const firstHere = id => code().then(() => new Promise(done => {
   const L = $('loading'), b = L.querySelector('.lfirst'), say = L.firstChild, off = () => document.body.classList.remove('building');
   document.body.classList.add('building');
   say.textContent = $t('첫 알이에요! 눌러서 깨워 보세요'); b.hidden = false; b.focus?.();
-  b.onclick = () => { b.onclick = null; b.hidden = true; say.textContent = ''; play.firstEgg(id, () => { say.textContent = $t('서식지 불러오는 중…'); done(); }, () => (built[id] ??= build(id)).then(off, off)); };
+  if (F170 && eggTap) setTimeout(() => b.onclick?.(), 300); // 170 A: tapped while it was coming: cracked as soon as it can be
+  b.onclick = () => { b.onclick = null; b.hidden = true; eggTap = true; /* cracked: later taps say nothing */ say.textContent = ''; play.firstEgg(id, () => { say.textContent = $t('서식지 불러오는 중…'); done(); }, () => (built[id] ??= build(id)).then(off, off)); };
 }), () => {});
+// 170 A (?f170): the egg on the loading screen is the 바로 깨기 button too; tapped before its code is here, it says so and cracks when it can
+let eggTap = F170 && !!window.__eggTap; // tapped on the start cover (index.html) before this code was here
+if (F170) $('loading').addEventListener('click', e => { if (!e.target.closest('.lbar')) return; const L = $('loading'), b = L.querySelector('.lfirst');
+  if (b && !b.hidden) return b.onclick?.(); if (!firstEgg(G.S) || eggTap) return; eggTap = true; L.firstChild.textContent = $t('알이 꿈틀거려요… 곧 깨어나요'); });
 async function enter(id) {
   cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + $t(' 서식지 3D'));
   $('habName').querySelector('b').textContent = HAB[id].short ?? HAB[id].name; // 14-3: the chip's room (375 wide) fits two letters
-  loadBar(true, !!play); if (G.S.flags.lastHab !== id) G.flag('lastHab', id);
+  loadBar(true, !!play); if (F170) bootOff(); if (G.S.flags.lastHab !== id) G.flag('lastHab', id);
   if (!SEE) track('habitat_open', { habitat: ko(HAB[id].name) }, 'open:' + id); // inbox 41 A: a day each
   if (firstEgg(G.S) && !built[id]) await firstHere(id); // inbox 61 A·B
   try { api = await (built[id] ??= build(id)); }
@@ -203,13 +211,13 @@ if (SEE) { // 69-4: only the sender's habitat; back (‹, Esc, the phone's back)
 // One history entry stands for "there is something to close" (a window, or a habitat on screen); back uses it up.
 const leaveHab = () => { if (!cur) return false; $('back').click(); return true; };
 addEventListener('keydown', e => { if (e.key === 'Escape' && !e.repeat && !closeTop()) leaveHab(); });
-let skipPop = false;
-const guard = () => {
+let skipPop = false; // 174 앱인토스: no history entries at all (the checklist bars history tricks); src/toss.js takes the phone's back (backEvent)
+const guard = () => { if (TOSS) return;
   const deep = !!cur || !!topWindow();
   if (deep && !history.state?.th) history.pushState({ th: 1 }, '');
   else if (!deep && history.state?.th && !skipPop) { skipPop = true; history.back(); } // 26-8: one back at a time (back is async; two events in a row asked twice → off the page)
 };
-addEventListener('popstate', () => { if (skipPop) { skipPop = false; return; } if (!closeTop()) leaveHab(); setTimeout(guard, 50); });
+addEventListener('popstate', () => { if (TOSS) return; if (skipPop) { skipPop = false; return; } if (!closeTop()) leaveHab(); setTimeout(guard, 50); });
 document.addEventListener('click', () => setTimeout(guard, 50), true);
 G.on(() => guard());
 
@@ -308,6 +316,8 @@ addEventListener('visibilitychange', () => {
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone();
   if (!cur && firstEgg(G.S)) nav.go(HABITATS[0].id); }; // inbox 61 B: a new player, straight to the first egg (no map tap)
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
+if (F170 && !SEE) import('./ui/first170.js'); // 170 C·D: the first day's one line and its end card
+let tut = null; if (TUT181 && !SEE) import('./ui/tut181.js').then(m => { tut = m; m.initTut(() => cur, () => api); }); // 182 ②: the 181 tutorial on the 170 flow (F170 is on with it)
 if (!SEE) { initAttend(() => cur); initEvent(() => cur, () => api); initMyth(() => cur, () => api, nav); initVisit(nav); initArt({ api: () => api, cur: () => cur, back: () => { if (ret.hidden) away({}); } }); }
 if (backTo) nav.go(backTo);
 if (!SEE) { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
@@ -336,8 +346,10 @@ const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
   + (cur && PC ? $t('<div class="row"><b>책상 모드</b><div class="seg"><button data-act="desk">켜기</button>{0}</div></div>', window.documentPictureInPicture ? $t('<button data-act="pip">항상 위 작은 창</button>') : '') : '') // 16-3 (작은 창: PC Chrome only)
   + $t('<div class="row"><b>내 저장 백업</b><div class="seg"><button data-act="backup"{0}>백업 · 불러오기</button></div></div>', BK.due() ? ' class="new"' : '')
   + $t('<div class="row"><b>처음 안내</b><div class="seg"><button data-act="help">도움말</button><button data-act="tips">안내 다시 보기</button></div></div>')
+  + (tut ? $t('<div class="row"><b>튜토리얼</b><div class="seg"><button data-act="tut">튜토리얼 다시 보기</button></div></div>') : '') // 182 ② (?tut181 only)
   + (iosSafariTab(BK.DEV) ? $t('<div class="row"><b>홈 화면 안내</b><div class="seg"><button data-act="home">홈 화면 안내 다시 보기</button></div></div>') : '') // inbox 39
-  + $t('<div class="row"><b>정보</b><div class="seg"><button data-act="intro">베타 안내</button><button data-act="news">새 소식 다시 보기</button></div></div>') // inbox 43
+  + (TOSS ? $t('<div class="row"><b>정보</b><div class="seg"><button data-act="intro">게임 안내</button><button data-act="news">새 소식 다시 보기</button></div></div>') // 174: no 베타 in the 토스 판
+    : $t('<div class="row"><b>정보</b><div class="seg"><button data-act="intro">베타 안내</button><button data-act="news">새 소식 다시 보기</button></div></div>')) // inbox 43
   + $t('<div class="row"><b>선물 코드</b><div class="seg"><button data-act="code">선물 코드 넣기</button></div></div>') // inbox 41 B
   + (FEEDBACK_URL === 'TODO' ? '' : $t('<div class="row"><b>의견</b><div class="seg"><button data-act="fb">의견 보내기</button><button data-act="bug">문제 알리기</button></div></div>')); };
 $('prefsBtn').onclick = () => { drawPrefs(); prefs.hidden = false; };
@@ -347,6 +359,7 @@ const tipsAgain = () => { resetTips(); G.flag('nestTapped', false); prefs.hidden
 rows.onclick = e => {
   const d = e.target.closest('button')?.dataset; if (!d) return;
   if (d.act === 'tips') return tipsAgain();
+  if (d.act === 'tut' && tut) { prefs.hidden = help.hidden = true; return tut.again(); } // 182 ②
   if (d.act === 'help') { prefs.hidden = true; return openHelp(); } // 74: was the 「?」 button
   if (d.act === 'home') { G.flag('homeHintSeen', false); prefs.hidden = true; return toast(cur ? $t('홈 화면 안내를 다시 보여 줄게요') : $t('서식지에 들어가면 홈 화면 안내를 다시 보여 줄게요'), 2200, true); } // play.js shows it
   if (d.act === 'backup') return BK.open();

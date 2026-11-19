@@ -3,8 +3,8 @@
 import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
-import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage, PROP } from '../game/rules.js';
-import { PROPS, HABITATS, PART_NAME, GROW_ACTS } from '../game/data.js';
+import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage, PROP, affLevel, affBar, step181 } from '../game/rules.js';
+import { PROPS, HABITATS, PART_NAME, GROW_ACTS, F170, AFF_ACTS, TUT181 } from '../game/data.js';
 import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
 import { weatherAt } from '../habitat/weather.js';
@@ -33,6 +33,12 @@ const nameOf = callName; // 26-4: its name if it has one
 // a baby's growing, in words: "자라는 중 62% · 12분 남음" / "성장 멈춤 · 62%" (a 꼬마 사탕 holds it)
 const pct = (r, now) => Math.floor(gauge(r, now) * 100);
 const growText = (r, now) => r.hold ? $t('성장 멈춤 · {0}%', pct(r, now)) : $t('자라는 중 {0}% · {1} 남음', pct(r, now), span(Math.max(60000, growLeft(r, now) ?? 0)));
+// 170 B 정 레벨 (?f170), on the friend card only: its name (Lv5 a small star, Lv10 단짝 the star twinkles) and one bar: a growing
+// baby's growth gauge, then the way to the next level. Numbers and our own words only (the name: callName, cleaned in rules.js)
+const affMark = L => L >= 5 ? `<i class="jstar${L >= 10 ? ' dj' : ''}" aria-hidden="true">★</i>` : '';
+const affLine = (r, now) => { const L = affLevel(r, now), w = Math.round(affBar(r, now) * 100);
+  return `<small class="jl"><b>${$t('정 Lv{0}', L)}</b><b class="gg${r.hold ? ' hold' : ''}"><i style="width:${w}%"></i></b>${r.stage === 'baby' && !r.hold ? growText(r, now) : (r.hold ? growText(r, now) + ' · ' : '') + (L >= 10 ? $t('단짝') : $t('다음 레벨까지 {0}%', w))}</small>`; };
+const actOf = L => L === 2 || L === 3 ? GROW_ACTS[L - 2].name : AFF_ACTS[L];
 // 69-1 출생 기록 한 줄: the day (한국 시간, as the 이야기 카드), the habitat whose nest it came from, that hour's weather, and that
 // night's sky if it was a special one. Read off what the save keeps already (its born and egg: the codex's day and habitat for
 // a first one, so a legendary's line and its story card say the same); nothing new is saved
@@ -99,6 +105,7 @@ export function initPlay(nav) {
   function drawTag() {
     const r = tagFor && G.S.animals.find(a => a.id === tagFor.id), baby = r?.stage === 'baby' && !r.pending, now = G.now();
     tagEl.hidden = !tagText; tagEl.classList.toggle('grow', !!baby);
+    if (F170) { const L = r ? affLevel(r, now) : 0; tagEl.classList.toggle('jstar', L >= 5); tagEl.classList.toggle('dj', L >= 10); } // 170 B
     if (!baby) { tagEl.textContent = tagText; return; }
     tagEl.innerHTML = `<span>${tagText}</span><b class="gg${r.hold ? ' hold' : ''}"><i style="width:${pct(r, now)}%"></i></b><small>${growText(r, now)}</small>`;
   }
@@ -134,11 +141,11 @@ export function initPlay(nav) {
   // the small card over an animal: its name; a baby also how far it has grown, 먹이 주기 (3 a day) and the 꼬마 사탕
   // (or 다시 자라기 when one holds it). Anyone can go to storage from here.
   function showBubble(r, say = '') {
-    const now = G.now(), baby = r.stage === 'baby', n = feedsLeft(r, now), c = G.S.candy || 0;
+    const now = G.now(), baby = r.stage === 'baby', n = feedsLeft(r, now, G.S), c = G.S.candy || 0;
     const btn = (act, text, sub) => `<button data-act="${act}"${sub ? ' class="sub"' : ''}>${text}</button>`;
     if (r.wg) bubble.innerHTML = guestHtml(r, say); else // 66-1
     if (r.guest) bubble.innerHTML = $t('{0}{1}<small>손님 · {2}시간 더 머물러요</small><div class="row">{3}</div>', say ? say + ' ' : '', guestName(r), Math.max(1, Math.ceil((r.until - now) / 3600e3)), btn('book', $t('방명록'), true)); else // 16-1
-    bubble.innerHTML = `${say ? say + ' ' : ''}${nameOf(r)}${baby ? `<small>${growText(r, now)}</small>` : ''}<div class="row">${
+    bubble.innerHTML = `${say ? say + ' ' : ''}${nameOf(r)}${F170 ? affMark(affLevel(r, now)) + affLine(r, now) : baby ? `<small>${growText(r, now)}</small>` : ''}<div class="row">${
       baby && growing(r) ? btn('feed', n ? $t('먹이 주기 {0}/{1}', n, B.grow.feeds) : $t('오늘 먹이 다 줬어요')) + btn('candy', $t('꼬마 사탕 주기 {0}', c ? $t('({0}개)', c) : `♥${B.candy.price}`), true) : ''}${
       r.hold ? btn('grow', $t('다시 자라기')) : ''}${btn('walk', $t('산책 보내기'), true)}${btn('store', $t('보관함에 넣기'), true)}</div>`;
     bubble.querySelector('[data-act=feed]')?.toggleAttribute('disabled', !n); bubble.hidden = false;
@@ -199,7 +206,7 @@ export function initPlay(nav) {
     }
     if (e.what === 'bye' && hab) { toast($t('{0}: 「다음에 또 올게」', nm), 2400, true); if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; } }
     if (e.what === 'free') { const P = PROPS.find(p => p.id === e.prop); G.flag('ui:decorBtn'); decorBtn.classList.add('newly'); setTimeout(() => decorBtn.classList.remove('newly'), 4200);
-      toast($t('「{0}」{을/를} 받았어요 · 꾸미기 › {1}에서 꺼내 손님 곁에 놓아 주세요', P?.name ?? '', tabName(e.prop)), 4200, true); }
+      if (!['hatch', 'name', 'pet', 'feed', 'decor'].includes(TUT181 && step181(G.S, G.now()))) toast($t('「{0}」{을/를} 받았어요 · 꾸미기 › {1}에서 꺼내 손님 곁에 놓아 주세요', P?.name ?? '', tabName(e.prop)), 4200, true); } // 182 ②: unless the tutorial's decor step (still ahead) says it; skipped or done: the toast
     // 66-2 단골 · 큰 소원 · 정착 (after the 기뻐해요 toast: the next one waits for it)
     const later = (ms, f) => setTimeout(f, ms);
     if (e.what === 'arrive' && here && e.big != null) later(3300, () => say($t('{0}{이/가} 큰 소원을 들고 왔어요 ({1}/{2}) · 눌러서 보세요', nm, e.big + 1, GUEST.big), 3600));
@@ -235,7 +242,16 @@ export function initPlay(nav) {
       if (e.type === 'strollBack' && hab) { const a = e.animal, nm = nameOf(a); if (!a.stored && habitatOf(a) === habId) hab.drop(a); toast($t('{0}{이/가} 산책에서 돌아왔어요 · ♥+{1}{2}', nm, e.card.hearts, a.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 3000); } // 13-1
       if (e.type === 'whole') { const r = e.reward; toast($t('{0} 모으기 {1}/3 선물: {2}', HAB[e.habitat].name, e.step, r === 'expand' ? $t('다음 땅 넓히기가 무료예요') : $t('큰 소품 「{0}」{이/가} 보관함에 왔어요', PROP[r]?.name)), 3600); } // 66-3
       if (e.type === 'reset' && hab) { bubble.hidden = true; bubbleFor = null; hint(); }
+      if (e.type === 'affLevel' && hab) affUp(e, ev);
     }
+  }
+  // 170 B 정 레벨 up: a small burst of hearts at the friend (if on screen) and one line (grown up just now: the grown card says it)
+  function affUp(e, ev) {
+    const a = e.animal; if (ev.some(x => x.type === 'grown' && x.animal === a) || ev.findLast(x => x.type === 'affLevel') !== e) return; // many at once (back after a while): the last one only
+    const p = habitatOf(a) === habId && !a.stored && hab.where(a.id); if (p) for (let i = 0; i < 3; i++) setTimeout(() => heart(p[0] + (i - 1) * 44, p[1] + 34 - 14 * (i % 2), 'rim'), i * 120); // beside it, under the card that opens above it
+    const nm = nameOf(a), act = actOf(e.level);
+    toast(e.level >= 10 ? $t('{0}{과/와} 단짝이 되었어요 · 정 Lv10', nm) : act ? $t('{0}{과/와} 정이 깊어졌어요 · 정 Lv{1} · {2}을 배웠어요', nm, e.level, act) : $t('{0}{과/와} 정이 깊어졌어요 · 정 Lv{1}', nm, e.level), 2800, true);
+    if (bubbleFor?.id === a.id && !bubble.hidden) showBubble(bubbleFor);
   }
   G.on(events);
 
@@ -268,7 +284,7 @@ export function initPlay(nav) {
   const home = $('homeHint'); let homeT = 0, quiet = 0, persisted = false;
   function homeCard() {
     homeT = 0; if (!hab || !home.hidden || !homeHintDue(DEV, G.S.flags)) return;
-    if (busy() || G.S.guests?.tut >= 0 || G.now() - G.S.since < 300e3) quiet = Date.now(); // 66-1: not in the first 5 minutes (the guest tutorial)
+    if (busy() || (F170 ? document.body.classList.contains('n170wait') : G.S.guests?.tut >= 0 || G.now() - G.S.since < 300e3)) quiet = Date.now(); // 66-1: not in the first 5 minutes (the guest tutorial); 170 D: right after the first card and its naming, not as a tutorial guest arrives (first170.js n170wait)
     if (Date.now() - quiet < 2000) { homeT = setTimeout(homeCard, 800); return; }
     home.hidden = false;
   }
@@ -276,7 +292,7 @@ export function initPlay(nav) {
   let appT = 0, appQuiet = 0;
   function appBand() {
     if (!hab || !appHintDue(DEV, G.S.flags)) return void (appT = 0);
-    if (overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden]), .tip, #toast.on') || document.body.classList.contains('photo') || !home.hidden) appQuiet = Date.now(); // busy() but not the quiet rest: the save is at stake
+    if (overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden]), .tip, #toast.on') || document.body.classList.contains('photo') || !home.hidden || document.body.classList.contains('n170wait')) appQuiet = Date.now(); // busy() but not the quiet rest: the save is at stake
     if (Date.now() - appQuiet < 2000) { appT = setTimeout(appBand, 800); return; }
     G.flag('appHintSeen'); track('webview_hint'); // 93-3
     const bar = Object.assign(document.createElement('div'), { className: 'rate appband', role: 'group' }); bar.setAttribute('aria-label', $t('다른 브라우저에서 이어서 하기'));
@@ -300,6 +316,7 @@ export function initPlay(nav) {
   const got = (list, r) => { let h = 0; for (const s of list) h += G.seeScene(s.id, r?.species) || 0;
     if (h) toast($t('새 놀이 장면 「{0}」{1} · 도감에 담았어요 ♥+{2}', list[0].name, list.length > 1 ? $t(' 외 {0}개', list.length - 1) : '', h), 2800, true); };
   function scene(e, quiet) {
+    if (F170 && hab && !quiet && e.who?.length) G.affPlay(e.who.map(w => w.rec?.id)); // 170 B: a play scene's friends
     if (!hab || document.hidden) return; const list = scenesOf(e).filter(s => !G.S.scenes[s.id]); if (!list.length) return;
     const r = e.who?.[0]?.rec, p = r && hab.where(r.id), W = innerWidth, H = innerHeight;
     if (p && p[0] > 8 && p[0] < W - 8 && p[1] > 70 && p[1] < H - 90 && !overlayOpen()) return got(list, r);

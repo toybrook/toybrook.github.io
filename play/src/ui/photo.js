@@ -5,7 +5,7 @@
 // The preview is the same drawing: the filter as CSS on the 3D canvas, the rest on a canvas over it (deco); the saved
 // picture is the frame drawn again at 2-3x, the filter worked out per pixel with the CSS matrices (tint), then deco.
 import { $t, esc } from '../i18n/i18n.js';
-import { VIEW } from '../config.js';
+import { VIEW, TOSS } from '../config.js';
 import * as G from '../game/game.js';
 import { seeLink, seeCard, seeSend } from './visit.js'; // 69-4
 import { outIn, callName } from '../game/rules.js';
@@ -76,13 +76,14 @@ export function deco(x, w, h, o, code) {
 // getApi: the habitat on screen (habitat.js), getHab: its id. on(): whether 사진 모드 is up (main.js holds hearts and notes then)
 export function initPhoto(getApi, getHab) {
   const $ = id => document.getElementById(id), el = $('snap'), ov = $('snapOv'), btn = $('snapBtn');
-  const o = { hour: null, sky: null, fx: 'none', frame: true, logo: true, code: true, fold: false };
+  const o = { hour: null, sky: null, fx: 'none', frame: true, logo: true, code: !TOSS, fold: false }; // 174: no link QR in the Toss build
   let on = false, busy = false, code = null, text = '', msg = '';
   const ratio = () => Math.min(3, (window.devicePixelRatio || 1) * (window.__stageScale || 1));
   const seg = (k, opts) => opts.map(([t, v]) => `<button data-k="${k}" data-v="${v}"${o[k] === v ? ' class="on"' : ''}>${t}</button>`).join('');
   function draw() {
     el.classList.toggle('fold', o.fold);
     el.innerHTML = $t('<div class="sbody"><div class="row"><b>시간</b><div class="seg">{0}</div></div><div class="row"><b>날씨</b><div class="seg">{1}</div></div>\n<div class="row"><b>필터</b><div class="seg">{2}</div></div>\n<div class="row"><b>넣기</b><div class="seg">{3}</div></div>\n<div class="row"><b class="w">따라가기</b><select data-follow aria-label="따라갈 친구"><option value="">안 함</option>{4}{5}</select></div></div>\n<p class="smsg" role="status">{6}</p>\n<div class="sbar"><button data-act="fold">{7}</button><button data-act="home">전체 보기</button><button class="go" data-act="save">저장</button><button data-act="card">구경 그림</button><button data-close>나가기</button></div>', seg('hour', HOURS), seg('sky', getHab() === 'snow' ? SKIES.map(k => k[1] === 'rain' ? [$t('눈'), 'rain'] : k) : SKIES), seg('fx', Object.entries(FILTERS).map(([k, [t]]) => [t, k])), ADDS.map(([k, t]) => `<button data-add="${k}"${o[k] ? ' class="on"' : ''} aria-pressed="${o[k]}">${t}</button>`).join(''), getApi()?.hasTrain?.() ? $t('<option value="train">🚂 장난감 기차</option>') : '', outIn(G.S, getHab()).map(a => `<option value="${a.id}">${a.fav ? '★ ' : ''}${esc(callName(a))}</option>`).join(''), msg || $t('끌어서 돌리고, 두 손가락을 벌려 가까이 봐요 · 시간과 날씨는 보기만 바뀌어요'), o.fold ? $t('펼치기') : $t('접기'));
+    if (TOSS) el.querySelectorAll('[data-act="card"], [data-add="code"]').forEach(b => b.remove()); // 174: 구경 그림 and the link QR are links out
     paint();
   }
   function paint() { // the preview: the filter on the 3D canvas, deco over it at the screen's pixels

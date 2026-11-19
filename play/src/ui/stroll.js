@@ -7,6 +7,7 @@ import { strollCap, strolling, callName, mythHill } from '../game/rules.js';
 import { figureThumb } from './thumbs.js';
 import { PHOTO_PLACES, cardPhoto, photoCard, prunePhotos } from './postcard3d.js'; // 78: the places whose cards are a photo
 import { toast, josa } from './hud.js';
+import { TOSS } from '../config.js';
 
 const FH = MYTHIC[0].place, PL = Object.fromEntries([...PLACES, FH].map(p => [p.id, p])), PNAME = Object.fromEntries(PROPS.map(p => [p.id, p.name]));
 export const cardLine = c => (PL[c.pl]?.lines[c.ln] ?? '').replace('{n}', c.nm).replace(/\{(.)\/(.)\}/g, (_, a, b) => josa(c.nm, a, b));
@@ -18,6 +19,7 @@ export function pickStroll(a) {
   const nm = callName(a), n = strolling(G.S).length, cap = strollCap(G.S), R = B.stroll, full = n >= cap;
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
   menu.innerHTML = $t('<div><h2>산책 보내기</h2><p class="sub">{0} · {1}</p><div class="col">{2}{3}<button data-visit>친구네 놀러 가기</button><button class="sb" data-shut>닫기</button></div></div>', esc(nm), full ? $t('지금 {0}마리가 산책 중이라 더 못 가요', n) : $t('산책 중 {0}/{1} · 돌아오면 엽서와 하트를 줘요', n, cap), R.hours.map(h => $t('<button data-h="{0}"{1}>{2}시간 · ♥{3}{4}</button>', h, full ? ' disabled' : '', h, R.hearts[h], R.candy[h] ? $t(' · 사탕 {0}', R.candy[h]) : '')).join(''), mythHill(G.S) ? $t('<button data-h="{0}" data-pl="{1}"{2}>🔥 {3} · {4}시간 · {5}</button>', R.hours[0], FH.id, full ? ' disabled' : '', FH.name, R.hours[0], MYTHIC[0].hair) : '');
+  if (TOSS) menu.querySelector('[data-visit]')?.remove(); // 174: 친구네 놀러 가기 is a link to send (none out of Toss)
   menu.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.visit != null) { menu.remove(); menu = null; if (a.stage !== 'baby') document.getElementById('friends').hidden = true; return void import('./visit.js').then(m => m.sendSheet(a)); } // 74: 놀러 보내기 is a branch of 산책 (16-1)

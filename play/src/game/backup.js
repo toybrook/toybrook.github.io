@@ -18,15 +18,15 @@ export function pack(S, edition, at = now()) {
 export const toCode = (S, edition, at) => TAG + b64(pack(S, edition, at));
 
 // inbox 39: iPhone·iPad Safari may clear a site's storage after 7 days without a visit; a home-screen web app is spared.
-// dev: { ua, touch: maxTouchPoints, standalone }. iPadOS asks for the desktop site (a Macintosh UA) but has touch points.
+// dev: { ua, touch: maxTouchPoints, standalone, toss (174: the Apps in Toss build: no home-screen or browser hints) }. iPadOS asks for the desktop site (a Macintosh UA) but has touch points.
 // Safari only: Chrome·Firefox·Edge·Opera on iOS and in-app browsers (Kakao, Naver, Instagram…) name themselves in the UA.
-export const iosSafariTab = ({ ua = '', touch = 0, standalone = false }) => (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && touch > 1))
+export const iosSafariTab = ({ ua = '', touch = 0, standalone = false, toss = false }) => !toss && (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && touch > 1))
   && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|Line\/|DaumApps|Whale/.test(ua) && !standalone;
 export const homeHintDue = (dev, flags = {}) => iosSafariTab(dev) && !flags.homeHintSeen;
 // inbox 64-A: Instagram·Threads(Barcelona)·Facebook·KakaoTalk·LINE in-app browsers keep their own storage, so the save stays behind there
 export const inApp = (ua = '') => /Instagram|Barcelona|Threads|FBAN|FBAV|FB_IAB|KAKAOTALK|Line\/|DaumApps/.test(ua);
 // inbox 107: or inside another site's frame (와플 waffleweb.co): that save is apart from the one at toybrook.github.io
-export const appHintDue = (dev, flags = {}) => (inApp(dev.ua) || !!dev.framed) && !flags.appHintSeen;
+export const appHintDue = (dev, flags = {}) => !dev.toss && (inApp(dev.ua) || !!dev.framed) && !flags.appHintSeen;
 
 // text pasted or read from a file -> { save, at } or { err: what to tell the player }. newest: the game's SCHEMA_VERSION.
 export function unpack(text, edition, newest) {

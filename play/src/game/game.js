@@ -7,7 +7,8 @@ import * as P from './pals.js'; // 113
 import * as GU from './guests.js'; import { guestWear } from './guests-data.js'; // 66-1, 86-3마
 import * as A from './art.js'; // 17-2
 import * as W from './wild.js'; // 17-3
-import { PROPS } from './data.js';
+import { PROPS, YARD } from './data.js';
+import * as Y from './yard.js'; // 182 ④ (?yard): the yard's part of the save, under its own key
 import { EDITION } from '../config.js';
 import { now as clock } from './clock.js';
 export { now, dayOf } from './clock.js'; // the UI reads game time as G.now()
@@ -23,6 +24,7 @@ export const on = f => listeners.push(f); // f(events) after every tick and acti
 // once under KEY.v<n> / KEY.bad, so an update never silently loses a collection.
 function load(now) {
   let raw = null;
+  if (held) return null;
   try { raw = localStorage.getItem(KEY); if (!raw) return null; } catch { return null; }
   let v = 0, S = null, ed = EDITION;
   try { const o = JSON.parse(raw); v = o?.schemaVersion; ed = o?.edition || 'beta'; if (ed === EDITION) S = R.fromSave(o, now); } catch { /* unreadable */ }
@@ -35,9 +37,13 @@ function load(now) {
 // 26-7: off: another tab has the game (Web Locks), so this one saves nothing; failed: the last save threw (full storage etc.), told
 // once till one goes through again. hooks (main.js): busy() this tab opened second, lost() another tab took over, fail()
 let off = !!navigator.locks, failed = false, hooks = {};
+// 174 held (src/toss.js, before start): this phone's keys may still be another Toss user's, so this run neither reads nor writes the save
+export let held = false;
+export const hold = () => { held = true; };
 export function save() {
   if (off) return;
-  try { localStorage.setItem(KEY, JSON.stringify(S)); failed = false; } catch { if (!failed) { failed = true; hooks.fail?.(); } } // keep playing
+  if (held) return;
+  try { localStorage.setItem(KEY, JSON.stringify(YARD ? Y.yardOut(S) : S)); if (YARD) { const y = Y.yardPart(S); if (y) localStorage.setItem(Y.YKEY, JSON.stringify(y)); } failed = false; } catch { if (!failed) { failed = true; hooks.fail?.(); } } // keep playing
 }
 // 26-7 한 번에 한 탭: the tab that holds the lock saves. A reload or a tab just let go may still hold it a moment: asked twice.
 // ponytail: no Web Locks (Safari < 15.4) = no guard, two tabs both save as before
@@ -59,20 +65,22 @@ let view = false;
 export function start(h = {}) {
   if (h.view) { view = true; off = true; S = h.view; return []; }
   hooks = h; const now = clock(); S = load(now) || R.weekStart(R.newGame(now), now); S.edition = EDITION;
-  const ev = R.advance(S, now); save(); claim(false); // saved as soon as this tab holds the lock
+  if (YARD && !held) { let y = null; try { y = localStorage.getItem(Y.YKEY); } catch { /* none */ } Y.yardIn(S, y); } // 182 ④
+  const ev = R.advance(S, now); if (YARD) Y.giveKit(S); save(); claim(false); // saved as soon as this tab holds the lock
   setInterval(() => { const ev = tick(clock()); if (ev.length) save(); emit(ev); }, 1000);
   addEventListener('visibilitychange', save); addEventListener('pagehide', save);
   return ev;
 }
 // inbox 21 백업 불러오기: s (already through R.fromSave) becomes the save; the caller reloads the page right after.
 // 27-1: false when it can't be stored (full storage): the save stays as it was
-export function replace(s) { s.edition = EDITION; try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { return false; } S = s; return true; }
+export function replace(s) { if (held) return false; s.edition = EDITION; try { localStorage.setItem(KEY, JSON.stringify(s)); if (YARD) localStorage.removeItem(Y.YKEY); } catch { return false; } S = s; return true; }
 const emit = ev => { for (const f of listeners) f(ev); };
 // an action, then catch up (a feed or pet that fills the gauge grows it at once), save, tell
-function act(fn) { const now = clock(), out = fn(now), ev = view ? [] : R.advance(S, now); save(); emit([...(out?.events || []), ...ev]); return out; }
+function act(fn) { const now = clock(), out = fn(now), ev = view ? [] : R.advance(S, now); if (YARD && !view) Y.giveKit(S); save(); emit([...(out?.events || []), ...ev]); return out; }
 
 export const takeEgg = (hab, eggId) => act(now => R.takeEgg(S, hab, now, eggId));
 export const takeGift = () => act(now => R.takeGift(S, now)); // 112
+export const hurry = (i, ms) => act(now => R.hurry(S, i, ms, now)); // 174 앱인토스 보상형 광고 (토스 판에서만 불림)
 export const letGo = (hab, ids) => act(now => R.letGo(S, hab, ids, now)); // 112 놓아주기
 export const hatch = i => act(now => { // ?debug 「다음 알 시크릿」 (flags.forceSecret) is used up here; rules only take forced
   const f = !!S.flags.forceSecret, out = R.hatch(S, i, now, Math.random, f); if (out && f) delete S.flags.forceSecret; return out;
@@ -80,10 +88,15 @@ export const hatch = i => act(now => { // ?debug 「다음 알 시크릿」 (fla
 export const release = id => act(now => R.release(S, id, now));
 export const feed = id => act(now => R.feed(S, id, now));
 export const tapHeart = id => act(now => { const events = []; return { n: R.tapHeart(S, id, now, Math.random, events), events }; }).n; // 158: events (the unicorn's horn)
+// 170 B 정 레벨: a friend's level (0: no such friend), the friends in a play scene. Level-ups come as { type: 'affLevel', animal, level, from } (on)
+export const affOf = id => { const a = S?.animals.find(x => x.id === id); return a ? R.affLevel(a, clock()) : 0; };
+export const affPlay = ids => { if (!view && R.affPlay(S, ids, clock())) save(); }; // a scene at the day's cap (or not ours): nothing saved
 export const sendBack = id => act(() => R.sendBack(S, id));
 export const store = id => act(now => R.store(S, id, now));
 export const setFav = (id, on) => act(() => R.setFav(S, id, on));
 export const setName = (id, text) => act(() => R.setName(S, id, text));
+export const firstEnd = () => act(now => R.firstEnd(S, now)); // 170 D
+export const tutGift = hab => act(now => R.tutGift(S, now, hab)); // 182 ②: the tutorial's 튤립 화분, once a save (rules tutGift)
 export const unstore = id => act(now => R.unstore(S, id, now));
 export const sendStroll = (id, h, pl) => act(now => R.sendStroll(S, id, h, now, Math.random, pl)); // 13-1 (pl: 14-1 the 불의 언덕)
 export const cardsSeen = () => act(() => R.cardsSeen(S));
@@ -124,13 +137,16 @@ export const importLayout = (hab, d, fit, cell) => act(() => R.importLayout(S, h
 export const undoImport = () => act(() => R.undoImport(S));
 export const clearGhost = hab => act(() => R.clearGhost(S, hab));
 export const refundProp = uid => act(() => R.refundProp(S, uid));
+// 182 ④ 나의 뜰 (?yard): call a friend, send it home, a prop from another habitat's storage and back, the yard's own nature
+export const callToYard = id => act(() => Y.callToYard(S, id)), sendHome = id => act(() => Y.sendHome(S, id));
+export const importProp = uid => act(() => Y.importProp(S, uid)), returnProp = uid => act(() => Y.returnProp(S, uid)), takeNat = id => act(() => Y.takeNat(S, id));
 // inbox 41 B: mail.json's mail (ids: only those) and a gift code. Codes used on this device are also kept apart from the save
 // (toyhabitat.codes), so a new game here can't use one again
 const CODES = 'toyhabitat.codes', usedHere = () => { try { const u = JSON.parse(localStorage.getItem(CODES)); return Array.isArray(u) ? u : []; } catch { return []; } };
 export const claimMail = (list, ids) => act(now => R.claimMail(S, list, now, ids));
 export const claimLegend = () => act(now => R.claimLegend(S, now)); // 44
 export const useCode = (codes, input) => act(now => { const out = R.useCode(S, codes, input, now, usedHere());
-  if (out.got) try { localStorage.setItem(CODES, JSON.stringify([...usedHere(), out.got[0].id])); } catch { /* full: the save still has it */ } return out; });
+  if (out.got && !held) try { localStorage.setItem(CODES, JSON.stringify([...usedHere(), out.got[0].id])); } catch { /* full: the save still has it */ } return out; });
 // inbox 41 C 출석부: at = the habitat on screen (a gift prop goes there)
 // 15-1 계절 이벤트: the calendar (play/events.json, ui/event.js), the run now, its shop, album, cards and mail
 export const setCal = c => { R.setCal(c); if (S) act(() => {}); }; // 15-1: before start (the kept copy) only the calendar
@@ -223,4 +239,4 @@ export const crackMany = (type, n) => act(now => {
   S.album = album;
   return { cracked: out };
 });
-export const reset = () => { S = R.weekStart(R.newGame(clock()), clock()); save(); emit([{ type: 'reset' }]); };
+export const reset = () => { S = R.weekStart(R.newGame(clock()), clock()); if (YARD) try { localStorage.removeItem(Y.YKEY); } catch { /* none */ } save(); emit([{ type: 'reset' }]); };

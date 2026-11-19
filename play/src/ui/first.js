@@ -2,8 +2,8 @@
 // one toast when the screen is free (like 도전 과제, level.js).
 import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
-import { FIRST, BIGS, PROPS, HABITATS, BALANCE } from '../game/data.js';
-import { PROP, HAB, can, unlockInfo, gauge, eggGap } from '../game/rules.js';
+import { FIRST, BIGS, PROPS, HABITATS, BALANCE, TUT181 } from '../game/data.js';
+import { PROP, HAB, can, unlockInfo, gauge, eggGap, step181 } from '../game/rules.js';
 import { toast, topWindow, overlayOpen } from './hud.js';
 import { track } from './stats.js';
 import { sfx } from './sound.js';
@@ -74,13 +74,14 @@ let hintAt = 0, left = false; // left: the tab hidden once (92-5: then the line 
 addEventListener('visibilitychange', () => { if (document.hidden) left = true; });
 function hint() {
   const S = G.S; if (!S?.flags.ui64 || topWindow() || overlayOpen() || document.body.classList.contains('photo') || document.hidden || G.now() < hintAt) return;
-  if (S.stats.hatch >= 2 && !S.stats.pet && !S.flags.hintPet) { G.flag('hintPet'); hintAt = G.now() + 8e3; return toast($t('친구를 톡 눌러 쓰다듬어 보세요 · 하트가 생겨요'), 3200, true); }
+  const tut = TUT181 && (step181(S, G.now()) || document.body.classList.contains('tut181')); // 182 ②: the tutorial says these itself
+  if (S.stats.hatch >= 2 && !S.stats.pet && !S.flags.hintPet && !tut) { G.flag('hintPet'); hintAt = G.now() + 8e3; return toast($t('친구를 톡 눌러 쓰다듬어 보세요 · 하트가 생겨요'), 3200, true); }
   if (S.flags.week1 && S.attend.n === 1 && !S.flags.d2seen && S.stats.hatch && (G.now() - S.since >= LATER || left) && G.dayOf(G.now()) === G.dayOf(S.since)) { // 92-5·93-1: once, on the first day
     const n = S.nests[HABITATS[0].id], w = n && n.eggs.length < BALANCE.nest.max ? Math.max(0, n.t + eggGap(S) - G.now()) : null;
     G.flag('d2seen'); hintAt = G.now() + 8e3; track('d2_gift_seen'); track('leave_hint', { at: left ? 'back' : '5m' });
     return toast($t('내일 들어오면 전설 알이 와 있어요{0}', w == null ? '' : $t(' · 둥지 다음 알 {0}:{1}', Math.floor(w / 60e3), String(Math.floor(w / 1e3) % 60).padStart(2, '0'))), 4200, true);
   }
-  if (S.guests?.tut >= 0 || S.props.some(p => p.placed && !p.nat) || S.flags.hintDecor || !S.flags.hintPet) return;
+  if (S.guests?.tut >= 0 || S.props.some(p => p.placed && !p.nat) || S.flags.hintDecor || !S.flags.hintPet || tut) return;
   const free = S.props.some(p => !p.placed && !p.nat); if (!free && S.hearts < cheapest(S)) return;
   G.flag('hintDecor'); hintAt = G.now() + 8e3; toast(free ? $t('꾸미기에 받은 소품이 있어요 · 무료로 놓아 보세요') : $t('하트가 모였어요 · 꾸미기에서 ♥{0} 소품을 놓아 보세요', cheapest(S)), 3400, true);
 }

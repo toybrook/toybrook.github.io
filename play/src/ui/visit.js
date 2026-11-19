@@ -10,6 +10,7 @@ import * as V from '../game/visit.js';
 import { toast, josa, topWindow, overlayOpen, resting } from './hud.js';
 import { copyNow } from './report.js';
 import { track } from './stats.js';
+import { TOSS } from '../config.js';
 
 const $ = id => document.getElementById(id), box = $('visit');
 const H = Math.round(B.visit.stay / 3600e3);
@@ -23,6 +24,7 @@ const busy = () => firstEgg(G.S) || !box.hidden || topWindow() || overlayOpen() 
 
 // the share sheet if there is one, else copied (a cancelled share sends nothing more)
 async function send(url, text) {
+  if (TOSS) return void toast($t('토스 앱에서는 링크를 보내지 않아요'), 2400); // 174: no link out of Toss (the buttons that lead here are taken out too: share.js, photo.js, stroll.js)
   if (navigator.share) { try { await navigator.share({ title: $t('토이브룩'), text, url }); return; } catch (e) { if (e?.name === 'AbortError') return; } }
   toast(copyNow(url) !== false ? $t('링크를 복사했어요 · 메신저에 붙여 넣어 보내 주세요') : $t('복사하지 못했어요'), 2800);
 }
@@ -55,6 +57,7 @@ function arrive(v) {
 // when a guest left: the host picks a postcard (or none)
 let pic = null, line = 0;
 function pick(e) {
+  if (TOSS) return void G.pickCard(e.lid, null, 0); // 174: no postcard to send out of Toss (as 「괜찮아요」)
   pic = null; line = 0; const nm = kindName(e);
   box.innerHTML = $t('<div><h2>{0}의 {1}{이/가} 돌아갔어요</h2><p class="sub">엽서를 보내면 그 정원에 ♥가 가요</p>\n<div class="vpics">{2}</div>\n<div class="vlines">{3}</div>\n<div class="nbtns"><button class="sb" data-skip="{4}">괜찮아요</button><button class="go" data-card="{5}" disabled>엽서 보내기</button></div></div>', esc(V.gardenName(e.g)), esc(nm), V.PICS.map((p, i) => `<button data-pic="${i}" aria-pressed="false">${p}</button>`).join(''), V.LINES.map((t, i) => `<button data-line="${i}" aria-pressed="${!i}">${t}</button>`).join(''), e.lid, e.lid);
   box.hidden = false;

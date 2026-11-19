@@ -12,7 +12,7 @@
 import { $t } from '../i18n/i18n.js';
 
 import { GUEST_PROPS } from './guests-data.js'; // 66-1
-export const SCHEMA_VERSION = 13; // shape of the save; bump with a migration in rules.js (13: 152 D S.myth by MYTHIC id; 2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups; 12: 95 kept accessories S.accs, animal s = hatched secret)
+export const SCHEMA_VERSION = 14; // shape of the save; bump with a migration in rules.js (14: 170 B 정 레벨 a.j, S.jAt; 13: 152 D S.myth by MYTHIC id; 2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups; 12: 95 kept accessories S.accs, animal s = hatched secret)
 export const CONTENT_VERSION = 9; // bump when the lists below change (3: launch materials, one legendary each; marble and gold left the lists; 4: colour ids glitter gold -> violet, amber yellow -> honey; 5: meadow rabbit, pig, chicken; 6: meadow sheep, cow; 7: pond (turtle, otter, swan, flamingo, capybara; the duck moved from the meadow); 8: snow (penguin, polar bear, seal, arctic fox, reindeer, snowy owl); 9: dino (triceratops, brachiosaurus, stegosaurus, ankylosaurus, T. rex, pteranodon))
 
 const MIN = 60 * 1000;
@@ -68,25 +68,31 @@ export const UNLOCK_NEED = { pond: 19, snow: 19, dino: 18 };
 // none: the campfire), the two on it together: ♥first the first time, ♥hearts at most once a day after; max pairs at it at once a place
 export const DUO = { kinds: ['seesaw', 'swing', 'fountain', 'campfire', 'feeder'], first: 20, hearts: 3, max: 2 };
 const MYTH = { beta: { day: 1, nights: 1, guest: 3 }, release: { day: 3, nights: 3, guest: 7 } }; // release: it comes in about a week, settles in about two (check-eggs 14-1)
+// 174·182: the Toss rewarded ad (src/toss.js): an egg `cut` sooner, `day` a day, asked only when it has `minLeft` or more to go
+// and the save has hatched `after` or more (the first day's fast eggs are never asked about)
+const AD = { cut: 60 * MIN, day: 3, minLeft: 5 * MIN, after: 12 };
 export const PACE = {
   release: {
-    nest: { every: 60 * MIN, max: 8, start: 1, startRarity: 'common', early: { n: 0, every: 60 * MIN }, onUnlock: 0, release: { common: 2, rare: 5, heroic: 15, legendary: 40 }, slotsByLevel: [[1, 2]], gifts: 5 },
-    hatch: { common: 5 * MIN, rare: 30 * MIN, heroic: 120 * MIN, legendary: 480 * MIN },
-    slots: 2,
-    grow: { time: { common: 20 * MIN, rare: 40 * MIN, heroic: 90 * MIN, legendary: 180 * MIN }, pet: 0.02, feed: 0.1, feeds: 3 },
-    heart: { perTap: 1, cooldown: 10 * 1000, daily: 20 },
-    sendBack: { common: 2, rare: 5, heroic: 15, legendary: 50 },
-    codexHeart: 0,
-    unlock: { need: UNLOCK_NEED, hearts: 30 },
+    // 182 ① (177 A 2판, docs/balance-release.md 9절): the Toss build is this edition (build-web toss() sets EDITION)
+    nest: { every: 180 * MIN, max: 8, start: 3, startRarity: 'common', fast: [0, 10e3, 15e3, 60e3, 60e3, 60e3], early: [{ n: 6, every: 2 * MIN }, { n: 12, every: 5 * MIN }], onUnlock: 3,
+      release: { common: 2, rare: 5, heroic: 15, legendary: 40 }, slotsByLevel: [[1, 3], [6, 4], [12, 5]], gifts: 5 },
+    hatch: { common: 2 * MIN, rare: 15 * MIN, heroic: 60 * MIN, legendary: 240 * MIN },
+    slots: 3,
+    grow: { time: { common: 5 * MIN, rare: 20 * MIN, heroic: 60 * MIN, legendary: 120 * MIN }, pet: 0.02, feed: 0.1, feeds: 3 },
+    heart: { perTap: 1, cooldown: 10 * 1000, daily: 40 },
+    sendBack: { common: 3, rare: 8, heroic: 25, legendary: 80 },
+    codexHeart: 2,
+    unlock: { need: UNLOCK_NEED, hearts: 30, friends: 6 },
     expand: [20, 45, 140, 200, 400, 650],
     priceX: { small: 1, big: 1 },                    // 42 F-1: prop prices as listed (PROPS price; the beta x is below)
-    xp: { codex: 10, grown: 4, pet: 1, petDaily: 10, login: 5, achieve: 10 },
+    xp: { codex: 3, grown: 1, pet: 1, petDaily: 10, login: 5, achieve: 10 },
     play: { price: { seesaw: 70, ball: 30, hammock: 60, feeder: 40, campfire: 50, slide: 120, fountain: 150, musicbox: 80, bubbles: 60, lights: 70, fireworks: 60, pinhill: 90, bell: 50, rail: 10, railcurve: 10, railfork: 20, railbridge: 40, table: 40, shelf: 50, platform: 70, doll: 30, hillock: 40, puddle: 40, flowermound: 50, rockmound: 50 }, level: { 'set:friends': 6, 'prop:slide': 10, 'prop:fountain': 12, 'set:toys': 8, 'set:train': 7, 'set:home': 5, 'brush:stonepath': 3, 'prop:hillock': 3, 'brush:fenceline': 4, 'prop:puddle': 4, 'brush:plank': 5, 'prop:flowermound': 5, 'brush:wall': 6, 'prop:rockmound': 6 } },
     stroll: STROLL,
     scene: SCENE,
     shelf: SHELF,
     event: EVENT,
     myth: MYTH.release,
+    ad: AD,
     visit: VISIT,
     sky: SKY,
     pal: PAL,
@@ -110,6 +116,7 @@ export const PACE = {
     shelf: SHELF,
     event: EVENT,
     myth: MYTH.beta,
+    ad: AD,
     visit: VISIT,
     sky: SKY,
     pal: PAL,
@@ -117,10 +124,16 @@ export const PACE = {
 };
 const P = PACE[EDITION];
 export const BALANCE = {
-  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, event: P.event, myth: P.myth, visit: P.visit, sky: P.sky, pal: P.pal, // PACE (above)
+  nest: P.nest, hatch: P.hatch, slots: P.slots, grow: P.grow, heart: P.heart, sendBack: P.sendBack, codexHeart: P.codexHeart, stroll: P.stroll, scene: P.scene, shelf: P.shelf, event: P.event, myth: P.myth, visit: P.visit, sky: P.sky, pal: P.pal, ad: P.ad, // PACE (above)
   candy: { price: 15, free: 1 },                     // 꼬마 사탕 (inbox 14): holds a baby's growth (nothing shows on it); given back when it grows on. Hearts; a new game has `free`
   pity: { heroic: 30, legendary: 180 },              // shard gauges per egg type: every egg cracked +1 to each; full = the next egg is that rarity (legendary first).
                                                      // A natural one of that rarity or better empties the gauge. Guaranteed eggs prefer variants not owned yet
+  // 170 B 정 레벨 (rules.js affLevel): points. at = where Lv1..Lv10 start; 0~3 is the growth gauge x3 (Lv2 = 1/3 the twirl, Lv3 = 2/3,
+  // Lv4 = grown up), past it the hours a friend has spent out (idle an hour) plus its bonuses: the day's first pet (first), then each
+  // pet and play scene (pet, play: at most `day` a day each friend), a walk (stroll an hour away). Lv5 = 6 h out past grown, Lv10 = 6 days.
+  // heart: the day's first pet of a friend gives floor(Lv/2) hearts more, at most `heart`, at most `heartDay` a day in all;
+  // gift: Lv10 (단짝) walk hearts x gift. All of it to be set again before launch (docs/balance-data.md)
+  aff: { at: [0, 1, 2, 3, 9, 21, 39, 63, 99, 147], idle: 1, first: 4, pet: 1, play: 1, day: 4, stroll: 1.5, heart: 5, heartDay: 20, gift: 1.25 },
   secret: { chance: 0.03, sendBackX: 2 },            // any hatch: this chance of wearing one accessory (all equally likely); sending a secret back pays x2
   unlock: P.unlock,                                  // PACE
   maxVisible: 12,                                    // animals out in one habitat; also each zone's room (HABITATS room). Over either: storage
@@ -521,6 +534,8 @@ export const PAT = {
 export const PART_NAME = { head: $t('머리'), back: $t('등'), rump: $t('엉덩이') };
 // 69-2 자라며 배우는 몸짓: a baby on land (walk.js) picks these up as its growth gauge passes `at` (shown once: play.js)
 export const GROW_ACTS = [{ at: 1 / 3, id: 'twirl', name: $t('제자리에서 빙글 도는 법') }, { at: 2 / 3, id: 'bounce', name: $t('통통 뛰는 법') }];
+// 170 B: what a friend learns at each 정 레벨 past the two above (Lv4..Lv10; words on the level-up line, as 69-2's)
+export const AFF_ACTS = [null, null, null, null, $t('반갑게 고개를 끄덕이는 법'), $t('나란히 걸어 주는 법'), $t('기분 좋게 기지개 켜는 법'), $t('살금살금 따라오는 법'), $t('꾸벅꾸벅 조는 척하는 법'), $t('깡충 두 번 뛰는 법'), $t('단짝 인사를 하는 법')];
 
 export const SPECIES = [
   { id: 'duck', fit: { cape: { adult: { s: 1.5 } } }, name: $t('오리'), habitat: 'pond', model: 'duck', colors: { accent: '#ff8a1e' },
@@ -719,7 +734,7 @@ export const SPECIES = [
       stripes: [{ id: 'sky', name: $t('하늘'), body: '#a9cbe6', second: '#ffffff' }, { id: 'apricot', name: $t('살구'), body: '#f6c7a2', second: '#fffaf2' }, { id: 'ink', name: $t('먹색'), body: '#ffffff', second: '#3a3436', seldom: true }],
       gradient: [{ id: 'lagoon', name: $t('석호'), body: '#e0f6ee', second: '#3e8a98' }, { id: 'dusk', name: $t('저녁'), body: '#9fb4d8', second: '#3e4a66' }, { id: 'aurora', name: $t('오로라'), body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'nebula', name: $t('은하'), mat: 'nebula', effect: 'twinkle' }] },
+    legendary: [{ id: 'nebula', name: $t('별구름'), mat: 'nebula', effect: 'twinkle' }] },
   { id: 'stegosaurus', name: $t('스테고사우루스'), habitat: 'dino', model: 'stegosaurus', colors: { horn: '#a4692f', hoof: '#d8c28c', paint: { belly: '#b4a466' } },
     palette: {
       solid: [{ id: 'khaki', name: $t('카키'), body: '#9c8a4c' }, { id: 'olive', name: $t('올리브'), body: '#a8b46a', horn: '#f0a050' }, { id: 'sky', name: $t('하늘'), body: '#9fc8ec', horn: '#f39ac0', seldom: true }],
@@ -728,7 +743,7 @@ export const SPECIES = [
       stripes: [{ id: 'lemon', name: $t('레몬'), body: '#fbe7a0', second: '#fffaf0' }, { id: 'sea', name: $t('바다'), body: '#7fb3e8', second: '#ffffff' }, { id: 'tiger', name: $t('호랑'), body: '#f0a848', second: '#3a2a22', seldom: true }],
       gradient: [{ id: 'sunset', name: $t('노을'), body: '#ffe066', second: '#ff7a59' }, { id: 'jungle', name: $t('정글'), body: '#d8f0a0', second: '#3e8a5a' }, { id: 'aurora', name: $t('오로라'), body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'lava', name: $t('용암 바위'), mat: 'lava', effect: 'sparks' }] },
+    legendary: [{ id: 'lava', name: $t('용암 등판'), mat: 'lava', effect: 'sparks' }] },
   { id: 'ankylosaurus', name: $t('안킬로사우루스'), habitat: 'dino', model: 'ankylosaurus', colors: { accent: '#6f5a3c', horn: '#cdb88a', hoof: '#d6c49a' },
     palette: {
       solid: [{ id: 'clay', name: $t('흙빛'), body: '#8e7c56' }, { id: 'slate', name: $t('돌빛'), body: '#9ca4a8', accent: '#6a7276' }, { id: 'rose', name: $t('장미'), body: '#e09a9a', accent: '#a85a6a', seldom: true }],
@@ -746,7 +761,7 @@ export const SPECIES = [
       stripes: [{ id: 'tiger', name: $t('호랑'), body: '#ffb23e', second: '#3a2a22' }, { id: 'sea', name: $t('바다'), body: '#7fb3e8', second: '#ffffff' }, { id: 'candy', name: $t('사탕'), body: '#ffffff', second: '#e8483c', seldom: true }],
       gradient: [{ id: 'sunset', name: $t('노을'), body: '#ffd08a', second: '#c25c3a' }, { id: 'lime', name: $t('라임'), body: '#f0f8b0', second: '#5aa040' }, { id: 'aurora', name: $t('오로라'), body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'amberbone', name: $t('호박 속 골격'), mat: 'amberbone', effect: 'motes' }] },
+    legendary: [{ id: 'amberbone', name: $t('호박 속 뼈대'), mat: 'amberbone', effect: 'motes' }] },
   { id: 'pteranodon', fit: { wings: { r: [0, 0, 0.15], p: [0.06, 0.1, 0] } }, name: $t('프테라노돈'), habitat: 'dino', model: 'pteranodon', colors: { accent: '#b5603c', hoof: '#7a6450', beak: '#dcc48e' },
     palette: {
       solid: [{ id: 'brown', name: $t('갈색'), body: '#8f7a62' }, { id: 'sand', name: $t('모래'), body: '#e6cfa0', accent: '#c25c3a' }, { id: 'white', name: $t('흰색'), body: '#f8f6f0', accent: '#f39ac0', seldom: true }],
@@ -755,13 +770,25 @@ export const SPECIES = [
       stripes: [{ id: 'lavender', name: $t('라벤더'), body: '#d2c4f0', second: '#ffffff' }, { id: 'lemon', name: $t('레몬'), body: '#fbe7a0', second: '#fffaf0' }, { id: 'ink', name: $t('먹색'), body: '#ffffff', second: '#3a3436', seldom: true }],
       gradient: [{ id: 'dawn', name: $t('새벽'), body: '#ffffff', second: '#f4a6b8' }, { id: 'sea', name: $t('바다'), body: '#eaf6ff', second: '#477cc6' }, { id: 'aurora', name: $t('오로라'), body: '#9ff0c8', second: '#a585f0', seldom: true }],
     },
-    legendary: [{ id: 'sunstone', name: $t('선스톤'), mat: 'sunstone', effect: 'twinkle' }] },
+    legendary: [{ id: 'sunstone', name: $t('햇살돌 날개'), mat: 'sunstone', effect: 'twinkle' }] },
 ];
 // ?m89 (photos only; without it nothing here changes): trials not yet public. The 97~111 concept-sheet looks (Tier_fox_rex,
 // Legends8: glass, lacquer, moon sheep, jade rabbit, 구미호 A·B) were dropped in 114 (user 2026-11-17); they are in git 598fc3a
 export const M89 = false; // release build: the 89-4·90 trial looks stay off (89-2)
+// 183 B (?m89 only; photos): which of the two looks the platinum polar bear and the bronze reindeer wear (1: cut facets / museum
+// bronze, 2: engraved fur / cut bronze). build-web.mjs pins it to 1
+export const LEG183 = 1; // release build: the 183 B trial choice off (behind M89 anyway)
 // 170 trial flag (photos only until the user OKs it): first 10 seconds, 애정 레벨, 「다음 할 일」 줄, day-2 legend egg·night notice·install prompt·attendance preview
 export const F170 = false; // release build: the 170 trial stays off
+// 182 ② trial flag (181 A tutorial, docs/tutorial.md): it runs on the 170 flow, so F170 above is on with it too; off in the release build
+export const TUT181 = false; // release build: the 181 tutorial stays off
+// 182 ④ trial flag (docs/concepts/custom-zone.md 13-1, 「나의 뜰」): the yard habitat, photos only; off in the release build (build-web.mjs)
+export const YARD = false; // release build: the 182 ④ yard trial stays off
+// bigIds: measured 2026-11-20 (decorModel triangles over 8,000; the median prop 2,258; rails aside)
+// the yard's steps 0..3 (5-1): open land cells a side, props / natives / animals at once; price: ♥ for steps 1..3; big: the props over
+// 8,000 triangles (measured in the browser, report 182y) at most this many together; level: the garden level it opens at, free
+export const YARD_B = { price: [30, 60, 120], cells: [16, 20, 24, 28], props: [40, 55, 70, 90], nat: [20, 26, 32, 40], animals: [4, 5, 6, 7], big: 10,
+  bigIds: ['waterwheel', 'snowslide', 'ev_slide', 'gym', 'picnic', 'slide', 'tower', 'ev_flakelamp'], level: 10, kit: [['bench', 1], ['tulips', 3], ['lantern', 1], ['fence', 1]], kitNat: [['tree', 2], ['bush', 3], ['rock', 1], ['wildflowers', 2]] };
 // 120 (public since 123): new slots for the rabbit and the sheep, looks made from code (materials.js 115); the old variants stay
 // as they are. tier 'often' (inbox 120: 「흔함」 쪽 가중치). mono: one colour only (the shader paints it), so no colour list (check-eggs). 솜사탕 (candy115) and 뜨개 니트 (knit115) dropped: their looks are kept, no slot
 // 125-A: 박하사탕·반딧불·뭉게구름 gone (user 11/17: only 밤하늘 stays): no egg hatches them, the codex shows one only to a player who has
@@ -856,8 +883,8 @@ for (const [sp, L] of Object.entries(LEGEND151)) SPECIES.find(s => s.id === sp).
 // 163 D 설원 전설 2번째 ① (?m89 시범; inbox 163 D): platinum, bronze statue (materials.js 163 D) on the snow bodies as they are.
 // Appended last; late: visit.js VL puts them after every look made before, so old link numbers stay
 export const LEGEND163 = {
-  polarBear: { id: 'platinum', name: $t('백금 북극곰'), mat: 'platinum163', effect: 'clearglints', late: 163 },
-  reindeer: { id: 'bronze', name: $t('청동 조각상 순록'), mat: 'bronze163', effect: 'goldglints', late: 163 },
+  polarBear: { id: 'platinum', name: $t('백금 북극곰'), mat: LEG183 === 2 ? 'plat183b' : 'plat183a', effect: 'clearglints', late: 163 }, // 183 B
+  reindeer: { id: 'bronze', name: $t('청동 조각상 순록'), mat: LEG183 === 2 ? 'bronze183b' : 'bronze183a', effect: 'goldglints', late: 163 },
   penguin: { id: 'obsidian', name: $t('흑요석 은테 펭귄'), mat: 'obsidian163', effect: 'silversparks', late: 163 }, // 163 D ②
   seal: { id: 'blackopal', name: $t('블랙 오팔 물범'), mat: 'blackopal163', effect: 'twinkle', late: 163 },
   arcticFox: { id: 'rosequartz', name: $t('로즈쿼츠 여우'), mat: 'rosequartz163', effect: 'roseglints', late: 163 }, // 163 D ③
@@ -866,10 +893,15 @@ export const LEGEND163 = {
 // 172 A: the penguin, seal, fox and owl public (user OK 11/19); the polar bear and the reindeer again (171 B, 172 B), still ?m89
 export const HOLD163 = ['polarBear', 'reindeer'];
 for (const [sp, L] of Object.entries(LEGEND163)) if (M89 || !HOLD163.includes(sp)) SPECIES.find(s => s.id === sp).legendary.push(L);
+// 183 B: 176 B's own platinum bear body (hump, collar, gem; pilot89_polarbear176_*.glb, tools/bake-polarbear176.mjs, git efe7235)
+// dropped: both 183 looks are cut / engraved into the polar bear's own body
 // 152 C 백록 (160 A 공개): the white deer of Halla, on the reindeer's own legend files (tools/bake-baengnok152.mjs: slimmer, a big
 // smooth antler, a silver cord and bell) in white porcelain, frost flowers at its feet (materials.js 152 C). 158: no longer a reindeer
 // legendary slot: the 신수 백록 (MYTHIC152 fig) wears it
 MODELS.reindeer.legend = { adult: 'assets/models/baengnok152_adult.glb', baby: 'assets/models/baengnok152_baby.glb' }; // 160 A: public (the pilot89 files renamed) // 156 C: the calf's own file too
+// 183 B (?m89): the bronze reindeer's own bodies (tools/bake-reindeer183.mjs: slim knee-jointed legs, a big sweeping antler, no ruff
+// or collar; hollows and worn ends baked in), a second file for each stage (figure.js loads a list); materials.js bronze183a/b put them on
+if (M89) for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st] = [MODELS.reindeer.legend[st], `assets/models/pilot89_reindeer183_${st}.glb`];
 // 163 A 공룡 방향 다시 (?m89 시범; tools/bake-dino163.mjs, from 161 A's crisp horns, plates, spikes, toes and claws): the
 // triceratops and stegosaurus as toys: the head 1.35x / 1.38x on a shorter neck, the body 0.85x as long and rounder (shoulders and
 // hips up a little, the waist in), short thick legs thinning to the ankle on wide three-toed feet, the beak one shape with the face
@@ -890,12 +922,15 @@ if (M89) {
     ankylosaurus: {
       adult: { h: 1.519, r: 0.802, seg: [-0.701, 0.75], legs: { hip: 0.46, x: [0.39, -0.44], z: 0.38 }, fade: { o: [1.389, 0.785, 0], n: [0.876, -0.482, 0], w: 0.054 }, attach: { head: { p: [0.984, 1.244, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.64, 0.94, 0], r: [0, 0, -1.3], s: 1.3 }, back: { p: [-0.1, 1.408, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.158, 1.032, 0], r: [0, 0, 0], s: 1.2 } } },
       baby: { h: 1.273, r: 0.677, seg: [-0.482, 0.653], legs: { hip: 0.34, x: [0.29, -0.32], z: 0.32 }, fade: { o: [1.182, 0.725, 0], n: [0.876, -0.482, 0], w: 0.05 }, attach: { head: { p: [0.82, 1.2, 0], r: [0, 0, -0.1], s: 1.2 }, neck: { p: [0.5, 0.8, 0], r: [0, 0, -1.3], s: 1.15 }, back: { p: [-0.1, 1.172, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [0.995, 0.95, 0], r: [0, 0, 0], s: 1.3 } } } },
-    // the pteranodon at 0.75 (inbox 161 ②; public 0.45), 125-C's four-legged walk (the wings step as front legs: walk.fore), its
-    // legs the body's colour with dark claws (public legMat 'hoof': all brown), the wing membrane lighter (materials.js memb163).
-    // ?m89&ptera=<size> keeps 125-C's body for its comparison instead
+    // the pteranodon at 0.75 (inbox 161 ②; public 0.45). 176 (the chat on 171 A's upright one: a penguin): on all fours again, a
+    // front-high 「A」 from the side (the folded wing's wrist above the shoulder, its hand on the ground in front, the wing finger
+    // and the membrane back down to the hind ankle), the hind legs short (body's colour, dark claws: public legMat 'hoof' all
+    // brown); the wings step as front legs (walk.fore) and lying fold down to half their height (walk.lie [angle, squash]: the
+    // body comes down, the hands and the membrane stay above the ground); the membrane a tone darker (materials.js memb163); the
+    // beak its own mesh (the commons' ivory fade, the sunstone's gold). ?m89&ptera=<size> keeps 125-C's body for its comparison instead
     ...!(p => p > 0 && p < 5)(+new URLSearchParams(location.search).get('ptera')) && { pteranodon: { // as the 125-C block above
-      adult: { h: 1.55, r: 0.34, seg: [-0.281, 1.135], legs: { hip: 0.42, x: [-0.24], z: 0.2 }, wing: [0.26, 0.86, 0.27], fade: { o: [1.072, 1.164, 0], n: [0.984, -0.177, 0], w: 0.053 }, attach: { head: { p: [0.692, 1.45, 0], r: [0, 0, -0.1], s: 1.05 }, neck: { p: [0.46, 1.04, 0], r: [0, 0, -0.95], s: 1 }, back: { p: [-0.06, 1.09, 0], r: [0, 0, 0.05], s: 0.9 }, eye: { p: [0.785, 1.292, 0], r: [0, 0, 0], s: 0.9 } } },
-      baby: { h: 1.364, r: 0.331, seg: [-0.173, 0.825], legs: { hip: 0.32, x: [-0.19], z: 0.2 }, wing: [0.19, 0.76, 0.26], fade: { o: [0.888, 1.03, 0], n: [0.984, -0.177, 0], w: 0.05 }, attach: { head: { p: [0.565, 1.343, 0], r: [0, 0, -0.1], s: 1.2 }, neck: { p: [0.36, 0.92, 0], r: [0, 0, -0.95], s: 1.1 }, back: { p: [-0.05, 0.976, 0], r: [0, 0, 0.05], s: 0.9 }, eye: { p: [0.679, 1.142, 0], r: [0, 0, 0], s: 1.2 } } } } },
+      adult: { h: 1.349, r: 0.232, seg: [-0.285, 1.186], legs: { hip: 0.24, x: [-0.2], z: 0.15 }, wing: [0.12, 0.62, 0.2], fade: { o: [0.895, 0.997, 0], n: [0.984, -0.177, 0], w: 0.055 }, attach: { head: { p: [0.498, 1.295, 0], r: [0, 0, -0.1], s: 1 }, neck: { p: [0.27, 0.8, 0], r: [0, 0, -0.63], s: 0.95 }, back: { p: [-0.1, 0.656, 0], r: [0, 0, 0.3], s: 0.8 }, eye: { p: [0.595, 1.13, 0], r: [0, 0, 0], s: 0.9 } } },
+      baby: { h: 1.131, r: 0.229, seg: [-0.185, 0.731], legs: { hip: 0.2, x: [-0.17], z: 0.13 }, wing: [0.1008, 0.5208, 0.168], fade: { o: [0.714, 0.844, 0], n: [0.984, -0.177, 0], w: 0.046 }, attach: { head: { p: [0.417, 1.131, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.23, 0.67, 0], r: [0, 0, -0.63], s: 0.85 }, back: { p: [-0.08, 0.554, 0], r: [0, 0, 0.3], s: 0.72 }, eye: { p: [0.521, 0.946, 0], r: [0, 0, 0], s: 1.15 } } } } },
     // 165 A2 (inbox 161 ③): the brachiosaurus (its nasal bump, nostrils, a neck thinning to the head, toed feet; no beak: its fade
     // plane far in front, _fade 0) and the T. rex (125 c's head 1.3x, baby 1.25x (hs 1.3 / 1.48), no mouth line, no brows, no teeth; its rex125 look, stripes and
     // glints kept; the amber legendary's bones refitted). ?m89&trex=1|2 keeps 125-B's pilots for that comparison instead
@@ -907,9 +942,9 @@ if (M89) {
       baby: { h: 2.077, r: 0.55, seg: [-1.473, 1.52], legs: { hip: 0.5, x: [0], z: 0.3 }, attach: { head: { p: [0.86, 2.064, 0], r: [0, 0, -0.1], s: 1.628 }, neck: { p: [0.327, 1.265, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.492, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.049, 1.78, 0], r: [0, 0, 0], s: 1.702 } } } } } };
   for (const [id, S] of Object.entries(D)) {
     const gems = id === 'triceratops' || id === 'stegosaurus', P = MODELS[id];
-    if (id === 'pteranodon') { SIZE.pteranodon = 0.75; P.walk = { ...P.walk, fore: 0.3 }; delete P.legMat; }
+    if (id === 'pteranodon') { SIZE.pteranodon = 0.75; P.walk = { ...P.walk, fore: 0.25, lie: [0, 0.5] }; delete P.legMat; }
     Object.assign(P, { files: { baby: f(id, 'baby'), adult: f(id, 'adult') }, paints: id === 'tRex' ? ['belly', 'mouth', 'stripe'] : id === 'stegosaurus' || id === 'brachiosaurus' ? ['belly', 'mouth'] : id === 'pteranodon' ? [] : ['mouth'],
-      m89: id === 'tRex' ? { solid: 'rex125' } : { solid: 'dino163', twotone: 'twotone163', spots: 'spots163', stripes: 'stripes163', gradient: 'gradient163' }, baby: sized(id, 'baby', S.baby), adult: sized(id, 'adult', S.adult),
+      m89: id === 'tRex' ? { solid: 'rex125' } : { solid: id === 'brachiosaurus' ? 'dino163b' : 'dino163', twotone: 'twotone163', spots: 'spots163', stripes: 'stripes163', gradient: 'gradient163' }, baby: sized(id, 'baby', S.baby), adult: sized(id, 'adult', S.adult),
       ...gems && { legend: { baby: f(id, 'gems_baby'), adult: f(id, 'gems_adult') } }, ...id === 'tRex' && { legend: { baby: f(id, 'bones_baby'), adult: f(id, 'bones_adult') } } }); // the legendaries' crystals on this pilot's frill / plates; the T. rex's amber bones
     const c = SPECIES.find(s => s.id === id).colors; c.paint = { ...c.paint, ...id !== 'pteranodon' && { mouth: '#3b2c26' }, ...id === 'stegosaurus' && { spike: c.hoof } }; // the stegosaurus' belly kept: its other looks paint it as public, dino163 gives it the body's material
   }
@@ -1004,6 +1039,7 @@ export const ZONES = {
     { id: 'springs', name: $t('김 나는 웅덩이'), side: '+z', w: 8, line: $t('화산 옆 따뜻한 웅덩이에 동물들이 들어가 졸아요.'), line143: $t('검은 화산 돌 비탈에 따뜻한 물웅덩이가 계단처럼 이어지고 작은 폭포로 흘러내려요. 김이 피어오르는 웅덩이에 공룡이 몸을 담그고 졸아요. 옆에는 현무암 기둥과 노란 유황이 묻은 김 구멍도 있어요.') },
   ],
 };
+if (YARD) ZONES.yard = []; // 182 ④: the yard grows from its middle (zones.js rectAt), no strips
 
 // In unlock order: each one opens when the one before it is far enough along (BALANCE.unlock). ready: false = not built yet.
 // room: each zone's space (square units, bodyArea) for animals out there (swim: MODELS move 'swim', walk: 'walk'; props don't take room, they are crowd.js obstacles).
@@ -1035,6 +1071,9 @@ export const HABITATS = [
   { id: 'dino', name: $t('공룡 정글'), short: $t('정글'), ready: !HOLD.dino, nest: 'dino_nest', room: { swim: 0, walk: 681 },
     map: { at: [125, 147], label: [125, 180], icon: 'triceratops' }, sound: ({ day, night, dry, rain }) => ({ birdsFar: day * dry, insects: (0.4 + 0.6 * night) * dry, stream: 0.4, frogs: 0.5 * night * (1 - rain), rainLeaves: rain }) },
 ];
+// 182 ④ (?yard): 「나의 뜰」, not in HABITATS (no nest, codex, eggs, unlock chain or guests); rules.js puts it in HAB
+export const YARD_HAB = { id: 'yard', name: $t('나의 뜰'), ready: true, room: {}, map: { at: [335, 410], label: [335, 449], icon: 'yard' },
+  sound: ({ day, night, dry, rain }) => ({ grassWind: 0.4 * dry + 0.15, birdsFar: day * dry, nightField: night * (1 - rain), insects: night * dry, rainLeaves: rain }) };
 
 // Habitat props (서식지 꾸미기): bought with hearts, a fixed price, no randomness; placed, turned and put away for free.
 // habitat: where it is sold (none: every habitat; bought there, it stays there). r: footprint radius (placement, crowd.js
@@ -1439,7 +1478,8 @@ export const BRUSHES = [{ id: 'grass', name: $t('풀'), c: '#86bf45', hab: ['mea
   { id: 'stonepath', name: $t('돌길'), c: '#cfc8bb', way: 1 }, { id: 'plank', name: $t('나무판길'), c: '#c99a63', way: 1 },
   { id: 'fenceline', name: $t('울타리'), c: '#c88a4b', stand: 1 }, { id: 'wall', name: $t('돌담'), c: '#a8a39a', stand: 1 }]; // c: the ground colour (terrain.js)
 // 25-1 hab: the habitats a brush paints in (none: all). 자갈 everywhere; 풀·흙길·모래·꽃밭 not on the snow (14-3: on the dino jungle too); 눈·얼음 only there
-export const brushIn = (b, habId) => !!BRUSHES[b] && (!BRUSHES[b].hab || BRUSHES[b].hab.includes(habId));
+if (YARD) BRUSHES.push({ id: 'water', name: $t('물'), c: '#8ccbe0', hab: ['yard'] }); // 182 ④: 11, shallow water to look at (terrain.js uPC.a)
+export const brushIn = (b, habId) => !!BRUSHES[b] && (habId === 'yard' || !BRUSHES[b].hab || BRUSHES[b].hab.includes(habId));
 
 // Egg kinds. species: who can hatch from it, picked evenly. odds: rarity weights (%). pity: its shard gauges (75: each egg its own;
 // a new egg tier comes only with a new egg kind and its own odds + pity, never by changing these). hatchScale: x BALANCE.hatch.

@@ -13,6 +13,7 @@ import { ask, toast } from './hud.js';
 import { seeLink, send } from './visit.js';
 import { readSee } from '../game/visit.js';
 import { track } from './stats.js';
+import { TOSS } from '../config.js';
 
 const $ = id => document.getElementById(id), el = $('share'), LIST = 'gardens/gardens.json';
 const habName = id => HABITATS.find(h => h.id === id)?.name ?? id;
@@ -40,6 +41,7 @@ function draw() {
   const url = seeLink(habId), q = qr(url), ghosts = G.S.ghost?.[habId]?.length || 0, v = $('shText')?.value || '';
   el.innerHTML = $t('<div><h2>구경 링크 · {0}</h2>\n<p class="bkp">소품 자리와 방향·색·크기, 쌓은 것, 칠한 땅, 넓히기 단계, 나와 있는 친구의 종류·색·장식이 담겨요. 이름·하트·알은 들어가지 않아요.</p>\n<div class="row"><b>배치 저장 칸</b>{1}</div>\n<div class="row"><b>구경 링크</b><p class="bkp">받은 사람은 이 서식지를 둘러보기만 해요 · 그 사람의 저장은 바뀌지 않아요</p>{2}\n<textarea id="shMine" rows="3" readonly spellcheck="false">{3}</textarea><div class="seg"><button data-act="send">링크 보내기</button><button data-act="copy">복사</button><button data-act="card">구경 그림</button></div></div>\n<div class="row"><b>불러오기</b><textarea id="shText" rows="3" placeholder="받은 구경 링크나 꾸미기 코드(TG1.…)를 붙여 넣어요" spellcheck="false" autocomplete="off"></textarea>\n<div class="seg"><button data-act="load">불러오기</button>{4}</div></div>\n<p class="bkmsg" role="status"{5}>{6}</p>\n{7}\n{8}\n<div class="row"><b>정원 구경하기</b>{9}</div>\n<input type="file" id="shFile" accept="image/*" hidden>\n<button data-close>닫기</button></div>', habName(habId), LAY_NAMES.map((d, k) => { const L = G.S.lays?.[habId]?.[k]; // 28-5: 3 named layouts, saved as their codes
     return $t('<div class="lay"><input id="lay{0}" maxlength="8" value="{1}" aria-label="{2}번 칸 이름" autocomplete="off"><button data-save="{3}">{4}</button><button data-lay="{5}"{6}>불러오기</button></div>', k, esc(L?.n ?? d), k + 1, k, L ? $t('덮어쓰기') : $t('저장'), k, L ? '' : ' disabled'); }).join(''), q ? $t('<img class="shqr" src="{0}" alt="구경 링크 QR">', q) : $t('<p class="bkp">배치가 많아 QR은 못 만들어요 · 링크를 보내 주세요</p>'), url, 'BarcodeDetector' in window ? $t('<button data-act="pick">QR 사진 고르기</button>') : '', msg ? '' : ' hidden', msg, G.S.layoutUndo?.hab === habId ? $t('<div class="row"><b>되돌리기</b><div class="seg"><button data-act="undo">불러오기 전으로 되돌리기</button></div></div>') : '', ghosts ? $t('<div class="row"><b>반투명 미리보기 {0}개</b><div class="seg"><button data-act="clear">미리보기 지우기</button></div></div>', ghosts) : '', gardenList());
+  if (TOSS) { $('shMine').closest('.row').remove(); el.querySelector('h2').textContent = $t('꾸미기 배치 · {0}', habName(habId)); } // 174
   $('shText').value = v;
   $('shFile').onchange = async e => { // a photo of a QR: the browser's own reader (Android Chrome and others; the button shows only then)
     const f = e.target.files[0]; if (!f) return;

@@ -7,7 +7,7 @@ import { dayOf } from './clock.js';
 export function heartFor(S, animal, now) {
   if (now - (animal.heartAt || 0) < BALANCE.heart.cooldown) return 0;
   animal.heartAt = now;
-  const day = dayOf(now); if (S.pet?.day !== day) S.pet = { day, n: 0 };
+  const day = dayOf(now); if (S.pet?.day !== day && !(now < S.jAt)) S.pet = { day, n: 0 }; // 176: not with the clock turned back (rules backDay)
   const n = Math.min(BALANCE.heart.perTap, BALANCE.heart.daily - S.pet.n);
   S.pet.n += n; return n;
 }

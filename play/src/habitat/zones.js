@@ -5,7 +5,7 @@
 // spots animals go to there (walk.js ctx.spots). zoneSet(hab, top) gathers those of the zones built (open or under mist);
 // the habitat's layout adds them to its height field, its walkable ground and its colours, its water (meadow water.js) draws
 // the pools and rills, and zoneprops.js builds what stands there.
-import { ZONES, UNIT } from '../game/data.js';
+import { ZONES, UNIT, HOLD, YARD_B } from '../game/data.js';
 
 // inbox 42 A: everything below in the old board's metres, times S (the zones' widths too; a pool's r, a rill's or a path's w
 // stay, so the wider board has more open ground round them)
@@ -14,6 +14,7 @@ export const BOARD0 = [-18, 18, -29, 29].map(v => v * S);
 const SIDE = { '+x': [1, 1], '-x': [0, -1], '+z': [3, 1] };
 // the board after step L (0: the first board)
 export function rectAt(hab, L) {
+  if (hab === 'yard') { const h = YARD_B.cells[Math.min(L, 3)] * S / 2; return [-h, h, -h, h]; } // 182 ④: the open land, a square round the middle
   const r = [...BOARD0];
   for (const z of ZONES[hab].slice(0, L)) { const [i, s] = SIDE[z.side]; r[i] += s * z.w * S; }
   return r;
@@ -90,7 +91,10 @@ export const REVEAL = { k: 0, skip: null }; // 129 넓히는 순간 (?s129, ?z14
 // Now the flower hill (flowerhill143), the small wood (grove143) and the fork (fork143); the reeds and the sandbar come under this flag next
 export const Z143 = 0; // release build: the 143 zone trial stays off
 // 150 (user OK 11/18): the flower hill, the small wood and the fork are public (no flag); the others still under ?z143=1
-export const PUB143 = new Set(['flowerhill', 'grove', 'fork']), z143on = id => Z143 || PUB143.has(id);
+// 176: the jungle opens with its 143 zones, tied to the jungle's own gate (HOLD.dino: the source has it open, the release build holds it,
+// tools/build-web.mjs), so opening the gate opens these too; the other habitats' 143 stays the trial
+export const JUNGLE143 = new Set(['fernwood', 'cliffs', 'riverbed', 'bigdig', 'mudflat', 'springs']);
+export const PUB143 = new Set(['flowerhill', 'grove', 'fork']), z143on = id => Z143 || PUB143.has(id) || !HOLD.dino && JUNGLE143.has(id);
 const SOAKD = { polarBear: 0.78, seal: 0.71, arcticFox: 0.63, reindeer: 0.63 }, SOAKERS = Object.keys(SOAKD), // how much of each is under the water: to just under its eyes (measured: the eyes' bottom x the sleep's squash - 0.05)
   MOSS = speck(['#6d8a4a', '#5f7d44', '#8a8580'], 0.45, 0.55);
 function spring129(s, v) {
@@ -577,20 +581,20 @@ const SHAPES = {
   // 14-3 the dino jungle. dig: an animal paws at the sand a while (walk.js), now and then turning up a fossil (rules.js dig);
   // roll: wallows in the mud (as the snow pile's roll)
   dino: {
-    fernwood: s => Z143 ? fernwood143(s) : [FACE(s, '#4e8a36', 0.85, { pat: speck(['#3f7a2c', '#5f9a3c', '#6aa640'], 0.35, 0.35) }), H(s, 0.5, 0.5, 2.8, 5, 0.6), // fern shade on a low rise
+    fernwood: s => z143on('fernwood') ? fernwood143(s) : [FACE(s, '#4e8a36', 0.85, { pat: speck(['#3f7a2c', '#5f9a3c', '#6aa640'], 0.35, 0.35) }), H(s, 0.5, 0.5, 2.8, 5, 0.6), // fern shade on a low rise
       SPOT(s, 0.3, 0.3, 'rest'), SPOT(s, 0.65, 0.5, 'nap'), SPOT(s, 0.35, 0.7, 'rest'), SPOT(s, 0.6, 0.9, 'rest')],
-    cliffs: s => Z143 ? cliffs143(s) : [FACE(s, '#7e8a58', 0.6), H(s, 0.55, 0.38, 3.4, 4.4, 9, { rock: 1, top: 0.3 }), TINT(s, 0.55, 0.38, 3.6, 4.6, ROCK, 1, { steep: 1 }), // a rock hill (3H)
+    cliffs: s => z143on('cliffs') ? cliffs143(s) : [FACE(s, '#7e8a58', 0.6), H(s, 0.55, 0.38, 3.4, 4.4, 9, { rock: 1, top: 0.3 }), TINT(s, 0.55, 0.38, 3.6, 4.6, ROCK, 1, { steep: 1 }), // a rock hill (3H)
       ...[[0.3, 0.66], [0.7, 0.8], [0.35, 0.93]].flatMap(([u, v]) => { const [x, z] = at(s, u, v); return [{ t: 'col', x, z, r: 1.1, h: 1.4 }, { t: 'tint', x, z, rx: 2.2, rz: 2.2, c: ROCK, a: 0.8 }]; }), // rock stacks: the pterosaur's perches
       SPOT(s, 0.55, 0.6, 'rest'), SPOT(s, 0.55, 0.87, 'nap'), SPOT(s, 0.25, 0.18, 'rest')],
-    riverbed: () => { if (Z143) return riverbed143(); const pts = P([[-24, 33.4], [-16, 31.6], [-8, 34.2], [0, 32.2], [8, 34.4], [16, 32.4], [24, 33.8]]);
+    riverbed: () => { if (z143on('riverbed')) return riverbed143(); const pts = P([[-24, 33.4], [-16, 31.6], [-8, 34.2], [0, 32.2], [8, 34.4], [16, 32.4], [24, 33.8]]);
       return [{ t: 'tint', pts, rw: 2.8, c: '#b8ad98', a: 0.9, pat: GRAVEL }, { t: 'rill', pts, w: 1.4 },
         ...SP([[-20, 30.8, 'rest'], [-4, 30.6, 'nap'], [12, 35.8, 'rest'], [20, 30.8, 'rest'], [4, 36.1, 'rest']])]; },
-    bigdig: s => Z143 ? bigdig143(s) : [FACE(s, SAND, 1, { pat: speck(['#d9c088', '#f0ddb0', '#c8a870'], 0.4, 0.4) }), { t: 'flat', r: s.r }, TINT(s, 0.5, 0.5, 2.6, 7, '#c8a870', 0.7), // the dug ground, darker
+    bigdig: s => z143on('bigdig') ? bigdig143(s) : [FACE(s, SAND, 1, { pat: speck(['#d9c088', '#f0ddb0', '#c8a870'], 0.4, 0.4) }), { t: 'flat', r: s.r }, TINT(s, 0.5, 0.5, 2.6, 7, '#c8a870', 0.7), // the dug ground, darker
       SPOT(s, 0.35, 0.45, 'dig', { r: 1.6 }), SPOT(s, 0.62, 0.75, 'dig', { r: 1.6 }), SPOT(s, 0.3, 0.88, 'rest'), SPOT(s, 0.72, 0.12, 'nap')],
-    mudflat: s => Z143 ? mudflat143(s) : [FACE(s, '#6e5a3a', 0.85, { pat: speck(['#5e4a30', '#7a6440', '#56703a'], 0.4, 0.5) }), POOL(s, 0.5, 0.28, 2.4, { murk: 1 }), POOL(s, 0.45, 0.72, 2.6, { murk: 1 }),
+    mudflat: s => z143on('mudflat') ? mudflat143(s) : [FACE(s, '#6e5a3a', 0.85, { pat: speck(['#5e4a30', '#7a6440', '#56703a'], 0.4, 0.5) }), POOL(s, 0.5, 0.28, 2.4, { murk: 1 }), POOL(s, 0.45, 0.72, 2.6, { murk: 1 }),
       TINT(s, 0.5, 0.5, 2.6, 4, '#5e4028', 0.8), // the wallow between the pools
       SPOT(s, 0.55, 0.5, 'roll', { r: 1.4 }), SPOT(s, 0.4, 0.48, 'roll', { r: 1.4 }), SPOT(s, 0.3, 0.9, 'rest'), SPOT(s, 0.7, 0.14, 'nap')],
-    springs: s => Z143 ? springs143(s) : [FACE(s, '#7a8a5a', 0.5), ...[[0.5, 0.25, 2.4], [0.45, 0.52, 2.8], [0.55, 0.78, 2.4]].flatMap(([u, v, r]) => [POOL(s, u, v, r, { hot: 1 }), TINT(s, u, v, r / S + 0.8, r / S + 0.8, '#a39a8a', 0.6)]),
+    springs: s => z143on('springs') ? springs143(s) : [FACE(s, '#7a8a5a', 0.5), ...[[0.5, 0.25, 2.4], [0.45, 0.52, 2.8], [0.55, 0.78, 2.4]].flatMap(([u, v, r]) => [POOL(s, u, v, r, { hot: 1 }), TINT(s, u, v, r / S + 0.8, r / S + 0.8, '#a39a8a', 0.6)]),
       SPOT(s, 0.4, 0.52, 'bath', { r: 0.6 }), SPOT(s, 0.52, 0.525, 'bath', { r: 0.6 }), SPOT(s, 0.5, 0.25, 'bath', { r: 0.6 }), SPOT(s, 0.55, 0.78, 'bath', { r: 0.6 }),
       SPOT(s, 0.5, 0.1, 'rest'), SPOT(s, 0.5, 0.92, 'rest'), SPOT(s, 0.5, 0.38, 'nap'), SPOT(s, 0.5, 0.65, 'nap')],
   },

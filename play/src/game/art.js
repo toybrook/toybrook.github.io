@@ -43,7 +43,7 @@ export const whoOf = a => `${PE[a.pe]?.name ?? ''} ${SP[a.species]?.name ?? ''}$
 export function artTick(S, now, ev) { // advance
   const A = S.art, hab = S.flags.lastHab; if (!A.here) A.here = now;
   for (const p of S.props) if (p.art?.ask && !p.placed) { delete p.art.ask; delete p.art.told; } // put away (꾸미기, 판 비우기): no more asking, as on load
-  if (S.flags.artOff || now - A.here < ART.idle || A.day === dayOf(now) || !hab || !S.unlocked.includes(hab) || !HAB[hab]?.ready || HOLD[hab] || waiting(S, hab) >= ART.max) return;
+  if (S.flags.artOff || now - A.here < ART.idle || A.day === dayOf(now) || !hab || hab === 'yard' || !S.unlocked.includes(hab) || !HAB[hab]?.ready || HOLD[hab] || waiting(S, hab) >= ART.max) return;
   const who = outIn(S, hab).filter(a => ART.pe.includes(a.pe)).sort((a, b) => a.id - b.id); if (!who.length) return;
   const n = Math.floor(now / 864e5), a = who[n % who.length], sh = shapes(a.pe, hab), prop = sh[Math.floor(n / who.length) % sh.length];
   const night = now - A.here >= 6 * 3600e3 && new Date(now).getHours() < 12;

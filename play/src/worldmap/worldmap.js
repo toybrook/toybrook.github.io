@@ -3,7 +3,7 @@
 import { $t } from '../i18n/i18n.js';
 import { toast, lockText } from '../ui/hud.js';
 import * as G from '../game/game.js';
-import { HABITATS } from '../game/data.js';
+import { HABITATS, YARD, YARD_HAB } from '../game/data.js';
 import { unlockInfo } from '../game/rules.js';
 
 const INK = '#6b4a2b', CREAM = '#fff4dc';
@@ -28,6 +28,8 @@ const ICON = {
   triceratops: `<ellipse cx="-3" cy="-2" rx="9.5" ry="9" fill="#e9c48d"/><ellipse cx="2.5" cy="3.5" rx="8" ry="6.6" fill="${CREAM}"/>
     <path d="M9 2.5 14.2 6 9 8.6z" fill="${CREAM}"/><path d="M-.6-1.4 3.4-11.6 3.2-.6zM4.6-.8 8.6-9.2 7.8.4zM10.6 1.2 12.6-3.6 12.4 2.4z" fill="#f6efe0"/>
     <circle cx="5.6" cy="1.6" r="1.1" fill="${INK}"/>`, // 14-3 the dino jungle's sign
+  yard: `<path d="M-11 9.5h22" stroke="#e9c48d" stroke-width="2.6" stroke-linecap="round"/><path d="M-7 9V-1M0 9V-4M7 9V-1" stroke="${CREAM}" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M-10 2.5h20M-10-.5h20" stroke="${CREAM}" stroke-width="1.8"/><circle cx="-3.5" cy="-9" r="3" fill="#f3a6a0"/><circle cx="4" cy="-8" r="2.6" fill="#f6d36b"/>`, // 182 ④ (?yard) 나의 뜰: a little fence and two flowers
 };
 const SIGN = icon => `<svg viewBox="-20 -20 40 50" aria-hidden="true">
   <rect x="-2.6" y="12" width="5.2" height="17" rx="2" fill="#8a5a2f"/>
@@ -39,11 +41,15 @@ const lockToast = id => toast(lockText(id), 3200);
 
 export function initWorldMap(root, { enter }) {
   const map = root.querySelector('#map'), made = [];
+  if (YARD && !root.querySelector('.spot[data-hab=yard]')) { // 182 ④ (?yard): the yard's spot, right of the meadow
+    const b = document.createElement('button'); b.className = 'spot'; b.dataset.hab = 'yard'; Object.assign(b.style, { left: '290px', top: '365px', width: '90px', height: '95px' });
+    root.querySelector('.spot[data-hab]').after(b);
+  }
   const add = (cls, [x, y], html) => { const e = document.createElement(cls === 'label' ? 'span' : 'div'); e.className = cls; e.style.left = x + 'px'; e.style.top = y + 'px'; e.innerHTML = html; map.appendChild(e); made.push(e); };
   function refresh() {
     for (const e of made.splice(0)) e.remove();
     for (const spot of root.querySelectorAll('.spot[data-hab]')) {
-      const h = HABITATS.find(h => h.id === spot.dataset.hab), P = h.map; // where its marker and label sit (data.js)
+      const h = HABITATS.find(h => h.id === spot.dataset.hab) ?? YARD_HAB, P = h.map; // where its marker and label sit (data.js)
       const state = !unlockInfo(G.S, h.id).open ? 'lock' : h.ready ? 'in' : 'soon';
       add(state === 'lock' ? 'mark lock' : 'mark sign', P.at, state === 'lock' ? LOCK : SIGN(P.icon));
       const word = { lock: $t('잠김'), in: $t('들어가기'), soon: $t('준비 중') }[state];

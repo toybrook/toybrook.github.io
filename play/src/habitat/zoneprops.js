@@ -115,9 +115,9 @@ export function zoneProps(scene, hab, o) {
     const f3 = on3 && s.id === 'fork', fore3 = (x, z) => f3 ? fore143(x, z) : fore(x, z); // 143 B the fork: no trees or bushes in its middle (the cottage, the wheel), no strewn rocks (heaps); low flowers stay
     const b3 = Z143 && s.id === 'sandbar', w3 = Z143 && s.id === 'falls', m3 = Z143 && s.id === 'mushroom' && Z.F.filter(f => f.zone === s.id && (f.t === 'house143' || f.t === 'glow143')); // q1: and none in front of the mushroom house or the glowing toadstools
     const d3 = Z143 && s.id === 'sled' && Z.F.find(f => f.zone === s.id && f.t === 'ramp'); // q1: and none on the sled hill's run, its steps or its run-out
-    const e3 = Z143 && s.id === 'fernwood' && Z.F.filter(f => f.zone === s.id && (f.t === 'bigfern143' || f.t === 'bed143')), clear3 = (x, z) => e3.some(f => Math.hypot(x - f.x, z - f.z) < (f.bed ? 4.5 : 7)); // q1: a clearing round the giant fern and its leaf beds
-    const c3 = Z143 && dino && Z.F.filter(f => f.zone === s.id && f.clr), cl3 = c3?.length ? (x, z) => c3.some(f => Math.hypot(x - f.x, z - f.z) < f.clr) : null; // q1 B the dino zones: a clearing round each thing with clr
-    const b4 = Z143 && dino && Z.F.filter(f => f.zone === s.id && f.bare), bare3 = b4?.length ? (x, z) => b4.some(f => f.pts ? polyD(x, z, f.pts) < f.bare : ((x - f.x) / f.bare[0]) ** 2 + ((z - f.z) / f.bare[1]) ** 2 < 1) : null;
+    const e3 = z143on(s.id) && s.id === 'fernwood' && Z.F.filter(f => f.zone === s.id && (f.t === 'bigfern143' || f.t === 'bed143')), clear3 = (x, z) => e3.some(f => Math.hypot(x - f.x, z - f.z) < (f.bed ? 4.5 : 7)); // q1: a clearing round the giant fern and its leaf beds
+    const c3 = z143on(s.id) && dino && Z.F.filter(f => f.zone === s.id && f.clr), cl3 = c3?.length ? (x, z) => c3.some(f => Math.hypot(x - f.x, z - f.z) < f.clr) : null; // q1 B the dino zones: a clearing round each thing with clr
+    const b4 = z143on(s.id) && dino && Z.F.filter(f => f.zone === s.id && f.bare), bare3 = b4?.length ? (x, z) => b4.some(f => f.pts ? polyD(x, z, f.pts) < f.bare : ((x - f.x) / f.bare[0]) ** 2 + ((z - f.z) / f.bare[1]) ** 2 < 1) : null;
     const fore4 = (x, z) => b3 ? sand143fore(x, z) : w3 ? falls143fore(x, z) : m3 ? m3.some(f => Math.abs(x - f.x) < 4.5 && z > (f.z ?? 61.5) - 2) : d3 ? Math.abs(x - d3.x) < 3 && z > d3.z0 - 1.5 && z < d3.z1 + 6 : e3 ? clear3(x, z) : cl3 ? cl3(x, z) : fore3(x, z); // 143 B the sandbar: no bushes or strewn rocks in its middle; the falls: no trees either before the cliff
     // the zone's own things first (the mix fills round them)
     const own = {
@@ -628,7 +628,7 @@ export function zoneProps(scene, hab, o) {
           for (const sd of [-0.26, 0.26]) tr.push({ x: px - dz / l * sd, y: y + 0.01, z: pz + dx / l * sd, s: [0.5, 1, 1], ry, c: '#e4f4fc' }); }
         scene.add(instanced(new THREE.BoxGeometry(1, 0.01, 0.09), toyMat('#ffffff', { roughness: 0.3 }), tr, { cast: false })); },
       // ---- 14-3 the dino jungle ----
-      fernwood() { if (Z143) { // q1 (zones.js fernwood143): first (the groves keep off them) the giant fern, the leaf beds and their heaps, the log, the nest. Its own stream
+      fernwood() { if (z143on(s.id)) { // q1 (zones.js fernwood143): first (the groves keep off them) the giant fern, the leaf beds and their heaps, the log, the nest. Its own stream
           let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, all = t => Z.F.filter(q => q.zone === s.id && q.t === t);
           for (const f of all('bigfern143')) { K3.treefern(f.x, f.z, 2.4); occupied.at(-1).r = 1.2; } // its trunk only blocks; its cover (a dry spot in the rain) as it is
           const g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 16, 10), LF = ['#5fa83c', '#4e8a36', '#6aa640'];
@@ -658,7 +658,7 @@ export function zoneProps(scene, hab, o) {
         for (const [u, v] of [[0.3, 0.15], [0.7, 0.3], [0.35, 0.5], [0.7, 0.68], [0.3, 0.84], [0.6, 0.97]]) { const [cx, cz] = at(u, v); // thick groves of tree ferns
           for (let i = 0; i < 4; i++) { const x = cx + (rnd() - 0.5) * 3.4, z = cz + (rnd() - 0.5) * 3.4; if (low(1.3, x, z) && !(e3 && clear3(x, z))) tree(x, z, 0.9 + rnd() * 0.45); } } },
       cliffs() { const h = Z.F.find(q => q.t === 'hill' && q.zone === s.id); occupied.push({ x: h.x, z: h.z, r: 0.7 * Math.min(h.rx, h.rz), h: h.h }); // no one climbs the rock
-        if (Z143) { // q1 B (zones.js cliffs143): its shoulders (no one climbs them either), vines down the faces to the view, the twig nests, the stone heaps. Its own stream
+        if (z143on(s.id)) { // q1 B (zones.js cliffs143): its shoulders (no one climbs them either), vines down the faces to the view, the twig nests, the stone heaps. Its own stream
           let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id);
           const g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 10, 8), leaf = new THREE.SphereGeometry(1, 7, 5), twig = new THREE.CylinderGeometry(0.03, 0.04, 1, 5), LV = ['#4e8a36', '#5fa83c', '#3f7a2c', '#6aa640'], RK = F.filter(q => q.t === 'hill' && q.h > 4);
           const V = THREE.Vector3, up = new V(0, 1, 0), nrm = (x, z) => new V(heightAt(x - 0.1, z) - heightAt(x + 0.1, z), 0.2, heightAt(x, z - 0.1) - heightAt(x, z + 0.1)).normalize(); // the rock's face there
@@ -679,7 +679,7 @@ export function zoneProps(scene, hab, o) {
         for (let i = 0; i < 14; i++) { const a = i / 14 * 6.283 + rnd() * 0.3, x = h.x + Math.cos(a) * h.rx * 1.02, z = h.z + Math.sin(a) * h.rz * 0.98; if (free(x, z, 0.4) && !nearSpot(x, z, 0.3)) rock(x, z, 0.5 + rnd() * 0.5); }
         for (const f of Z.F.filter(q => q.t === 'col' && q.zone === s.id)) for (let j = 0; j < 3; j++) { const a = rnd() * 6.283, x = f.x + Math.cos(a) * (f.r + 0.6), z = f.z + Math.sin(a) * (f.r + 0.6); if (free(x, z, 0.3)) rock(x, z, 0.28 + rnd() * 0.22); } }, // the pterosaur's rock stacks: stones at their feet
       riverbed() { const f = Z.rills.find(q => q.zone === s.id);
-        if (Z143) { // q1 B (zones.js riverbed143): the stepping stones (their tops to the ford spots), the fish that leap, the log over the stream, the heaps. Its own stream
+        if (z143on(s.id)) { // q1 B (zones.js riverbed143): the stepping stones (their tops to the ford spots), the fish that leap, the log over the stream, the heaps. Its own stream
           let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id), ball = new THREE.SphereGeometry(1, 14, 10);
           for (const p of F.find(q => q.act === 'ford').ford) { const [x, z] = p, wet = polyD(x, z, f.pts) < f.w - 0.4, top = wet ? Math.max(lv(f, x, z) + 0.18, heightAt(x, z) + 0.1) : heightAt(x, z) + 0.1; // as the fork's (both spots share the stones)
             const sx = 0.5 + r3() * 0.12, sy = wet ? 1.3 : 0.45; slabs.push({ x, y: top - 0.48 * sy, z, s: [sx, sy, sx * (0.85 + r3() * 0.15)], ry: r3() * 6.283, c: j3('#b3ada1', 0.05) }); if (k === popK) pop.slabs.push(slabs.length - 1);
@@ -705,7 +705,7 @@ export function zoneProps(scene, hab, o) {
         banks(f, 18, f.w + 0.3, f.w + 0.8, (x, z) => { if (free(x, z, 0.3) && !nearSpot(x, z, 0)) rock(x, z, 0.25 + rnd() * 0.3); }); // stones on the gravel banks
         banks(f, 26, f.w - 0.3, f.w + 0.2, (x, z) => { if (!nearSpot(x, z, 0.2)) R.tuft(x, z); }); }, // reeds at the water's edge
       bigdig() { // the dig: a huge rib cage standing in the sand, a horned skull and leg bones lying about (the fossil props, bigger)
-        if (Z143) { // q1 B (zones.js bigdig143): the whole skeleton in its pit, the string grid, the camp, the holes one digs open. Its own stream
+        if (z143on(s.id)) { // q1 B (zones.js bigdig143): the whole skeleton in its pit, the string grid, the camp, the holes one digs open. Its own stream
           let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id), one = t => F.find(q => q.t === t);
           const B = one('bones143'), G = one('grid143').r, C = one('camp143'), g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 12, 9), cyl = new THREE.CylinderGeometry(1, 1, 1, 12), BN = '#efe4cc', bn = { mat: { roughness: 0.7 } };
           const V = THREE.Vector3, up = new V(0, 1, 0), rod = (G0, a, b, r, c) => { const d = new V().subVectors(b, a), m = part(G0, new THREE.CylinderGeometry(r, r, 1, 5), c, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); m.scale.y = d.length(); m.quaternion.setFromUnitVectors(up, d.normalize()); return m; };
@@ -755,7 +755,7 @@ export function zoneProps(scene, hab, o) {
           for (const [u, v, ry] of [[0.25, 0.22, 0.4], [0.75, 0.62, 2.0], [0.3, 0.7, -0.8]]) { const [x, z] = at(u, v); if (free(x, z, 0.8)) fixture('fos_bone', x, z, ry, 0.8, heightAt(x, z) - 0.05, 0.4); } }
         for (let i = 0; i < 60; i++) { const [x, z] = at(0.1 + rnd() * 0.8, 0.12 + rnd() * 0.85); if (free(x, z, 0)) L.pebble.push({ x, y: heightAt(x, z) + 0.02, z, s: [0.14 + rnd() * 0.14, 0.07, 0.12 + rnd() * 0.1], ry: rnd() * 6, c: jitter(pickOf(['#c8a870', '#a89070', '#e2cfa0']), 0.08) }); } },
       mudflat() {
-        if (Z143) { // q1 B (zones.js mudflat143): the tracks, the wallow's wet mud, its print and splash, the bubbles, the puddles that grow in the rain, the log. Its own stream
+        if (z143on(s.id)) { // q1 B (zones.js mudflat143): the tracks, the wallow's wet mud, its print and splash, the bubbles, the puddles that grow in the rain, the log. Its own stream
           let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id), one = t => F.find(q => q.t === t);
           const R3 = kit(Lr, { rand: r3, heightAt, occupied }), MI = one('mire143'), W = one('wal143'), g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 12, 9), disc = new THREE.CircleGeometry(1, 16), flat = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
           const print = (x, z, a) => { const q = new THREE.Group(), c = j3('#3e2b1d', 0.04); // a three-toed print pressed into the mud, its toes along the way it went
@@ -839,7 +839,7 @@ export function zoneProps(scene, hab, o) {
           heaps(F, r3, j3); place(3, (x, z) => ok(x, z, 0.6) && Math.hypot(x - W.x, z - W.z) > 5.5, stump); }
         else { for (const p of pools) ringOf(p, 7, wl(p) - 0.4, wl(p) + 0.2, (x, z) => R.tuft(x, z)); place(4, (x, z) => ok(x, z, 0.6), stump); } },
       springs() {
-        if (Z143) { // q1 B (zones.js springs143): heaps of dark lava stones on the pools' far rims (none at a fall's lip or foot), basalt columns, the vent; the steam thick and slow (as hot spring A). Its own stream
+        if (z143on(s.id)) { // q1 B (zones.js springs143): heaps of dark lava stones on the pools' far rims (none at a fall's lip or foot), basalt columns, the vent; the steam thick and slow (as hot spring A). Its own stream
           let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, j3 = kit(L, { rand: r3, heightAt, occupied }).jitter, F = Z.F.filter(q => q.zone === s.id), falls = F.filter(q => q.t === 'fall');
           const gap = (x, z) => falls.some(f => Math.hypot(x - f.from[0], z - f.from[1]) < 1.3 || Math.hypot(x - f.to[0], z - f.to[1]) < 1.2);
           const lava = (x, z, sc, big) => { const sx = sc * (1.05 + r3() * 0.35), sy = sc * (0.6 + r3() * 0.25), sz = sc * (0.8 + r3() * 0.25), y = Math.max(lowest(x, z, 0.7 * Math.max(sx, sz)), heightAt(x, z) - 0.4 * sy) - 0.05 * sy; // half sunk

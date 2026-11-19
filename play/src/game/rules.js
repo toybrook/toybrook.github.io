@@ -8,7 +8,7 @@
 //              born, g (growth gauge 0..1 as of gAt), gAt, fed (feeds on fedDay), fedDay, hold (a 꼬마 사탕 holds its growth), adultAt,
 //              card (grown, its "다 자랐어요" card not seen yet), stored, heartAt, pending (hatched, reveal card not answered yet: not out
 //              in the habitat), newColor (pending only: a colour first seen on this card), fav (26-4 아끼는 친구: true | absent),
-//              nm (26-4 its name: cleanName | absent) }],
+//              nm (26-4 its name: cleanName | absent), j (170 B 정 레벨: { p points past the gauge, l level announced, d, n the day's pet·play bonus } | absent: affTick) }],
 //   codex:   { 'species:variant': { at (first one of it out: registered), adult (first seen grown up), h (26-5: the habitat whose nest it hatched from; absent before 0.60) } },   seen: [codex keys already looked at (or not new)],
 //   colors:  { 'species:variant': [colour ids seen on a reveal card] } (a layer inside a codex cell; never counts toward the codex),
 //   pity:    { [egg type]: { heroic, legendary } } (shards, BALANCE.pity),   album: { [accessory]: { species, variant, color, at } } (first seen),
@@ -26,7 +26,7 @@
 //   since (when this game began, 41), mailGot: [mail ids received], codes: [gift codes used, codeKey],
 //   giftRow: [eggs given over a full nest, at most BALANCE.nest.gifts] (112 선물 알; stats.release: eggs let go, 놓아주기),
 //   attend: { day: the last 출석 (dayOf), at: its time, n: slots had in all } (41 C), first: { [첫날 할 일 id | 'all']: when done } (41 D),
-//   fossil: { at: when the last fossil was dug up (14-3 dig; 0: none yet) } }
+//   fossil: { at: when the last fossil was dug up (14-3 dig; 0: none yet) }, jAt (170 B: friends' 정 counted up to then) }
 // stored: in storage (보관함): not out in the habitat, no slot limit, keeps its stage.
 // Animals are kept by species id + variant id only, so new content never breaks an old save; ids the
 // game no longer knows stay in the save untouched and are just not shown.
@@ -38,16 +38,18 @@ import { blank as artBlank, tidyArt, artTick } from './art.js'; // 17-2
 import { blank as wildBlank, tidyWild, wildTick } from './wild.js'; // 17-3
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
 import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's name
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD, YARD, YARD_B, YARD_HAB } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf } from './clock.js';
+import { F170 } from './data.js'; // 170 B
 import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore, falls143fore } from '../habitat/zones.js';
 import { lotus143off } from '../habitat/zones.js'; // 143 B the lotus marsh
 import { newlyDone } from './achieve.js';
 
 const byId = list => Object.fromEntries(list.map(x => [x.id, x]));
 export const SP = byId(SPECIES), HAB = byId(HABITATS), EGG = byId(EGG_TYPES), RAR = byId(RARITIES), EARNED = byId(EARNED_TIERS), PROP = byId(PROPS), NAT = byId(NATURE);
+if (YARD) HAB.yard = YARD_HAB; // 182 ④ 나의 뜰: a habitat for the rules (place, paint, expand, caps), not in HABITATS
 export const RANK = Object.fromEntries(RARITIES.map((r, i) => [r.id, i]));
 
 export const variantsOf = sp => [...SHARED_VARIANTS, ...(sp.extra || []), ...sp.legendary.map(l => ({ ...l, rarity: 'legendary' }))];
@@ -57,13 +59,13 @@ export const variantOf = (spId, vId) => typeof vId === 'object' ? (FIGS.has(vId)
 export const colorsOf = (spId, vId) => SP[spId]?.palette?.[vId] ?? variantOf(spId, vId)?.colors ?? [];
 export const colorOf = (spId, vId, cId) => { const cs = colorsOf(spId, vId); return cs.find(c => c.id === cId) ?? cs[0] ?? null; };
 export const key = (spId, vId) => spId + ':' + vId;
-export const habitatOf = a => a.hab || SP[a.species]?.habitat; // a.hab: a guest (settle)
+export const habitatOf = a => (YARD && a.stay) || a.hab || SP[a.species]?.habitat; // 182 ④ a.stay: called to the yard (game/yard.js) // a.hab: a guest (settle)
 // A species that moved to a habitat not open yet (19-2: the duck, meadow -> pond): its animals stay in the first habitat
 // (a.hab) till their own one opens, then move there. Run on every load and every unlock. Props bought there that moved too
 // (the lily pad, the duck house) go to the new habitat's storage once it is open (placed ones stay till then).
 const settle = S => {
   for (const a of S.animals) { const h0 = habitatOf(a), h = SP[a.species]?.habitat; if (h && !S.unlocked.includes(h)) a.hab = S.unlocked[0]; else delete a.hab; if (habitatOf(a) !== h0) delete a.home; } // inbox 53: another habitat, no pen
-  for (const p of S.props) { const h = PROP[p.prop]?.habitat; if (h && h !== p.hab && S.unlocked.includes(h)) { p.hab = h; p.placed = false; } }
+  for (const p of S.props) { const h = PROP[p.prop]?.habitat; if (h && h !== p.hab && p.hab !== 'yard' && S.unlocked.includes(h)) { p.hab = h; p.placed = false; } }
 };
 export const known = a => !!variantOf(a.species, a.variant);
 // codex cells of a habitat: every variant of every species living there, grouped by rarity in RARITIES order. A gone look (125-A)
@@ -75,7 +77,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: { s149spring: 1, z143hill: 1, z143fork: 1, z143grove: 1 }, myth: Object.fromEntries(MYTHIC.map(m => [m.id, {}])), visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank() }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: { s149spring: 1, z143hill: 1, z143fork: 1, z143grove: 1 }, myth: Object.fromEntries(MYTHIC.map(m => [m.id, {}])), visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank(), jAt: now }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   S.guests = guestsBlank(S); // 66-1
@@ -110,6 +112,7 @@ export function fromSave(raw, now) {
       ids(S); S.nextId = Math.max(Math.floor(num(S.nextId, 1, Number.MAX_SAFE_INTEGER)), top + 1); } // never hands out an id that is already used
     for (const a of S.animals) { const n = cleanName(a.nm); if (n) a.nm = n; else delete a.nm; if (a.fav !== true) delete a.fav; if (!(Array.isArray(a.home) && a.home.length === 2 && a.home.every(v => Number.isFinite(v) && Math.abs(v) < 1e3))) delete a.home; if (a.wd != null && !GUESTS.some(R => R.k === a.wd)) delete a.wd; } // 26-4: a backup code is text from outside; 53 home; 66-2 wd
     tidy(S); // 28-5
+    tidyAff(S, now); // 170 B
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
     if (!Number.isFinite(raw.since)) S.since = Math.min(now, ...Object.values(S.codex).map(e => e?.at), ...S.animals.map(a => a.born)) || now; // 41: before 0.71, the first animal
     S.mailGot = S.mailGot.filter(x => typeof x === 'string'); S.codes = S.codes.filter(x => typeof x === 'string'); S.giftEggs = Math.min(99, Math.max(0, Math.floor(S.giftEggs) || 0)); // 44
@@ -142,7 +145,7 @@ export function fromSave(raw, now) {
 }
 // Save migrations: MIGRATIONS[v] turns a v-1 save into a v save. A new save shape = SCHEMA_VERSION + 1 in data.js and a
 // step here (fields that only need a default don't need one: newGame fills them). 1 and 2 had no steps.
-const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10, 11: to11, 12: S => { for (const a of S.animals) if (a.acc) a.s = 1; }, 13: mythTo13 }; // 12 (95): a friend that hatched in a secret accessory keeps the x2 send-back (a.s), the one worn stays on it, none kept yet // 4: animals over the new room go to storage on the first advance
+const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10, 11: to11, 12: S => { for (const a of S.animals) if (a.acc) a.s = 1; }, 13: mythTo13, 14: affTo14 }; // 12 (95): a friend that hatched in a secret accessory keeps the x2 send-back (a.s), the one worn stays on it, none kept yet // 4: animals over the new room go to storage on the first advance
 // 2 -> 3 (16-2): 대리석 left the launch list (-> 유리), 황금 too (-> the species' remaining legendary); every animal gets
 // its variant's first colour, which also counts as seen. Codex entries move with them (the earliest date wins).
 function to3(S) {
@@ -378,7 +381,8 @@ export function advance(S, now, rng = Math.random) {
   const ev = [];
   for (const h of HABITATS) {
     if (!h.nest || !h.ready || !S.unlocked.includes(h.id)) continue;
-    const n = S.nests[h.id] ??= { t: now, eggs: [] };
+    // 176: a 0.75 save had the jungle in unlocked while it was held (no nest made, no onUnlock eggs): its nest starts with one egg
+    const n = S.nests[h.id] ??= { t: now, eggs: h.id === 'dino' ? [layEgg(S, h.nest, rng)] : [] };
     if (n.t > now) n.t = now; // clock went back
     for (let g; n.eggs.length < B.nest.max && now - n.t >= (g = eggGap(S)); ) { n.t += g; n.eggs.push(layEgg(S, h.nest, rng)); ev.push({ type: 'egg', habitat: h.id }); }
     if (n.eggs.length >= B.nest.max) n.t = now; // a full nest doesn't bank time
@@ -391,11 +395,13 @@ export function advance(S, now, rng = Math.random) {
     register(S, a, a.adultAt); const e = S.codex[key(a.species, a.variant)], isNew = e.adult == null; if (isNew) e.adult = a.adultAt;
     S.xp += B.level.xp.grown; bump(S, 'grown'); ev.push({ type: 'grown', animal: a, isNew });
   }
+  affTick(S, now, ev); // 170 B
   ev.push(...enforceCap(S));
   HABITATS.forEach((h, i) => { if (i && h.ready && !S.unlocked.includes(h.id) && unlockInfo(S, h.id).met) { S.unlocked.push(h.id); settle(S);
     if (h.nest && h.ready && !S.nests[h.id]) S.nests[h.id] = { t: now, eggs: Array.from({ length: B.nest.onUnlock }, () => layEgg(S, h.nest, rng)) }; // inbox 31: eggs to start with
     ev.push({ type: 'unlock', habitat: h.id }); } });
-  const day = dayOf(now); if (S.xpDay !== day) { S.xpDay = day; S.xp += B.level.xp.login; bump(S, 'days'); } // the day's first visit (or the game left open past midnight)
+  if (YARD && !S.unlocked.includes('yard') && unlockInfo(S, 'yard').met) { S.unlocked.push('yard'); ev.push({ type: 'unlock', habitat: 'yard' }); } // 182 ④
+  const day = dayOf(now); if (S.xpDay !== day && !backDay(S, now)) { S.xpDay = day; S.xp += B.level.xp.login; bump(S, 'days'); } // the day's first visit (or the game left open past midnight)
   for (const a of newlyDone(S)) { S.ach = { ...S.ach, [a.id]: now }; S.xp += B.level.xp.achieve; ev.push({ type: 'achieve', id: a.id }); } // 23-2
   wholeTick(S, ev); // 66-3
   firstCheck(S, now, ev, rng); // 41 D
@@ -423,8 +429,9 @@ export const unlocksBetween = (from, to) => Object.entries(LV.unlock).filter(([L
 // Habitat cap: maxVisible animals out, and each zone's room (HABITATS room: every animal counts at its adult body size),
 // both grown by 땅 넓히기 (BALANCE.expand).
 export const levelOf = (S, habId) => S.expand?.[habId] || 0;
-export const capOf = (S, habId) => { const L = levelOf(S, habId); return L ? B.expand.visible[L - 1] : B.maxVisible; };
-export const decorCap = (S, habId) => { const L = levelOf(S, habId); return L ? B.expand.decor[L - 1] : B.decor.max; }; // props placed at once
+const yL = S => Math.min(levelOf(S, 'yard'), YARD_B.cells.length - 1); // 182 ④ the yard's own steps (YARD_B)
+export const capOf = (S, habId) => { if (habId === 'yard') return YARD_B.animals[yL(S)]; const L = levelOf(S, habId); return L ? B.expand.visible[L - 1] : B.maxVisible; };
+export const decorCap = (S, habId) => { if (habId === 'yard') return YARD_B.props[yL(S)]; const L = levelOf(S, habId); return L ? B.expand.decor[L - 1] : B.decor.max; }; // props placed at once
 export const roomOf = (S, h, zone) => { const L = levelOf(S, h.id), r = h.room?.[zone]; return r == null ? null : r * (L ? B.expand.room[L - 1] : 1); };
 export const zoneOf = a => MODELS[SP[a.species]?.model]?.move;
 export const need = a => { const m = MODELS[SP[a.species]?.model]; return m ? bodyArea(m.adult) : 0; };
@@ -455,6 +462,7 @@ function enforceCap(S) {
 
 // Next habitat's lock: a fixed number of the previous one's codex cells (138-A) + hearts (a threshold, not spent). Once open, open for good.
 export function unlockInfo(S, habId) {
+  if (habId === 'yard') return { open: S.unlocked.includes('yard'), met: (S.lv || 1) >= YARD_B.level, level: YARD_B.level }; // 182 ④ free at its level
   const i = HABITATS.findIndex(h => h.id === habId), prev = HABITATS[i - 1];
   if (i <= 0) return { open: true, met: true };
   const cells = codexCells(prev.id).length, have = codexCells(prev.id).filter(c => S.codex[c.key]).length;
@@ -553,7 +561,8 @@ function strollBack(S, now, ev, rng) {
   for (const a of S.animals.filter(a => a.stroll).sort((a, b) => a.stroll.end - b.stroll.end)) {
     const w = a.stroll; w.end = Math.min(w.end, now + w.h * 3600e3); if (now < w.end) continue;
     const R = B.stroll, prop = rng() < R.prop[w.h] ? STROLL_PROPS[S.strolls % STROLL_PROPS.length] : null;
-    const got = give(S, { hearts: R.hearts[w.h], candy: R.candy[w.h], prop }, now, rng, habitatOf(a));
+    const got = give(S, { hearts: Math.round(R.hearts[w.h] * (AFF.on && affLevel(a, w.end) >= 10 ? B.aff.gift : 1)), candy: R.candy[w.h], prop }, now, rng, habitatOf(a)); // 170 B: 단짝 a little more
+    if (a.stage !== 'baby' || a.hold) (a.j ??= { p: 0, l: 0 }).p += w.h * B.aff.stroll; // 170 B (a growing baby: its gauge)
     if (got.prop) S.strolls++;
     delete a.stroll; bank(a, w.end); a.stored = !fits(S, a);
     const card = { id: S.nextId++, a: a.id, sp: a.species, v: a.variant, c: a.color, acc: a.acc, st: a.stage, nm: callName(a), pl: w.pl, ln: w.ln, h: w.h, at: w.end, hearts: got.hearts, candy: got.candy, prop: got.prop, new: true };
@@ -670,7 +679,7 @@ export function setDisplay(S, k, cId) {
 export const displayColor = (S, k) => S.display[k] ?? S.colors[k]?.[0] ?? null;
 // 꾸미기: buy with hearts (put away), place/turn (free; where it may go is the habitat's layout.js), put away
 export function buyProp(S, propId, habId) { // habId: where it was bought (a prop sold everywhere stays there)
-  const P = PROP[propId], hab = P?.habitat ?? habId; if (!P || P.paid || P.gift || S.hearts < P.price || !hab || !(can(S, 'prop:' + P.id) || tutShop(S) === P.id)) return null; // 41: a gift one only comes as a gift; 66-1: the tutorial's 등불 before its Lv
+  const P = PROP[propId], hab = habId === 'yard' ? 'yard' : P?.habitat ?? habId; if (!P || P.paid || P.gift || S.hearts < P.price || !hab || !(can(S, 'prop:' + P.id) || tutShop(S) === P.id)) return null; // 41: a gift one only comes as a gift; 66-1: the tutorial's 등불 before its Lv
   S.hearts -= P.price;
   const p = { uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 };
   S.props.push(p); return p;
@@ -681,7 +690,7 @@ export function buyProp(S, propId, habId) { // habId: where it was bought (a pro
 const hid = id => [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
 export function shelfOf(S, habId, now) {
   const C = B.shelf, T = C.hours * 3600e3, k = Math.floor(now / T), ends = (k + 1) * T;
-  const pool = PROPS.filter(P => (P.habitat ?? habId) === habId && !P.gift && !P.paid && !P.rail && !P.stamp && can(S, 'prop:' + P.id)).sort((a, b) => hid(a.id) - hid(b.id));
+  const pool = PROPS.filter(P => (habId === 'yard' ? !P.water && !P.art : (P.habitat ?? habId) === habId) && !P.gift && !P.paid && !P.rail && !P.stamp && can(S, 'prop:' + P.id)).sort((a, b) => hid(a.id) - hid(b.id));
   const n = Math.min(C.n, pool.length), items = [];
   for (let i = 0; i < n; i++) { const P = pool[(k * C.n + i) % pool.length], off = i === k % n; items.push({ id: P.id, off, price: off ? Math.round(P.price * (1 - C.off)) : P.price }); }
   if (n && k % C.every === 0) { const it = items[(k + 1) % n], pal = paletteOf(PROP[it.id]) || [], xs = pal.map((e, c) => e[2] ? c : 0).filter(Boolean);
@@ -689,17 +698,17 @@ export function shelfOf(S, habId, now) {
   return { k, ends, items };
 }
 export function buyShelf(S, habId, i, now) {
-  const it = shelfOf(S, habId, now).items[i], P = it && PROP[it.id], hab = P?.habitat ?? habId; if (!P || S.hearts < it.price) return null;
+  const it = shelfOf(S, habId, now).items[i], P = it && PROP[it.id], hab = habId === 'yard' ? 'yard' : P?.habitat ?? habId; if (!P || S.hearts < it.price) return null;
   S.hearts -= it.price;
   const p = { uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 }; if (it.price !== P.price) p.cost = it.price;
   if (it.c) { p.c = it.c; const L = S.looks[P.id] || []; if (!L.includes(it.c)) { S.looks[P.id] = [...L, it.c]; p.nl = 1; } }
   S.props.push(p); return p;
 }
 // 땅 넓히기: the next step of an open habitat, for hearts
-export const expPrice = (S, habId) => { const p = B.expand.price[levelOf(S, habId)]; return p != null && S.freeExp?.[habId] ? 0 : p; }; // 66-3: a free step (모으기 판)
+export const expPrice = (S, habId) => { if (habId === 'yard') return YARD_B.price[levelOf(S, habId)]; const p = B.expand.price[levelOf(S, habId)]; return p != null && S.freeExp?.[habId] ? 0 : p; }; // 66-3: a free step (모으기 판)
 export function buyExpand(S, habId) {
   const L = levelOf(S, habId), price = expPrice(S, habId), free = price === 0;
-  if (!HAB[habId] || !S.unlocked.includes(habId) || price == null || S.hearts < price || !can(S, 'expand:' + (L + 1))) return null;
+  if (!HAB[habId] || !S.unlocked.includes(habId) || price == null || S.hearts < price || habId !== 'yard' && !can(S, 'expand:' + (L + 1))) return null; // 182 ④ the yard: no level per step
   S.hearts -= price; S.expand = { ...S.expand, [habId]: L + 1 }; if (free) S.freeExp = { ...S.freeExp, [habId]: S.freeExp[habId] - 1 };
   return { level: L + 1, events: [{ type: 'expand', habitat: habId, level: L + 1, free }] };
 }
@@ -721,7 +730,10 @@ export const placedIn = (S, habId) => S.props.filter(p => p.placed && p.hab === 
 // 28-4: rail pieces placed in a habitat (PROPS rail: a bridge counts 2), toward B.decor.rails
 export const railsIn = (S, habId) => S.props.reduce((n, p) => n + (p.placed && p.hab === habId && PROP[p.prop]?.rail || 0), 0);
 // one more of this kind (n more not placed yet before it) would go over: decorCap, or for a rail piece B.decor.rails
-export const capped = (S, habId, prop, n = 0) => { const r = PROP[prop]?.rail; if (PROP[prop]?.art) return false; return r ? railsIn(S, habId) + r * (n + 1) > B.decor.rails : placedIn(S, habId).length + n >= decorCap(S, habId); };
+export const natCap = S => YARD_B.nat[yL(S)], natIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && p.nat).length; // 182 ④
+export const bigIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && YARD_B.bigIds.includes(p.prop)).length;
+export const capped = (S, habId, prop, n = 0) => { if (habId === 'yard') { if (NAT[prop]) return natIn(S, habId) + n >= natCap(S); if (YARD_B.bigIds.includes(prop) && bigIn(S, habId) + n >= YARD_B.big) return true; } // 182 ④ the yard's nature and big ones
+  const r = PROP[prop]?.rail; if (PROP[prop]?.art) return false; return r ? railsIn(S, habId) + r * (n + 1) > B.decor.rails : placedIn(S, habId).length + n >= decorCap(S, habId); };
 // 22-1: the habitat's own nature (NATURE) handed over by its build: list [{ prop, x, z, s, v, ring }] (first-board units), rings:
 // how many rings the build planted (the meadow: its first board + one per 땅 넓히기 step; the pond: 1). Only rings not done yet.
 export function addNatives(S, habId, list, rings) {
@@ -787,7 +799,7 @@ export function topAt(h, k) {
   const f = sizeF(PROP[h.prop], h.sz), c = Math.cos(h.rot || 0), s = Math.sin(h.rot || 0);
   return { x: +(h.x + (t[0] * c + t[2] * s) * f / UNIT).toFixed(4), z: +(h.z + (-t[0] * s + t[2] * c) * f / UNIT).toFixed(4), y: t[1] * f }; // inbox 42 A: a top's metres in saved units
 }
-const seatFree = (S, h, k, p) => !!PROP[h?.prop]?.top?.[k] && h.placed && !S.props.some(o => o !== p && o.placed && o.on === h.uid && o.sl === k);
+export const seatFree = (S, h, k, p) => !!PROP[h?.prop]?.top?.[k] && h.placed && !S.props.some(o => o !== p && o.placed && o.on === h.uid && o.sl === k);
 // what a save may hold (a backup code is text from outside): c and sz in range (else dropped: 0); a small prop whose prop under
 // it went (put away, sold, moved off) goes into storage; one on a prop moved (고르기, 되돌리기) stands on its spot again
 export function tidy(S) {
@@ -852,7 +864,7 @@ export const clearGhost = (S, habId) => { if (!S.ghost?.[habId]?.length) return 
 // only, the spot free; x, z then from the spot). What stands on it moves and turns with it.
 export function placeProp(S, uid, x, z, rot, ex = {}) {
   const p = S.props.find(p => p.uid === uid); if (!p) return null;
-  if (!p.placed && !p.nat && capped(S, p.hab, p.prop)) return null;
+  if (!p.placed && (!p.nat || p.hab === 'yard') && capped(S, p.hab, p.prop)) return null; // 182 ④ the yard's nature has a cap
   const h = ex.on != null && S.props.find(o => o.uid === ex.on);
   if (ex.on != null && !(PROP[p.prop]?.small && h && h !== p && h.hab === p.hab && seatFree(S, h, ex.sl, p))) return null;
   if (!p.placed && p.nat && p.prop === 'tree') bump(S, 'plant'); // 23-2 나무 심기: one put away, planted again
@@ -945,11 +957,11 @@ export function accOn(S, id, k) {
 export function noteLive(S, k, n) { if (!(n > (S.stats?.[k] || 0))) return false; S.stats[k] = n; return true; }
 export function setTitle(S, id) { if (id != null && !S.ach?.[id]) return false; S.title = id; return true; }
 // feeding a growing baby: + BALANCE.grow.feed, at most grow.feeds a day each (the device's local day)
-export const feedsLeft = (a, now) => a.fedDay === dayOf(now) ? Math.max(0, B.grow.feeds - (a.fed || 0)) : B.grow.feeds;
+export const feedsLeft = (a, now, S) => a.fedDay === dayOf(now) || (S && backDay(S, now)) ? Math.max(0, B.grow.feeds - (a.fed || 0)) : B.grow.feeds;
 export function feed(S, id, now) {
   const a = S.animals.find(a => a.id === id);
-  if (!a || !growing(a) || !feedsLeft(a, now)) return false;
-  const day = dayOf(now); if (a.fedDay !== day) { a.fedDay = day; a.fed = 0; }
+  if (!a || !growing(a) || !feedsLeft(a, now, S)) return false;
+  const day = dayOf(now); if (a.fedDay !== day && !backDay(S, now)) { a.fedDay = day; a.fed = 0; } // 182 A: the clock turned back is not a new day
   bank(a, now); a.fed++; a.g = Math.min(1, a.g + B.grow.feed); bump(S, 'feed'); return true;
 }
 // petting: the heart rule (hearts.js); a tap that gives a heart also adds BALANCE.grow.pet to a growing baby
@@ -960,7 +972,8 @@ export function tapHeart(S, id, now, rng = Math.random, ev = null) { // ev: 158 
     if (L.e.earn.luck && rng() < L.e.earn.luck) { L.R.luck++; evEarn(S, L.R, 1, now); } } } // 15-2: now and then one more
   if (n && S.pet.n <= B.level.xp.petDaily) S.xp += B.level.xp.pet; // the day's first petDaily hearts (hearts.js counts them)
   if (ev && a && S.animals.includes(a)) mythLuck(S, a, now, rng, ev);
-  S.hearts += n; return n;
+  const x = n && S.animals.includes(a) ? affPet(S, a, now) : 0; // 170 B
+  S.hearts += n + x; return n + x;
 }
 // ms till grown on time alone (null: not growing)
 export const growLeft = (a, now) => growing(a) ? (1 - gauge(a, now)) * growTime(a) : null;
@@ -981,6 +994,49 @@ export function letGrow(S, id, now) {
 }
 // the "다 자랐어요" cards were seen
 export function grownSeen(S, ids) { for (const a of S.animals) if (ids.includes(a.id)) delete a.card; }
+// 170 B 정 레벨 (BALANCE.aff): one bar per friend, Lv1..Lv10, never down. Its front part is the growth gauge (x aff.at[3]); past
+// it a.j.p: aff.idle an hour while it is out and not a growing baby (grown, or held by a 꼬마 사탕: the level goes on, the look
+// stays baby), the day's first pet (aff.first), pets and play scenes (at most aff.day a day each), a walk (aff.stroll an hour away).
+// Points add up with the flag off too (nothing shows; turning it on starts nobody over); AFF.on (?f170): the level-up event, the
+// first pet's hearts, the 단짝's walk. check-eggs sets AFF.on. C·D: affLevel(a, now), G.affOf(id), event { type: 'affLevel', animal, level, from }
+export const AFF = { on: F170 };
+const affPts = (a, now) => B.aff.at[3] * (a.stage === 'adult' ? 1 : gauge(a, now)) + (a.j?.p || 0);
+const lvAt = p => { const at = B.aff.at; let L = 1; while (L < at.length && p >= at[L]) L++; return L; };
+export const affLevel = (a, now) => lvAt(affPts(a, now));
+// the card's one bar: what is filling now (a growing baby: its growth gauge; else the way to the next level; Lv10: full)
+export const affBar = (a, now) => { if (growing(a)) return gauge(a, now); const p = affPts(a, now), L = lvAt(p), at = B.aff.at; return L >= at.length ? 1 : (p - at[L - 1]) / (at[L] - at[L - 1]); };
+function affTick(S, now, ev) {
+  const t0 = S.jAt ?? now, back = new Map(); if (!(S.jAt > now)) S.jAt = now; // the clock back: nothing till it is past jAt again
+  for (const e of ev) if (e.type === 'strollBack') back.set(e.animal, e.card.at); else if (e.type === 'grown') back.set(e.animal, e.animal.adultAt); // out (or grown) only since then
+  for (const a of S.animals) {
+    const j = a.j ??= { p: 0, l: 0 }, h = Math.max(0, now - Math.max(t0, back.get(a) ?? 0)) / 3600e3; if (h && !a.stored && !a.pending && !growing(a)) j.p += h * B.aff.idle;
+    const L = affLevel(a, now); if (L > j.l) { if (j.l && AFF.on) ev.push({ type: 'affLevel', animal: a, level: L, from: j.l }); j.l = L; } // l 0: a new one, quietly
+  }
+}
+// 176: the clock turned back (now before S.jAt, the latest time the game has seen) is never a new day: no fresh day caps
+const backDay = (S, now) => now < S.jAt;
+const bonus = (S, a, now, k) => { const j = a.j ??= { p: 0, l: 0 }, day = dayOf(now); if (j.d !== day) { if (backDay(S, now)) return 0; j.d = day; j.n = 0; } const x = Math.max(0, Math.min(k, B.aff.day - j.n)); j.n += x; j.p += x; return x; };
+// a pet that gave a heart (tapHeart): the day's first of this friend a big step (and, AFF.on, floor(Lv/2) hearts more, capped); then a small one
+function affPet(S, a, now) {
+  if (growing(a)) return 0; // a growing baby's pet is in its gauge (B.grow.pet)
+  const day = dayOf(now), A = B.aff;
+  if (a.j?.f !== day && !backDay(S, now)) { const L = affLevel(a, now); (a.j ??= { p: 0, l: 0 }).f = day; a.j.p += A.first; if (!AFF.on) return 0;
+    const x = Math.max(0, Math.min(A.heart, Math.floor(L / 2), A.heartDay - (S.pet.jb || 0))); S.pet.jb = (S.pet.jb || 0) + x; return x; } // S.pet: hearts.js starts it over each day
+  bonus(S, a, now, A.pet); return 0;
+}
+// a play scene (play.js): each friend in it, not a growing baby
+export function affPlay(S, ids, now) { let n = 0; for (const a of S.animals) if (ids.includes(a.id) && !a.pending && !growing(a)) n += bonus(S, a, now, B.aff.play); return n; } // the points added (0: all at the day's cap)
+function affTo14(S, now) { for (const a of S.animals) a.j = { p: 0, l: affLevel(a, now) }; S.jAt = now; } // 13 -> 14: each friend from where it has grown to
+function tidyAff(S, now) { // 135: a save from outside: numbers in range, a day a short text
+  const num = (v, hi) => Number.isFinite(v) ? Math.min(hi, Math.max(0, v)) : 0, day = v => typeof v === 'string' && v.length < 40;
+  for (const a of S.animals) { const j = a.j; if (j === undefined) continue;
+    if (!isObj(j)) { a.j = { p: 0, l: 0 }; continue; }
+    const o = { p: num(j.p, 1e6), l: Math.floor(num(j.l, B.aff.at.length)) }; // the fields in the save's own order (a reload is the same text)
+    for (const k of Object.keys(j)) if (k === 'f' && day(j.f) || k === 'd' && day(j.d)) o[k] = j[k]; else if (k === 'n' && day(j.d)) o.n = Math.floor(num(j.n, B.aff.day));
+    if (day(j.d) && !('n' in o)) o.n = 0; a.j = o; }
+  if (S.pet.jb !== undefined) S.pet.jb = Math.floor(num(S.pet.jb, B.aff.heartDay));
+  if (!(Number.isFinite(S.jAt) && S.jAt >= 0)) S.jAt = now; // ahead of the clock: kept (affTick adds nothing until it is passed)
+}
 // inbox 41 B 우편함·선물 코드 (the list: play/mail.json, src/ui/mail.js). Times are KST text: 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM';
 // a day alone as an end means the end of that day; missing or unreadable = no limit. A gift { hearts, candy, eggs, prop }:
 // the eggs are ordinary nest eggs (layEgg: rarity rolled, pity counted when they hatch), put in the newest open habitat's nest
@@ -1143,19 +1199,57 @@ export const evMail = (S, now) => { const L = liveRun(S, now); if (!L) return []
   return [{ id: 'ev-' + L.key, ...L.e.mail, end: new Date(L.R.end + 9 * 3600e3 - 1).toISOString().slice(0, 10) }]; };
 // inbox 41 D 첫날 할 일 (data.js FIRST): on while today (dayOf) is one of the game's first FIRST.days days and not all are done.
 // advance gives each task's hearts once (S.first[id] = when); all of them: FIRST.prop (into the habitat last entered) + FIRST.candy
-const FIRST_V = { hatch: S => S.stats?.hatch || 0, pet: S => S.stats?.pet || 0, prop: S => S.props.filter(p => p.placed && !p.nat && !PROP[p.prop]?.art).length, photo: S => S.stats?.photo || 0, codex: S => S.stats?.codex || 0 };
+export const FIRST_V = { hatch: S => S.stats?.hatch || 0, pet: S => S.stats?.pet || 0, prop: S => S.props.filter(p => p.placed && !p.nat && !PROP[p.prop]?.art).length, photo: S => S.stats?.photo || 0, codex: S => S.stats?.codex || 0 };
 export const firstGot = (S, t) => Math.min(t.n, FIRST_V[t.id](S));
 export const firstOn = (S, now) => !S.first?.all && Array.from({ length: FIRST.days }, (_, i) => dayOf(new Date(S.since).setHours(12, 0, 0, 0) + i * DAY_MS)).includes(dayOf(now));
 function firstCheck(S, now, ev, rng) {
   if (!firstOn(S, now)) return; S.first ??= {};
   for (const t of FIRST.tasks) if (!S.first[t.id] && firstGot(S, t) >= t.n) { S.first[t.id] = now; S.hearts += t.hearts; ev.push({ type: 'first', id: t.id, hearts: t.hearts }); }
-  if (FIRST.tasks.every(t => S.first[t.id])) { S.first.all = now; ev.push({ type: 'firstAll', got: give(S, { prop: FIRST.prop, candy: FIRST.candy }, now, rng, S.flags.lastHab) }); }
+  if (FIRST.tasks.every(t => S.first[t.id])) { S.first.all = now; ev.push({ type: 'firstAll', got: S.first.gift ? null : give(S, { prop: FIRST.prop, candy: FIRST.candy }, now, rng, S.flags.lastHab) }); } // gift: 170 D gave it already
+}
+// 170 C (?f170, ui/first170.js): the first two days' one line, the first task not done in this order (null: gone: day 3 on,
+// or the end card seen). flags.nm170: named or skipped; flags.end170: the end card seen. lv(a): 170 A·B's 정 level (absent: one pet)
+export const STEPS170 = ['hatch', 'name', 'pet', 'prop', 'egg3', 'end'];
+export function step170(S, now, lv = null) {
+  if (S.flags.end170 || ![0, 1].some(i => dayOf(new Date(S.since).setHours(12, 0, 0, 0) + i * DAY_MS) === dayOf(now))) return null;
+  const a = firstFriend(S), done = { hatch: !!a, name: !!S.flags.nm170 || !!a?.nm, pet: lv ? !!a && lv(a) >= 2 : (S.stats?.pet || 0) > 0, prop: FIRST_V.prop(S) > 0, egg3: (S.stats?.hatch || 0) >= 3, end: false };
+  return STEPS170.find(k => !done[k]);
+}
+export const firstFriend = S => S.animals.reduce((m, a) => a.pending || a.stored || a.stroll || m && m.id < a.id ? m : a, null); // one out in the habitat
+// 182 ② (?tut181, ui/tut181.js, docs/tutorial.md §4): the 181 tutorial's step, the first one not done at or after the saved key
+// (flags.tut181: a step key, 'done', 'skip' or 'again'; anything else = from the start). No day limit (170's is only for `end`:
+// the end card shows while step170 does). decor·codex pass only through the saved key (the tutorial saw them done). null: none
+export const STEPS181 = ['hatch', 'name', 'pet', 'feed', 'decor', 'codex', 'nest', 'end'];
+export const fedOnce = a => !!a && (a.fedDay != null || !growing(a)); // fed once, or no feed button (not a growing baby)
+export function step181(S, now) {
+  const v = S.flags.tut181; if (v === 'done' || v === 'skip' || v === 'again') return null;
+  if (v == null && (S.stats?.hatch || 0) >= 3 && step170(S, now) === null) return null; // 182 ② review: an old save past the first day (3 eggs, 170 over): nothing to teach, 'done'
+  const a = firstFriend(S), from = Math.max(0, STEPS181.indexOf(typeof v === 'string' ? v : '')), done = { hatch: !!a, name: !!S.flags.nm170 || !!a?.nm,
+    pet: (S.stats?.pet || 0) > 0, feed: fedOnce(a) || !!a && !feedsLeft(a, now), decor: false, codex: false, nest: (S.stats?.hatch || 0) >= 3, end: !!S.flags.end170 || step170(S, now) === null };
+  return STEPS181.find((k, i) => i >= from && !done[k]) ?? null;
+}
+// the tutorial's tulips (Q3; any habitat has them): one stored prop when none is stored in that habitat, once a save (first.tutProp), never while replaying
+export function tutGift(S, now, hab = 'meadow') {
+  if (S.flags.tut181 === 'again' || S.first?.tutProp || S.props.some(p => !p.placed && !p.nat && p.hab === hab)) return null;
+  const p = { uid: S.nextId++, prop: 'tulips', hab, placed: false, x: 0, z: 0, rot: 0 }; S.props.push(p); S.first = { ...S.first, tutProp: now }; return p;
+}
+// 170 D: the end card gives the 첫날 선물 (FIRST.prop + candy) now, once (first.gift; firstCheck still gives each task's hearts, then no
+// second gift); type firstEnd: told on that card, not by first.js
+export function firstEnd(S, now, rng = Math.random) {
+  S.flags.end170 = 1; if (S.first?.all || S.first?.gift) return { events: [] };
+  S.first = { ...S.first, gift: now }; return { got: give(S, { prop: FIRST.prop, candy: FIRST.candy }, now, rng, S.flags.lastHab), events: [{ type: 'firstEnd' }] };
+}
+// 174 앱인토스 보상형 광고: one waiting slot `ms` sooner (start moves with it, so the progress ring stays true); null when nothing waits
+export function hurry(S, i, ms, now) {
+  const s = S.slots[i]; if (!s || !(ms > 0) || now >= s.end) return null;
+  const cut = Math.min(ms, s.end - now); s.start -= cut; s.end -= cut; return { cut, events: [] };
 }
 // debug: pretend `ms` passed (every timestamp moves back), then catch up
 export function skip(S, ms, now, rng = Math.random) {
   for (const n of Object.values(S.nests)) n.t -= ms;
   for (const s of S.slots) if (s) { s.start -= ms; s.end -= ms; }
   for (const a of S.animals) { a.born -= ms; if (a.gAt != null) a.gAt -= ms; if (a.adultAt != null) a.adultAt -= ms; a.heartAt -= ms; if (a.stroll) { a.stroll.start -= ms; a.stroll.end -= ms; } }
+  if (Number.isFinite(S.jAt)) S.jAt -= ms; // 170 B
   if (Number.isFinite(S.flags.lvCard?.at)) S.flags.lvCard.at -= ms; // 41 D: level.js's gap between level cards
   for (const M of Object.values(S.myth)) for (const k in M) if (k !== 'bond' && k !== 'read' && k !== 'pn' && Number.isFinite(M[k])) M[k] -= ms; // 14-1 (152 D: each; 158: pn a count)
   for (const M of Object.values(S.myth)) if (M.pd != null && ms >= 864e5) delete M.pd; // 158: a day or more skipped, today's horn roll is new

@@ -8,7 +8,7 @@
 // first screen). Light: no three.js (the first screen has it).
 import { $t } from '../i18n/i18n.js';
 import { DEBUG, PREFS } from '../config.js';
-import { HABITATS } from '../game/data.js';
+import { HABITATS, YARD_HAB } from '../game/data.js';
 import { LOOP, BEDS, SPRITES, SHOTS } from './sound-map.js';
 
 let A = null, out, amb, fx, ani, white, meter = null;
@@ -99,6 +99,27 @@ function play(name, { at, ref = 3, rate = 1, gain = 1, delay = 0, bus = ani, lp 
   return true;
 }
 
+// 176 공룡 울음: no recording, made here — a squeeze toy's small 「꾸앙」: a buzzy note through a soft filter that rises and falls,
+// a little wobble and a puff of air. R: [pitch Hz, rise (x), length s, wave]; the same limits and panning as play()
+function roar(R, { at, rate = 1, gain = 0.8, delay = 0, call = false } = {}) {
+  if (A.state !== 'running' || busy.all >= MAX || (call && busy.call >= MAX_CALLS)) return false;
+  const [f0, up, dur, type = 'sawtooth'] = R, f = f0 * rate, t = A.currentTime + delay, g = A.createGain();
+  let tail = g;
+  if (at) { const p = tail = A.createPanner(); p.panningModel = 'equalpower'; p.distanceModel = 'inverse'; p.refDistance = 6; p.rolloffFactor = 1;
+    if (p.positionX) { p.positionX.value = at[0]; p.positionY.value = at[1]; p.positionZ.value = at[2]; } else p.setPosition(...at); g.connect(p); }
+  tail.connect(ani);
+  const o = A.createOscillator(), w = A.createOscillator(), wg = A.createGain(), lp = filter('lowpass', f * 3.2, 3);
+  o.type = type; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * up, t + dur * 0.35); o.frequency.exponentialRampToValueAtTime(f * 0.72, t + dur);
+  w.frequency.value = 23; wg.gain.value = f * 0.035; w.connect(wg).connect(o.frequency);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16 * gain, t + 0.04); g.gain.exponentialRampToValueAtTime(0.1 * gain, t + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(lp).connect(g); puff(t, dur * 0.5, 'bandpass', Math.min(4000, f * 4), 0.05 * gain, { Q: 2, dest: g });
+  o.start(t); w.start(t); o.stop(t + dur + 0.05); w.stop(t + dur + 0.05);
+  busy.all++; if (call) busy.call++;
+  o.onended = () => { busy.all--; if (call) busy.call--; w.disconnect(); wg.disconnect(); o.disconnect(); lp.disconnect(); g.disconnect(); if (tail !== g) tail.disconnect(); };
+  return true;
+}
+const say = (V, o) => V.roar ? roar(V.roar, o) : play(V.call, o); // a call: its recording, or a dinosaur's made one
+
 // the effects (s: when, from now). Each at most twice at once, and not again within 50 ms (taps in a row stay quiet).
 const FX = {
   tap: t => tone(t, 1250, 0.05, { gain: 0.05, to: 950 }),
@@ -122,6 +143,8 @@ const FX = {
   // 129 넓히는 순간 (?s129): the mist blown off (a soft gust, a high chime as it opens), each fixture's 「통」 as it pops up
   unveil: t => { puff(t, 1.2, 'bandpass', 520, 0.13, { Q: 0.9 }); puff(t + 0.2, 1.0, 'bandpass', 1150, 0.07, { Q: 1 }); bell(t + 0.55, 1568, 1.3, 0.06); bell(t + 0.7, 2093, 1.1, 0.045); },
   pop: t => tone(t, 300, 0.12, { type: 'triangle', gain: 0.1, to: 620 }),
+  // 183 A Q4: the wooden shelf UI's (?ui183) button press, a dry wooden 「톡」: a knock of filtered noise over a short low note
+  wood: t => { puff(t, 0.035, 'bandpass', 1500, 0.22, { Q: 5 }); tone(t, 620, 0.06, { type: 'triangle', gain: 0.07, to: 430, attack: 0.002 }); },
 };
 const DUR = { hatch: 1.8, grown: 1.6, level: 2, bell: 1.8, fireworks: 1.6, train: 0.7, unveil: 1.8, pop: 0.14 }, fxBusy = {}, lastAt = {};
 const BUZZ = { hatch: [25, 70, 25], grown: 40 }; // 26-3 진동 (Android Chrome; iPhone browsers have no navigator.vibrate)
@@ -214,6 +237,9 @@ const VOICE = {
   chicken: { call: 'hen', b: 1.4, bird: 1, gain: 0.7 }, duck: { call: 'duck', b: 1.3, bird: 1 }, turtle: { b: 1.4 }, otter: { b: 1.6 }, swan: { call: 'duck', rate: 0.72, b: 1.1, bird: 1 },
   flamingo: { call: 'duck', rate: 0.82, b: 1.2, bird: 1 }, capybara: { b: 1.15 }, penguin: { call: 'penguin', b: 1.3, bird: 1 }, polarBear: { call: 'breath', rate: 0.62, b: 0.7 },
   seal: { call: 'breath', rate: 0.9, b: 1.05 }, arcticFox: { b: 1.6 }, reindeer: { call: 'breath', rate: 0.8, b: 0.9 }, snowyOwl: { call: 'owl', rate: 1.15, b: 1.3, bird: 1, gain: 0.5 },
+  // 176 the jungle's: made calls (roar), the big ones low and long, the pteranodon a high squeak
+  triceratops: { roar: [210, 1.5, 0.5], b: 0.9 }, brachiosaurus: { roar: [120, 1.3, 0.9, 'triangle'], b: 0.7, gain: 1 }, stegosaurus: { roar: [250, 1.4, 0.4], b: 1 },
+  ankylosaurus: { roar: [170, 1.25, 0.45], b: 0.85 }, tRex: { roar: [140, 1.6, 0.75], b: 0.75 }, pteranodon: { roar: [680, 1.35, 0.3, 'square'], b: 1.3, gain: 0.6 },
 };
 const QUIET = new Set(['carry', 'drop', 'jump', 'play', 'sleep', 'nuzzle']); // no steps (held up, falling, on a prop, ...)
 const mem = new WeakMap(), pm = new WeakMap(), lastCall = {}; // each animal's and play prop's own, the species' last call
@@ -227,7 +253,7 @@ function animal(a, now) {
   else m.d = 0;
   // now and then its call (fewer at night; never two of a species within SP_GAP, never more than MAX_CALLS at once)
   if (now > m.call) { m.call = now + rnd(60, 150) * (cur.night > 0.5 ? 2.5 : 1);
-    if (V.call && st !== 'sleep' && st !== 'carry' && now - (lastCall[a.rec.species] ?? -99) > SP_GAP && play(V.call, { at: at(), ref: 6, rate: (V.rate || 1) * baby * rnd(0.92, 1.08), gain: V.gain ?? 0.8, call: true })) lastCall[a.rec.species] = now; }
+    if ((V.call || V.roar) && st !== 'sleep' && st !== 'carry' && now - (lastCall[a.rec.species] ?? -99) > SP_GAP && say(V, { at: at(), ref: 6, rate: (V.rate || 1) * baby * rnd(0.92, 1.08), gain: V.gain ?? 0.8, call: true })) lastCall[a.rec.species] = now; }
   // asleep: slow breaths; grazing: small bites (near only)
   if (d < NEAR && now > m.br && (st === 'sleep' || st === 'graze')) {
     if (st === 'sleep') { m.br = now + rnd(3.2, 4.4); play('breath', { at: at(), ref: 2, rate: V.b * 0.8 * baby * rnd(0.95, 1.05), gain: 0.3, lp: 1500 }); }
@@ -276,7 +302,7 @@ export function cry(species) {
   if (!A || A.state !== 'running') return;
   const V = VOICE[species] || {}; need('common');
   setTimeout(() => { if (V.bird) play('chick', { rate: rnd(0.95, 1.1), gain: 0.5 });
-    else { play('breath', { rate: (V.b || 1) * 1.5, gain: 0.45 }); if (V.call && V.call !== 'breath') play(V.call, { rate: (V.rate || 1) * 1.35, gain: 0.35, delay: 0.25 }); } }, 350);
+    else { play('breath', { rate: (V.b || 1) * 1.5, gain: 0.45 }); if (V.roar || V.call && V.call !== 'breath') say(V, { rate: (V.rate || 1) * 1.35, gain: 0.35, delay: 0.25 }); } }, 350);
 }
 
 // a habitat entered: its shots wanted (and the common ones), another's let go, all its files fetched (beds decoded when they play).
@@ -284,7 +310,7 @@ export function cry(species) {
 let here;
 function enter(hab) {
   here = hab;
-  const H = HABITATS.find(h => h.id === hab), beds = Object.keys(H?.sound?.({ day: 1, night: 1, dry: 1, rain: 1, snow: 1 }) || {}), wet = beds.some(k => k.startsWith('rain'));
+  const H = HABITATS.find(h => h.id === hab) ?? (hab === YARD_HAB.id ? YARD_HAB : undefined), beds = Object.keys(H?.sound?.({ day: 1, night: 1, dry: 1, rain: 1, snow: 1 }) || {}), wet = beds.some(k => k.startsWith('rain'));
   if (wet) beds.push('rainLight', 'rainHeavy');
   const own = hab === 'meadow' ? [hab, 'pond'] : hab === 'dino' ? ['meadow', 'pond'] : [hab], keep = new Set([...beds.map(k => BEDS[k]), SPRITES.common, ...own.map(g => SPRITES[g]), wet && SPRITES.rain]);
   for (const g in ready) if (!keep.has(SPRITES[g])) { delete ready[g]; delete dec[SPRITES[g]]; }
@@ -298,7 +324,7 @@ export function ambience(hab, night = 0, rain = 0, snow = 0) {
   Object.assign(cur, { hab, night, rain, snow });
   if (!A) return;
   if (hab !== here) enter(hab);
-  const H = HABITATS.find(h => h.id === hab), h = 0.5 + 0.5 * Math.sin(A.currentTime * 2 * Math.PI / 150); // the rain comes harder and softer (2.5 min)
+  const H = HABITATS.find(h => h.id === hab) ?? (hab === YARD_HAB.id ? YARD_HAB : undefined), h = 0.5 + 0.5 * Math.sin(A.currentTime * 2 * Math.PI / 150); // the rain comes harder and softer (2.5 min)
   const want = hab ? { ...H?.sound?.({ day: day(), night, dry: dry(), rain, snow }) } : {};
   if ('rainLeaves' in want || 'rainWater' in want) Object.assign(want, { rainLight: rain * (1 - 0.6 * h), rainHeavy: rain * h });
   if (rain > 0.05 && 'rainLight' in want) need('rain');
@@ -308,7 +334,7 @@ export function ambience(hab, night = 0, rain = 0, snow = 0) {
 
 // 16-3 책상 모드: 'off' silent, 'amb' the background only (no taps, no animals); null: as set
 let desk = null;
-export const deskSound = m => { desk = m; applySound(); };
+export const deskSound = m => { const was = desk; desk = m; applySound(); return was; }; // 174: the one before (toss.js puts it back)
 // the volumes and 모두 끄기 (설정 calls this after a change)
 export function applySound() {
   if (!A) return void touched(); // 27-7e: 켜기 itself (a tap) makes the sound, not the touch after it
@@ -345,5 +371,5 @@ function touched() {
 }
 for (const e of ['pointerdown', 'pointerup', 'touchend', 'keydown']) addEventListener(e, touched, { capture: true, passive: true });
 document.addEventListener('visibilitychange', wake);
-// every button: a very small tap
-document.addEventListener('click', e => { if (e.target.closest?.('button, .spot')) sfx('tap'); }, true);
+// every button: a very small tap (183 A: the wooden 「톡」 under the wooden shelf UI, html[data-ui183])
+document.addEventListener('click', e => { if (e.target.closest?.('button, .spot')) sfx(document.documentElement.dataset.ui183 ? 'wood' : 'tap'); }, true);

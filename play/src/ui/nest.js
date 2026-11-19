@@ -13,7 +13,8 @@ import { makeEgg, HATCH, glowAt } from '../animals/growth.js';
 import { dress, loadModel, loadAcc } from '../animals/figure.js';
 import { eggMat } from '../animals/materials.js';
 import { sfx, cry } from './sound.js';
-import { calm } from '../config.js';
+import { calm, TOSS } from '../config.js';
+import { openOdds } from './odds.js';
 
 const $ = id => document.getElementById(id);
 const nameOf = kindName;
@@ -48,7 +49,7 @@ ${PIECES.map((p, i) => `<polygon points="${p.pts}" ${i < n ? `fill="hsl(${RAR[k]
 
 export function initNest(nav) {
   const el = $('nest'), btn = $('nestBtn'), badge = btn.querySelector('i');
-  el.innerHTML = $t('<div class="nsheet" role="dialog" aria-label="둥지">\n  <div class="chead"><b>둥지</b><span id="ncount"></span><button class="back" data-tidy>정리</button><button class="back" data-close>닫기</button></div>\n  <div class="ngift" id="ngift" hidden></div>\n  <div class="ctabs" id="ntabs"></div>\n  <div class="ntop"><div class="neggs" id="neggs"></div><div class="nstage" id="nstage" hidden></div></div>\n  <div class="nlow"><div class="ngauges" id="ngauges"></div><div class="nslots" id="nslots"></div><div class="ncard" id="ncard" hidden></div></div>\n</div>');
+  el.innerHTML = $t('<div class="nsheet" role="dialog" aria-label="둥지">\n  <div class="chead"><b>둥지</b><span id="ncount"></span><button class="back" data-odds>확률</button><button class="back" data-tidy>정리</button><button class="back" data-close>닫기</button></div>\n  <div class="ngift" id="ngift" hidden></div>\n  <div class="ctabs" id="ntabs"></div>\n  <div class="ntop"><div class="neggs" id="neggs"></div><div class="nstage" id="nstage" hidden></div></div>\n  <div class="nlow"><div class="ngauges" id="ngauges"></div><div class="nslots" id="nslots"></div><div class="ncard" id="ncard" hidden></div></div>\n</div>');
   const eggsEl = $('neggs'), giftEl = $('ngift'), tidyBtn = el.querySelector('[data-tidy]'), stageEl = $('nstage'), gEl = $('ngauges'), slotsEl = $('nslots'), cardEl = $('ncard'), tabsEl = $('ntabs');
   let sel = null, habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {}, after = null, ready = null;
   const nest = () => G.S.nests[habId] || { eggs: [], t: G.now() };
@@ -263,6 +264,7 @@ export function initNest(nav) {
     else if (b.dataset.back != null) answer(false, e);
     else if (busy) return;
     else if (b.dataset.tab) { tab = b.dataset.tab; draw(); }
+    else if (b.dataset.odds != null) openOdds(tab, G.S); // 177 C
     else if (b.dataset.tidy != null || b.dataset.untidy != null) { sel = sel || b.dataset.untidy != null ? null : new Set(); draw(); }
     else if (b.dataset.letgo != null) letGo(e);
     else if (b.dataset.gift != null) { if (G.takeGift() < 0) toast($t('부화 칸이 가득 찼어요 · 알을 깨우면 넣을 수 있어요')); else sfx('egg'); }
@@ -271,7 +273,7 @@ export function initNest(nav) {
     else if (b.dataset.i != null) {
       const s = G.S.slots[+b.dataset.i], now = G.now();
       if (!s) toast($t('위의 알을 누르면 이 칸에 들어가요'));
-      else if (now < s.end) { toast($t('{0} 알 · {1} 뒤에 깨어나요', RAR[s.egg.rarity].name, span(s.end - now))); knock(b); }
+      else if (now < s.end) { toast($t('{0} 알 · {1} 뒤에 깨어나요', RAR[s.egg.rarity].name, span(s.end - now))); knock(b); if (TOSS) dispatchEvent(new CustomEvent('toss:egg', { detail: { i: +b.dataset.i } })); } // 174: src/toss.js may ask about an ad
       else hatchSlot(+b.dataset.i);
     }
   });
@@ -283,11 +285,11 @@ export function initNest(nav) {
     heart(x, y); sfx('grown'); toast($t('알 {0}개를 놓아줬어요 · ♥+{1}', r.n, r.hearts));
   }
   // 69-1: an egg still waiting, tapped (톡), answers from inside a moment later: two little rocks and 톡톡 (the same for every rarity)
-  function knock(b) { sfx('tap'); sfx('tok', 0.28); sfx('tok', 0.42); b.classList.remove('knock'); void b.offsetWidth; b.classList.add('knock'); }
+  function knock(b) { sfx('tok', 0.28); sfx('tok', 0.42); b.classList.remove('knock'); void b.offsetWidth; b.classList.add('knock'); }
   G.on(ev => { if (ev.some(e => e.type === 'reset')) close(); draw(); });
 
   return {
-    attach(api, id) { hab = api; habId = id; draw(); },
+    attach(api, id) { hab = api; habId = id === 'yard' ? HABITATS[0].id : id; draw(); }, // 182 ④ (?yard): in the yard, the first habitat's nest
     leave() { close(); hab = null; },
     open,
     // inbox 61 B: a new player's first egg, from the loading screen's 바로 깨기 (main.js), before the board is built; done: the sheet closed

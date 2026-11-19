@@ -3,9 +3,11 @@
 import { $t, LOC } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { fromSave } from '../game/rules.js';
-import { SCHEMA_VERSION } from '../game/data.js';
+import { SCHEMA_VERSION, YARD } from '../game/data.js';
+import { yardOut } from '../game/yard.js';
+const SV = () => YARD ? yardOut(G.S) : G.S; // 182 ④ (?yard): a backup is the main save as a build without the flag keeps it
 import { toCode, pack, unpack } from '../game/backup.js';
-import { EDITION } from '../config.js';
+import { EDITION, TOSS } from '../config.js';
 import { ask, toast } from './hud.js';
 
 const UNDO = 'toyhabitat.save.undo', DONE = 'toyhabitat.imported', DAY = 864e5;
@@ -30,7 +32,7 @@ const say = t => { const v = $('bkText')?.value || ''; msg = t; draw(); $('bkTex
 // inbox 39: this device for homeHintDue (a home-screen app opens standalone: manifest display)
 export const DEV = { ua: navigator.userAgent, touch: navigator.maxTouchPoints || 0,
   standalone: navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches,
-  framed: (() => { try { return top !== self; } catch { return true; } })() }; // inbox 107: in another site's frame (a cross-origin top may refuse to be read)
+  framed: (() => { try { return top !== self; } catch { return true; } })(), toss: TOSS }; // 174 // inbox 107: in another site's frame (a cross-origin top may refuse to be read)
 export function open() { msg = ''; draw(); $('prefs').hidden = true; el.hidden = false; }
 
 async function copy(code) {
@@ -40,20 +42,22 @@ async function copy(code) {
 }
 // inbox 64-A 「이어서 하기」: this save as a link (only #backup=<code>); opening it asks before loading (below)
 export async function copyLink() {
-  const u = `${location.origin}${location.pathname}#backup=${encodeURIComponent(toCode(G.S, EDITION))}`;
+  const u = `${location.origin}${location.pathname}#backup=${encodeURIComponent(toCode(SV(), EDITION))}`;
   try { await navigator.clipboard.writeText(u); return true; } catch { /* some in-app browsers: no clipboard API */ }
   open(); $('bkText').value = u; say($t('복사가 안 돼요 · 위 칸의 링크를 길게 눌러 복사해 주세요')); return false;
 }
-export const chromeLink = () => `intent://${location.host}${location.pathname}#backup=${encodeURIComponent(toCode(G.S, EDITION))}#Intent;scheme=https;package=com.android.chrome;end`;
+export const chromeLink = () => `intent://${location.host}${location.pathname}#backup=${encodeURIComponent(toCode(SV(), EDITION))}#Intent;scheme=https;package=com.android.chrome;end`;
 async function load(text) {
+  if (G.held) return say($t('기기 저장 공간이 모자라서 불러오지 못했어요')); // 174: this run saves nothing (src/toss.js)
   const r = unpack(text, EDITION, SCHEMA_VERSION); if (r.err) return say(r.err);
   const s = fromSave(r.save, G.now()); if (!s) return say($t('읽을 수 없는 백업이에요'));
   if (!await ask($t('지금 저장을 덮어써요. 지금 저장은 자동으로 한 번 남겨 둘게요.\n\n불러올 백업: {0}{1}', r.at ? date(r.at) + ' · ' : '', sumUp(s)), $t('불러오기'))) return;
-  try { localStorage.setItem(UNDO, JSON.stringify(G.S)); } catch { return say($t('기기 저장 공간이 모자라서 불러오지 못했어요')); }
+  try { localStorage.setItem(UNDO, JSON.stringify(SV())); } catch { return say($t('기기 저장 공간이 모자라서 불러오지 못했어요')); }
   if (!G.replace(s)) { localStorage.removeItem(UNDO); return say($t('기기 저장 공간이 모자라서 불러오지 못했어요')); }
   sessionStorage.setItem(DONE, '1'); location.reload();
 }
 async function undo() {
+  if (G.held) return say($t('기기 저장 공간이 모자라서 되돌리지 못했어요'));
   const u = undoSave(), s = u && fromSave(u, G.now()); if (!s) { localStorage.removeItem(UNDO); return say($t('되돌릴 저장이 없어요')); }
   if (!await ask($t('불러오기 전 저장으로 돌아가요. 지금 저장은 사라져요.\n\n돌아갈 저장: {0}', sumUp(s)), $t('되돌리기'))) return;
   if (!G.replace(s)) return say($t('기기 저장 공간이 모자라서 되돌리지 못했어요'));
@@ -65,10 +69,10 @@ el.onclick = async e => {
   if (d.close != null) { el.hidden = true; return; }
   if (d.nag) { G.flag('backupNagOff', d.nag === 'off'); return draw(); }
   if (d.act === 'copy' || d.act === 'file') G.flag('backupAt', G.now()); // the backup carries its own date
-  if (d.act === 'copy') return say(await copy(toCode(G.S, EDITION)) ? $t('백업 코드를 복사했어요 · 메모나 메일에 붙여 넣어 두세요') : $t('복사가 안 돼요 · 아래 칸의 코드를 길게 눌러 복사해 주세요'));
+  if (d.act === 'copy') return say(await copy(toCode(SV(), EDITION)) ? $t('백업 코드를 복사했어요 · 메모나 메일에 붙여 넣어 두세요') : $t('복사가 안 돼요 · 아래 칸의 코드를 길게 눌러 복사해 주세요'));
   if (d.act === 'file') {
     const a = document.createElement('a'), stamp = new Date().toLocaleDateString('sv-SE').replace(/-/g, '');
-    a.href = URL.createObjectURL(new Blob([pack(G.S, EDITION)], { type: 'application/json' })); a.download = `toybrook-backup-${stamp}.json`;
+    a.href = URL.createObjectURL(new Blob([pack(SV(), EDITION)], { type: 'application/json' })); a.download = `toybrook-backup-${stamp}.json`;
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); return say($t('백업 파일을 저장했어요 · 다운로드 폴더를 확인해 주세요'));
   }
   if (d.act === 'paste') return load($('bkText').value);

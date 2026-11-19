@@ -7,3 +7,10 @@
 9be041e96308775d00e2695cc607645b9a9b64fd7c0e759dd8f7c00a8d92becb  utils/BufferGeometryUtils.js   three.js r160 examples/jsm/utils
 01f48524f4bac6141eaba07e94cc36e7ee56f311796fa6117c159842941b0468  meshopt_decoder.module.js      three.js r160 examples/jsm/libs (meshoptimizer 0.18)
 ea91d7118a5395289170da848b7c6758b996163bfbccf312591ab65a4911b7c0  qrcode.js                      qrcode-generator 2.0.4 (npm)
+# 174: dist-toss만 vendor/ait/에 넣는 파일(이 폴더에는 없음. 빌드가 toss/node_modules에서 복사, 판은 toss/package-lock.json이 고정).
+# 위 표(check-eggs가 6줄을 셈)에 넣지 않고 주석으로 적습니다. 판을 올리면 이 주석도 같이 고칩니다. (2026-11-19 빌드의 sha256)
+#   e52a314d58f7e51c81b00236150b52dad85466ad04ded5d89c08e0844f849573  ait/web-framework.js  @apps-in-toss/web-framework 3.10.0 dist/index.js (Apache-2.0)
+#   91faed25afeab73b036a4359e097785f3ae8fdbbf77c4fbb973875327eebff1e  ait/valibot.js        valibot 1.5.0 dist/index.min.mjs (MIT)
+#   8dec7f8f41b4dce61b37575ee0c52d10aace93112ac0788769c37348d35b925d  ait/bridge-web.js     @webview-bridge/web 1.7.10 dist/index.js (MIT)
+#   f1542c5fb979b8ecfc09a57d9129593d623a304f651c9cf03f9966f45635b6ed  ait/bridge-utils.js   @webview-bridge/utils 1.7.10 dist/index.js (MIT)
+#   38fac282ae2df5a80abb6866161933bc0d8db0c9e4e228ce487f93ff9ab14f9f  ait/semver.js         toss/semver-shim.mjs (semver 7.8.6의 coerce·gte만, ISC)
