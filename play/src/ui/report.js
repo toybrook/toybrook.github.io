@@ -25,9 +25,14 @@ export function note(msg, at = '') {
   const m = String(msg).replace(/^Uncaught /, '').replace(/\w+:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 160), last = list[list.length - 1];
   if (last && last.m === m && last.at === at) { last.n++; last.t = Date.now(); } // the same one again: counted
   else { list.push({ t: Date.now(), m, at, n: 1 }); if (list.length > MAX) list.shift(); }
-  keep(); track('error', { msg: m.slice(0, 120), at, scr: band(innerWidth), hab: placeOf(), gl }, 'error:' + m.slice(0, 120) + at);
+  keep(); if (FOREIGN.test(m)) return; // kept here (문제 알리기), not sent
+  track('error', { msg: m.slice(0, 120), at, scr: band(innerWidth), hab: placeOf(), gl, ver: VERSION }, 'error:' + m.slice(0, 120) + at); // 168: ver, which build it was
 }
-addEventListener('error', e => note(e.message, where(e.error?.stack) || where(`${e.filename}:${e.lineno}`)));
+// 168: not the game's: an in-app browser's own bridge (Instagram on Android: its injected script calls a Java object that is gone)
+const FOREIGN = /Java object is gone/;
+// 168: no frame in src/ or vendor/: 'page' (this site, e.g. index.html) or 'other' (a script from elsewhere: an extension, an in-app browser), never the address
+const from = f => !f ? '' : f.startsWith(location.origin) ? 'page' : 'other';
+addEventListener('error', e => note(e.message, where(e.error?.stack) || where(`${e.filename}:${e.lineno}`) || from(e.filename)));
 addEventListener('unhandledrejection', e => { const r = e.reason; note(r?.name ? `${r.name}: ${r.message}` : r, where(r?.stack)); });
 export const errors = () => list.slice();
 

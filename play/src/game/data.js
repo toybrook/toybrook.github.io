@@ -760,6 +760,8 @@ export const SPECIES = [
 // ?m89 (photos only; without it nothing here changes): trials not yet public. The 97~111 concept-sheet looks (Tier_fox_rex,
 // Legends8: glass, lacquer, moon sheep, jade rabbit, 구미호 A·B) were dropped in 114 (user 2026-11-17); they are in git 598fc3a
 export const M89 = false; // release build: the 89-4·90 trial looks stay off (89-2)
+// 170 trial flag (photos only until the user OKs it): first 10 seconds, 애정 레벨, 「다음 할 일」 줄, day-2 legend egg·night notice·install prompt·attendance preview
+export const F170 = false; // release build: the 170 trial stays off
 // 120 (public since 123): new slots for the rabbit and the sheep, looks made from code (materials.js 115); the old variants stay
 // as they are. tier 'often' (inbox 120: 「흔함」 쪽 가중치). mono: one colour only (the shader paints it), so no colour list (check-eggs). 솜사탕 (candy115) and 뜨개 니트 (knit115) dropped: their looks are kept, no slot
 // 125-A: 박하사탕·반딧불·뭉게구름 gone (user 11/17: only 밤하늘 stays): no egg hatches them, the codex shows one only to a player who has
@@ -861,7 +863,9 @@ export const LEGEND163 = {
   arcticFox: { id: 'rosequartz', name: $t('로즈쿼츠 여우'), mat: 'rosequartz163', effect: 'roseglints', late: 163 }, // 163 D ③
   snowyOwl: { id: 'filigree', name: $t('은 세공 올빼미'), mat: 'filigree163', effect: 'fireflies', late: 163 },
 };
-if (M89) for (const [sp, L] of Object.entries(LEGEND163)) SPECIES.find(s => s.id === sp).legendary.push(L);
+// 172 A: the penguin, seal, fox and owl public (user OK 11/19); the polar bear and the reindeer again (171 B, 172 B), still ?m89
+export const HOLD163 = ['polarBear', 'reindeer'];
+for (const [sp, L] of Object.entries(LEGEND163)) if (M89 || !HOLD163.includes(sp)) SPECIES.find(s => s.id === sp).legendary.push(L);
 // 152 C 백록 (160 A 공개): the white deer of Halla, on the reindeer's own legend files (tools/bake-baengnok152.mjs: slimmer, a big
 // smooth antler, a silver cord and bell) in white porcelain, frost flowers at its feet (materials.js 152 C). 158: no longer a reindeer
 // legendary slot: the 신수 백록 (MYTHIC152 fig) wears it
@@ -869,22 +873,45 @@ MODELS.reindeer.legend = { adult: 'assets/models/baengnok152_adult.glb', baby: '
 // 163 A 공룡 방향 다시 (?m89 시범; tools/bake-dino163.mjs, from 161 A's crisp horns, plates, spikes, toes and claws): the
 // triceratops and stegosaurus as toys: the head 1.35x / 1.38x on a shorter neck, the body 0.85x as long and rounder (shoulders and
 // hips up a little, the waist in), short thick legs thinning to the ankle on wide three-toed feet, the beak one shape with the face
-// (ivory on all five commons' looks, materials.js dino163 / twotone163 ...: faded in by fade, figure.js _fade); the frill tilted back more, a cheek
-// point; the stegosaurus' tail spikes their own 'spike' mesh (paint.spike: the commons ivory; every other look the plates' horn).
+// (ivory on all five commons' looks, materials.js dino163 / twotone163 ...: faded in by fade, figure.js _fade); the frill tilted back more (165 A:
+// no cheek point); the stegosaurus' tail spikes their own 'spike' mesh (paint.spike: the commons ivory; every other look the plates' horn).
 // The legendaries' crystals on these frills / plates (their own gem files). The 'mouth' mesh is the dark nostrils (the shared and
 // other looks have no 'mouth': theirs is the body's material, as the T. rex's nostrils)
 if (M89) {
   const f = (id, st) => `assets/models/pilot89_dino163_${id}_${st}.glb`, D = {
     triceratops: {
-      adult: { h: 2.734, r: 1.104, seg: [-0.537, 1.026], legs: { hip: 0.56, x: [0.46, -0.48], z: 0.34 }, fade: { o: [1.869, 1.009, 0], n: [0.989, -0.148, 0], w: 0.068 }, attach: { head: { p: [1.211, 1.753, 0], r: [0, 0, -0.1], s: 1.3 }, neck: { p: [0.8, 1.18, 0], r: [0, 0, -1], s: 1.5 }, back: { p: [-0.15, 1.738, 0], r: [0, 0, 0], s: 1.2 }, eye: { p: [1.45, 1.407, 0], r: [0, 0, 0], s: 1.2 } } },
-      baby: { h: 2.093, r: 0.793, seg: [-0.493, 0.947], legs: { hip: 0.38, x: [0.32, -0.36], z: 0.3 }, fade: { o: [1.507, 0.825, 0], n: [0.989, -0.148, 0], w: 0.056 }, attach: { head: { p: [0.9, 1.525, 0], r: [0, 0, -0.1], s: 1.4 }, neck: { p: [0.64, 0.93, 0], r: [0, 0, -1], s: 1.32 }, back: { p: [-0.1, 1.396, 0], r: [0, 0, 0], s: 1 }, eye: { p: [1.17, 1.14, 0], r: [0, 0, 0], s: 1.35 } } } },
+      adult: { h: 2.734, r: 1.104, seg: [-0.527, 1.026], legs: { hip: 0.56, x: [0.46, -0.48], z: 0.34 }, fade: { o: [2.034, 0.984, 0], n: [0.989, -0.148, 0], w: 0.041 }, attach: { head: { p: [1.211, 1.753, 0], r: [0, 0, -0.1], s: 1.3 }, neck: { p: [0.8, 1.18, 0], r: [0, 0, -1], s: 1.5 }, back: { p: [-0.15, 1.762, 0], r: [0, 0, 0], s: 1.2 }, eye: { p: [1.45, 1.407, 0], r: [0, 0, 0], s: 1.2 } } },
+      baby: { h: 2.093, r: 0.793, seg: [-0.499, 0.947], legs: { hip: 0.38, x: [0.32, -0.36], z: 0.3 }, fade: { o: [1.646, 0.804, 0], n: [0.989, -0.148, 0], w: 0.034 }, attach: { head: { p: [0.9, 1.525, 0], r: [0, 0, -0.1], s: 1.4 }, neck: { p: [0.64, 0.93, 0], r: [0, 0, -1], s: 1.32 }, back: { p: [-0.1, 1.438, 0], r: [0, 0, 0], s: 1 }, eye: { p: [1.17, 1.14, 0], r: [0, 0, 0], s: 1.35 } } } },
     stegosaurus: {
-      adult: { h: 1.898, r: 0.642, seg: [-1.116, 1.047], legs: { hip: 0.54, x: [0.42, -0.44], z: 0.33 }, fade: { o: [1.481, 0.804, 0], n: [0.981, -0.196, 0], w: 0.055 }, attach: { head: { p: [0.993, 1.244, 0], r: [0, 0, -0.1], s: 1.05 }, neck: { p: [0.72, 0.96, 0], r: [0, 0, -1.3], s: 1.2 }, back: { p: [-0.1, 1.808, 0], r: [0, 0, 0], s: 1.15 }, eye: { p: [1.161, 0.987, 0], r: [0, 0, 0], s: 1 } } },
-      baby: { h: 1.539, r: 0.574, seg: [-0.757, 0.948], legs: { hip: 0.38, x: [0.3, -0.32], z: 0.29 }, fade: { o: [1.314, 0.747, 0], n: [0.981, -0.196, 0], w: 0.052 }, attach: { head: { p: [0.816, 1.32, 0], r: [0, 0, -0.1], s: 1.25 }, neck: { p: [0.58, 0.82, 0], r: [0, 0, -1.3], s: 1.1 }, back: { p: [-0.1, 1.482, 0], r: [0, 0, 0], s: 0.95 }, eye: { p: [1.046, 0.97, 0], r: [0, 0, 0], s: 1.2 } } } } };
+      adult: { h: 1.898, r: 0.642, seg: [-1.116, 1.047], legs: { hip: 0.54, x: [0.42, -0.44], z: 0.33 }, fade: { o: [1.613, 0.778, 0], n: [0.981, -0.196, 0], w: 0.033 }, attach: { head: { p: [0.993, 1.244, 0], r: [0, 0, -0.1], s: 1.05 }, neck: { p: [0.72, 0.96, 0], r: [0, 0, -1.3], s: 1.2 }, back: { p: [-0.1, 1.808, 0], r: [0, 0, 0], s: 1.15 }, eye: { p: [1.161, 0.987, 0], r: [0, 0, 0], s: 1 } } },
+      baby: { h: 1.539, r: 0.574, seg: [-0.757, 0.948], legs: { hip: 0.38, x: [0.3, -0.32], z: 0.29 }, fade: { o: [1.437, 0.723, 0], n: [0.981, -0.196, 0], w: 0.031 }, attach: { head: { p: [0.816, 1.32, 0], r: [0, 0, -0.1], s: 1.25 }, neck: { p: [0.58, 0.82, 0], r: [0, 0, -1.3], s: 1.1 }, back: { p: [-0.1, 1.482, 0], r: [0, 0, 0], s: 0.95 }, eye: { p: [1.046, 0.97, 0], r: [0, 0, 0], s: 1.2 } } } },
+    // 165 A (inbox 161 ②): the ankylosaurus and the pteranodon on the same rules (their crisp studs, spikes, cheek horns, crest
+    // baked into the body's accent; the club its own horn mesh); no gem files: their legendaries (malachite, sunstone) are looks only
+    ankylosaurus: {
+      adult: { h: 1.519, r: 0.802, seg: [-0.701, 0.75], legs: { hip: 0.46, x: [0.39, -0.44], z: 0.38 }, fade: { o: [1.389, 0.785, 0], n: [0.876, -0.482, 0], w: 0.054 }, attach: { head: { p: [0.984, 1.244, 0], r: [0, 0, -0.1], s: 1.1 }, neck: { p: [0.64, 0.94, 0], r: [0, 0, -1.3], s: 1.3 }, back: { p: [-0.1, 1.408, 0], r: [0, 0, 0], s: 1.3 }, eye: { p: [1.158, 1.032, 0], r: [0, 0, 0], s: 1.2 } } },
+      baby: { h: 1.273, r: 0.677, seg: [-0.482, 0.653], legs: { hip: 0.34, x: [0.29, -0.32], z: 0.32 }, fade: { o: [1.182, 0.725, 0], n: [0.876, -0.482, 0], w: 0.05 }, attach: { head: { p: [0.82, 1.2, 0], r: [0, 0, -0.1], s: 1.2 }, neck: { p: [0.5, 0.8, 0], r: [0, 0, -1.3], s: 1.15 }, back: { p: [-0.1, 1.172, 0], r: [0, 0, 0], s: 1.05 }, eye: { p: [0.995, 0.95, 0], r: [0, 0, 0], s: 1.3 } } } },
+    // the pteranodon at 0.75 (inbox 161 ②; public 0.45), 125-C's four-legged walk (the wings step as front legs: walk.fore), its
+    // legs the body's colour with dark claws (public legMat 'hoof': all brown), the wing membrane lighter (materials.js memb163).
+    // ?m89&ptera=<size> keeps 125-C's body for its comparison instead
+    ...!(p => p > 0 && p < 5)(+new URLSearchParams(location.search).get('ptera')) && { pteranodon: { // as the 125-C block above
+      adult: { h: 1.55, r: 0.34, seg: [-0.281, 1.135], legs: { hip: 0.42, x: [-0.24], z: 0.2 }, wing: [0.26, 0.86, 0.27], fade: { o: [1.072, 1.164, 0], n: [0.984, -0.177, 0], w: 0.053 }, attach: { head: { p: [0.692, 1.45, 0], r: [0, 0, -0.1], s: 1.05 }, neck: { p: [0.46, 1.04, 0], r: [0, 0, -0.95], s: 1 }, back: { p: [-0.06, 1.09, 0], r: [0, 0, 0.05], s: 0.9 }, eye: { p: [0.785, 1.292, 0], r: [0, 0, 0], s: 0.9 } } },
+      baby: { h: 1.364, r: 0.331, seg: [-0.173, 0.825], legs: { hip: 0.32, x: [-0.19], z: 0.2 }, wing: [0.19, 0.76, 0.26], fade: { o: [0.888, 1.03, 0], n: [0.984, -0.177, 0], w: 0.05 }, attach: { head: { p: [0.565, 1.343, 0], r: [0, 0, -0.1], s: 1.2 }, neck: { p: [0.36, 0.92, 0], r: [0, 0, -0.95], s: 1.1 }, back: { p: [-0.05, 0.976, 0], r: [0, 0, 0.05], s: 0.9 }, eye: { p: [0.679, 1.142, 0], r: [0, 0, 0], s: 1.2 } } } } },
+    // 165 A2 (inbox 161 ③): the brachiosaurus (its nasal bump, nostrils, a neck thinning to the head, toed feet; no beak: its fade
+    // plane far in front, _fade 0) and the T. rex (125 c's head 1.3x, baby 1.25x (hs 1.3 / 1.48), no mouth line, no brows, no teeth; its rex125 look, stripes and
+    // glints kept; the amber legendary's bones refitted). ?m89&trex=1|2 keeps 125-B's pilots for that comparison instead
+    brachiosaurus: {
+      adult: { h: 3.493, r: 0.657, seg: [-1.395, 1.178], legs: { hip: 0.76, x: [0.42, -0.44], z: 0.32 }, fade: { o: [9, 0, 0], n: [1, 0, 0], w: 0.01 }, attach: { head: { p: [1.242, 3.426, 0], r: [0, 0, -0.1], s: 0.97 }, neck: { p: [0.87, 2.3, 0], r: [0, 0, -0.35], s: 1.1 }, back: { p: [0, 1.894, 0], r: [0, 0, 0], s: 1.2 }, eye: { p: [1.401, 3.141, 0], r: [0, 0, 0], s: 1.05 } } },
+      baby: { h: 2.618, r: 0.576, seg: [-0.928, 0.986], legs: { hip: 0.5, x: [0.32, -0.34], z: 0.29 }, fade: { o: [9, 0, 0], n: [1, 0, 0], w: 0.01 }, attach: { head: { p: [0.94, 2.565, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.66, 1.6, 0], r: [0, 0, -0.4], s: 1.12 }, back: { p: [0, 1.406, 0], r: [0, 0, 0], s: 1 }, eye: { p: [1.124, 2.237, 0], r: [0, 0, 0], s: 1.2 } } } },
+    ...!['1', '2'].includes(new URLSearchParams(location.search).get('trex')) && { tRex: {
+      adult: { h: 2.208, r: 0.55, seg: [-1.708, 1.43], legs: { hip: 0.7, x: [0], z: 0.3 }, attach: { head: { p: [0.92, 2.21, 0], r: [0, 0, -0.1], s: 1.43 }, neck: { p: [0.452, 1.508, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.702, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.089, 1.965, 0], r: [0, 0, 0], s: 1.495 } } },
+      baby: { h: 2.077, r: 0.55, seg: [-1.473, 1.52], legs: { hip: 0.5, x: [0], z: 0.3 }, attach: { head: { p: [0.86, 2.064, 0], r: [0, 0, -0.1], s: 1.628 }, neck: { p: [0.327, 1.265, 0], r: [0, 0, -0.9], s: 1.25 }, back: { p: [-0.1, 1.492, 0], r: [0, 0, 0.05], s: 1.05 }, eye: { p: [1.049, 1.78, 0], r: [0, 0, 0], s: 1.702 } } } } } };
   for (const [id, S] of Object.entries(D)) {
-    Object.assign(MODELS[id], { files: { baby: f(id, 'baby'), adult: f(id, 'adult') }, paints: id === 'stegosaurus' ? ['belly', 'mouth'] : ['mouth'], m89: { solid: 'dino163', twotone: 'twotone163', spots: 'spots163', stripes: 'stripes163', gradient: 'gradient163' }, baby: sized(id, 'baby', S.baby), adult: sized(id, 'adult', S.adult),
-      legend: { baby: f(id, 'gems_baby'), adult: f(id, 'gems_adult') } }); // the legendaries' crystals on this pilot's frill / plates
-    const c = SPECIES.find(s => s.id === id).colors; c.paint = { ...c.paint, mouth: '#3b2c26', ...id === 'stegosaurus' && { spike: c.hoof } }; // the stegosaurus' belly kept: its other looks paint it as public, dino163 gives it the body's material
+    const gems = id === 'triceratops' || id === 'stegosaurus', P = MODELS[id];
+    if (id === 'pteranodon') { SIZE.pteranodon = 0.75; P.walk = { ...P.walk, fore: 0.3 }; delete P.legMat; }
+    Object.assign(P, { files: { baby: f(id, 'baby'), adult: f(id, 'adult') }, paints: id === 'tRex' ? ['belly', 'mouth', 'stripe'] : id === 'stegosaurus' || id === 'brachiosaurus' ? ['belly', 'mouth'] : id === 'pteranodon' ? [] : ['mouth'],
+      m89: id === 'tRex' ? { solid: 'rex125' } : { solid: 'dino163', twotone: 'twotone163', spots: 'spots163', stripes: 'stripes163', gradient: 'gradient163' }, baby: sized(id, 'baby', S.baby), adult: sized(id, 'adult', S.adult),
+      ...gems && { legend: { baby: f(id, 'gems_baby'), adult: f(id, 'gems_adult') } }, ...id === 'tRex' && { legend: { baby: f(id, 'bones_baby'), adult: f(id, 'bones_adult') } } }); // the legendaries' crystals on this pilot's frill / plates; the T. rex's amber bones
+    const c = SPECIES.find(s => s.id === id).colors; c.paint = { ...c.paint, ...id !== 'pteranodon' && { mouth: '#3b2c26' }, ...id === 'stegosaurus' && { spike: c.hoof } }; // the stegosaurus' belly kept: its other looks paint it as public, dino163 gives it the body's material
   }
 }
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave

@@ -98,7 +98,8 @@ function figure(c, sil) {
 async function build() {
   const want = sig(); if (want === built) return; built = want;
   const cells = codexCells(tab, G.S), sps = [...new Set(cells.map(c => c.species))];
-  await Promise.all(sps.map(s => loadModel(s.model))); if (want !== sig()) return;
+  if (!await Promise.all(sps.map(s => loadModel(s.model))).then(() => true, () => false)) { if (built === want) built = ''; return; } // 168: offline, a model never fetched: no shelves yet, the next open or change tries again
+  if (want !== sig()) return;
   st.root.clear(); figs = []; fx = []; star = null; shelves = [];
   const rows = sps.length;
   const top = rows * SY, all = cells.every(c => G.S.codex[c.key]);

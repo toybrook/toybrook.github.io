@@ -50,7 +50,7 @@ export function createActor(ctx, rec) {
       const k = pond.k ?? 0.9, A = Math.atan2((z - pond.z) / k, x - pond.x), R = THREE.MathUtils.clamp((Math.hypot(x - pond.x, (z - pond.z) / k) - 1.2) / pond.r, L0, L1);
       if (from) for (let j = 0; j < 21; j++) { const B = A + (j % 2 ? 1 : -1) * Math.ceil(j / 2) * 0.1; if (free(ctx.crowd, body, ...spot(B, R), yawAt(B))) { a = B; rr = lane = R; break; } } // or a little round
       const p = at(), t0 = dropFrom(from); land = { x, z, t: t0, dur: DROP.end + Math.max(0.6, Math.hypot(p.x - x, p.z - z) / 3.2) }; },
-    water: 'swim',
+    water: ctx.wet ? 'swim' : null, // 168: a board without water (a duck in the meadow while the pond is locked) has no wet(): it lives on land, as walk.js does
     carry(x, z) { unplay(); unnest(); land = null; held = { x, z, t: now }; }, // t: 69-2 moved last at (it wriggles while moved, then settles)
     spin(d) { if (held) root.rotation.y += d; }, // 69-1: held up, turned round by the finger
     use(st) { const q = land && choose({ play: [st], night: ctx.night }, api, { ...me(), T: now }, land.x, land.z, 99); if (q) land.q = q; return q ? [land.x, land.z] : null; },

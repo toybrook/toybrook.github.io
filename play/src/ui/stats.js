@@ -1,7 +1,7 @@
 // inbox 41 A 이용 통계 (Umami Cloud, EU, no cookies). Off = the script is never added, so no outside request at all: UMAMI_ID
 // empty, 설정 › 이용 통계 보내기 끄기, the browser's Do Not Track, offline, or not on STATS_HOST (copies elsewhere, local tests).
 // Only these, counted in this browser (toyhabitat.stats, apart from the save): start (a day), first_hatch and return_d1 (once
-// ever), habitat_open (the habitat's name, a day each), attend (the day), error (120 characters + file:line, a day each; inbox 49: + the screen's width band, the habitat on screen, the GL context lost or not).
+// ever), habitat_open (the habitat's name, a day each), attend (the day), error (120 characters + file:line, a day each; inbox 49: + the screen's width band, the habitat on screen, the GL context lost or not; 168: the game's version).
 // inbox 51, for the release balance (docs/balance-data.md), bands only: buy (small/big/play, ♥0~49/50~99/100+), expand (habitat, step),
 // level (each 5th), hearts_day (the last play day's hearts got and spent, 0/1~49/50~119/120+, sent the next day) and codex (cells
 // in tens, a day), each with day: days since the game began (0~29, 30+), never a date or time. 25 a day at most, errors 5 more.
@@ -11,6 +11,7 @@
 /// 66-1 (inbox 66·68): first_drag (a friend carried, the first day), hatch_2 (the second hatch, within 2 min of the first or not, the
 // first day), play_5m (with play_1m/3m: still here at 60/180/300 s), great_d1 (대만족 on the first day, sent the next day, in bands) and return_d7.
 // 69-4: see_sent (a 구경 링크 or 구경 그림 sent) and see_open (one opened, to look at).
+// 169: load (the first screen up, in time bands, with src) and d0_last (the first time away: where, and how long), the first day only, once ever.
 // No names, mail, device id or save. The service worker leaves other hosts alone (dist-web/sw.js), so the script is never stored.
 // report.js imports this before the game: nothing here may import the game.
 import { UMAMI_ID, STATS_HOST, PREFS } from '../config.js';
@@ -57,16 +58,37 @@ const fromRef = r => { let h = ''; try { h = new URL(r).hostname; } catch { /* n
 let src = null; try { src = sessionStorage.getItem('toyhabitat.src'); } catch { /* private mode */ }
 src ||= fromRef(document.referrer);
 
+// 169: the first screen up (main.js: the boot cover off), seconds from the page's start in bands. The device's first day, once ever
+export function loaded() {
+  if (st.load) return; st.load = 1; keep(); const s = performance.now() / 1000;
+  if (firstDay()) track('load', { in: s < 2 ? '~2s' : s < 4 ? '~4s' : s < 8 ? '~8s' : '8s+', src });
+}
+// 169: what was on screen when the player left (read from the page, nothing of the game): loading / intro / egg (the first egg's
+// 바로 깨기 or the nest sheet, a hatch going) / card (the hatch card) / decor / codex / pet (the habitat, a pet in the last 60 s) / habitat / other
+const shown = id => { const e = document.getElementById(id); return !!e && !e.hidden; };
+function where(petAt) {
+  if (document.getElementById('boot') && !document.getElementById('boot').classList.contains('done')) return 'loading';
+  if (shown('intro')) return 'intro';
+  if (shown('nest')) return shown('ncard') ? 'card' : 'egg';
+  if (document.querySelector('#loading .lfirst:not([hidden])')) return 'egg';
+  if (shown('loading')) return 'loading';
+  if (shown('decor')) return 'decor';
+  if (shown('codex')) return 'codex';
+  if (document.getElementById('habitat')?.classList.contains('hidden') !== false || document.querySelector('#habitat > section:not([hidden]), body > section.pop:not([hidden])')) return 'other';
+  return Date.now() - petAt < 60e3 ? 'pet' : 'habitat';
+}
 // main.js, after the save is up. S: the game state (read only)
 const noon = t => new Date(t).setHours(12, 0, 0, 0);
 const hb = n => n < 1 ? '0' : n < 50 ? '1~49' : n < 120 ? '50~119' : '120+';
 export function watch(G) {
   if (!st.t0) { st.t0 = G.S.stats.days > 1 ? 'old' : Date.now(); if (G.S.stats.hatch) st.first_hatch = 1; if (st.t0 !== 'old') st.g1 = 0; keep(); } // a player from before 0.71: no first or next day
   const day = (t = Date.now()) => { const d = Math.round((noon(t) - noon(G.S.since)) / DAY); return d >= 30 ? '30+' : Math.max(0, d); };
+  let pets = G.S.stats.pet || 0, petAt = 0; // 169: the last pet (one that gave hearts: rules.js counts those)
   let h = G.S.hearts; // hearts got and spent are what this page saw them do (not across a backup put in)
   const tick = (ev = []) => {
     const today = dayOf(Date.now());
     if (st.hd?.day !== today) { if (st.hd?.d != null) track('hearts_day', { got: hb(st.hd.got), spent: hb(st.hd.spent), day: st.hd.d }); st.hd = { day: today, d: day(), got: 0, spent: 0 }; }
+    if ((G.S.stats.pet || 0) > pets) petAt = Date.now(); pets = G.S.stats.pet || 0;
     const dh = G.S.hearts - h; h = G.S.hearts; if (dh) { st.hd[dh > 0 ? 'got' : 'spent'] += Math.abs(dh); keep(); }
     track('start', { src });
     track('codex', { cells: Math.floor(Object.keys(G.S.codex).length / 10) * 10, day: day() });
@@ -89,6 +111,12 @@ export function watch(G) {
     if (G.S.stats.hatch >= 2 && !st.hatch_2) { st.hatch_2 = 1; keep(); if (st.t0 !== 'old' && today === dayOf(st.t0) && st.h1) track('hatch_2', { in: Date.now() - st.h1 <= 120e3 ? '2분 안' : '2분 넘게' }); }
   };
   tick(); G.on(tick);
+  // 169: the first time the page is hidden or closed, marked even when not sent (a later day, or off); not reached: dropped
+  const left = e => {
+    if (st.d0 || e.type === 'visibilitychange' && !document.hidden) return; st.d0 = 1; keep(); const s = performance.now() / 1000;
+    if (firstDay()) track('d0_last', { at: where(petAt), s: s < 30 ? '~30s' : s < 60 ? '~1m' : s < 180 ? '~3m' : s < 300 ? '~5m' : '5m+' });
+  };
+  addEventListener('visibilitychange', left); addEventListener('pagehide', left);
   // inbox 54: time on the game screen today (hidden or asleep not counted: a gap over 10 s counts 10 s)
   let last = Date.now();
   addEventListener('visibilitychange', () => { last = Date.now(); });

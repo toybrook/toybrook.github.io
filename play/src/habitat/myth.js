@@ -42,6 +42,7 @@ export function mythLayer({ scene, ctx, U, ui, open, nearest, gather, idle, plac
   const body = { x: 0, z: 0, yaw: 0, r: MS.r, seg: MS.seg }, sh = new THREE.Object3D(); sh.rotation.x = -Math.PI / 2; let blob = null;
   const beside = (x, z, d) => nearest((px, pz) => walkable(px, pz) && free(ctx.crowd, body, px, pz) && Math.hypot(px - x, pz - z) > d, [x + d * 0.7, z + d * 0.7]);
   const homeAt = () => { const A = of('myth_altar'); return A ? beside(A.spot.x, A.spot.z, 3.6) : beside((open[0] + open[1]) / 2, (open[2] + open[3]) / 2, 0); };
+  const retry = () => setTimeout(() => { loading = null; }, 3e4); // 168: a failed load (offline) is forgotten after 30 s, so a later one asks again (ui/myth.js asks every 0.8 s)
   const spawn = () => loading ??= loadMyth().then(() => {
     F = makeMyth(); F.obj.rotation.order = 'YXZ'; F.obj.visible = false; scene.add(F.obj); F.obj.traverse(o => { if (o.isMesh && !o.material.transparent) solid.push(o); });
     const N = 14, pos = new Float32Array(N * 3), g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); // 14-1: steam off its back in the rain
@@ -119,7 +120,7 @@ export function mythLayer({ scene, ctx, U, ui, open, nearest, gather, idle, plac
       if (key !== traceAt) { if (trace) scene.remove(trace); trace = null; traceAt = key;
         if (C) { const a0 = Math.random() * 6, pts = Array.from({ length: 11 }, (_, i) => { const a = a0 + i * 0.5, R = 2.5 + i * 0.12; return [C.spot.x + Math.cos(a) * R, C.spot.z + Math.sin(a) * R, Math.atan2(-Math.cos(a), -Math.sin(a))]; });
           trace = trail(pts, [[HOOF, burnt[0], 2], [SPOT, burnt[1], 3]]); } }
-      if ((s === 'guest' || s === 'home') && !w) spawn();
+      if ((s === 'guest' || s === 'home') && !w) spawn().catch(retry); // 168: offline, its model never fetched: asked again next time (an unhandled rejection before, and no 신수 till a reload)
     },
     // a tap (before the props'): during its coming, skip; on it (no animal in front), a pet; the altar; the prints
     tap(ray, hit, e) {
@@ -151,7 +152,7 @@ export function mythLayer({ scene, ctx, U, ui, open, nearest, gather, idle, plac
       sh.position.set(me.x, heightAt(me.x, me.z) + 0.05, me.z); sh.scale.set(lx * f, lz * f, 1); sh.rotation.z = me.yaw; blob.set(sh, f);
     },
     async cut(done) { // its coming (ui/myth.js: the line and 건너뛰기); onto the altar if it is out
-      await spawn(); const A = of('myth_altar'), [lx, lz] = A ? beside(A.spot.x, A.spot.z, 3.6) : homeAt();
+      await spawn().catch(retry); if (!me) return void done?.(); const A = of('myth_altar'), [lx, lz] = A ? beside(A.spot.x, A.spot.z, 3.6) : homeAt();
       cutS = { t: 0, at: performance.now(), T: calm() ? 6.5 : 8.5, lx, lz, from: [lx - 18, lz - 12], done }; Object.assign(me, { st: 'stand', lap: null, lie: 0, x: lx, z: lz }); place();
       view(lx, lz + 2, 34, 1.05);
     },
@@ -192,6 +193,7 @@ export function guestLayer(m, { scene, ctx, ui, open, nearest, view, puff }) {
   const sh = new THREE.Object3D(); sh.rotation.x = -Math.PI / 2;
   const homeAt = () => { const [x, z] = pts[0] ?? [(open[0] + open[1]) / 2, (open[2] + open[3]) / 2]; return nearest((a, b) => walkable(a, b) && Math.hypot(a - x, b - z) > 2, [x - 2, z + 2]); };
   const place = () => { F.obj.position.set(me.x, heightAt(me.x, me.z), me.z); F.obj.rotation.y = me.yaw; };
+  const retry = () => setTimeout(() => { loading = null; }, 3e4); // 168: as the 신수's: a failed load is asked again after 30 s
   const spawn = () => loading ??= loadModel(SP[m.fig.sp].model).then(() => { if (dead) return;
     F = makeFigure(m.fig.sp, m.fig.v, 'adult'); F.obj.visible = false; g.add(F.obj); blob = blobSlot(scene);
     const [x, z] = homeAt(); me = { x, z, yaw: -0.6, st: 'stand', t: 0, dur: 2, ph: 0, lie: 0, gait: 'still', hx: x, hz: z }; place(); });
@@ -226,7 +228,7 @@ export function guestLayer(m, { scene, ctx, ui, open, nearest, view, puff }) {
   const ground = (ray, y) => (gp.set(up, -y), ray.ray.intersectPlane(gp, hp)); // the tap's point on the ground at y
   return {
     id: m.id,
-    set(s, w, find) { stage = s; wait = !!w; prints.visible = ['prints', 'altar', 'ready', 'called'].includes(s); if (glint) glint.visible = !!find; if ((s === 'guest' || s === 'home') && !w) spawn().catch(() => {}); },
+    set(s, w, find) { stage = s; wait = !!w; prints.visible = ['prints', 'altar', 'ready', 'called'].includes(s); if (glint) glint.visible = !!find; if ((s === 'guest' || s === 'home') && !w) spawn().catch(retry); },
     // a tap: during its coming, skip; on it (no animal in front), a pet; the glint; the prints (its 발견, then its window)
     tap(ray, hit, e) {
       if (cutS) { cutS.t = cutS.T; return true; }
@@ -247,7 +249,7 @@ export function guestLayer(m, { scene, ctx, ui, open, nearest, view, puff }) {
       sh.position.set(me.x, heightAt(me.x, me.z) + 0.05, me.z); sh.scale.set(2.2 * f, f, 1); sh.rotation.z = me.yaw; blob.set(sh, f);
     },
     async cut(done) {
-      await spawn().catch(() => {}); if (dead || !me) return void done?.(); const [lx, lz] = homeAt(), [ex, ez] = pts.at(-1) ?? [lx + 10, lz];
+      await spawn().catch(retry); if (dead || !me) return void done?.(); const [lx, lz] = homeAt(), [ex, ez] = pts.at(-1) ?? [lx + 10, lz];
       cutS = { t: 0, at: performance.now(), T: calm() ? 6 : 7.5, lx, lz, from: uni ? [lx - 12, lz - 8] : [ex, ez], done }; Object.assign(me, { st: 'stand', lie: 0, x: cutS.from[0], z: cutS.from[1], hx: lx, hz: lz }); place();
       view(lx, lz + 2, 30, 1.05);
     },

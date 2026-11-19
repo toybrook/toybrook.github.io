@@ -580,7 +580,8 @@ const myOf = id => MYTHIC.find(m => m.id === id), before = m => MYTHIC.slice(0, 
 export const mythTurn = (S, m) => !HOLD.myth && !!S.myth[m.id] && (m === MY || S.unlocked.includes(m.habitat)) && before(m).every(p => S.myth[p.id]?.settled);
 // the faint fire prints (its 발견) show from then, no condition: the first from S.since, the next from the day the one before settled
 export const mythPrints = (S, id = MY.id) => { const p = before(myOf(id)).at(-1); return at6(p ? S.myth[p.id].settled : S.since ?? 0, B.myth.day); };
-export const mythNight = t => { const h = new Date(t).getHours(); return h >= 20 || h < 5; };
+export const NIGHT = [20, 5]; // the night's hours: 부르기 (mythCall, the others only then), 167 「신수란?」 says them
+export const mythNight = t => { const h = new Date(t).getHours(); return h >= NIGHT[0] || h < NIGHT[1]; };
 // null (nothing yet, or not its turn) | 'prints' | 'fire' (a campfire's night to wait) | 'trace' | 'altar' (the 3) | 'ready' (부르기) | 'called' | 'guest' | 'home'
 export function mythStage(S, now, id = MY.id) {
   const m = myOf(id); if (!m || !mythTurn(S, m)) return null; // inbox 65 (HOLD), 152 D
@@ -634,7 +635,7 @@ export function mythTrace(S, now, at = null) { // the burnt hoofprints tapped: p
 }
 export function mythCall(S, now, id = MY.id) { // 부르기: it comes this night (20:00, or now if it is night already)
   const m = myOf(id), night = mythNight(now); if (mythStage(S, now, id) !== 'ready' || (m !== MY && !night)) return null; // 158: the others only at night
-  const t = new Date(now); t.setHours(20, 0, 0, 0);
+  const t = new Date(now); t.setHours(NIGHT[0], 0, 0, 0);
   const M = S.myth[id]; M.called = now; M.arrive = m.dawn ? at6(now, new Date(now).getHours() < 6 ? 0 : 1) : night ? now : +t; return M.arrive; // 158 dawn: the unicorn at the next 06:00
 }
 // 158 the unicorn's horn: a pet of one of its habitat's friends rolls once a day (pd), `luck`; the pity-th day it rolls (pn) it is sure

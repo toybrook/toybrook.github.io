@@ -2,7 +2,7 @@
 // Repeated things are InstancedMesh (one draw call per kind) to keep phones at 60fps.
 import * as THREE from 'three';
 import { S, BW0 as BW, BD0 as BD, O, Z, SW, stream, pond, bridgeT, bP, bN, BL, bridgeArch as arch, paddock, fences, heightAt, occupied, freeBase as free, free as freeOpen, rand, dist2D, sPts0 as sPts, CLIFF_Z, WATER_Y } from './layout.js';
-import { ringIn } from '../zones.js';
+import { ringIn, Z143 } from '../zones.js';
 import { zoneProps } from '../zoneprops.js';
 import { toyMat, roundedBox, merge, lathe, addSway, instanced, windTime, nightGlow, snowNow, snowTop, SNOW_RGB } from '../toyKit.js';
 import { QUALITY, thin, calm } from '../../config.js';
@@ -305,12 +305,16 @@ export function partGeos() {
   const pineGeo = lathe([[0, 0.7], [1.3, 0.8], [1.36, 0.95], [0.62, 1.45], [1.05, 1.5], [1.1, 1.64], [0.48, 2.12], [0.8, 2.17], [0.84, 2.3], [0.12, 3.1], [0.0, 3.15]], 16);
   // the snow on a pine's tiers (25-1): each tier's upper slope with a shell of snow a little over it, its lower lip in soft
   // scallops (the pine's profile above: [r, y] from each tier's rim to where the next one starts)
-  const snowGeo = merge([[[1.36, 0.95], [0.62, 1.45]], [[1.1, 1.64], [0.48, 2.12]], [[0.84, 2.3], [0.12, 3.1]]].map(([[r0, y0], [r1, y1]], i) => {
-    const dr = r1 - r0, dy = y1 - y0, l = Math.hypot(dr, dy), nr = dy / l, ny = -dr / l, at = (t, o) => [r0 + dr * t + nr * o, y0 + dy * t + ny * o], t0 = i === 2 ? 0.25 : 0.32;
+  const snowOn = (tiers, T0 = [0.32, 0.32, 0.25]) => merge(tiers.map(([[r0, y0], [r1, y1]], i) => {
+    const dr = r1 - r0, dy = y1 - y0, l = Math.hypot(dr, dy), nr = dy / l, ny = -dr / l, at = (t, o) => [r0 + dr * t + nr * o, y0 + dy * t + ny * o], t0 = T0[i];
     const g = lathe([at(t0, -0.04), at(t0 - 0.02, 0.05), at(t0 + 0.06, 0.09), at(0.6, 0.08), at(0.97, 0.07), [0, y1 + (i === 2 ? 0.1 : 0.06)]], 16), p = g.attributes.position, rl = at(t0, 0)[0];
     for (let k = 0; k < p.count; k++) { const x = p.getX(k), z = p.getZ(k), w = (Math.hypot(x, z) / rl) ** 4; p.setY(k, p.getY(k) - w * (0.03 + 0.05 * Math.sin(7 * Math.atan2(z, x) + i * 2))); }
     g.computeVertexNormals(); return g;
-  }));
+  })), snowGeo = snowOn([[[1.36, 0.95], [0.62, 1.45]], [[1.1, 1.64], [0.48, 2.12]], [[0.84, 2.3], [0.12, 3.1]]]);
+  // 165 E (?z143=1): the snow's pine up close read as flat green plates (a wide low tier, a flat underside). The same rims, lower
+  // and steeper: each tier a cone, its skirt hanging down over a hollow under it (the same 11 points, 16 round: as many triangles)
+  const pine143 = Z143 && lathe([[0, 1.05], [1.26, 0.6], [1.32, 0.67], [0.36, 1.9], [1.03, 1.33], [1.09, 1.39], [0.3, 2.45], [0.79, 2.04], [0.84, 2.1], [0.1, 3.12], [0.0, 3.17]], 16),
+    snow143 = Z143 && snowOn([[[1.32, 0.67], [0.36, 1.9]], [[1.09, 1.39], [0.3, 2.45]], [[0.84, 2.1], [0.1, 3.12]]], [0.3, 0.33, 0.3]);
   const rockGeo = new THREE.SphereGeometry(1, 16, 11);
   { const p = rockGeo.attributes.position; for (let i = 0; i < p.count; i++) { let x = p.getX(i), y = p.getY(i), z = p.getZ(i); const k = 1 + 0.1 * Math.sin(3 * x + 1) * Math.sin(2.5 * y + 2) * Math.sin(3.2 * z); if (y < -0.35) y = -0.35 + (y + 0.35) * 0.3; p.setXYZ(i, x * k, y * k, z * k); } rockGeo.computeVertexNormals(); }
   const postGeo = lathe([[0.14, 0], [0.14, 0.86], [0.12, 0.97], [0.07, 1.03], [0, 1.05]], 10);
@@ -318,15 +322,15 @@ export function partGeos() {
   const petalGeo = merge(Array.from({ length: 5 }, (_, i) => { const g = new THREE.SphereGeometry(0.1, 7, 5); g.scale(1, 0.35, 0.6); g.translate(0.11, 0, 0); g.rotateY(i / 5 * Math.PI * 2); return g; }));
   const centreGeo = new THREE.SphereGeometry(0.07, 8, 6); centreGeo.scale(1, 0.6, 1);
   const white = o => toyMat('#ffffff', o);
-  return PG = { geo: { canopy: sphere, trunk: trunkGeo, pine: pineGeo, snow: snowGeo, rock: rockGeo, post: postGeo, rail: railGeo, petal: petalGeo, centre: centreGeo, pebble: new THREE.SphereGeometry(1, 12, 7) },
+  return PG = { geo: { canopy: sphere, trunk: trunkGeo, pine: pineGeo, snow: snowGeo, pine143, snow143, rock: rockGeo, post: postGeo, rail: railGeo, petal: petalGeo, centre: centreGeo, pebble: new THREE.SphereGeometry(1, 12, 7) },
     mat: { canopy: addSway(white({ roughness: 0.5 }), 0.035, 1.2, true), trunk: white({ roughness: 0.55 }), pine: addSway(white({ roughness: 0.5 }), 0.02, 1.0, true), snow: addSway(white({ roughness: 0.62 }), 0.02, 1.0), rock: Object.assign(white({ roughness: 0.42 }), { onBeforeCompile: snowTop, customProgramCacheKey: () => 'rocksnow' }), plain: white({ roughness: 0.5 }), centre: white({ roughness: 0.4 }) } };
 }
 // one InstancedMesh per kind of L, then the fade lists' kind names (in occupied) turn into those meshes
 export function finish(scene, L, { rand, occupied }) {
   const { geo, mat } = partGeos();
-  const M = { canopy: instanced(geo.canopy, mat.canopy, L.canopy), trunk: instanced(geo.trunk, mat.trunk, L.trunk), pine: instanced(geo.pine, mat.pine, L.pine), rock: instanced(geo.rock, mat.rock, L.rock) };
+  const M = { canopy: instanced(geo.canopy, mat.canopy, L.canopy), trunk: instanced(geo.trunk, mat.trunk, L.trunk), pine: instanced(L.snow.length && Z143 ? geo.pine143 : geo.pine, mat.pine, L.pine), rock: instanced(geo.rock, mat.rock, L.rock) };
   scene.add(M.canopy, M.trunk, M.pine);
-  if (L.snow.length) scene.add(M.snow = instanced(geo.snow, mat.snow, L.snow)); // 25-1: the snow's pines
+  if (L.snow.length) scene.add(M.snow = instanced(Z143 ? geo.snow143 : geo.snow, mat.snow, L.snow)); // 25-1: the snow's pines
   for (const o of occupied) if (o.fade) for (const p of o.fade) if (typeof p[0] === 'string') p[0] = M[p[0]];
   scene.add(M.rock); L.mesh = M; // 129: the opened zone's stones pop up (zoneprops.js)
   scene.add(instanced(geo.pebble, mat.plain, L.pebble, { cast: false }));

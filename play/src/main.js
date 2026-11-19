@@ -14,12 +14,12 @@ import { iosSafariTab } from './game/backup.js';
 import { initPhoto } from './ui/photo.js';
 import { ASSETS, DEBUG, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, savePrefs, OFFLINE, calm, applyLook } from './config.js';
 import { applySound, sfx } from './ui/sound.js';
-import { watch, track } from './ui/stats.js';
+import { watch, track, loaded } from './ui/stats.js';
 import { openCode } from './ui/mail.js'; // inbox 41 B 우편함
 import { initAttend, todayRow, takeToday, weekOn, weekCells } from './ui/attend.js'; // inbox 41 C 출석부
 import './ui/first.js'; // inbox 41 D 첫날 할 일
 import { initEvent } from './ui/event.js'; // 15-1 계절 이벤트
-import { initMyth, onMyth, mythCut, mythDue } from './ui/myth.js'; // 14-1 신수의 부름
+import { initMyth, onMyth, mythCut, mythDue, mythNightDue, mythNightText, mythNightTold, mythGo } from './ui/myth.js'; // 14-1 신수의 부름; 167 C (public since 171)
 import { initVisit, seeHash, seeBar } from './ui/visit.js'; // 16-1 놀러 보내기; 69-4 서식지 구경 링크
 import { initSky, skyNow, onStar, retSky, retShown, retGo } from './ui/sky.js'; // 16-2 특별한 하늘
 import { initArt, place as artPlace, retRow as artRow, open as artOpen, tapped as artTapped, due as artDue } from './ui/art.js'; // 17-2 동물 작품
@@ -87,7 +87,7 @@ const fresh = firstEgg(G.S), mapUp = () => mapUp.p ??= (mapImg.src = ASSETS.worl
 const backTo = !fresh && (G.S.flags.betaIntro || PREFS.introAt === VERSION) && (h => HAB[h]?.ready && G.S.unlocked.includes(h) ? h : HABITATS[0].id)(G.S.flags.lastHab);
 if (fresh) code().catch(() => {}).then(() => cur || mapUp());
 (fresh || backTo ? Promise.resolve() : mapUp()).then(() => {
-  const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400);
+  const boot = $('boot'); boot.classList.add('done'); setTimeout(() => boot.remove(), 400); if (!SEE) loaded(); // 169
   idle(() => code().then(h => { // then the models of the habitat opened last (a new player: none, above)
     if (!fresh && !backTo) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.withGuests()).catch(() => {}));
     if (OFFLINE && !SEE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
@@ -152,7 +152,7 @@ async function enter(id) {
   api.setActive(true); play.attach(api, id);
   if (G.S.refit?.includes(id)) G.refit(id, api.decor.refit(G.S.props)); // inbox 42 A: the board grew (rules.js to11): what no longer fits moves
   if (!SEE) artPlace(id); // 17-2: the 작품 made while away, on this board's empty ground
-  await api.warm(); loadBar(false); idle(mapUp); return true;
+  await api.warm().catch(() => {}); loadBar(false); // 168: shaders made ahead or not, the curtain lifts (style.css hides the buttons while it shows) idle(mapUp); return true;
 }
 const mapUi = initWorldMap(world, { enter });
 G.on(ev => { if (ev.some(e => e.type === 'unlock' || e.type === 'reset')) mapUi.refresh(); });
@@ -243,22 +243,23 @@ const retAttend = () => G.attendDue() && G.S.attend.n > 0; // a new player's fir
 const retHome = () => cur || G.S.flags.lastHab || HABITATS[0].id;
 function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
   retEggs = eggs;
-  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !retSky() && !newsDue && !artDue(retHome()).length && !wildNews(G.S)) return; // nothing new: no card
+  if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !mythNightDue() && !retSky() && !newsDue && !artDue(retHome()).length && !wildNews(G.S)) return; // nothing new: no card
   if (intro.hidden && news.hidden) showRet(); else retWait = true;
 }
 function showRet() {
   const eggs = retEggs, now = G.now(), ready = G.S.slots.filter(s => s && now >= s.end).length, grown = G.S.animals.filter(a => a.card), att = retAttend() && todayRow();
   const n = Object.values(eggs).reduce((a, b) => a + b, 0), most = Object.keys(eggs).sort((a, b) => eggs[b] - eggs[a])[0];
   const back = G.S.cards.filter(c => c.new), names = [...new Set(back.map(c => esc(c.nm)))]; // 13-1: postcards not seen, at the top (137 A: escaped, they go into ret.innerHTML)
+  const mn = mythNightDue(); // 167 C: 「부를 수 있음」 since the day, night now and not here at dusk: the top row
   const myth = mythDue(); // 14-1: it came to the altar while away: the top row (its coming seen from there, 다시 보기)
   const sk = retSky(); // 16-2: last night's sky not seen (망원경으로 다시 보기)
   const ar = artRow(retHome()); // 17-2 「밤사이 먹보 양 몽실이가 작품을 만들었어요」 (after the 출석, before the rest)
   const wn = wildNews(G.S), wr = wn && ['🌼', wn.text, wn.sub, 'wild']; // 17-3: one row, the most interesting change (a tap: the camera there)
-  if (!n && !grown.length && !att && !back.length && !myth && !sk && !newsDue && !ar && !wr) return;
+  if (!n && !grown.length && !att && !back.length && !myth && !mn && !sk && !newsDue && !ar && !wr) return;
   const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line (137 A: escaped where it goes in, below)
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
   const d2 = att && att[2], wk = att && weekOn(); // 93-1: the second day's legendary egg, the card's top row (a tap: into the nest, then the nest)
-  const rows = [d2 && ['🥚', $t('이틀째 선물 · 전설 알이 왔어요'), $t('누르면 둥지로 · 기다림 없이 바로 깨요'), 'd2'], myth && ['🔥', $t('밤사이 제단에 불갈기 천리마가 내려왔어요'), $t('다시 보기'), 'myth'], sk && ['🌌', sk.text, $t('다시 보기'), 'sky'], back.length && ['🐾', $t('산책에서 돌아왔어요'), $t('{0}{1} · 엽서 {2}장 보기', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : '', back.length), 'cards'], !d2 && att && ['📅', wk ? $t('첫 주 선물 {0}일째', att[0]) : $t('{0}일째 출석', att[0]), att[1], 'attend'], ar, wr, n && ['🥚', $t('알 {0}개', n), `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? $t('둥지가 가득 찼어요') : $t('둥지에 생겼어요{0}', full.length ? $t(' · {0} 가득', full.map(h => HAB[h].name).join('·')) : '')}`, 'eggs'],
+  const rows = [mn && ['🌙', esc(mythNightText(mn)), $t('가 보기'), 'mnight'], d2 && ['🥚', $t('이틀째 선물 · 전설 알이 왔어요'), $t('누르면 둥지로 · 기다림 없이 바로 깨요'), 'd2'], myth && ['🔥', $t('밤사이 제단에 불갈기 천리마가 내려왔어요'), $t('다시 보기'), 'myth'], sk && ['🌌', sk.text, $t('다시 보기'), 'sky'], back.length && ['🐾', $t('산책에서 돌아왔어요'), $t('{0}{1} · 엽서 {2}장 보기', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : '', back.length), 'cards'], !d2 && att && ['📅', wk ? $t('첫 주 선물 {0}일째', att[0]) : $t('{0}일째 출석', att[0]), att[1], 'attend'], ar, wr, n && ['🥚', $t('알 {0}개', n), `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? $t('둥지가 가득 찼어요') : $t('둥지에 생겼어요{0}', full.length ? $t(' · {0} 가득', full.map(h => HAB[h].name).join('·')) : '')}`, 'eggs'],
     grown.length && ['🌱', $t('다 자란 친구 {0}', grown.length), $t('보러 가요'), 'grown'], ready && ['✨', $t('부화 끝난 알 {0}', ready), $t('깨우러 가요'), 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', $t('백업해 두면 기기를 바꿔도 이어서 할 수 있어요'), $t('설정 › 내 저장 백업'), 'backup']); G.flag('backupNag', today); }
@@ -268,8 +269,8 @@ function showRet() {
   ret.dataset.wild = wn ? JSON.stringify([wn.hab, wn.at]) : ''; if (wn) G.wildSeen();
   ret.dataset.eggs = most || ''; ret.dataset.grown = grown[0] ? habitatOf(grown[0]) : ''; retGrown = grown.map(a => a.id);
   if (grown.length) code().then(() => import('./ui/thumbs.js')).then(({ figureThumb: f }) => ret.querySelectorAll('.minis > span').forEach((p, i) => { const a = grown[i], [b, c] = p.querySelectorAll('img');
-    f(a.species, a.variant, a.color, a.acc, 'baby').then(u => { b.src = u; }); f(a.species, a.variant, a.color, a.acc, 'adult').then(u => { c.src = u; }); })).catch(() => {}); // offline: the row without them
-  ret.hidden = false; if (myth) G.mythShown(); if (sk) retShown(sk.n); if (newsDue) { newsDue = false; G.flag('news', VERSION); }
+    f(a.species, a.variant, a.color, a.acc, 'baby').then(u => { b.src = u; }, () => {}); f(a.species, a.variant, a.color, a.acc, 'adult').then(u => { c.src = u; }, () => {}); })).catch(() => {}); // offline: the row without them
+  ret.hidden = false; if (myth) G.mythShown(); if (mn) { ret.dataset.mn = mn.id; mythNightTold(); } if (sk) retShown(sk.n); if (newsDue) { newsDue = false; G.flag('news', VERSION); }
 }
 ret.onclick = async e => {
   const b = e.target.closest('button'), d = b?.dataset; if (!d) return;
@@ -282,6 +283,7 @@ ret.onclick = async e => {
   if (d.go === 'd2') { ret.dataset.eggs = Object.keys(G.S.nests).find(h => G.S.nests[h].eggs.some(e => e.now)) || ''; d.go = 'eggs'; } // taken above (retAttend)
   if (d.go === 'backup') return BK.open();
   if (d.go === 'news') { news.hidden = false; return; }
+  if (d.go === 'mnight') return mythGo(ret.dataset.mn, 'win'); // 167 C: to its habitat, its window
   const home = retHome(), to = { eggs: ret.dataset.eggs || home, ready: home, grown: ret.dataset.grown || home, cards: home, myth: 'meadow', sky: 'meadow', art: home, wild: JSON.parse(ret.dataset.wild || '[]')[0] || home }[d.go];
   // the 3D comes in under a cloud, at once: no map in between (it showed for seconds on a phone the first time); the loading bar says the rest
   const far = cur !== to; if (far) { veil.firstChild.textContent = ''; veil.hidden = false; veil.classList.add('on'); world.classList.add('now'); hab.classList.add('now'); }
@@ -306,7 +308,7 @@ addEventListener('visibilitychange', () => {
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone();
   if (!cur && firstEgg(G.S)) nav.go(HABITATS[0].id); }; // inbox 61 B: a new player, straight to the first egg (no map tap)
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
-if (!SEE) { initAttend(() => cur); initEvent(() => cur, () => api); initMyth(() => cur, () => api); initVisit(nav); initArt({ api: () => api, cur: () => cur, back: () => { if (ret.hidden) away({}); } }); }
+if (!SEE) { initAttend(() => cur); initEvent(() => cur, () => api); initMyth(() => cur, () => api, nav); initVisit(nav); initArt({ api: () => api, cur: () => cur, back: () => { if (ret.hidden) away({}); } }); }
 if (backTo) nav.go(backTo);
 if (!SEE) { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
 

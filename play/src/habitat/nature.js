@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { kit, emptyL, flowerPal, flowerCluster, partGeos, makeGrassClump, grassMat } from './meadow/props.js';
 import { instanced } from './toyKit.js';
 import { QUALITY, thin } from '../config.js';
+import { Z143 } from './zones.js';
 
 const KINDS = ['canopy', 'trunk', 'pine', 'snow', 'rock', 'petal', 'centre', 'grass'], FLAT = ['petal', 'centre', 'grass'];
 const seeded = v => { let s = v % 2147483646 + 1; return () => { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; }; };
@@ -21,7 +22,7 @@ export function grow({ prop, s = 1, v = 0 }, X = 0, Z = 0, rot = 0, H = () => 0)
   const g = QUALITY.g; L.grass = thin(L.grass, g.grass); L.petal = thin(L.petal, g.flower); L.centre = thin(L.centre, g.flower); // 26-3 (a petal and its centre go together)
   return L;
 }
-const meshesOf = (L, add) => { const M = {}, { geo, mat } = looks(); for (const k of KINDS) if (L[k].length) add(M[k] = instanced(geo[k], mat[k], L[k], { cast: !FLAT.includes(k) })); return M; };
+const meshesOf = (L, add) => { const M = {}, { geo, mat } = looks(), z = Z143 && L.snow.length; for (const k of KINDS) if (L[k].length) add(M[k] = instanced(z && geo[k + '143'] || geo[k], mat[k], L[k], { cast: !FLAT.includes(k) })); return M; }; // 165 E: the snow's pines (meadow/props.js pine143)
 
 // a board's natives: set(placed records, unit) draws them and gives uid -> fade list ([[mesh, first, count]], habitat.js);
 // model(rec): one as a Group, for holding it; pick(hit): the uid a raycast hit belongs to

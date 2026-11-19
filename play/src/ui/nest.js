@@ -74,7 +74,7 @@ export function initNest(nav) {
     once('eggs', mine.map(e => e.id).join() + tab + d2 + !!sel, () => {
       eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => $t('<button class="negg{0}" data-id="{1}" aria-label="{2} 알{3}"><img alt=""></button>', canLetGo(e) ? '' : ' keep', e.id, RAR[e.rarity].name, canLetGo(e) ? '' : $t(' · 선물'))).join('')}${d2 ? $t('<span class="negg lock" aria-label="전설 알 · 내일 열려요"><img alt=""><small>내일 열려요</small></span>') : ''}</div><p class="nnote"></p>${
         sel ? $t('<div class="nbtns ntidy"><button class="sb" data-untidy>취소</button><button class="go" data-letgo>놓아주기</button></div>') : ''}`;
-      eggsEl.querySelectorAll('img').forEach((img, i) => eggThumb(mine[i]?.rarity ?? 'legendary').then(u => { img.src = u; }));
+      eggsEl.querySelectorAll('img').forEach((img, i) => eggThumb(mine[i]?.rarity ?? 'legendary').then(u => { img.src = u; }, () => {}));
     });
     const note = eggsEl.querySelector('.nnote');
     if (sel) { // 112 정리: tap eggs to pick, 놓아주기 lets them go for hearts (gifts can't be picked)
@@ -86,14 +86,14 @@ export function initNest(nav) {
     const gr = G.S.giftRow, free = G.S.slots.includes(null); giftEl.hidden = !gr.length; // 112 선물 알: given over a full nest, the first one into a free slot
     once('gift', gr.map(e => e.id).join(), () => {
       giftEl.innerHTML = $t('<b>선물 알</b>{0}<small></small>', gr.map((e, i) => $t('<button class="negg" data-gift aria-label="선물 {0} 알"><img alt=""></button>', RAR[e.rarity].name)).join(''));
-      giftEl.querySelectorAll('img').forEach((img, i) => eggThumb(gr[i].rarity).then(u => { img.src = u; }));
+      giftEl.querySelectorAll('img').forEach((img, i) => eggThumb(gr[i].rarity).then(u => { img.src = u; }, () => {}));
     });
     if (gr.length) giftEl.lastChild.textContent = free ? $t('누르면 부화 칸에 들어가요') : $t('부화 칸이 비면 넣을 수 있어요');
     drawGauges(); slotsEl.classList.toggle('n3', G.S.slots.length > 2); slotsEl.classList.toggle('n4', G.S.slots.length > 3); slotsEl.classList.toggle('n5', G.S.slots.length > 4); // inbox 31: three slots in one row (112: four, five)
     G.S.slots.forEach((s, i) => { const was = sig['slot' + i]; once('slot' + i, s ? `${s.egg.id}` : '-', () => {
       const b = slotsEl.children[i] || slotsEl.appendChild(Object.assign(document.createElement('button'), { className: 'nslot', innerHTML: '<img alt=""><span><b></b><small></small></span>' }));
       b.dataset.i = i; b.classList.toggle('empty', !s); b.classList.remove('fresh'); const img = b.firstChild;
-      img.removeAttribute('src'); if (s) eggThumb(s.egg.rarity).then(u => { img.src = u; });
+      img.removeAttribute('src'); if (s) eggThumb(s.egg.rarity).then(u => { img.src = u; }, () => {});
       if (s && was === '-') { void b.offsetWidth; b.classList.add('fresh'); } // an egg just went in
     }); });
     G.S.slots.forEach((s, i) => {
@@ -185,7 +185,8 @@ export function initNest(nav) {
   async function hatchSlot(i) {
     const s = G.S.slots[i], tok = ++run; busy = true; tab = s.egg.type; shown = shards(G.S, tab);
     const r = G.hatch(i); if (!r) { busy = false; shown = null; return draw(); }
-    await Promise.all([loadModel(SP[r.animal.species].model), loadAcc(r.animal.acc)]); if (tok !== run) return; // another habitat's species: its model isn't loaded here yet
+    const got = await Promise.all([loadModel(SP[r.animal.species].model), loadAcc(r.animal.acc)]).then(() => true, () => false); if (tok !== run) return; // another habitat's species: its model isn't loaded here yet
+    if (!got) { busy = false; shown = null; return draw(); } // 168: offline and that model never fetched: the friend waits (pending) and its card comes back on the next open (resume)
     const light = RAR[r.rarity].shell; // the seams light up in its shell colour, the halo round the egg in its tier colour (the card's)
     stageOn(); st.glow.style.setProperty('--gc', RAR[r.rarity].color); show(r.animal, makeEgg(eggMat(r.egg.rarity), light)); draw();
     await sleep(400); if (tok !== run) return;
@@ -241,7 +242,7 @@ export function initNest(nav) {
       cardEl.hidden = true; stageOff(); busy = false; resume();
     }
   }
-  async function resume() { const p = pending(); if (!p) return draw(); busy = true; const tok = run; await Promise.all([loadModel(SP[p.species].model), loadAcc(p.acc)]); if (tok !== run || el.hidden) return; stageOn(); show(p); card(p); draw(); } // an unanswered card (closed sheet, reload) comes back
+  async function resume() { const p = pending(); if (!p) return draw(); busy = true; const tok = run; const got = await Promise.all([loadModel(SP[p.species].model), loadAcc(p.acc)]).then(() => true, () => false); if (tok !== run || el.hidden) return; if (!got) { busy = false; return draw(); } stageOn(); show(p); card(p); draw(); } // an unanswered card (closed sheet, reload) comes back
 
   function open() {
     if (!habId) return;

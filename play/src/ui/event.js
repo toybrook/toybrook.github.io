@@ -48,7 +48,7 @@ function draw() {
     : $t('<ol>{0}</ol>\n<p class="note">사진 모드로 찍으면 한 칸씩 채워져요 · 다 채우면 「{1}」{2}</p>', e.album.slots.map(s => `<li class="${R.shots[s.id] ? 'done' : ''}"><i aria-hidden="true">${R.shots[s.id] ? '📷' : '❔'}</i><span>${s.name}<small>${hint(s.need)}</small></span>${R.shots[s.id] ? '<em>✓</em>' : ''}</li>`).join(''), PROP[e.album.prop].name, R.cover ? $t(' 받았어요') : '');
   box.innerHTML = $t('<div><h2>{0} {1} 이벤트</h2><p class="note evc">{2} 모은 {3} <b>{4}</b>개 · {5}</p>\n<div class="evtabs" role="tablist">{6}</div>{7}\n<div class="nbtns"><button class="go" data-close>닫기</button></div></div>', esc(e.icon), esc(e.name), esc(c.icon), esc(c.name), R.got, left(R), TABS.filter(([k]) => k !== 'wear' || e.shop.some(i => i.wear)).map(([k, n]) => `<button role="tab" aria-selected="${tab === k}" data-tab="${k}"${tab === k ? ' class="on"' : ''}>${n}</button>`).join(''), body);
   box.dataset.step = 'win';
-  const H = hab(); if (tab === 'shop' && H?.decor) import('./thumbs.js').then(({ propThumb }) => box.querySelectorAll('img[data-p]').forEach(img => propThumb(img.dataset.p, H.decor.model).then(u => { img.src = u; })));
+  const H = hab(); if (tab === 'shop' && H?.decor) import('./thumbs.js').then(({ propThumb }) => box.querySelectorAll('img[data-p]').forEach(img => propThumb(img.dataset.p, H.decor.model).then(u => { img.src = u; }, () => {})));
 }
 const flakes = () => calm() ? '' : `<p class="flakes" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i style="left:${(i * 37) % 100}%;animation-delay:${-(i * 0.61) % 4}s">❄</i>`).join('')}</p>`;
 function card(L) { // the start card

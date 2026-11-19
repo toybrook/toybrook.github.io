@@ -1067,7 +1067,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // following: nearest = where it fills 70% of the screen height, aim at its middle, start at 1.4x the nearest
   function setFocus(a) {
     if (a && a === focus) return; // a pat while following keeps the view
-    focus = a; watch = false; trainCam = false; if (a) homeOn = false; goingHome = false; facing = false; glide = tw = null; zoomed = false; extra = 0; // the camera stays put: its side room becomes plain distance
+    focus = a; watch = false; trainCam = false; if (a) homeOn = false, aim = null; goingHome = false; facing = false; glide = tw = null; zoomed = false; extra = 0; // the camera stays put: its side room becomes plain distance; 168: following replaces a glide to a point (a stale aim left goal null)
     if (a) { lift = 0.5 * height(a); near = fit(a, NEAR_FILL, FRONT_PHI, faceOf(a)); glide = { radius: 1.4 * near }; clear = box154.setFromPoints(pts).getSize(v3).length(); } // fit's corners: its body, not its FX
     controls.zoomToCursor = !a; // following: zoom toward the animal
   }
@@ -1345,7 +1345,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }
   window.addEventListener('resize', resize, sig);
   // 27-1: the habitat on screen (a built one entered again is only set active, not started again)
-  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, wild: () => ({ H: wildH, layer: wild, cells: wildCells, trail: trailPaint, bugs: wildBugs, flies: wildFlies?.n ?? 0, lily: lilyK, steps, flush: flushSteps }), ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }), myth }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests)
+  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, wild: () => ({ H: wildH, layer: wild, cells: wildCells, trail: trailPaint, bugs: wildBugs, flies: wildFlies?.n ?? 0, lily: lilyK, steps, flush: flushSteps }), ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }), myth, cam: () => ({ focus: focus?.rec.species ?? null, aim: !!aim, glide: !!glide }) }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests)
   if (reveal) overview(true); // out to the wider board while the mist draws back
   // 28-1: a zone just opened (main.js): the camera glides out over it, and up to 4 animals run to its spots
   function showZone(k) {

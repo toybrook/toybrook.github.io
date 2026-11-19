@@ -411,6 +411,8 @@ html.calm .rate{animation:none}
 .dock{position:absolute;bottom:calc(18px + var(--sa-b));z-index:1001;display:flex;flex-direction:column-reverse;gap:8px}
 .dock.l{left:calc(12px + var(--sa-l));align-items:flex-start}.dock.r{right:calc(12px + var(--sa-r));align-items:flex-end}
 .dock .back{font-size:calc(13px*var(--fs));padding:0 13px}
+/* 168: while a habitat loads (#loading) there is none to decorate, list or follow yet: its buttons wait (display, so decorTab's offsetParent check sees it too) */
+#loading:not([hidden])~:is(.tools,.dock,.camb){display:none}
 #friendsBtn span{font-variant-numeric:tabular-nums}
 /* above the nest button: the soonest hatch, and 「부화 시작」 when a slot is empty and an egg waits.
    27-2: above the 친구들·꾸미기 row (124px), not between it — 「깨울 알 1개 · 둥지를 눌러요」 + 「부화 시작」 is wider than the gap on a 390px phone */
@@ -671,3 +673,15 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 /* 93-1: tomorrow's legendary egg in the nest, locked */
 .negg.lock{position:relative;cursor:default;filter:saturate(.8);opacity:.85}.negg.lock img{filter:brightness(.92)}
 .negg.lock small{position:absolute;left:0;right:0;bottom:2px;font-size:9px;text-align:center;color:#6b4d12;background:#fff3cfdd;border-radius:6px;margin:0 2px}
+/* 167 신수 안내·진행 표시 (?g167): the 4 steps (the card: all alike; a window: this one's lit), 지금 할 일 + 가 보기, 「신수란?」 */
+.msteps{list-style:none;margin:6px 0 8px;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.msteps li{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px;border-radius:10px;background:#fff6e6;border:1px solid #ecd9bb;color:#9a8468;font-size:calc(11px*var(--fs));line-height:1.25;text-align:center;word-break:keep-all;opacity:.55}
+.msteps li i{font-style:normal;font-size:calc(16px*var(--fs))}.msteps li small{font-size:calc(9.5px*var(--fs));color:#8a6a4c}
+.msteps li.done{opacity:.8}.msteps li.on{opacity:1;background:#ffe2a3;color:#6b4d12;border-color:#e0a93a;font-weight:700}
+.mabout .msteps li{opacity:1;color:#6b4a2b}.mabout p{margin:4px 0 6px}.mabout p.sub{margin:6px 0 12px}.mabout .mstand{height:120px}
+.mnow{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.myth .mnow p,.mnow p{flex:1;margin:0;font-size:calc(12.5px*var(--fs));line-height:1.45;color:#4a3626;text-align:left;word-break:keep-all}.mnow b{color:#b0703a}
+:is(.intro,.cdet) .mnow button{min-width:0;min-height:38px;padding:0 12px;border-radius:999px;border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b;font:inherit;font-size:calc(13px*var(--fs));font-weight:700;white-space:nowrap;cursor:pointer}
+.intro button.mabtn{display:block;margin:8px auto 0;min-width:0;min-height:36px;padding:0 14px;background:none;color:#8a6a4c;font-size:calc(13px*var(--fs));text-decoration:underline}
+.cdet .mprog{max-width:300px;margin:6px auto 0}
+.ctier .mq{margin-left:6px;width:24px;height:24px;border-radius:50%;border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b;font:inherit;font-size:calc(13px*var(--fs));font-weight:700;line-height:1;cursor:pointer;vertical-align:middle}

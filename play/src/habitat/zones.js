@@ -475,12 +475,16 @@ function bigdig143(s) {
 // pool; cattails thick on the pools' far sides; a half-sunk log; puddles that grow in the rain. World m (the strip x -51..-39)
 // 162 B: the wallow a sheet of wet glossy mud (mire143: water.js, dark in the middle, paler to its rim); round it and the pools a
 // ring of dry mud cracked into plates (crack143: zoneprops.js) on darker ground, no grass (bare); the tracks on a trodden mud path
+// 165 C: the plates no even ring. Each ring its side a (where they crowd, wide; the far side bare mud, none), its dry ground leaning
+// that way; a few plates gone off on the grass (out: x, z, r, beyond the crowd); big plates and small chips mixed (zoneprops.js)
 function mudflat143(s) {
   const W = { t: 'wal143', mud: 1, x: -44.9, z: 5.2, clr: 5.2 }, P = [POOL(s, 0.5, 0.28, 2.4, { murk: 1, mud: 1 }), POOL(s, 0.45, 0.72, 2.6, { murk: 1, mud: 1 })];
   const T = [[[-42.6, 25.2], [-42.4, 20.5], [-43.2, 15.5], [-43.0, 10.4]], [[-43.2, 0.2], [-42.6, -4.6], [-43.1, -9.5], [-43.6, -13.2]]], dry = (x, z, rx, rz) => ({ t: 'tint', x, z, rx, rz, c: '#5a4530', a: 0.92, fo: 0.25, bare: [rx - 0.2, rz - 0.2] });
+  const CR = [[-44.9, 5.2, 3.2, 4.6, 0.33, -2.0], ...P.map((p, i) => [p.x, p.z, p.r - 0.3, p.r - 0.3, 0.7, [-2.3, 1.4][i]])], lean = ([x, z, , , , a], rx, rz) => dry(x + Math.cos(a) * 0.9, z + Math.sin(a) * 0.9, rx, rz);
+  const OUT = [[-46.4, -4.6, 0.6], [-45.2, -6.4, 0.45], [-47.9, 0.2, 0.55], [-41.7, 3.0, 0.45], [-47.6, -21.0, 0.6], [-45.2, -22.0, 0.5], [-43.2, 34.0, 0.6], [-46.0, 33.6, 0.45]]; // wallow 4 (one on its bare side), pools 2 each
   return [FACE(s, '#6e5a3a', 0.85, { pat: speck(['#5e4a30', '#7a6440', '#56703a'], 0.4, 0.5) }), ...P,
-    { t: 'hill', x: -44.9, z: 5.2, rx: 3.0, rz: 4.4, h: -0.28, top: 0.6 }, dry(-44.9, 5.2, 5.0, 6.7), { t: 'mire143', x: -44.9, z: 5.2, rx: 3.2, rz: 4.6 }, // the wallow
-    ...P.map(p => dry(p.x, p.z, p.r + 1.6, p.r + 1.6)), { t: 'crack143', rings: [[-44.9, 5.2, 3.2, 4.6, 0.33], ...P.map(p => [p.x, p.z, p.r - 0.3, p.r - 0.3, 0.7])] },
+    { t: 'hill', x: -44.9, z: 5.2, rx: 3.0, rz: 4.4, h: -0.28, top: 0.6 }, lean(CR[0], 5.0, 6.7), { t: 'mire143', x: -44.9, z: 5.2, rx: 3.2, rz: 4.6 }, // the wallow
+    ...P.map((p, i) => lean(CR[i + 1], p.r + 1.6, p.r + 1.6)), { t: 'crack143', rings: CR, out: OUT },
     ...T.map(pts => ({ t: 'tint', pts, rw: 0.9, c: '#5e4832', a: 0.8, bare: 0.8 })),
     W, { t: 'spot', x: -45.0, z: 7.9, act: 'roll', r: 1.0, to: W }, { t: 'spot', x: -44.8, z: 2.5, act: 'roll', r: 1.0, to: W },
     ...T.map(pts => ({ t: 'track143', pts })), // pool to wallow to pool

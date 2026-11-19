@@ -1139,11 +1139,15 @@ const DINO163 = `float b = (1.0 - smoothstep(-0.8, -0.25, on.y)) * (1.0 - smooth
 const fade163 = m => { const prev = m.onBeforeCompile; m.onBeforeCompile = sh => { prev(sh);
   sh.vertexShader = 'attribute float _fade;\nvarying float vFade;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = _fade;');
   sh.fragmentShader = 'varying float vFade;\n' + sh.fragmentShader; }; return m; };
+// 165 A: the pteranodon's wing membrane (the wing's 'wingSpot' group, tools/bake-dino163.mjs; figure.js draws it in accent, the
+// crest's colour) on these commons a plain vinyl lighter than the body (toward cream); the other looks keep it their accent
+const memb163 = c => { const membrane = toyMat('#' + new THREE.Color(c.body).lerp(new THREE.Color('#fff4e0'), 0.42).getHexString());
+  return { membrane, parts: (r, G) => { const s = new Set(G.wings.map(w => w.spot)); r.traverse(x => { if (x.isMesh && s.has(x.geometry)) x.material = membrane; }); } }; };
 LOOKS.dino163 = c => { const L = plain(fade163(look(toyBody(c.body), 'dino163', DINO163, { uBelly: '#' + new THREE.Color(c.body).lerp(new THREE.Color('#f2e6c4'), 0.45).getHexString(), uBeak: c.beak || c.hoof || c.accent })), c);
-  return { ...L, ...L.belly && { belly: L.body } }; };
+  return { ...L, ...L.belly && { belly: L.body }, ...memb163(c) }; };
 // 163 A review: the other four commons (data.js M89 m89.twotone ...): their public pattern as it is, the same ivory beak fade on top
 for (const [k, P] of [['twotone', TWOTONE], ['spots', SPOTS], ['stripes', STRIPES], ['gradient', GRADIENT]])
-  LOOKS[k + '163'] = c => plain(fade163(look(toyBody(c.body), k + '163', P + '\n  diffuseColor.rgb = mix(diffuseColor.rgb, uBeak, vFade);', { uSecond: c.second, uBeak: c.beak || c.hoof || c.accent })), c);
+  LOOKS[k + '163'] = c => ({ ...plain(fade163(look(toyBody(c.body), k + '163', P + '\n  diffuseColor.rgb = mix(diffuseColor.rgb, uBeak, vFade);', { uSecond: c.second, uBeak: c.beak || c.hoof || c.accent })), c), ...memb163(c) });
 
 // 황금 복돼지 relief: cloud curls (a scalloped cloud with a curl at each end) as a height map in the red channel, lines
 // blurred into soft ridges. Tiles: everything is drawn at 9 offsets. Canvas only, no image files.
@@ -2539,45 +2543,72 @@ LOOKS.baengnok152 = () => { const body = look(P152(), 'baengnok152', body155C(SE
 
 // ---- 163 D 설원 전설 2번째 ① (?m89 시범; data.js LEGEND163): the snow bodies as they are, only the material. Apart from each one's
 // first (빙하 얼음, 겨울 등불) and from the shared rare chrome (a mirror) and heroic hammered copper (dimpled, dull green in the dimples).
-// 백금 북극곰: platinum, a soft satin metal a shade warmer than silver: broad soft highlights (soft163 below) under a thin clear gloss
-// (a faint sharp glint over the soft one); a little light of its own so the shaded side stays silver, not grey. Only the soles pale
-// gold, polished: the paw's underside (normal facing down, p.y < 0.065; the paws' down-facing part ends near p.y 0.05 adult, 0.06 baby).
-// The nose black enamel
-const PLAT163 = `float so163 = smoothstep(0.0, -0.25, on.y) * (1.0 - smoothstep(0.055, 0.075, p.y));
-  diffuseColor.rgb = mix(vec3(0.88, 0.875, 0.86), vec3(0.95, 0.76, 0.44), so163); roughnessFactor = mix(0.3, 0.16, so163); lookStudio = 0.85 * so163; soft163 = 1.0 - so163;
-  totalEmissiveRadiance += vec3(0.85, 0.87, 0.9) * (0.03 + 0.05 * pow(1.0 - nv, 2.0)) * (1.0 - so163) + vec3(0.9, 0.72, 0.42) * 0.14 * so163;`;
-// soft163: the studio's reflection (studioEnv, which takes no roughness: every studio metal is a mirror) blurred: its light and dark
-// bands averaged over a disc round the mirror direction (16 taps in a sunflower spiral, 0.22 wide) and taken at 0.8 (16 x 0.05: a
-// satin metal gives back a little less than a mirror; tuned in the photos), in place of the environment's radiance where soft163
-// (1 = the platinum, 0 = its soles): the same lights as the polished ones, their edges soft. Straight along the helper axis the
-// disc closes to the mirror ray (t1_ 0, not NaN)
-const soft163 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
+// 백금 북극곰 (165 D, again): platinum, a near mirror a shade warm (champagne): the studio's lights crisp in it, the body and the legs
+// one metal (163's satin blur, taken over a fixed angle, made the broad body soft and left the thin legs crisp: two metals; gone).
+// Its points: one aquamarine snowflake on the brow (a pale sea-blue gem, cut: each arm two facets sloping off its ridge, the middle a
+// flat table; light inside it), and gold: the paws' rims (the sole and its edge up to p.y 0.045, seen from the side) and four claw tips
+// at each paw's front, by the normal's turn round the paw (the same on every paw and both stages). vK165 (brow165 below): the flake's
+// centre (x, y, on the midline), the brow normal's angle in the xy plane, 2 on the body (1 on the legs, as an unset attribute reads).
+// The body's underside (on.y < 0, faded in to -0.35) has its normal flattened toward the horizontal as the legs' sides are, so the
+// belly and the legs mirror the same band of the studio where they meet. Claws: 0.42 rad apart, half width 0.1 rad, 0.038 high
+// from p.y 0.05. The nose black enamel
+const PLAT165 = AA127 + `float bu_ = step(1.5, vK165.w) * smoothstep(0.0, -0.35, on.y); // the body's underside turned to face out as the legs do
+  normal = normalize(mix(normal, normalMatrix * normalize(vec3(on.x, on.y * 0.2, on.z)), bu_));
+  vec3 n0_ = vec3(cos(vK165.z), sin(vK165.z), 0.0), tu_ = vec3(-n0_.y, n0_.x, 0.0), d0_ = p - vec3(vK165.xy, 0.0);
+  vec2 q_ = vec2(d0_.z, dot(d0_, tu_)) / 0.058; float r_ = length(q_), k_ = floor(atan(q_.y, q_.x) / 1.0472 + 0.5), a_ = atan(q_.y, q_.x) - k_ * 1.0472;
+  vec2 s_ = r_ * vec2(cos(a_), abs(sin(a_))), b_ = s_ - vec2(0.55, 0.0), bd_ = vec2(0.5, 0.866), ax_ = vec2(cos(k_ * 1.0472), sin(k_ * 1.0472));
+  float sd_ = min(min(max(s_.y - 0.15 + 0.07 * s_.x, s_.x - 1.0), length(b_ - bd_ * clamp(dot(b_, bd_), 0.0, 0.32)) - 0.085), r_ - 0.24);
+  float gm165 = step(1.5, vK165.w) * step(abs(dot(d0_, n0_)), 0.05) * step(0.3, dot(on, n0_)) * (1.0 - AA(sd_, 0.0));
+  vec2 t2_ = r_ < 0.24 ? vec2(0.0) : (vec2(-ax_.y, ax_.x) * sign(a_) * 0.45 + ax_ * 0.2); // the facets: off the arm's ridge and down to its tip
+  normal = normalize(normal + normalMatrix * (vec3(0.0, 0.0, t2_.x) + tu_ * t2_.y) * gm165); nv = clamp(dot(normal, vdir), 0.0, 1.0);
+  float ca_ = atan(on.z, on.x), cu_ = fract(ca_ / 0.42) - 0.5, cy_ = (p.y - 0.05) / 0.038; // four claws round each paw's front (centres +-0.21, +-0.63 rad)
+  float gd165 = (1.0 - step(1.5, vK165.w)) * max(1.0 - AA(p.y, 0.045), (1.0 - AA(cu_ * cu_ / 0.06 + cy_ * cy_, 1.0)) * step(abs(ca_), 0.84) * step(-0.5, on.y));
+  float fc_ = h31(vec3(k_ * 2.0 + step(0.0, a_), 3.0, 7.0));
+  diffuseColor.rgb = mix(mix(vec3(0.93, 0.89, 0.82), vec3(1.0, 0.72, 0.32), gd165), vec3(0.36, 0.8, 0.9) * 0.3, gm165);
+  metalnessFactor = 1.0 - gm165; roughnessFactor = mix(mix(0.07, 0.14, gd165), 0.03, gm165); lookStudio = mix(mix(0.9, 0.85, gd165), 1.0, gm165);
+  totalEmissiveRadiance += vec3(0.9, 0.87, 0.82) * 0.04 * (1.0 - gd165) * (1.0 - gm165) + vec3(0.36, 0.8, 0.9) * gm165 * (0.2 + 0.25 * fc_ + 0.25 * pow(1.0 - nv, 2.0));`;
+// _k165: a copy of each geometry the platinum is on (body, legs) with the brow attribute (constant per mesh); made once and kept, as
+// withCv163's; dispose163 frees them. brow165: the flake's centre on the midline's top 0.035 of the height in front of the eyes' centre
+// (adult x 0.557, y 0.96; baby x 0.452, y 0.94: on the brow, clear of the eyes, z 0.10 / 0.14), the normal there
+const K165 = new Map();
+const withK165 = (g, k) => { let c = K165.get(g); if (!c) { c = g.clone(); c.setAttribute('_k165', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 4).map((_, i) => k[i % 4]), 4)); K165.set(g, c); } return c; };
+const brow165 = G => { const B = G.body, P = B.attributes.position, N = B.attributes.normal, E = G.eye.attributes.position;
+  B.boundingBox ?? B.computeBoundingBox(); const H = B.boundingBox.max.y, cx = (B.boundingBox.min.x + B.boundingBox.max.x) / 2;
+  let ex = 0, n = 0; for (let i = 0; i < E.count; i++) if (E.getZ(i) > 0) { ex += E.getX(i); n++; }
+  if (!n) return [0, -1, 0, 2]; // no +z eye: no flake (y -1)
+  const x0 = (ex / n - cx) / H + 0.035; let y = -1, a = 0;
+  for (const w of [1, 2.5, 5]) { // the window widened till its top vertex faces up (the baby's crown has none in the narrowest: it found the chin)
+    for (let i = 0; i < P.count; i++) if (Math.abs((P.getX(i) - cx) / H - x0) < 0.012 * w && Math.abs(P.getZ(i)) < 0.02 * H * w && P.getY(i) / H > y) { y = P.getY(i) / H; a = Math.atan2(N.getY(i), N.getX(i)); }
+    if (Math.sin(a) > 0.3) break; y = -1; }
+  return [x0, y, a, 2]; };
+const k165 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
   m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
-    sh.fragmentShader = sh.fragmentShader.replace('float lookStudio', 'float soft163 = 0.0;\nfloat lookStudio').replace('#include <lights_fragment_maps>', `#include <lights_fragment_maps>
-{ vec3 rw_ = inverseTransformDirection(reflect(-geometryViewDir, geometryNormal), viewMatrix), c_ = cross(rw_, vec3(0.31, 0.9, 0.3)), t1_ = c_ / max(length(c_), 1e-6), t2_ = cross(rw_, t1_), sf_ = vec3(0.0);
-  for (int i = 0; i < 16; i++) { float a_ = float(i) * 2.3998; sf_ += studioEnv(normalize(rw_ + 0.22 * sqrt((float(i) + 0.5) / 16.0) * (cos(a_) * t1_ + sin(a_) * t2_))) * 0.05; }
-  radiance = mix(radiance, sf_, soft163); }`); };
-  m.customProgramCacheKey = () => k + '-soft163'; return m; };
-// 청동 조각상 순록: a bronze statue: warm bronze, verdigris (pale blue-green, dull) gathered in the hollows (the joins, round the ruff,
-// under the chin and belly) and in soft patches and down-running streaks, the raised places (muzzle, ears, brow, back, the ruff's tufts)
-// rubbed through to bright gold. Hollow and raised from the mesh itself: _cv163 (cv163 below) = how much the surface bends round each
-// vertex (convex +, 1 / radius in model units), smoothed over its neighbours. uAcc 1 (ruff, tail tuft): more verdigris, less gold.
-// The antlers polished bronze to gold at the tips, the nose rubbed bright gold, the hoof bands polished worn bronze
-const BRONZE163 = `float fz_ = 1.0 - smoothstep(0.3, 1.0, length(fwidth(p)) * 60.0), cv_ = vCv163, n1_ = fbm3(p * 5.0 + 2.0), n2_ = fbm3(p * vec3(22.0, 4.0, 22.0) + 7.0), n3_ = vn3(p * 70.0);
-  float pz_ = 0.4 - (cv_ - 1.5) * 0.08 + (n2_ - 0.5) * 0.75 + (n1_ - 0.5) * 0.5 - 0.15 * on.y + 0.1 * uAcc + 0.15 * (1.0 - smoothstep(0.04, 0.3, p.y)) + (n3_ - 0.5) * 0.2 * fz_;
-  float pt163 = smoothstep(0.52, 0.64, pz_), dk_ = smoothstep(0.36, 0.52, pz_) * (1.0 - pt163);
-  float w163 = smoothstep(0.5, 0.72, cv_ * 0.11 + 0.3 * smoothstep(0.3, 0.9, on.y) * smoothstep(0.62, 0.85, p.y) + (n1_ - 0.5) * 0.3 - 0.25 * uAcc) * (1.0 - smoothstep(0.3, 0.5, pz_));
-  vec3 bz_ = mix(vec3(0.36, 0.2, 0.08) * (0.85 + 0.3 * vn3(p * 9.0)), vec3(0.1, 0.07, 0.035), dk_ * 0.45), vd_ = mix(vec3(0.07, 0.34, 0.33), vec3(0.3, 0.64, 0.6), smoothstep(0.55, 0.8, pz_) * (0.6 + 0.4 * n3_));
-  diffuseColor.rgb = mix(mix(bz_, vec3(1.0, 0.7, 0.33), w163), vd_, pt163); metalnessFactor = 1.0 - pt163;
-  roughnessFactor = mix(mix(0.36, 0.13, w163), 0.85, pt163); lookStudio = mix(0.55, 0.85, w163) * (1.0 - pt163);`;
-const HORN163 = `float t_ = smoothstep(0.88, 1.28, p.y); diffuseColor.rgb = mix(vec3(0.5, 0.29, 0.11), vec3(1.0, 0.72, 0.36), t_); roughnessFactor = mix(0.16, 0.1, t_);`;
+    sh.vertexShader = 'attribute vec4 _k165;\nvarying vec4 vK165;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvK165 = _k165;');
+    sh.fragmentShader = 'varying vec4 vK165;\n' + sh.fragmentShader; };
+  m.customProgramCacheKey = () => k + '-k165'; return m; };
+// 청동 순록 (165 D, again): polished bronze, the studio's lights crisp in it; the raised places (brow, back, the ruff's crest) a shade
+// brighter, rubbed gold. Verdigris only thin in the mesh's own grooves (deep concave: under the jaw, the nape's crease, round the tail's
+// root; between the antler tines), each with a darker bronze edge as a crease darkens: a line, never a painted patch (163's noise
+// patches and streaks gone). _cv163 (cv163 below) = how much the surface bends round each vertex (convex +, 1 / radius in model
+// units), smoothed over its neighbours. The antlers bright golden bronze, polished, a shade paler to the tips; the nose rubbed gold,
+// the hoof bands polished bronze
+const BRONZE165 = `float cv_ = vCv163, n1_ = fbm3(p * 6.0 + 2.0);
+  float gv165 = smoothstep(-1.0, -2.2, cv_ + (n1_ - 0.5) * 0.5), dk_ = smoothstep(-0.4, -1.4, cv_) * (1.0 - gv165);
+  float w163 = smoothstep(0.55, 0.85, cv_ * 0.11 + 0.3 * smoothstep(0.3, 0.9, on.y) * smoothstep(0.62, 0.85, p.y) + (n1_ - 0.5) * 0.2);
+  diffuseColor.rgb = mix(mix(mix(vec3(0.6, 0.33, 0.13), vec3(0.3, 0.15, 0.06), dk_ * 0.75), vec3(0.9, 0.6, 0.3), w163 * 0.7), vec3(0.3, 0.6, 0.52), gv165);
+  metalnessFactor = 1.0 - gv165; roughnessFactor = mix(mix(0.16, 0.12, w163), 0.75, gv165); lookStudio = 0.8 * (1.0 - gv165);`;
+const HORN165 = `float t_ = smoothstep(0.88, 1.32, p.y), gv165 = smoothstep(-2.0, -4.0, vCv163), dk_ = smoothstep(-0.6, -2.0, vCv163) * (1.0 - gv165);
+  diffuseColor.rgb = mix(mix(mix(vec3(0.92, 0.58, 0.22), vec3(1.0, 0.74, 0.36), t_), vec3(0.45, 0.26, 0.1), dk_ * 0.7), vec3(0.3, 0.6, 0.52), gv165);
+  metalnessFactor = 1.0 - gv165; roughnessFactor = mix(0.1, 0.75, gv165); lookStudio = 0.85 * (1.0 - gv165);`;
 Object.assign(NIGHT_LOOK, {
-  platinum163: 'totalEmissiveRadiance += uNight * vec3(0.72, 0.8, 0.95) * (0.04 + 0.3 * pow(1.0 - nv, 2.0)) * (1.0 - so163);', // a cool moonlit edge keeps the metal's outline
-  bronze163: 'totalEmissiveRadiance += uNight * (vec3(1.0, 0.7, 0.33) * w163 * 0.12 + vec3(1.0, 0.72, 0.4) * 0.12 * pow(1.0 - nv, 2.0) * (1.0 - pt163));', // the gold a little warm by night, a warm edge
+  platinum163: 'totalEmissiveRadiance += uNight * (vec3(0.72, 0.8, 0.95) * (0.04 + 0.3 * pow(1.0 - nv, 2.0)) * (1.0 - gd165) * (1.0 - gm165) + vec3(0.36, 0.8, 0.9) * 0.3 * gm165);', // a cool moonlit edge keeps the metal's outline; the gem a little lit
+  bronze163: 'totalEmissiveRadiance += uNight * (vec3(1.0, 0.7, 0.33) * w163 * 0.12 + vec3(1.0, 0.72, 0.4) * 0.12 * pow(1.0 - nv, 2.0) * (1.0 - gv165));', // the gold a little warm by night, a warm edge
 });
 // _cv163 per vertex: each edge's turn of the normal over its length (dot(dn, dp) / |dp|^2), averaged round the vertex, then smoothed
 // twice over the neighbours (one mesh = one radius scale). On a copy of the geometry (the shared one stays as it is, and merge()'s
-// cache, keyed by geometry, keeps the copies apart); made once per geometry and kept, as the looks; dispose163 frees them
+// cache, keyed by geometry, keeps the copies apart); made once per geometry and kept, as the looks; dispose163 frees them. 165 D: a mesh
+// whose concave tail is deeper than the adult's (its 3.5 % quantile under -1.6: the baby's scalloped ruff) has its concave side scaled down
+// till that quantile is -1.6, so the verdigris stays as thin a line as on the adult (whose meshes are all within: unchanged)
 const CV163 = new Map();
 const curv163 = g => { const P = g.attributes.position, N = g.attributes.normal, n = P.count; if (!g.index) return new Float32Array(n); // not indexed: flat (the glbs are)
   const ix = g.index.array, s = new Float32Array(n), c = new Float32Array(n);
@@ -2588,58 +2619,80 @@ const curv163 = g => { const P = g.attributes.position, N = g.attributes.normal,
   let v = s.map((x, i) => c[i] ? x / c[i] : 0);
   for (let r = 0; r < 2; r++) { const t = v.slice(), m = new Float32Array(n).fill(1); for (let e = 0; e < E.length; e += 2) { t[E[e]] += v[E[e + 1]]; t[E[e + 1]] += v[E[e]]; m[E[e]]++; m[E[e + 1]]++; } v = t.map((x, i) => x / m[i]); }
   return v; };
-const withCv163 = g => { let c = CV163.get(g); if (!c) { c = g.clone(); c.setAttribute('_cv163', new THREE.BufferAttribute(curv163(c), 1)); CV163.set(g, c); } return c; };
+const withCv163 = g => { let c = CV163.get(g); if (!c) { c = g.clone(); const v = curv163(c), q = Float32Array.from(v).sort()[Math.floor(v.length * 0.035)] ?? 0, f = q < -1.6 ? -1.6 / q : 1;
+  c.setAttribute('_cv163', new THREE.BufferAttribute(f < 1 ? v.map(x => x < 0 ? x * f : x) : v, 1)); CV163.set(g, c); } return c; };
 const cv163 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
   m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
     sh.vertexShader = 'attribute float _cv163;\nvarying float vCv163;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvCv163 = _cv163;');
     sh.fragmentShader = 'varying float vCv163;\n' + sh.fragmentShader; };
   m.customProgramCacheKey = () => k + '-cv163'; return m; };
 Object.assign(LOOKS, {
-  platinum163: () => { const b = soft163(look(phys('#ffffff', { roughness: 0.3, metalness: 1, clearcoat: 0.4, clearcoatRoughness: 0.2 }), 'platinum163', PLAT163, {}, { studio: 0 }));
-    return { body: b, accent: b, hoof: b, beak: phys('#17171a', { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04 }) }; },
-  bronze163: () => { const z = acc => cv163(look(phys('#ffffff', { roughness: 0.3, metalness: 1 }), 'bronze163', BRONZE163, { uAcc: acc }, { studio: 0.6 })), body = z(0), accent = z(1);
-    return { body, accent, hoof: shine('#c08a48', 0.18), beak: shine('#f2c46a', 0.12), horn: look(phys('#ffffff', { roughness: 0.14, metalness: 1, clearcoat: 0.6, clearcoatRoughness: 0.05 }), 'bronze163horn', HORN163, {}, { studio: 0.85 }),
-      parts: o => o.traverse(x => { if (x.isMesh && (x.material === body || x.material === accent)) x.geometry = withCv163(x.geometry); }) }; },
+  platinum163: () => { const b = k165(look(phys('#ffffff', { roughness: 0.07, metalness: 1 }), 'platinum163', PLAT165, {}, { studio: 0.9 }));
+    return { body: b, accent: b, hoof: b, beak: phys('#17171a', { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04 }),
+      parts: (r, G) => { if (!G.eye) return; const k = brow165(G); r.traverse(x => { if (x.isMesh && x.material === b) x.geometry = withK165(x.geometry, x.geometry === G.body ? k : [0, 0, 0, 1]); }); } }; },
+  bronze163: () => { const body = cv163(look(phys('#ffffff', { roughness: 0.13, metalness: 1 }), 'bronze163', BRONZE165, {}, { studio: 0.85 }));
+    const horn = cv163(look(phys('#ffffff', { roughness: 0.1, metalness: 1 }), 'bronze163horn', HORN165, {}, { studio: 0.85 }));
+    return { body, accent: body, hoof: shine('#c08a48', 0.18), beak: shine('#f2c46a', 0.12), horn,
+      parts: o => o.traverse(x => { if (x.isMesh && (x.material === body || x.material === horn)) x.geometry = withCv163(x.geometry); }) }; },
 });
-// ---- 163 D ② (?m89 시범): 흑요석 은테 펭귄, 블랙 오팔 물범. Not black plastic (inbox 163 D): the penguin's black a mirror, its white
-// a wide glazed porcelain and a silver band between them; the seal's fire before its black.
-// 흑요석 은테 펭귄: the back, head and flippers obsidian (a black mirror: studio 1, as 흑요석 백조's, without its rainbow bands), the white
-// front glazed porcelain carried further round the flanks than modelled (0.065 of the height past the modelled edge on the flanks, 0.025
-// up at the throat: _t163 below; the studio's soft boxes in its glaze), a polished silver band 0.045 wide where porcelain meets obsidian, a thin silver bezel round each eye
-// (the black bead would be lost in the black: _e163) and a silver rim round the flippers (uWing 1: where the normal turns along the
-// flipper's flat, |on.z| < 0.42). Beak and feet polished silver. The flippers have no _t163 / _e163: everything that reads them is uWing 0
-const OBS163 = AA127 + `float bk_ = 1.0 - uWing, d_ = vT163.x, W_ = vT163.y;
-  float por163 = bk_ * (1.0 - AA(d_, W_)), rim_ = bk_ * (AA(d_, W_) - AA(d_, W_ + 0.045));
-  float de_ = length(vec3(p.x, p.y, abs(p.z)) - vE163.yzw), er_ = bk_ * step(1e-4, vE163.x) * (AA(de_, vE163.x * 0.95) - AA(de_, vE163.x * 0.95 + 0.01));
-  float sv163 = max(max(rim_, er_), uWing * (1.0 - AA(abs(on.z), 0.42)));
-  diffuseColor.rgb = mix(vec3(0.006, 0.006, 0.008), vec3(0.9, 0.905, 0.915), por163); roughnessFactor = mix(0.05, 0.14, por163); lookStudio = mix(1.0, 0.45, por163);
-  vec3 rw_ = inverseTransformDirection(reflect(-vdir, normal), viewMatrix);
-  totalEmissiveRadiance += mix(vec3(0.05, 0.048, 0.055) * pow(1.0 - nv, 2.5), vec3(0.93, 0.95, 1.0) * (0.1 + 0.06 * pow(1.0 - nv, 2.0)) + studioEnv(rw_) * (0.1 + 0.4 * pow(1.0 - nv, 4.0)), por163);
+// ---- 163 D ② (?m89 시범): 흑요석 은테 펭귄, 블랙 오팔 물범 (both again in 165 D).
+// 흑요석 은테 펭귄 (165 D, again; not black plastic): the back, head and flippers rainbow obsidian: a black mirror (studio 1) with violet
+// and green sheens inside it, at two depths along the view ray (they drift against the surface as it turns: glass depth), strong at low
+// angles, faint face on. The front moonstone, not white plastic: milky stone, bluish grey toward its edges, a little light from inside,
+// and one streak of blue adularescence down the belly (where the belly's turn round the upright body faces a light from the front-above,
+// slanting with the height: it glides across as the penguin turns). Silver only round the flippers (uWing 1: where the normal turns along
+// the flipper's flat, |on.z| < 0.42); the eyes plain black beads (the 163 bezel gone), beak and feet polished silver. The moonstone
+// carried 0.065 of the height round the flanks past the modelled edge, nothing at the throat (_t163 below). On the crown
+// (on.y over 0.4..0.75) the black's reflections at 0.06 (spec165 below): seen from above it mirrored the studio's top box as a grey
+// disc ringed by the dark band (a quarter still left rings); the lights' own small highlight stays
+const OBS165 = AA127 + `float bk_ = 1.0 - uWing, por163 = bk_ * (1.0 - AA(vT163.x, vT163.y)), sv163 = uWing * (1.0 - AA(abs(on.z), 0.42)), th_ = 1.0 - nv;
+  vec3 vo_ = normalize(vdir * normalMatrix), q1_ = p - vo_ * 0.04, q2_ = p - vo_ * 0.11;
+  float s1_ = fbm3(q1_ * vec3(2.5, 8.0, 2.5) + 4.0), s2_ = fbm3(q2_ * vec3(2.0, 6.0, 2.0) + 9.0);
+  vec3 V_ = vec3(0.5, 0.14, 0.95), E_ = vec3(0.06, 0.75, 0.4);
+  vec3 rb165 = (mix(V_, E_, smoothstep(0.4, 0.6, s1_)) * smoothstep(0.55, 0.8, abs(s1_ - 0.5) * 2.0 + 0.4) + mix(E_, V_, smoothstep(0.4, 0.6, s2_)) * 0.3) * (0.015 + 0.5 * pow(th_, 2.2));
+  vec3 h_ = normalize(normalize(vdir + normalize(vec3(-0.3, 0.5, 0.8))) * normalMatrix); float tl_ = (p.y - 0.45) * 0.9;
+  vec2 hz_ = normalize(h_.xz + vec2(1e-4, 0.0)), oz_ = on.xz / max(length(on.xz), 1e-3), hr_ = vec2(hz_.x * cos(tl_) - hz_.y * sin(tl_), hz_.x * sin(tl_) + hz_.y * cos(tl_));
+  float ag_ = acos(clamp(dot(oz_, hr_), -1.0, 1.0)), ad165 = (exp(-ag_ * ag_ / 0.08) + 0.25 * exp(-ag_ * ag_ / 0.4)) * smoothstep(0.3, 0.7, length(on.xz)) * por163;
+  vec3 mk165 = mix(vec3(0.5, 0.52, 0.58), vec3(0.88, 0.87, 0.85), smoothstep(0.15, 0.85, nv)) * (0.8 + 0.4 * fbm3(q2_ * 4.0 + 2.0)), bl165 = vec3(0.1, 0.3, 1.0) * 1.3;
+  diffuseColor.rgb = mix(vec3(0.006, 0.006, 0.008), mk165 * 0.1 * (1.0 - 0.8 * min(ad165, 1.0)), por163); roughnessFactor = mix(0.05, 0.14, por163); lookStudio = mix(1.0, 0.35, por163);
+  spec165 = mix(1.0, 0.06, smoothstep(0.4, 0.75, on.y) * (1.0 - por163));
+  totalEmissiveRadiance += mix(vec3(0.05, 0.048, 0.055) * pow(th_, 2.5) + rb165, mk165 * (0.26 + 0.1 * th_) * (1.0 - 0.85 * min(ad165, 1.0)) + bl165 * ad165, por163);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.93, 0.94, 0.96), sv163); roughnessFactor = mix(roughnessFactor, 0.12, sv163); metalnessFactor = sv163;
-  lookStudio = mix(lookStudio, 0.85, sv163); totalEmissiveRadiance *= 1.0 - sv163;`;
-// 블랙 오팔 물범: black opal: a blue-black glossy stone (body, back spots, bib and muzzle the same code and settings: no seams) broken into
-// fragments (cells, warped so they are not a lattice) of play-of-colour fire, red, orange, green, blue, violet, each fragment its own hue,
-// shifting with the angle (view-space normal); the burning fragments chosen in clusters (fbm + the fragment's own id), black stone and a
-// few pinfire sparks between; a flash sweeps across each fragment its own way (never below 0.45). About 45 % of the seal is fire from
-// any side (163d2.md: 38-55 % by angle; inbox: 40 % or more). The nose polished black
-const BOPAL163 = `vec3 w_ = vec3(fbm3(p * 2.5 + 1.0), fbm3(p * 2.5 + 7.0), fbm3(p * 2.5 + 13.0)) - 0.5;
-  vec3 c_ = cells(p * 7.0 + w_ * 1.8); float a_ = dot(normal, vec3(0.55, 0.7, 0.45));
-  float m163 = smoothstep(0.43, 0.46, 0.65 * fbm3(p * 5.0 + w_ + 3.0) + 0.35 * c_.z); // which fragments burn: in clusters, black stone between
-  float g_ = fract(c_.z * 3.7 + nv * 0.35 + a_ * 0.3 + uTime * 0.02) * 5.0;
-  vec3 R_ = vec3(0.95, 0.06, 0.04), O_ = vec3(1.0, 0.42, 0.0), G_ = vec3(0.0, 0.85, 0.22), B_ = vec3(0.0, 0.32, 1.0), V_ = vec3(0.45, 0.08, 1.0);
-  vec3 fire163 = g_ < 1.0 ? mix(R_, O_, g_) : g_ < 2.0 ? mix(O_, G_, g_ - 1.0) : g_ < 3.0 ? mix(G_, B_, g_ - 2.0) : g_ < 4.0 ? mix(B_, V_, g_ - 3.0) : mix(V_, R_, g_ - 4.0);
-  vec3 dr_ = h33(vec3(c_.z * 91.0, 3.0, 7.0)) - 0.5; // each fragment's flash sweeps its own way and moves with the angle
-  float fl163 = m163 * (0.45 + 0.55 * smoothstep(-0.3, 0.9, sin(dot(p, dr_) * 40.0 + c_.z * 30.0 + nv * 5.0 + a_ * 3.0 + uTime * 0.25))) * (0.75 + 0.25 * smoothstep(0.0, 0.08, c_.y - c_.x));
-  vec3 k_ = cells(p * 38.0); float pf_ = step(0.8, k_.z) * (1.0 - smoothstep(0.08, 0.2, k_.x)) * (1.0 - m163); // pinfire: small sparks in the black between
-  diffuseColor.rgb = vec3(0.01, 0.012, 0.028) + fire163 * 0.05 * fl163; roughnessFactor = 0.06;
-  totalEmissiveRadiance += fire163 * fl163 * 0.75 + rainbow(k_.z * 5.0 + nv * 0.5) * pf_ * 0.6 + vec3(0.02, 0.03, 0.08) * pow(1.0 - nv, 2.0);`;
+  lookStudio = mix(lookStudio, 0.85, sv163); totalEmissiveRadiance *= 1.0 - sv163; spec165 = mix(spec165, 1.0, sv163);`;
+// spec165: the reflections (the environment's and the clear coat's, after the studio's mix) scaled per pixel: 1 = as they are
+const spec165 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
+  m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+    sh.fragmentShader = sh.fragmentShader.replace('float lookStudio', 'float spec165 = 1.0;\nfloat lookStudio').replace('#include <lights_fragment_end>', `{ radiance *= spec165;
+#ifdef USE_CLEARCOAT
+  clearcoatRadiance *= spec165;
+#endif
+}
+#include <lights_fragment_end>`); };
+  m.customProgramCacheKey = () => k + '-spec165'; return m; };
+// 블랙 오팔 물범 (165 D, again): black opal, the blue-black stone the most of it (inbox 165 D: 60 % or more black; 163's "40 % fire"
+// dropped). Small fragments (cells, warped so they are not a lattice) in clusters (fbm + the fragment's own id), each with its own
+// facing (a random direction): it flashes only where the mirror direction (object space) lines up with it, so which fragments light
+// and their hue change with the angle, never a fixed pattern. Hues soft (a third toward grey): blue, teal, green, violet, a rare
+// orange; each flash brighter in a band across it (play of colour), the dark fragments a faint tint. The stone's reflections at 0.45
+// (spec165): the env's grey haze would lift the black. The nose polished gold (the gold point beside the stone, as the ruby rabbit's
+// ear tips and the emerald turtle's rims)
+const BOPAL165 = `vec3 w_ = vec3(fbm3(p * 2.5 + 1.0), fbm3(p * 2.5 + 7.0), fbm3(p * 2.5 + 13.0)) - 0.5;
+  vec3 c_ = cells(p * 15.0 + w_ * 2.5), vo_ = normalize(vdir * normalMatrix), fd_ = normalize(h33(vec3(c_.z * 91.0, 3.0, 7.0)) - 0.5);
+  float m163 = smoothstep(0.47, 0.5, 0.6 * fbm3(p * 5.0 + w_ + 3.0) + 0.4 * c_.z), al_ = dot(reflect(-vo_, on), fd_);
+  float g_ = fract(c_.z * 3.7 + al_ * 0.5) * 5.0;
+  vec3 B_ = vec3(0.12, 0.35, 0.95), T_ = vec3(0.05, 0.62, 0.6), G_ = vec3(0.2, 0.7, 0.3), V_ = vec3(0.5, 0.25, 0.9), O_ = vec3(0.9, 0.45, 0.12);
+  vec3 fire163 = g_ < 1.0 ? mix(B_, T_, g_) : g_ < 2.0 ? mix(T_, G_, g_ - 1.0) : g_ < 3.0 ? mix(G_, B_, g_ - 2.0) : g_ < 4.0 ? mix(B_, V_, g_ - 3.0) : mix(V_, g_ > 4.8 ? O_ : V_, smoothstep(4.8, 5.0, g_));
+  fire163 = mix(fire163, vec3(dot(fire163, vec3(0.3, 0.55, 0.15))), 0.33);
+  float fl163 = m163 * (0.05 + 0.95 * smoothstep(0.45, 0.85, al_)) * (0.45 + 0.55 * smoothstep(-0.6, 0.8, sin(dot(p, fd_) * 70.0 + al_ * 5.0))) * smoothstep(0.0, 0.05, c_.y - c_.x);
+  diffuseColor.rgb = vec3(0.012, 0.016, 0.035) + fire163 * 0.04 * fl163; roughnessFactor = 0.06;
+  totalEmissiveRadiance += fire163 * fl163 * 0.7 + vec3(0.02, 0.03, 0.08) * pow(1.0 - nv, 2.0); spec165 = 0.45;`;
 Object.assign(NIGHT_LOOK, {
-  obsidian163: 'totalEmissiveRadiance += uNight * (vec3(0.3, 0.32, 0.4) * 0.25 * pow(1.0 - nv, 3.0) * (1.0 - por163) * (1.0 - sv163) + vec3(0.85, 0.9, 1.0) * 0.1 * por163);', // the black keeps its outline, the porcelain a soft glow
+  obsidian163: 'totalEmissiveRadiance += uNight * ((rb165 * 0.5 + vec3(0.3, 0.32, 0.4) * 0.2 * pow(th_, 3.0)) * (1.0 - por163) * (1.0 - sv163) + (mk165 * 0.25 + bl165 * ad165 * 0.8) * por163);', // the black keeps its outline and its sheen, the moonstone a soft glow, its streak brighter
   blackopal163: 'totalEmissiveRadiance += uNight * fire163 * fl163 * 0.5;', // the fire brighter by night
 });
-// _t163 / _e163 (the penguin's body and front, per stage G): copies of the two meshes (as withCv163's). d: the distance in pattern space
-// to the nearest vertex the two share (the modelled edge), + on the body, - on the front; W: how far the porcelain reaches past it, by
-// that edge vertex's height under the edge's top (the throat). _e163: the +z eye bead's half size and centre, the same on every vertex
+// _t163 (the penguin's body and front, per stage G): copies of the two meshes (as withCv163's). d: the distance in pattern space to the
+// nearest vertex the two share (the modelled edge), + on the body, - on the front; W: how far the moonstone reaches past it, by that edge
+// vertex's height under the edge's top (0.065 on the flanks, 0 at the throat)
 const T163 = new Map();
 const tux163 = G => { let c = T163.get(G.body); if (c) return c;
   const B = G.body, A = G.accent, key = (P, i) => `${P.getX(i).toFixed(4)},${P.getY(i).toFixed(4)},${P.getZ(i).toFixed(4)}`;
@@ -2649,27 +2702,24 @@ const tux163 = G => { let c = T163.get(G.body); if (c) return c;
   const field = (g, s) => { const o = g.attributes._op, t = new Float32Array(o.count * 2);
     for (const i of new Set(g.index.array)) { let best = 1e9, by = 0; const x = o.getX(i), y = o.getY(i), z = o.getZ(i);
       for (let j = 0; j < edge.length; j += 3) { const d = (x - edge[j]) ** 2 + (y - edge[j + 1]) ** 2 + (z - edge[j + 2]) ** 2; if (d < best) { best = d; by = edge[j + 1]; } }
-      t[i * 2] = s * Math.sqrt(best); t[i * 2 + 1] = 0.025 + 0.04 * (1 - THREE.MathUtils.smoothstep(by, top - 0.3, top - 0.02)); }
+      t[i * 2] = s * Math.sqrt(best); t[i * 2 + 1] = 0.065 * (1 - THREE.MathUtils.smoothstep(by, top - 0.3, top - 0.02)); }
     return t; };
-  B.boundingBox ?? B.computeBoundingBox(); const H = B.boundingBox.max.y, cx = (B.boundingBox.min.x + B.boundingBox.max.x) / 2, P = G.eye.attributes.position, eb = new THREE.Box3(), v = new THREE.Vector3();
-  for (let i = 0; i < P.count; i++) if (P.getZ(i) > 0) eb.expandByPoint(v.fromBufferAttribute(P, i));
-  const ec = eb.getCenter(new THREE.Vector3()), es = eb.getSize(new THREE.Vector3()), E = [Math.max(es.x, es.y) / 2 / H, (ec.x - cx) / H, ec.y / H, ec.z / H];
-  const cp = (g, t) => { const n = g.clone(); n.setAttribute('_t163', new THREE.BufferAttribute(t, 2)); n.setAttribute('_e163', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 4).map((_, i) => E[i % 4]), 4)); return n; };
+  const cp = (g, t) => { const n = g.clone(); n.setAttribute('_t163', new THREE.BufferAttribute(t, 2)); return n; };
   c = { body: cp(B, field(B, 1)), accent: cp(A, field(A, -1)) }; T163.set(B, c); return c; };
-// the flippers (w) have neither attribute: zeros in the fragment shader instead (everything that reads them is uWing 0 there)
+// the flippers (w) have no _t163: zeros in the fragment shader instead (everything that reads it is uWing 0 there)
 const tuxv163 = (m, w) => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
   m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
-    if (w) { sh.fragmentShader = 'const vec2 vT163 = vec2(0.0);\nconst vec4 vE163 = vec4(0.0);\n' + sh.fragmentShader; return; }
-    sh.vertexShader = 'attribute vec2 _t163;\nattribute vec4 _e163;\nvarying vec2 vT163;\nvarying vec4 vE163;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvT163 = _t163; vE163 = _e163;');
-    sh.fragmentShader = 'varying vec2 vT163;\nvarying vec4 vE163;\n' + sh.fragmentShader; };
+    if (w) { sh.fragmentShader = 'const vec2 vT163 = vec2(0.0);\n' + sh.fragmentShader; return; }
+    sh.vertexShader = 'attribute vec2 _t163;\nvarying vec2 vT163;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvT163 = _t163;');
+    sh.fragmentShader = 'varying vec2 vT163;\n' + sh.fragmentShader; };
   m.customProgramCacheKey = () => k + (w ? '-t163w' : '-t163'); return m; };
 Object.assign(LOOKS, {
-  obsidian163: () => { const o = w => tuxv163(look(phys('#050506', { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02 }), 'obsidian163', OBS163, { uWing: w }, { studio: 1 }), w), body = o(0), s = shine('#e6e9ee', 0.12);
+  obsidian163: () => { const o = w => spec165(tuxv163(look(phys('#050506', { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02 }), 'obsidian163', OBS165, { uWing: w }, { studio: 1 }), w)), body = o(0), s = shine('#e6e9ee', 0.12);
     return { body, accent: body, wing: o(1), hoof: s, beak: s,
-      parts: (r, G) => { if (!G.accent?.index || !G.eye) return; const c = tux163(G); // (a body without the modelled front: plain obsidian)
+      parts: (r, G) => { if (!G.accent?.index) return; const c = tux163(G); // (a body without the modelled front: plain obsidian)
         r.traverse(x => { if (x.isMesh && x.material === body) x.geometry = x.geometry === G.body ? c.body : x.geometry === G.accent ? c.accent : x.geometry; }); } }; },
-  blackopal163: () => { const b = look(phys('#05060c', { roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03 }), 'blackopal163', BOPAL163, {}, { studio: 0.5 });
-    return { body: b, accent: b, hoof: b, horn: b, nostril: b, beak: phys('#0b0b0e', { roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.03 }) }; },
+  blackopal163: () => { const b = spec165(look(phys('#05060c', { roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03 }), 'blackopal163', BOPAL165, {}, { studio: 0.5 }));
+    return { body: b, accent: b, hoof: b, horn: b, nostril: b, beak: shine('#ffc75a', 0.1) }; },
 });
 // ---- 163 D ③ (?m89 시범): 로즈쿼츠 여우, 은 세공 올빼미.
 // 로즈쿼츠 여우: rose quartz, milky and opaque (inbox 163 D: no clear crystal body): a polished pink stone (clear coat over a satin
@@ -2678,8 +2728,11 @@ Object.assign(LOOKS, {
 // Only the tail tip lit from inside (the tail ends at -0.65 both stages, the hind legs stand near -0.06 / -0.12): a faint pink spill
 // from -0.32, the tip (from -0.45) a vivid hot pink (the stone's own colour and the studio's reflections let go there, so the light
 // is not washed out; a moderate strength: ACES turns a stronger pink to white), a pale core at the very end, breathing slowly; and a
-// soft halo quad round the tip (tipOf163 below). uAcc 1 (the ear tips; the baby's back line) a deeper rose. The nose a polished garnet
-const ROSE163 = `vec3 ri_ = normalize(-vdir * normalMatrix);
+// soft halo quad round the tip (tipOf163 below). uAcc 1 (the ear tips; the baby's back line) a deeper rose. The nose a polished garnet.
+// 165 D: a thin champagne-gold trim (polished metal under the clear coat, no light from inside) on the ear tips (the top 2.8 % of the
+// height: only the ears reach it, both stages) and round the paws' edge (the lowest 3 %: the body and tail stop above 0.058; its
+// normal turned out and up, a bevel catching the studio's top light rather than mirroring the floor)
+const ROSE163 = AA127 + `vec3 ri_ = normalize(-vdir * normalMatrix);
   float v1_ = fbm3(p * vec3(2.5, 4.0, 2.5) + ri_ * 0.05 + 3.0), v2_ = fbm3(p * vec3(4.0, 2.5, 4.0) + ri_ * 0.14 + 11.0), th_ = 1.0 - nv;
   float cl163 = smoothstep(0.38, 0.74, v1_) * 0.6 + smoothstep(0.42, 0.8, v2_) * 0.4;
   float tl163 = smoothstep(-0.32, -0.56, p.x), tip163 = smoothstep(-0.45, -0.62, p.x), co163 = smoothstep(-0.58, -0.67, p.x), br163 = 0.9 + 0.1 * sin(uTime * 1.3);
@@ -2687,7 +2740,11 @@ const ROSE163 = `vec3 ri_ = normalize(-vdir * normalMatrix);
   vec3 pk163 = mix(vec3(0.8, 0.34, 0.42), vec3(0.96, 0.74, 0.78), cl163) * mix(1.0, 0.8, uAcc);
   diffuseColor.rgb = pk163 * 0.66 * (1.0 - 0.95 * tip163); roughnessFactor = mix(0.34, 0.7, tip163); lookStudio = 0.5 * (1.0 - tip163);
   totalEmissiveRadiance += pk163 * (0.07 + 0.08 * nv + 0.16 * th_ * th_) * (1.0 - tip163) + vec3(1.0, 0.9, 0.95) * fr163 * 0.5
-    + (vec3(1.0, 0.06, 0.3) * (tl163 * tl163 * 0.45 + tip163 * (0.85 + 0.4 * nv)) + vec3(1.0, 0.45, 0.68) * co163 * (0.5 + 1.0 * nv)) * br163;`;
+    + (vec3(1.0, 0.06, 0.3) * (tl163 * tl163 * 0.45 + tip163 * (0.85 + 0.4 * nv)) + vec3(1.0, 0.45, 0.68) * co163 * (0.5 + 1.0 * nv)) * br163;
+  float pw_ = 1.0 - AA(p.y, 0.03), gk165 = max(AA(p.y, 0.972), pw_);
+  normal = normalize(mix(normal, normalMatrix * normalize(vec3(on.x, 0.6, on.z)), pw_ * 0.8));
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.98, 0.74, 0.42), gk165); metalnessFactor = gk165; roughnessFactor = mix(roughnessFactor, 0.16, gk165);
+  lookStudio = mix(lookStudio, 0.85, gk165); totalEmissiveRadiance *= 1.0 - gk165;`;
 // 은 세공 올빼미: silver filigree (openwork): the feathers silver wire scales in offset rows round the body's upright axis (16 round, the
 // rows half a scale apart, each scale's rim a twisted wire, a coiled wire spiral in each scale with a bead at its heart); between the
 // wires the figure is open and a soft ivory light shows from inside. The wires round (the normal turned across each wire's width), the
@@ -2730,7 +2787,7 @@ const tipGlow163 = () => new THREE.ShaderMaterial({ uniforms: { uTime: windTime,
   vertexShader: 'attribute vec3 aQ; varying vec2 vQ; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); mv.xy += aQ.xy * aQ.z * length(modelViewMatrix[1].xyz); vQ = aQ.xy; gl_Position = projectionMatrix * mv; }',
   fragmentShader: 'uniform float uTime, uNight; varying vec2 vQ; void main() { float a = pow(max(0.0, 1.0 - length(vQ)), 2.0) * (0.9 + 0.9 * uNight) * (0.9 + 0.1 * sin(uTime * 1.3)); gl_FragColor = vec4(vec3(1.0, 0.15, 0.45) * a, 1.0); }' });
 Object.assign(NIGHT_LOOK, {
-  rosequartz163: 'totalEmissiveRadiance += uNight * (pk163 * 0.03 * (1.0 - tl163) + vec3(1.0, 0.25, 0.5) * (tl163 * 0.25 + tip163 * 0.6) + vec3(1.0, 0.7, 0.8) * co163 * 0.4);', // the tail tip a lamp by night, the stone a faint pink
+  rosequartz163: 'totalEmissiveRadiance += uNight * (pk163 * 0.03 * (1.0 - tl163) * (1.0 - gk165) + vec3(1.0, 0.25, 0.5) * (tl163 * 0.25 + tip163 * 0.6) + vec3(1.0, 0.7, 0.8) * co163 * 0.4);', // the tail tip a lamp by night, the stone a faint pink
   filigree163: 'totalEmissiveRadiance += uNight * vec3(1.0, 0.78, 0.46) * gp163 * 1.1;', // the light inside brighter by night
 });
 Object.assign(LOOKS, {
@@ -2743,4 +2800,4 @@ Object.assign(LOOKS, {
 });
 // the sets are made once and kept (as every look's); dispose163 frees them and the copies (no caller yet: nothing tears the looks down)
 export const dispose163 = () => { for (const [k, s] of cache) if (/^(platinum|bronze|obsidian|blackopal|rosequartz|filigree)163\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
-  for (const g of CV163.values()) g.dispose(); CV163.clear(); for (const g of TIP163.values()) g.dispose(); TIP163.clear(); for (const c of T163.values()) { c.body.dispose(); c.accent.dispose(); } T163.clear(); };
+  for (const g of CV163.values()) g.dispose(); CV163.clear(); for (const g of K165.values()) g.dispose(); K165.clear(); for (const g of TIP163.values()) g.dispose(); TIP163.clear(); for (const c of T163.values()) { c.body.dispose(); c.accent.dispose(); } T163.clear(); };

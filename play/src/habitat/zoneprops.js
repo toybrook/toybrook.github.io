@@ -511,7 +511,7 @@ export function zoneProps(scene, hab, o) {
           if (big) occupied.push({ x, z, r: 0.85, h: hh }); } }
         if (!Z143) return; // q1 (zones.js pillars143): the glassy slabs (a breath fogs one when sniffed), drifts and crystals at the pillars' feet. Its own stream
         let s3 = 1450 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; };
-        const g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 14, 10), SN = '#f4f8fb', ICEC = '#dff2fa';
+        const g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 14, 10), SN = '#f4f8fb';
         const xg = mergeGeometries([new THREE.CylinderGeometry(1, 1, 1, 6).translate(0, 0.5, 0), new THREE.ConeGeometry(1, 0.45, 6).translate(0, 1.225, 0)]), xm = new THREE.MeshStandardMaterial({ color: '#a8e4ff', emissive: '#4fb0ff', emissiveIntensity: 0.3, roughness: 0.15 });
         const cluster = (x, z, n, sc) => { const y0 = lowest(x, z, 0.3); for (let i = 0; i < n; i++) { const t = i / n * 6.283 + r3(), d = i ? 0.16 * sc : 0, hh = (i ? 0.45 + r3() * 0.3 : 0.95) * sc; // as the cave's: a tall one, smaller ones leaning out
           part(g, xg, '', x + Math.cos(t) * d, y0 - 0.05, z + Math.sin(t) * d, { m: xm, rx: Math.sin(t) * (i ? 0.35 : 0.06), rz: -Math.cos(t) * (i ? 0.35 : 0.06), ry: r3() }).scale.set(0.09 * sc, hh, 0.09 * sc); } };
@@ -520,18 +520,29 @@ export function zoneProps(scene, hab, o) {
           part(g, ball, SN, p.x - 1.4, lowest(p.x - 1.4, p.z, 0.4) - 0.04, p.z + 0.35, { ry: r3() }).scale.set(0.6, 0.22, 0.5);
           for (const a0 of [0, 2.4, -2.4]) { const a = a0 + (r3() - 0.5) * 1.2, x = p.x + Math.cos(a) * 1.3, z = p.z + Math.sin(a) * 1.3; // the first free of three sides
             if (free(x, z, 0.3) && !nearSpot(x, z, 0.4)) { cluster(x, z, 3 + Math.floor(r3() * 2), 0.9 + r3() * 0.5); break; } } }
-        const pm = new THREE.MeshStandardMaterial({ color: '#a8dcf4', emissive: '#6fbde3', emissiveIntensity: 0.2, roughness: 0.04, metalness: 0.15 }), glint = roundedBox(0.2, 1.5, 0.03, 0.01), glint2 = roundedBox(0.09, 0.9, 0.03, 0.01);
-        for (const m of Z.F.filter(q => q.t === 'mirror143' && q.zone === s.id)) { const y = lowest(m.x, m.z, 1.2) - 0.1, sl = new THREE.Group(); // a frosted frame round a pane of clear ice smooth as glass (two shines across it, as a toy mirror's), a lip on top, icicles under it
-          part(sl, roundedBox(2.3, 2.9, 0.3, 0.1), ICEC, 0, 1.45, 0, { mat: { roughness: 0.15 } }); part(sl, roundedBox(1.85, 2.35, 0.38, 0.06), '', 0, 1.4, 0, { m: pm });
-          for (const sd of [-1, 1]) { part(sl, glint, SN, -0.35, 1.75, sd * 0.195, { rz: -0.6 }); part(sl, glint2, SN, 0.05, 1.95, sd * 0.195, { rz: -0.6 }); }
-          part(sl, roundedBox(2.5, 0.22, 0.56, 0.1), ICEC, 0, 2.95, 0, { mat: { roughness: 0.15 } }); part(sl, roundedBox(2.2, 0.16, 0.46, 0.08), SN, 0, 3.1, 0);
-          for (const sd of [-1, 1]) for (const u of [-0.95, -0.6, -0.3, 0.05, 0.4, 0.75]) { const ln = 0.16 + r3() * 0.3; part(sl, new THREE.ConeGeometry(0.045 + ln * 0.05, ln, 6), ICEC, u + (r3() - 0.5) * 0.12, 2.84 - ln / 2, sd * 0.24, { rx: Math.PI, mat: { roughness: 0.15 } }); }
+        // 165 E: the slab was a frame round a pane with two shines (a glass door standing there): now a sheet of natural ice, its top
+        // broken into uneven points, frost round its edges, pale sky blue, leaning a little. Its outline its own (r3), its edges rounded
+        // 171 E: still a white ghost (a frost rim all round): now clear sky-blue ice you see the thickness of (its sides through its face),
+        // its top sharp crystal points and a few six-sided shards, frost a little on its edges only
+        const pm = new THREE.MeshStandardMaterial({ color: '#7cc4ee', emissive: '#3d98d2', emissiveIntensity: 0.16, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.72 }),
+          em = new THREE.MeshStandardMaterial({ color: '#c4e9fa', emissive: '#6db8e4', emissiveIntensity: 0.14, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.9 }), // its cut sides, denser (the thickness)
+          half = (geo, i) => { const { start, count } = geo.groups[i], o = new THREE.BufferGeometry(); for (const [k, a] of Object.entries(geo.attributes)) o.setAttribute(k, new THREE.BufferAttribute(a.array.slice(start * a.itemSize, (start + count) * a.itemSize), a.itemSize)); return o; },
+          FR = '#eef6fb', lump = new THREE.SphereGeometry(1, 8, 6), shard = new THREE.CylinderGeometry(0, 0.13, 0.8, 6).translate(0, 0.4, 0);
+        for (const m of Z.F.filter(q => q.t === 'mirror143' && q.zone === s.id)) { const y = lowest(m.x, m.z, 1.2) - 0.1, sl = new THREE.Group(), W = 1.15, P = [[-W, 0], [W, 0], [W + 0.05 + r3() * 0.07, 1.0], [W - 0.06, 1.85 + r3() * 0.3]];
+          for (let i = 1; i < 7; i++) P.push([W - 0.1 - i / 7 * (2 * W - 0.2) + (r3() - 0.5) * 0.12, (i % 2 ? 2.95 + r3() * 0.4 : 2.15 + r3() * 0.15)]); // the points along its top, high and low by turns (171 E: sharper)
+          P.push([-W + 0.06, 1.75 + r3() * 0.3], [-W - 0.05 - r3() * 0.07, 0.9]);
+          const ext = (o, d, b) => { const sh = new THREE.Shape(); P.forEach(([u, v], i) => { const L0 = Math.hypot(u, v - 1.3) || 1, q = [u + u / L0 * o, v + (v - 1.3) / L0 * o]; i ? sh.lineTo(...q) : sh.moveTo(...q); });
+            return new THREE.ExtrudeGeometry(sh, { depth: d, bevelEnabled: b > 0, bevelThickness: b, bevelSize: b, bevelSegments: 1 }).translate(0, 0, -d / 2); }; // 171 E: one bevel step, crisp facets
+          const ice = ext(0, 0.42, 0.03); part(sl, half(ice, 0), '', 0, 0, 0, { m: pm }); part(sl, half(ice, 1), '', 0, 0, 0, { m: em }); ice.dispose(); // the ice, thick: its faces clear, its sides denser
+          for (let i = 4; i < 9; i += 2) { const [u, v] = P[i], k = 0.7 + r3() * 0.5; part(sl, shard, '', u, v - 0.25, (r3() - 0.5) * 0.12, { m: pm, rz: (u < 0 ? 1 : -1) * (0.1 + r3() * 0.25) }).scale.set(k, k, k); } // shards up from its high points
+          for (let i = 0; i < P.length; i++) { const [u, v] = P[i], [u2, v2] = P[(i + 1) % P.length]; if (!v && !v2 || v > 2 && v2 > 2) continue; // a little frost on its side edges (not its foot or points), front and back
+            for (const sd of [-1, 1]) if (r3() < 0.35) { const t = r3(), w = 0.06 + r3() * 0.04; part(sl, lump, FR, u + (u2 - u) * t, v + (v2 - v) * t, sd * 0.22, { ry: r3() }).scale.set(w * 1.6, w * 0.6, w * 0.4); } }
           for (const [u, w] of [[-1.25, 0.5], [1.2, 0.45], [0.2, 0.35]]) part(sl, ball, SN, u, 0, (r3() - 0.5) * 0.4, { ry: r3() }).scale.set(w, 0.22, w * 0.8); // snow at its foot
-          sl.position.set(m.x, y, m.z); sl.rotation.y = m.ry; g.add(sl);
+          sl.position.set(m.x, y, m.z); sl.rotation.set(-0.07, m.ry, (m.ry < 0 ? 1 : -1) * (0.05 + r3() * 0.03), 'YXZ'); g.add(sl); // leaning back a little, and to one side
           for (const sd of [-0.7, 0.7]) occupied.push({ x: m.x + Math.cos(m.ry) * sd, z: m.z - Math.sin(m.ry) * sd, r: 0.95, h: 3 }); // its ends (the middle in front stays open: the spot)
           const fog = new THREE.Mesh(new THREE.CircleGeometry(0.4, 20), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false })); // the breath on the ice
           fog.rotation.y = m.ry; fog.visible = false; scene.add(fog); let t0 = null;
-          ups.push(t => { if (m.fog) { const q = m.fog; m.fog = null; fog.position.set(q.x + m.nx * 0.22, heightAt(q.x, q.z) + (q.y ?? 0.6), q.z + m.nz * 0.22); t0 = t + 1.0; } // a breath out against it, a mist that fades
+          ups.push(t => { if (m.fog) { const q = m.fog; m.fog = null; fog.position.set(q.x + m.nx * 0.3, heightAt(q.x, q.z) + (q.y ?? 0.6), q.z + m.nz * 0.22); t0 = t + 1.0; } // a breath out against it, a mist that fades
             const e = t0 == null ? 9 : t - t0; fog.visible = e > 0 && e < 4.5; if (!fog.visible) return; fog.material.opacity = 0.9 * Math.min(1, e / 0.4) * (1 - Math.max(0, (e - 1.5) / 3)); fog.scale.setScalar(0.6 + Math.min(1, e / 0.6) * 0.5); }); }
         put(bake(g), 0, 0, 0, 0, 0, 0); occupied.pop(); },
       hotspring() { if (S129) return spring129(); const p = pools[0]; for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283 + rnd() * 0.15, d = p.r - 0.15; K.rock(p.x + Math.cos(a) * d, p.z + Math.sin(a) * d, 0.32 + rnd() * 0.2); occupied.pop(); }
@@ -545,12 +556,15 @@ export function zoneProps(scene, hab, o) {
           const shell = (r, tl, c0) => { const tb = new THREE.CylinderGeometry(r, r, L, 28, 1, true, Math.PI - tl / 2, tl), cp = new THREE.SphereGeometry(r, 28, 10, Math.PI, Math.PI, 0, c0); // a half tube to the mouth, a quarter ball behind it
             tb.rotateX(Math.PI / 2); tb.translate(0, 0, -L / 2); cp.translate(0, 0, -L); return mergeGeometries([tb, cp]); };
           const g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 14, 10), hood = shell(R, Math.PI, Math.PI / 2), ICEC = '#dff2fa';
-          part(g, hood, '#8e9097', 0, 0, 0, { mat: { roughness: 0.75 } }); part(g, hood, '#2a3a50', 0, 0, 0, { mat: { roughness: 0.9, side: THREE.BackSide } }); // rock out, dark blue in
+          part(g, hood, '#8e9097', 0, 0, 0, { mat: { roughness: 0.75 } }); { const inn = hood.clone(), p = inn.attributes.position, cl = [], A = new THREE.Color('#8fb6cf'), B = new THREE.Color('#3a5a7c'), c = new THREE.Color(); // rock out, pale ice in (165 E: was dark blue, a black hole):
+            for (let i = 0; i < p.count; i++) { c.lerpColors(A, B, Math.min(1, Math.max(0, -p.getZ(i) / (L + R) * 0.75 + p.getY(i) / R * 0.3))); cl.push(c.r, c.g, c.b); } // paler by the mouth and the floor, a deeper blue far in and up
+            inn.setAttribute('color', new THREE.Float32BufferAttribute(cl, 3));
+            part(g, inn, '#ffffff', 0, 0, 0, { mat: { roughness: 0.5, side: THREE.BackSide, vertexColors: true, emissive: '#3f78a8', emissiveIntensity: 0.14 } }); } // out of its own shade, so the walls show; a faint blue light of its own by night
           part(g, shell(R + 0.07, 1.6, 0.8), '#f4f8fb', 0, 0, 0, { mat: { roughness: 0.8 } }); // snow on its top
           for (const [a, b, w] of [[-1.1, -0.6, 0.7], [0.9, -1.7, 0.8], [-0.4, -3.0, 0.65], [1.6, -0.2, 0.5]]) part(g, ball, '#f4f8fb', a, Math.sqrt(Math.max(0, R * R - a * a - Math.max(0, -b - L) ** 2)) + 0.02, b).scale.set(w, 0.16, w * 0.8); // lumps of it
           part(g, new THREE.TorusGeometry(R + 0.02, 0.36, 10, 28, Math.PI), '#9a9da5', 0, -0.08, 0.02); // the mouth's rim
           part(g, new THREE.TorusGeometry(R + 0.12, 0.27, 8, 16, 1.7), '#f4f8fb', 0, 0.06, 0.02, { rz: Math.PI / 2 - 0.85 }); // snow on it
-          part(g, ball, '#4a5870', 0, 0.02, -(L + R) / 2 - 0.3, { mat: { roughness: 0.95 } }).scale.set(R - 0.7, 0.04, (L + R) / 2 - 0.7); // the dark floor, well in
+          part(g, ball, '#8fb2c6', 0, 0.02, -(L + R) / 2 - 0.3, { mat: { roughness: 0.6, emissive: '#4a86b8', emissiveIntensity: 0.12 } }).scale.set(R - 0.7, 0.04, (L + R) / 2 - 0.7); // the icy floor, well in (165 E: was dark)
           for (const a0 of [-0.78, -0.4, 0.02, 0.37, 0.74]) { const a = Math.PI / 2 + a0 + (r3() - 0.5) * 0.12, ln = 0.26 + r3() * 0.38; // icicles, uneven (a full even row read as teeth)
             part(g, new THREE.ConeGeometry(0.08 + ln * 0.06, ln, 6), ICEC, Math.cos(a) * (R - 0.28), Math.sin(a) * (R - 0.28) - ln / 2, 0.14, { rx: Math.PI, mat: { roughness: 0.15 } }); }
           const xg = mergeGeometries([new THREE.CylinderGeometry(1, 1, 1, 6).translate(0, 0.5, 0), new THREE.ConeGeometry(1, 0.45, 6).translate(0, 1.225, 0)]), xm = new THREE.MeshStandardMaterial({ color: '#a8e4ff', emissive: '#4fb0ff', emissiveIntensity: 0.55, roughness: 0.15 });
@@ -765,15 +779,27 @@ export function zoneProps(scene, hab, o) {
           const tri = (a, b, c, col) => { const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2], o = col.out; // 163 C: faces turned to face up (or out, for a side)
             const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, f = o ? nx * o[0] + nz * o[1] < 0 : ny < 0;
             for (const p of f ? [a, c, b] : [a, b, c]) { pv.push(p[0], p[1], p[2]); pc.push(col.r, col.g, col.b); } };
-          for (const [cx, cz, rx, rz, wd] of one('crack143').rings) { const E = 1.1 + wd, sp = 0.5, SD = []; // 163 C dry mud cracked into plates round the wallow and the pools: a shaken Voronoi (cells of every size and shape, no hex grid), each plate
-            for (let gz = cz - rz * E - sp; gz < cz + rz * E + sp; gz += sp) for (let gx = cx - rx * E - sp; gx < cx + rx * E + sp; gx += sp) if (r3() > 0.28) SD.push([gx + (r3() - 0.5) * sp * 0.9, gz + (r3() - 0.5) * sp * 0.9]); // some seeds dropped: some cells big
-            for (const [x, z] of SD) { const o = (Math.hypot((x - cx) / rx, (z - cz) / rz) - 1.05) / wd; // half sunk and low, its rim sloping down to a dark crack; fewer, smaller and paler outward
-              if (o < 0 || o > 1 || r3() < o * 0.45 || !ok(x, z, 0) || TR.some(P => polyD(x, z, P) < 0.7) || PD0.some(([px, pz, pr]) => Math.hypot(x - px, z - pz) < pr + 0.3)) continue;
-              const R0 = sp * 1.3; let P = [[x - R0, z - R0], [x + R0, z - R0], [x + R0, z + R0], [x - R0, z + R0]];
-              for (const [qx, qz] of SD) { const dx = qx - x, dz = qz - z; if ((!dx && !dz) || dx * dx + dz * dz > 8 * R0 * R0) continue; const mx = x + dx / 2, mz = z + dz / 2, sd = p => (p[0] - mx) * dx + (p[1] - mz) * dz, Q = []; // keep its own side of the line halfway to each neighbour
+          const CK = one('crack143'), hit = (x, z) => !ok(x, z, 0) || TR.some(P => polyD(x, z, P) < 0.45) || PD0.some(([px, pz, pr]) => Math.hypot(x - px, z - pz) < pr + 0.15); // 165 C: no part of a plate on the water, a track, a puddle or a prop
+          const fields = [...CK.rings.map(([cx, cz, rx, rz, wd, a]) => { const E = 1.1 + wd * 2.8; // 165 C: no even ring. Its width (o 0..1 across it) wide on its side a, thinning round, none on the far side
+              return [cx - rx * E, cx + rx * E, cz - rz * E, cz + rz * E, (x, z) => { const u = (x - cx) / rx, v = (z - cz) / rz, t = Math.atan2(v, u), f = (1 + Math.cos(t - a)) / 2, w = wd * (2.3 * f * f - 0.15) * (1 + 0.3 * Math.sin(3 * t + cx)); return w > 0 ? (Math.hypot(u, v) - 1.05) / w : -1; }]; }),
+            ...CK.out.map(([x, z, r]) => [x - r - 0.6, x + r + 0.6, z - r - 0.6, z + r + 0.6, (px, pz) => { const d = Math.hypot(px - x, pz - z) / r; return d < 1 ? 0.55 + 0.45 * d : -1; }]),
+            ...CK.rings.map(([cx, cz, rx, rz, , a]) => { const r = 0.7, at = (t, e) => [cx + Math.cos(t) * (rx * 1.05 + e), cz + Math.sin(t) * (rz * 1.05 + e)]; // 171 C: one or two small plates on each ring's bare far side too (last, so the plates above keep their seeds), the first spot round it off the track and the water
+              let [x, z] = at(a + Math.PI, 0.3); seek: for (const e of [0.3, 0.6, 0.9, 1.2]) for (const d of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2]) { const [px, pz] = at(a + Math.PI + d, e); if (!hit(px, pz) && ![0, 1.57, 3.14, 4.71].some(u => hit(px + Math.cos(u) * r * 0.8, pz + Math.sin(u) * r * 0.8)) && !Lr.stem.some(q => Math.hypot(q.x - px, q.z - pz) < r + 0.4)) { x = px; z = pz; break seek; } }
+              return [x - r - 0.6, x + r + 0.6, z - r - 0.6, z + r + 0.6, (px, pz) => { const d = Math.hypot(px - x, pz - z) / r; return d < 1 ? 0.2 + 0.35 * d : -1; }]; })]; // and a few gone off on the grass, pale
+          const DN = []; for (const [x0, x1, z0, z1, ow] of fields) { const sp = 0.5, SD = [], d0 = DN.length; // 163 C dry mud cracked into plates round the wallow and the pools: a shaken Voronoi (cells of every size and shape, no hex grid), each plate
+            for (let gz = z0; gz < z1; gz += sp) for (let gx = x0; gx < x1; gx += sp) if (r3() > 0.28) { const x = gx + (r3() - 0.5) * sp * 0.9, z = gz + (r3() - 0.5) * sp * 0.9; SD.push({ x, z, o: ow(x, z), R: 0.65 }); } // some seeds dropped: some cells big
+            for (const s of SD) if (!s.gone && s.o >= 0 && s.o < 0.6 && r3() < 0.1) { s.R = 1.3; for (const q of SD) if (q !== s && Math.hypot(q.x - s.x, q.z - s.z) < 1.15) q.gone = true; } // 165 C: a few big plates (the seeds round them dropped)
+            const L5 = SD.filter(s => !s.gone), n5 = L5.length; for (let i = 0; i < n5; i++) { const s = L5[i]; if (s.R < 1 && s.o >= 0 && r3() < 0.1 + 0.25 * Math.min(1, s.o)) { const t = r3() * 6.283; for (const u of [0, 2.2]) { const d = 0.15 + r3() * 0.06, x = s.x + Math.cos(t + u) * d, z = s.z + Math.sin(t + u) * d; L5.push({ x, z, o: ow(x, z), R: 0.65 }); } } } // and small chips (a seed split in three), more outward
+            for (const { x, z, o, R: R0 } of L5) { // half sunk and low, its rim sloping down to a dark crack; fewer, smaller and paler outward
+              if (o < 0 || o > 1 || r3() < o * 0.45) continue;
+              let P = [[x - R0, z - R0], [x + R0, z - R0], [x + R0, z + R0], [x - R0, z + R0]];
+              for (const { x: qx, z: qz } of L5) { const dx = qx - x, dz = qz - z; if ((!dx && !dz) || dx * dx + dz * dz > 8 * R0 * R0) continue; const mx = x + dx / 2, mz = z + dz / 2, sd = p => (p[0] - mx) * dx + (p[1] - mz) * dz, Q = []; // keep its own side of the line halfway to each neighbour
                 P.forEach((p, i) => { const q = P[(i + 1) % P.length], a = sd(p), b = sd(q); if (a <= 0) Q.push(p); if ((a <= 0) !== (b <= 0)) { const t = a / (a - b); Q.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]); } }); P = Q; }
               if (P.length < 3) continue;
-              const n = P.length, mx = P.reduce((s, p) => s + p[0], 0) / n, mz = P.reduce((s, p) => s + p[1], 0) / n, g0 = 0.022 + r3() * 0.022 + 0.016 * o, ta = r3() * 6.283, tl = (r3() - 0.5) * 0.04, th = 0.03 - 0.01 * o;
+              const n = P.length, mx = P.reduce((s, p) => s + p[0], 0) / n, mz = P.reduce((s, p) => s + p[1], 0) / n, rd = Math.max(...P.map(([px, pz]) => Math.hypot(px - mx, pz - mz)));
+              if (hit(mx, mz) || P.some(([px, pz]) => hit(px, pz)) || Lr.stem.some(q => Math.hypot(q.x - mx, q.z - mz) < rd + 0.1) || DN.some((q, i) => i < d0 && Math.hypot(q.x - mx, q.z - mz) < (q.rd + rd) * 0.8)) continue; // nor on another field's
+              DN.push({ x: mx, z: mz, rd }); c3.push({ x: mx, z: mz, clr: rd + 0.6 }); b4.push({ x: mx, z: mz, bare: [rd + 0.05, rd + 0.05] }); // 165 C: the mix's bushes, rocks and ferns off it, no grass through it
+              const g0 = 0.022 + r3() * 0.022 + 0.016 * o, ta = r3() * 6.283, tl = (r3() - 0.5) * 0.04, th = 0.03 - 0.01 * o;
               const tilt = (px, pz) => tl * ((px - mx) * Math.cos(ta) + (pz - mz) * Math.sin(ta)), top = P.map(([px, pz]) => { const d = Math.hypot(px - mx, pz - mz), k = Math.max(0.45, 1 - g0 / d), X = mx + (px - mx) * k, Z = mz + (pz - mz) * k; return [X, heightAt(X, Z) + 0.012 + th + tilt(X, Z), Z]; });
               const fl = P.map(([px, pz]) => [px, heightAt(px, pz) + 0.012, pz]), ct = [mx, heightAt(mx, mz) + 0.012 + th + 0.004, mz]; // its sides down to the cell's edge: the dark crack
               C3.set(j3(o < 0.5 ? '#8f7556' : '#a8896a', 0.06)).lerp(CP, o * 0.5); const CT = { r: C3.r, g: C3.g, b: C3.b };

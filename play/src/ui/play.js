@@ -216,7 +216,7 @@ export function initPlay(nav) {
   function dusk(k) {
     const R = k && rosterOf({ k }), el = document.createElement('div'); el.className = 'dusk';
     el.innerHTML = $t('<p>오늘 손님은 여기까지예요</p>{0}', R ? $t('<img alt=""><small>내일은 누가 올까요?</small>') : '');
-    stage.append(el); if (R) silhouetteThumb(R.sp, guestWear(R), false, 0).then(u => { const i = el.querySelector('img'); if (i) i.src = u; });
+    stage.append(el); if (R) silhouetteThumb(R.sp, guestWear(R), false, 0).then(u => { const i = el.querySelector('img'); if (i) i.src = u; }, () => {});
     setTimeout(() => el.remove(), calm() ? 5000 : 7000);
   }
   function events(ev) {
@@ -251,14 +251,14 @@ export function initPlay(nav) {
     if (pal) { // 17-1 "○○와 ○○가 단짝이 되었어요!" (after the grown cards)
       const [a, b] = [pal.a, pal.b].map(id => G.S.animals.find(x => x.id === id)), na = nameOf(a), nb = nameOf(b);
       card.innerHTML = $t('<div><h2>{0}{과/와} {1}{이/가} 단짝이 되었어요!</h2><p class="pair"><img alt="{2}"><span>♥</span><img alt="{3}"></p><p class="sub">{4} · {5} · 나란히 걷고, 같이 낮잠 자고, 시소도 같이 타요</p>{6}<button data-close>좋아요</button></div>', na, nb, na, nb, PE[a.pe].name, PE[b.pe].name, PROP[pal.prop] ? $t('<p class="sub">둘 다 {0}{을/를} 좋아해요</p>', PROP[pal.prop].name) : '');
-      card.querySelectorAll('.pair img').forEach((m, i) => { const x = [a, b][i]; figureThumb(x.species, x.variant, x.color, x.acc, x.stage).then(u => { m.src = u; }); });
+      card.querySelectorAll('.pair img').forEach((m, i) => { const x = [a, b][i]; figureThumb(x.species, x.variant, x.color, x.acc, x.stage).then(u => { m.src = u; }, () => {}); });
       card.querySelector('button').onclick = () => { card.hidden = true; G.palSeen(); };
       card.hidden = false; sfx('grown'); return;
     }
     const one = list.length === 1, nm = one && nameOf(list[0]), more = list.length - 4;
     card.innerHTML = $t('<div><h2>{0}</h2>{1}{2}{3}<button data-close>좋아요</button></div>', one ? $t('{0}{이/가} 다 자랐어요!', nm) : $t('친구 {0}마리가 다 자랐어요!', list.length), list.slice(0, 4).map(a => $t('<p class="pair"><img class="b" alt="새끼"><span>→</span><img alt="성체"></p>')).join(''), more > 0 ? $t('<p>그리고 {0}마리 더</p>', more) : '', one ? '' : $t('<p class="sub">자란 모습은 도감에서도 볼 수 있어요</p>'));
     card.querySelectorAll('.pair').forEach((p, i) => { const a = list[i], [b, c] = p.querySelectorAll('img');
-      figureThumb(a.species, a.variant, a.color, a.acc, 'baby').then(u => { b.src = u; }); figureThumb(a.species, a.variant, a.color, a.acc, 'adult').then(u => { c.src = u; }); });
+      figureThumb(a.species, a.variant, a.color, a.acc, 'baby').then(u => { b.src = u; }, () => {}); figureThumb(a.species, a.variant, a.color, a.acc, 'adult').then(u => { c.src = u; }, () => {}); });
     card.querySelector('button').onclick = () => { card.hidden = true; G.grownSeen(list.map(a => a.id)); setTimeout(cards, 600); }; // 17-1: then a 단짝 card, if one waits
     card.hidden = false; sfx('grown');
   }

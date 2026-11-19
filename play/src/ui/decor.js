@@ -60,6 +60,7 @@ const grown = () => { const H = G.S.wild.h[habId]; return H ? Object.keys(H.g).l
 const keep = () => { undo.push(layoutOf(G.S, habId)); if (undo.length > UNDO) undo.shift(); redo = []; };
 
 export function openDecor(id, api) {
+  if (!api) return; // 168: no habitat built yet (its loading screen): nothing to decorate (style.css hides the buttons then)
   habId = id; hab = api; held = null; brush = undefined; grid = false; undo = []; redo = []; min = false; moreT = false; pick = null; sweep = 0; el.classList.remove('tall');
   if (!tabsHere().some(t => t.id === tab)) tab = 'nature';
   el.hidden = false; habEl.classList.add('decorating'); hab.decor.mode(true); draw(); tip('decor', '#decor .dgrid'); tip('expand', '#decor .dexp'); tip('nature', '#decor [data-sweep]'); if (tab === 'train') railGuide();
@@ -138,10 +139,10 @@ function draw() {
     list = mine().filter(P => tabOf(P) === tab).sort((a, b) => lvOf(a) - lvOf(b)), nats = tab === 'nature' ? NATURE.filter(N => stowedNat(N.id).length) : [], sh = G.shelf(habId);
   el.innerHTML = GRIP() + $t('<div class="dhead"><b>꾸미기</b><span{0}>놓은 {1} {2} / {3}</span><button class="back" data-done>완료</button></div>\n{4}{5}<div class="dlist">{6}<div class="dtabs">{7}</div>\n<div class="dgrid">{8}{9}{10}{11}{12}{13}</div>\n<p class="dhint">{14}</p></div>', n >= cap ? ' class="no"' : '', rl ? $t('레일') : $t('소품'), n, cap, rl ? railLine(railNow(false), '', $t('<button class="sb" data-rhelp>놓는 법</button>')) : '', tools(), shelfRow(sh), tabsHere().map(t => `<button class="${t.id === tab ? 'on' : ''}" data-tab="${t.id}">${t.name}</button>`).join(''), ring, exp, L ? $t('<button class="dprop dcmp" data-compare><i></i><b>넓히기 전과 비교</b><small>처음 땅과 지금 땅을 위에서 봐요</small></button>') : '', tab === 'nature' ? $t('<button class="dprop dsweep" data-sweep><i></i><b>자연 정리</b><small>네모를 그려 그 안의 나무·바위·덤불을 한 번에 치워요</small></button>') : '', nats.map(N => $t('<button class="dprop dnat" data-n="{0}"><img alt=""><b>{1}</b><small>처음부터 있던 것 · 다시 심어요</small><em>넣어 둔 것 {2}</em></button>', N.id, N.name, stowedNat(N.id).length)).join(''), list.map(P => { const s = stowed(P.id).length, lk = !s && !can(G.S, 'prop:' + P.id);
     return `<button class="dprop${lk ? ' lock' : ''}" data-p="${P.id}"><img alt=""><b>${P.name}</b><small>${propNote(P)}${sceneNote(P)}</small><em>${s ? $t('넣어 둔 것 {0}', s) : P.gift ? $t('놓았어요') : lk ? `Lv ${needFor('prop:' + P.id)}` : `<span class="hrt">♥</span>${P.price}`}</em></button>`; }).join(''), n >= cap ? full(rl && 'rail') : rl ? $t('레일 끝의 초록 점은 이어진 곳, 빨간 점은 열린 곳이에요 · 고리를 닫으면 태엽 기차가 달려요') : G.S.ghost?.[habId]?.length ? $t('반투명한 것은 불러온 배치의 미리보기예요 · 그 소품을 사거나 꺼내면 그 자리에서 시작해요') : $t('놓은 소품이나 나무를 누르면(길게 누르면 바로 끌어서) 옮기거나 넣을 수 있어요'));
-  el.querySelectorAll('.dnat img').forEach((img, i) => propThumb('n:' + nats[i].id, () => hab.decor.natModel({ prop: nats[i].id, s: 1, v: 12 })).then(u => { img.src = u; }));
-  el.querySelectorAll('.dring img').forEach(img => propThumb('railring', hab.decor.model).then(u => { img.src = u; }));
-  el.querySelectorAll('.dsh img').forEach((img, i) => propThumb(sh.items[i].id, hab.decor.model).then(u => { img.src = u; }));
-  el.querySelectorAll('.dprop[data-p] img').forEach((img, i) => propThumb(list[i].id, hab.decor.model).then(u => { img.src = u; }));
+  el.querySelectorAll('.dnat img').forEach((img, i) => propThumb('n:' + nats[i].id, () => hab.decor.natModel({ prop: nats[i].id, s: 1, v: 12 })).then(u => { img.src = u; }, () => {}));
+  el.querySelectorAll('.dring img').forEach(img => propThumb('railring', hab.decor.model).then(u => { img.src = u; }, () => {}));
+  el.querySelectorAll('.dsh img').forEach((img, i) => propThumb(sh.items[i].id, hab.decor.model).then(u => { img.src = u; }, () => {}));
+  el.querySelectorAll('.dprop[data-p] img').forEach((img, i) => propThumb(list[i].id, hab.decor.model).then(u => { img.src = u; }, () => {}));
 }
 
 // put the held one down where it is (null: red there, or the cap)
