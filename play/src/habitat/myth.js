@@ -12,7 +12,6 @@ import { blobSlot } from '../animals/walk.js';
 import { hourNow } from './daylight.js';
 import { calm } from '../config.js';
 import { sfx } from '../ui/sound.js';
-import { M89 } from '../game/data.js';
 
 const lay = g => g.rotateX(-Math.PI / 2);
 const HOOF = lay(new THREE.RingGeometry(0.17, 0.34, 18, 1, Math.PI + 0.55, Math.PI * 2 - 1.1)), SPOT = lay(new THREE.CircleGeometry(0.13, 10)); // a hoofprint: its heel open behind
@@ -95,7 +94,7 @@ export function mythLayer({ scene, ctx, U, ui, open, nearest, gather, idle, plac
         if (walkable(nx, nz) && !blocked(ctx.crowd, body, nx, nz, me.yaw)) { me.x = nx; me.z = nz; me.stuck = 0; } else if ((me.stuck += dt) > 0.8) { me.lap = null; stand(1, 3); }
         if (SPD[me.gait]) me.ph += dt * SPD[me.gait] / CYC[me.gait]; // stuck → stand() just made gait 'still' (no SPD): skip, else ph turns NaN and the legs freeze for good (report 157c)
         if (me.gait === 'run' && (me.step -= dt) < 0) { me.step = 0.13; const [fx0, fz0] = FEET[me.ph * 4 & 3], c = Math.cos(me.yaw), s = Math.sin(me.yaw); stamp(me.x + c * fx0 + s * fz0, me.z - s * fx0 + c * fz0, me.yaw); }
-        else if (M89 && SPD[me.gait] && me.gait !== 'run' && (me.ph * 4 | 0) !== me.foot) { me.foot = me.ph * 4 | 0; const [fx0, fz0] = FEET[me.foot & 3], c = Math.cos(me.yaw), s = Math.sin(me.yaw); stamp(me.x + c * fx0 + s * fz0, me.z - s * fx0 + c * fz0, me.yaw, 1.2); } } // 157 C: walking, a brief ember at each step
+        else if (SPD[me.gait] && me.gait !== 'run' && (me.ph * 4 | 0) !== me.foot) { me.foot = me.ph * 4 | 0; const [fx0, fz0] = FEET[me.foot & 3], c = Math.cos(me.yaw), s = Math.sin(me.yaw); stamp(me.x + c * fx0 + s * fz0, me.z - s * fx0 + c * fz0, me.yaw, 1.2); } } // 157 C: walking, a brief ember at each step
     }
     me.lie = Math.max(0, Math.min(1, me.lie + (me.st === 'lie' ? 0.8 : -0.8) * dt));
     me.rear = me.st === 'rear' ? smooth(me.t / 0.5) * smooth((me.dur - me.t) / 0.6) : 0;

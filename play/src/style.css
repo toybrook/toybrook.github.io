@@ -449,7 +449,7 @@ html.calm .rate{animation:none}
 .ret li button.take::after{content:attr(data-take);font-size:calc(13px*var(--fs));font-weight:700;color:#fff;background:#e8805f;border-radius:10px;padding:5px 10px}
 .ret li button.take:disabled{opacity:1}.ret li button.take:disabled::after{content:'✓';background:none;color:#e5584a;font-size:calc(18px*var(--fs))}
 .ret .minis{display:flex;justify-content:center;gap:6px;margin:4px 0 0}.ret .minis span{display:flex;align-items:center;gap:1px}
-.ret .minis{flex-wrap:wrap}.ret button[data-go=news] span{min-width:0}.ret button[data-go=news] small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ret .minis img{width:56px;height:56px;object-fit:contain}.ret .minis img.b{width:48px;height:48px}.ret .minis b{color:#b08a64;font-size:calc(11px*var(--fs))}
+.ret .minis{flex-wrap:wrap}.ret button[data-go=news] span{min-width:0}.ret button[data-go=news] small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ret .minis img{width:56px;height:56px;object-fit:contain}.ret .minis img.b{width:48px;height:48px}.ret .minis b{color:#b08a64;align-self:center;font-size:calc(11px*var(--fs))}
 /* inbox 58: no card shows through the start screen while it fades (they wait under it); the scenes swap at once under 돌아왔어요's cloud */
 body:has(#boot) .intro{visibility:hidden}
 .scene.now{transition:none}

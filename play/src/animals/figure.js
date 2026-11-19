@@ -61,6 +61,12 @@ export const loadModel = id => loading[id] ??= (async () => {
     g.body.computeBoundingBox(); const b = g.body.boundingBox, H = b.max.y, cx = (b.min.x + b.max.x) / 2;
     withOp(g.body, H, cx); if (g.accent) withOp(g.accent, H, cx); if (g.beak) withOp(g.beak, H, cx); if (g.horn) withOp(g.horn, H, cx); if (g.nostril) withOp(g.nostril, H, cx);
     for (const k of M.paints || []) if (g[k]) withOp(g[k], H, cx); // more painted colour layers on the body (the penguin's face and ear patches)
+    if (g.spike) withOp(g.spike, H, cx); // 163 A (?m89): the stegosaurus' tail spikes, their own mesh
+    // 163 A (?m89): S.fade {o, n, w}: _fade 0 -> 1 across the plane through o (normal n, soft over +-w) on the body (the dinosaurs'
+    // beak, ivory on materials.js dino163); 0 on every other part, so the parts sharing the body's material still merge
+    if (S.fade) for (const [k, geo] of Object.entries(g)) if (geo.isBufferGeometry) { const p = geo.attributes.position, f = new Float32Array(p.count), { o, n, w } = S.fade;
+      if (k === 'body') for (let i = 0; i < p.count; i++) f[i] = THREE.MathUtils.smoothstep((p.getX(i) - o[0]) * n[0] + (p.getY(i) - o[1]) * n[1] + (p.getZ(i) - o[2]) * n[2], -w, w);
+      geo.setAttribute('_fade', new THREE.BufferAttribute(f, 1)); }
     // one leg geometry per leg position (its _op differs)
     g.legs = !S.legs ? [] : S.legs.x.flatMap(x => [S.legs.z, -S.legs.z].map(z => ({ x, z,
       leg: withOp(g.leg.clone(), H, cx, [x, S.legs.hip, z]), hoof: g.hoof && withOp(g.hoof.clone(), H, cx, [x, S.legs.hip, z]),
@@ -182,6 +188,8 @@ FX.goldglints = { ...FX.twinkle, frag: FX.clearglints.frag.replace('vS < 0.5 ? v
 // 151 (?m89): silversparks: the sparks (chicken) as silver dust (the obsidian swan): smaller, a few more, cool white
 FX.silversparks = { ...FX.sparks, n: 24, size: 0.22, frag: FX.sparks.frag.replace('vS < 0.34 ? vec3(1.0, 0.55, 0.18) : vS < 0.67 ? vec3(1.0, 0.42, 0.62) : vec3(0.72, 0.42, 1.0)',
   'vS < 0.5 ? vec3(0.78, 0.84, 0.95) : vec3(0.95, 0.97, 1.0)').replace('vec3(1.0, 0.95, 0.85), core * 0.6', 'vec3(1.0), core * 0.6') };
+// 163 D ③ (?m89): roseglints: the twinkle in rose quartz pinks, a deeper and a paler one (the rose quartz fox)
+FX.roseglints = { ...FX.twinkle, frag: FX.clearglints.frag.replace('vS < 0.5 ? vec3(0.8, 0.92, 1.0) : vec3(1.0)', 'vS < 0.5 ? vec3(1.0, 0.56, 0.72) : vec3(1.0, 0.86, 0.91)') };
 const fxMats = {};
 const fxMat = kind => fxMats[kind] ??= new THREE.ShaderMaterial({
   uniforms: { uTime: windTime, uPx: { value: 800 } }, transparent: true, depthWrite: FX[kind].solid || false, blending: FX[kind].solid || FX[kind].soft ? THREE.NormalBlending : THREE.AdditiveBlending,
@@ -280,6 +288,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
   if (G.accent) body.add(mesh(G.accent, m.accent)); // none on an all-one-colour body (swan, flamingo)
   if (G.beak) body.add(mesh(G.beak, m.beak || m.hoof)); // a bird's beak (the hoof colour, like its feet), a pig's nostrils, a cow's nose (colors.beak)
   if (G.horn) body.add(mesh(G.horn, m.horn || m.body)); // a cow's horns (colors.horn)
+  if (G.spike) body.add(mesh(G.spike, m.spike || m.horn || m.body)); // 163 A (?m89): the stegosaurus' tail spikes (colors.paint.spike; else as its plates)
   if (G.nostril) body.add(mesh(G.nostril, m.nostril || m.hoof)); // a cow's nostrils (in its nose mesh); the penguin's dark upper beak (colors.nostril)
   for (const k of M.paints || []) if (G[k]) body.add(mesh(G[k], m[k] || m.body)); // colors.paint[k]
   for (const [k, geo] of Object.entries(G.legend)) if (m[k]) body.add(mesh(geo, m[k])); // 71-2 MODELS legend, on the look that has a material for it (bone, gem)

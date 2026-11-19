@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.84.0-15f8bdf7">
+<meta name="build" content="toybrook-0.84.1-12c408af">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -28,7 +28,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="1201593" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="1206520" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected) return; const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -102,7 +102,8 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
       <li data-upd><i aria-hidden="true">🔄</i><span>새 판이 나오면 위에 「새로 고침」 띠가 떠요</span></li>
-      <li data-top><i aria-hidden="true">🦄</i><span>새 신수 둘: 초원의 유니콘과 설원의 백록. 불갈기 천리마가 머물고 나면 차례로 이야기가 시작돼요</span></li>
+      <li data-top><i aria-hidden="true">🔥</i><span>신수 불갈기 천리마가 더 반짝이게 돌아왔어요: 거울 같은 옻칠, 유리 불꽃 날개</span></li>
+      <li><i aria-hidden="true">🦄</i><span>새 신수 둘: 초원의 유니콘과 설원의 백록. 불갈기 천리마가 머물고 나면 차례로 이야기가 시작돼요</span></li>
       <li><i aria-hidden="true">🦢</i><span>연못 알에 두 번째 전설 6종: 흑진주 오리·에메랄드 등껍질 거북·금박 레진 수달·흑요석 백조·네온 플라밍고·문스톤 카피바라</span></li>
       <li><i aria-hidden="true">🐴</i><span>초원 알에 새 전설: 무지개 티타늄 말</span></li>
       <li><i aria-hidden="true">🌼</i><span>초원의 꽃 언덕·작은 숲·개울 갈래가 새로 꾸며졌어요: 꽃 언덕 굴러 내려오기, 큰 나무 그늘 낮잠, 물레방아와 징검다리</span></li>

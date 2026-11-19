@@ -264,7 +264,7 @@ function showRet() {
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', $t('백업해 두면 기기를 바꿔도 이어서 할 수 있어요'), $t('설정 › 내 저장 백업'), 'backup']); G.flag('backupNag', today); }
   if (top) rows.push(['📰', $t('새 소식 {0}', VERSION), esc(top), 'news']); // 133: last. Opened on the older build, the new one reloads in (offline.js fresh) and this row is the only new one: the rows above stay put
   ret.innerHTML = $t('<div><h2>돌아왔어요</h2><ul>{0}</ul>\n<div class="nbtns"><button class="go" data-close>확인</button></div></div>', rows.map(([i, t, sub, k]) => `<li><button data-go="${k}"${k === 'attend' ? ` class="take" data-take="${$t('받기')}"` : ''}><i aria-hidden="true">${i}</i><span>${t}<small>${sub}</small></span></button>${
-    (k === 'attend' || k === 'd2') && wk ? weekCells() : k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => $t('<span><img class="b" alt="새끼"><b>→</b><img alt="성체"></span>')).join('')}</p>` : ''}</li>`).join(''));
+    (k === 'attend' || k === 'd2') && wk ? weekCells() : k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => $t('<span><img class="b" alt="새끼"><b>→</b><img alt="성체"></span>')).join('')}${grown.length > 3 ? `<b>${$t(' 외 {0}', grown.length - 3).trim()}</b>` : ''}</p>` : ''}</li>`).join(''));
   ret.dataset.wild = wn ? JSON.stringify([wn.hab, wn.at]) : ''; if (wn) G.wildSeen();
   ret.dataset.eggs = most || ''; ret.dataset.grown = grown[0] ? habitatOf(grown[0]) : ''; retGrown = grown.map(a => a.id);
   if (grown.length) code().then(() => import('./ui/thumbs.js')).then(({ figureThumb: f }) => ret.querySelectorAll('.minis > span').forEach((p, i) => { const a = grown[i], [b, c] = p.querySelectorAll('img');

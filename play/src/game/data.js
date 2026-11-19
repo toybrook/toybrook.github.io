@@ -851,10 +851,42 @@ export const LEGEND151 = {
   capybara: { id: 'moonstone', name: $t('문스톤 카피바라'), mat: 'moonstone151', effect: 'clearglints', late: 151 }, // 155 B2: six small glints, not the moondust's forty dots
 };
 for (const [sp, L] of Object.entries(LEGEND151)) SPECIES.find(s => s.id === sp).legendary.push(L); // 160 A: public (user OK 11/19)
+// 163 D 설원 전설 2번째 ① (?m89 시범; inbox 163 D): platinum, bronze statue (materials.js 163 D) on the snow bodies as they are.
+// Appended last; late: visit.js VL puts them after every look made before, so old link numbers stay
+export const LEGEND163 = {
+  polarBear: { id: 'platinum', name: $t('백금 북극곰'), mat: 'platinum163', effect: 'clearglints', late: 163 },
+  reindeer: { id: 'bronze', name: $t('청동 조각상 순록'), mat: 'bronze163', effect: 'goldglints', late: 163 },
+  penguin: { id: 'obsidian', name: $t('흑요석 은테 펭귄'), mat: 'obsidian163', effect: 'silversparks', late: 163 }, // 163 D ②
+  seal: { id: 'blackopal', name: $t('블랙 오팔 물범'), mat: 'blackopal163', effect: 'twinkle', late: 163 },
+  arcticFox: { id: 'rosequartz', name: $t('로즈쿼츠 여우'), mat: 'rosequartz163', effect: 'roseglints', late: 163 }, // 163 D ③
+  snowyOwl: { id: 'filigree', name: $t('은 세공 올빼미'), mat: 'filigree163', effect: 'fireflies', late: 163 },
+};
+if (M89) for (const [sp, L] of Object.entries(LEGEND163)) SPECIES.find(s => s.id === sp).legendary.push(L);
 // 152 C 백록 (160 A 공개): the white deer of Halla, on the reindeer's own legend files (tools/bake-baengnok152.mjs: slimmer, a big
 // smooth antler, a silver cord and bell) in white porcelain, frost flowers at its feet (materials.js 152 C). 158: no longer a reindeer
 // legendary slot: the 신수 백록 (MYTHIC152 fig) wears it
 MODELS.reindeer.legend = { adult: 'assets/models/baengnok152_adult.glb', baby: 'assets/models/baengnok152_baby.glb' }; // 160 A: public (the pilot89 files renamed) // 156 C: the calf's own file too
+// 163 A 공룡 방향 다시 (?m89 시범; tools/bake-dino163.mjs, from 161 A's crisp horns, plates, spikes, toes and claws): the
+// triceratops and stegosaurus as toys: the head 1.35x / 1.38x on a shorter neck, the body 0.85x as long and rounder (shoulders and
+// hips up a little, the waist in), short thick legs thinning to the ankle on wide three-toed feet, the beak one shape with the face
+// (ivory on all five commons' looks, materials.js dino163 / twotone163 ...: faded in by fade, figure.js _fade); the frill tilted back more, a cheek
+// point; the stegosaurus' tail spikes their own 'spike' mesh (paint.spike: the commons ivory; every other look the plates' horn).
+// The legendaries' crystals on these frills / plates (their own gem files). The 'mouth' mesh is the dark nostrils (the shared and
+// other looks have no 'mouth': theirs is the body's material, as the T. rex's nostrils)
+if (M89) {
+  const f = (id, st) => `assets/models/pilot89_dino163_${id}_${st}.glb`, D = {
+    triceratops: {
+      adult: { h: 2.734, r: 1.104, seg: [-0.537, 1.026], legs: { hip: 0.56, x: [0.46, -0.48], z: 0.34 }, fade: { o: [1.869, 1.009, 0], n: [0.989, -0.148, 0], w: 0.068 }, attach: { head: { p: [1.211, 1.753, 0], r: [0, 0, -0.1], s: 1.3 }, neck: { p: [0.8, 1.18, 0], r: [0, 0, -1], s: 1.5 }, back: { p: [-0.15, 1.738, 0], r: [0, 0, 0], s: 1.2 }, eye: { p: [1.45, 1.407, 0], r: [0, 0, 0], s: 1.2 } } },
+      baby: { h: 2.093, r: 0.793, seg: [-0.493, 0.947], legs: { hip: 0.38, x: [0.32, -0.36], z: 0.3 }, fade: { o: [1.507, 0.825, 0], n: [0.989, -0.148, 0], w: 0.056 }, attach: { head: { p: [0.9, 1.525, 0], r: [0, 0, -0.1], s: 1.4 }, neck: { p: [0.64, 0.93, 0], r: [0, 0, -1], s: 1.32 }, back: { p: [-0.1, 1.396, 0], r: [0, 0, 0], s: 1 }, eye: { p: [1.17, 1.14, 0], r: [0, 0, 0], s: 1.35 } } } },
+    stegosaurus: {
+      adult: { h: 1.898, r: 0.642, seg: [-1.116, 1.047], legs: { hip: 0.54, x: [0.42, -0.44], z: 0.33 }, fade: { o: [1.481, 0.804, 0], n: [0.981, -0.196, 0], w: 0.055 }, attach: { head: { p: [0.993, 1.244, 0], r: [0, 0, -0.1], s: 1.05 }, neck: { p: [0.72, 0.96, 0], r: [0, 0, -1.3], s: 1.2 }, back: { p: [-0.1, 1.808, 0], r: [0, 0, 0], s: 1.15 }, eye: { p: [1.161, 0.987, 0], r: [0, 0, 0], s: 1 } } },
+      baby: { h: 1.539, r: 0.574, seg: [-0.757, 0.948], legs: { hip: 0.38, x: [0.3, -0.32], z: 0.29 }, fade: { o: [1.314, 0.747, 0], n: [0.981, -0.196, 0], w: 0.052 }, attach: { head: { p: [0.816, 1.32, 0], r: [0, 0, -0.1], s: 1.25 }, neck: { p: [0.58, 0.82, 0], r: [0, 0, -1.3], s: 1.1 }, back: { p: [-0.1, 1.482, 0], r: [0, 0, 0], s: 0.95 }, eye: { p: [1.046, 0.97, 0], r: [0, 0, 0], s: 1.2 } } } } };
+  for (const [id, S] of Object.entries(D)) {
+    Object.assign(MODELS[id], { files: { baby: f(id, 'baby'), adult: f(id, 'adult') }, paints: id === 'stegosaurus' ? ['belly', 'mouth'] : ['mouth'], m89: { solid: 'dino163', twotone: 'twotone163', spots: 'spots163', stripes: 'stripes163', gradient: 'gradient163' }, baby: sized(id, 'baby', S.baby), adult: sized(id, 'adult', S.adult),
+      legend: { baby: f(id, 'gems_baby'), adult: f(id, 'gems_adult') } }); // the legendaries' crystals on this pilot's frill / plates
+    const c = SPECIES.find(s => s.id === id).colors; c.paint = { ...c.paint, mouth: '#3b2c26', ...id === 'stegosaurus' && { spike: c.hoof } }; // the stegosaurus' belly kept: its other looks paint it as public, dino163 gives it the body's material
+  }
+}
 // 127 새 공유 재질 11개 (?m89 시범; looks: materials.js 127). wave: the release each goes out in. The public game has those with wave
 // <= WAVE127 (0: none yet); ?m89 has them all. Each goes after the last shared look of its rarity (the codex's order)
 export const WAVE127 = 3; // 150 (user OK 11/18): all 11 public
@@ -1209,7 +1241,7 @@ export const PLACES = [
 // -> that night it comes -> a guest PACE myth.guest days -> it settles. pages: the story, page i shown when step i is done
 export const MYTHIC = [{
   id: 'firemane', name: $t('불갈기 천리마'), habitat: 'meadow', clues: ['hair', 'play', 'big'], hair: $t('붉은 갈기 털'), scenes: 3,
-  model: { file: 'assets/models/myth_firemane.glb', h: 2.517, r: 0.389, seg: [-0.43, 0.934], legs: { hip: 0.8432, foot: 0.165, x: [0.4, -0.42], z: 0.19 } }, // tools/bake-mythic.mjs prints these
+  model: { file: 'assets/models/myth_firemane157.glb', h: 2.517, r: 0.389, seg: [-0.43, 0.934], legs: { hip: 0.8432, foot: 0.165, x: [0.4, -0.42], z: 0.19 } }, // tools/bake-mythic.mjs prints these
   place: { id: 'firehill', name: $t('불의 언덕'), lines: [$t('{n}{은/는} 따뜻한 언덕에서 붉은 털 한 가닥을 물고 왔어요'), $t('{n}{이/가} 언덕의 그을린 풀밭을 한참 냄새 맡았어요'), $t('{n}{은/는} 언덕 꼭대기에서 불씨 같은 털을 찾았어요')] },
   tales: { at: $t('옛 제단'), // 14-2 이야기 카드 (game/story.js): its coming, its settling
     meet: [$t('하늘에서 불씨 하나가 천천히 내려왔어요.'), $t('제단의 불 세 개가 한꺼번에 환해졌어요.'), $t('친구들이 모두 고개를 들고 바라봤어요.')],

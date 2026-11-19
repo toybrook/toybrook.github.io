@@ -117,7 +117,7 @@ export function zoneProps(scene, hab, o) {
     const d3 = Z143 && s.id === 'sled' && Z.F.find(f => f.zone === s.id && f.t === 'ramp'); // q1: and none on the sled hill's run, its steps or its run-out
     const e3 = Z143 && s.id === 'fernwood' && Z.F.filter(f => f.zone === s.id && (f.t === 'bigfern143' || f.t === 'bed143')), clear3 = (x, z) => e3.some(f => Math.hypot(x - f.x, z - f.z) < (f.bed ? 4.5 : 7)); // q1: a clearing round the giant fern and its leaf beds
     const c3 = Z143 && dino && Z.F.filter(f => f.zone === s.id && f.clr), cl3 = c3?.length ? (x, z) => c3.some(f => Math.hypot(x - f.x, z - f.z) < f.clr) : null; // q1 B the dino zones: a clearing round each thing with clr
-    const b4 = Z143 && dino && Z.F.filter(f => f.zone === s.id && f.bare), bare3 = b4?.length ? (x, z) => b4.some(f => ((x - f.x) / f.bare[0]) ** 2 + ((z - f.z) / f.bare[1]) ** 2 < 1) : null;
+    const b4 = Z143 && dino && Z.F.filter(f => f.zone === s.id && f.bare), bare3 = b4?.length ? (x, z) => b4.some(f => f.pts ? polyD(x, z, f.pts) < f.bare : ((x - f.x) / f.bare[0]) ** 2 + ((z - f.z) / f.bare[1]) ** 2 < 1) : null;
     const fore4 = (x, z) => b3 ? sand143fore(x, z) : w3 ? falls143fore(x, z) : m3 ? m3.some(f => Math.abs(x - f.x) < 4.5 && z > (f.z ?? 61.5) - 2) : d3 ? Math.abs(x - d3.x) < 3 && z > d3.z0 - 1.5 && z < d3.z1 + 6 : e3 ? clear3(x, z) : cl3 ? cl3(x, z) : fore3(x, z); // 143 B the sandbar: no bushes or strewn rocks in its middle; the falls: no trees either before the cliff
     // the zone's own things first (the mix fills round them)
     const own = {
@@ -743,7 +743,7 @@ export function zoneProps(scene, hab, o) {
       mudflat() {
         if (Z143) { // q1 B (zones.js mudflat143): the tracks, the wallow's wet mud, its print and splash, the bubbles, the puddles that grow in the rain, the log. Its own stream
           let s3 = 1430 + k; const r3 = () => { s3 = (s3 * 16807) % 2147483647; return (s3 - 1) / 2147483646; }, K3 = kit(L, { rand: r3, heightAt, occupied }), j3 = K3.jitter, F = Z.F.filter(q => q.zone === s.id), one = t => F.find(q => q.t === t);
-          const W = one('wal143'), g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 12, 9), disc = new THREE.CircleGeometry(1, 16), flat = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
+          const R3 = kit(Lr, { rand: r3, heightAt, occupied }), MI = one('mire143'), W = one('wal143'), g = new THREE.Group(), ball = new THREE.SphereGeometry(1, 12, 9), disc = new THREE.CircleGeometry(1, 16), flat = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
           const print = (x, z, a) => { const q = new THREE.Group(), c = j3('#3e2b1d', 0.04); // a three-toed print pressed into the mud, its toes along the way it went
             part(q, disc, c, 0, 0, 0, { rx: -Math.PI / 2, mat: { roughness: 0.35 } }).scale.set(0.2, 0.16, 1);
             for (const t of [-0.55, 0, 0.55]) part(q, disc, c, 0.27 * Math.cos(t), 0, -0.27 * Math.sin(t), { rx: -Math.PI / 2, rz: t, mat: { roughness: 0.35 } }).scale.set(0.22, 0.065, 1);
@@ -759,16 +759,38 @@ export function zoneProps(scene, hab, o) {
             lg.position.set(o.x, y, o.z); lg.rotation.y = o.ry; g.add(lg);
             for (const d of [-1.2, 0, 1.2]) occupied.push({ x: o.x + Math.cos(o.ry) * d, z: o.z - Math.sin(o.ry) * d, r: 0.6, h: 0.6 });
             R.tuft(o.x + Math.cos(o.ry) * 2.1, o.z - Math.sin(o.ry) * 2.1); }
+          for (const a0 of [0.8, 1.0, 1.2]) { const a = Math.PI * a0, cx = MI.x + Math.cos(a) * MI.rx * 1.12, cz = MI.z + Math.sin(a) * MI.rz * 1.12; // 162 B three clumps of cattails at the wallow's far side (the view open)
+            for (let i = 0; i < 5; i++) { const x = cx + (r3() - 0.5) * 0.9, z = cz + (r3() - 0.5) * 1.2; if (ok(x, z, 0.1)) R3.tuft(x, z); } }
+          const TR = F.filter(q => q.t === 'track143').map(q => q.pts), PD0 = one('puddle143').pts, pv = [], pc = [], C3 = new THREE.Color(), CW = new THREE.Color('#3a291b'), CP = new THREE.Color('#b39676');
+          const tri = (a, b, c, col) => { const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2], o = col.out; // 163 C: faces turned to face up (or out, for a side)
+            const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, f = o ? nx * o[0] + nz * o[1] < 0 : ny < 0;
+            for (const p of f ? [a, c, b] : [a, b, c]) { pv.push(p[0], p[1], p[2]); pc.push(col.r, col.g, col.b); } };
+          for (const [cx, cz, rx, rz, wd] of one('crack143').rings) { const E = 1.1 + wd, sp = 0.5, SD = []; // 163 C dry mud cracked into plates round the wallow and the pools: a shaken Voronoi (cells of every size and shape, no hex grid), each plate
+            for (let gz = cz - rz * E - sp; gz < cz + rz * E + sp; gz += sp) for (let gx = cx - rx * E - sp; gx < cx + rx * E + sp; gx += sp) if (r3() > 0.28) SD.push([gx + (r3() - 0.5) * sp * 0.9, gz + (r3() - 0.5) * sp * 0.9]); // some seeds dropped: some cells big
+            for (const [x, z] of SD) { const o = (Math.hypot((x - cx) / rx, (z - cz) / rz) - 1.05) / wd; // half sunk and low, its rim sloping down to a dark crack; fewer, smaller and paler outward
+              if (o < 0 || o > 1 || r3() < o * 0.45 || !ok(x, z, 0) || TR.some(P => polyD(x, z, P) < 0.7) || PD0.some(([px, pz, pr]) => Math.hypot(x - px, z - pz) < pr + 0.3)) continue;
+              const R0 = sp * 1.3; let P = [[x - R0, z - R0], [x + R0, z - R0], [x + R0, z + R0], [x - R0, z + R0]];
+              for (const [qx, qz] of SD) { const dx = qx - x, dz = qz - z; if ((!dx && !dz) || dx * dx + dz * dz > 8 * R0 * R0) continue; const mx = x + dx / 2, mz = z + dz / 2, sd = p => (p[0] - mx) * dx + (p[1] - mz) * dz, Q = []; // keep its own side of the line halfway to each neighbour
+                P.forEach((p, i) => { const q = P[(i + 1) % P.length], a = sd(p), b = sd(q); if (a <= 0) Q.push(p); if ((a <= 0) !== (b <= 0)) { const t = a / (a - b); Q.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]); } }); P = Q; }
+              if (P.length < 3) continue;
+              const n = P.length, mx = P.reduce((s, p) => s + p[0], 0) / n, mz = P.reduce((s, p) => s + p[1], 0) / n, g0 = 0.022 + r3() * 0.022 + 0.016 * o, ta = r3() * 6.283, tl = (r3() - 0.5) * 0.04, th = 0.03 - 0.01 * o;
+              const tilt = (px, pz) => tl * ((px - mx) * Math.cos(ta) + (pz - mz) * Math.sin(ta)), top = P.map(([px, pz]) => { const d = Math.hypot(px - mx, pz - mz), k = Math.max(0.45, 1 - g0 / d), X = mx + (px - mx) * k, Z = mz + (pz - mz) * k; return [X, heightAt(X, Z) + 0.012 + th + tilt(X, Z), Z]; });
+              const fl = P.map(([px, pz]) => [px, heightAt(px, pz) + 0.012, pz]), ct = [mx, heightAt(mx, mz) + 0.012 + th + 0.004, mz]; // its sides down to the cell's edge: the dark crack
+              C3.set(j3(o < 0.5 ? '#8f7556' : '#a8896a', 0.06)).lerp(CP, o * 0.5); const CT = { r: C3.r, g: C3.g, b: C3.b };
+              for (let i = 0; i < n; i++) { const j = (i + 1) % n, ox = (P[i][0] + P[j][0]) / 2 - mx, oz = (P[i][1] + P[j][1]) / 2 - mz;
+                tri(ct, top[i], top[j], CT); const w = { r: CW.r, g: CW.g, b: CW.b, out: [ox, oz] }; tri(top[i], top[j], fl[j], w); tri(top[i], fl[j], fl[i], w); } } }
+          const PG = new THREE.BufferGeometry(); PG.setAttribute('position', new THREE.Float32BufferAttribute(pv, 3)); PG.setAttribute('color', new THREE.Float32BufferAttribute(pc, 3)); PG.computeVertexNormals();
+          const plates = new THREE.Mesh(PG, toyMat('#ffffff', { vertexColors: true, roughness: 0.9 })); plates.receiveShadow = true; put(plates, 0, 0, 0, 0, 0, 0); occupied.pop(); // one mesh, the habitat's (gone with it, as the zone's others)
           put(bake(g), 0, 0, 0, 0, 0, 0); occupied.pop();
-          for (const p of pools) { ringOf(p, 16, wl(p) - 0.4, wl(p) + 0.3, (x, z) => { if (x < p.x + 0.6) R.tuft(x, z); }); steam(p.x, waterAt(p), p.z, wl(p) * 0.7); } // cattails thick on the far side (the view open), a little steam
+          for (const p of pools) { ringOf(p, 16, wl(p) - 0.4, wl(p) + 0.3, (x, z) => { if (x < p.x + 0.6) R.tuft(x, z); }); steam(p.x, waterAt(p), p.z, wl(p) * 0.7, 0.28); } // cattails thick on the far side (the view open), a little steam
           const PD = one('puddle143').pts, pm = new THREE.InstancedMesh(flat, toyMat('#3d2b1c', { roughness: 0.08 }), PD.length); pm.frustumCulled = false; pm.receiveShadow = true; scene.add(pm); // the puddles: small and dull dry, wide in the rain
           const rim = pools.map(p => { const w0 = wl(p), wy = waterAt(p), G = new THREE.RingGeometry(w0 - 0.1, w0 + 0.9, 40, 3), a = G.attributes.position; G.rotateX(-Math.PI / 2); // the pools spill over their banks in the rain (a wet ring, its edge ragged)
             for (let i = 0; i < a.count; i++) { const x = a.getX(i), z = a.getZ(i), d = Math.hypot(x, z), an = Math.atan2(z, x), e = w0 - 0.1 + (d - w0 + 0.1) * (0.75 + 0.25 * Math.sin(an * 5 + p.x) + 0.15 * Math.sin(an * 9)), X = p.x + x * e / d, Z0 = p.z + z * e / d;
               a.setXYZ(i, X, Math.max(heightAt(X, Z0), wy) + 0.02, Z0); }
             G.computeVertexNormals(); return G; }), rm = new THREE.Mesh(mergeGeometries(rim), toyMat('#47301e', { roughness: 0.3, transparent: true, opacity: 0, depthWrite: false })); rim.forEach(G => G.dispose());
           rm.visible = false; scene.add(rm);
-          const NB = 10, bub = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 10, 5, 0, 6.283, 0, Math.PI / 2), toyMat('#5c4129', { roughness: 0.12 }), NB), rg = new THREE.InstancedMesh(new THREE.TorusGeometry(1, 0.05, 4, 18).rotateX(Math.PI / 2), toyMat('#6b4d31', { roughness: 0.3 }), NB);
-          const BB = Array.from({ length: NB }, (_, i) => { const p = pools[i % pools.length]; return { p, y: waterAt(p), T: 3 + r3() * 3.5, ph: r3() * 9, sz: 0.09 + r3() * 0.08, d: wl(p) * 0.75 }; }); // bubbles swell on the mud and pop, a ring spreading
+          const NB = 30, bub = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 6, 0, 6.283, 0, Math.PI / 2), toyMat('#7b5a3a', { roughness: 0.06 }), NB), rg = new THREE.InstancedMesh(new THREE.TorusGeometry(1, 0.05, 4, 18).rotateX(Math.PI / 2), toyMat('#7a5a3a', { roughness: 0.2 }), NB);
+          const BB = Array.from({ length: NB }, (_, i) => { const p = i < 18 ? pools[i % pools.length] : null; return { p, y: p ? waterAt(p) : 0, T: 2.5 + r3() * 2.5, ph: r3() * 9, sz: 0.15 + r3() * 0.13, d: p ? wl(p) * 0.75 : 0.65, n: -1, x: 0, z: 0 }; }); // bubbles swell slowly on the mud (163 C: bigger and more often, to be seen from home: 18 in the pools, 12 in the wallow) and pop, a ring spreading
           const SN = 64, spl = new THREE.InstancedMesh(ball, toyMat('#4a3220', { roughness: 0.2 }), SN), DR = Array.from({ length: SN }, () => ({ a: r3() * 6.283, v: 0.8 + r3() * 1.2, vy: 1.8 + r3() * 1.4, s: 0.08 + r3() * 0.07, k: r3() })); // mud flying as one rolls
           const imp = [0, 1].map(() => { const m = new THREE.Mesh(flat, toyMat('#2a1a0e', { roughness: 0.45, map: softTex(), transparent: true, opacity: 0, depthWrite: false })); m.visible = false; scene.add(m); return { m }; }); let ni = 0; // its print left in the mud
           for (const m of [bub, rg, spl]) { m.frustumCulled = false; m.castShadow = false; scene.add(m); }
@@ -777,10 +799,12 @@ export function zoneProps(scene, hab, o) {
           ups.push((t, ctx) => { const dt = Math.min(0.1, Math.max(0, t - tl)); tl = t; rn += (Math.min(1, ctx?.rain || 0) - rn) * Math.min(1, dt / 6); // the rain in over some seconds
             PD.forEach(([x, z, r], i) => { const s = r * (0.3 + 0.9 * sm(rn)); pm.setMatrixAt(i, M4.compose(V.set(x, heightAt(x, z) + 0.014, z), Q, S0.set(s, 1, s * 0.8))); }); pm.instanceMatrix.needsUpdate = true;
             rm.material.opacity = 0.8 * sm(rn); rm.visible = rn > 0.02;
-            BB.forEach((b, i) => { const n = Math.floor((t + b.ph) / b.T), c = (t + b.ph) / b.T - n, h = Math.sin(n * 12.9898 + i * 78.233) * 43758.5453, u = h - Math.floor(h), a = u * 6.283, d = b.d * Math.sqrt((u * 7) % 1), x = b.p.x + Math.cos(a) * d, z = b.p.z + Math.sin(a) * d;
-              set(bub, i, x, b.y, z, c < 0.5 ? b.sz * sm(c / 0.5) : 0); set(rg, i, x, b.y + 0.01, z, c >= 0.5 && c < 0.85 ? 0.08 + 0.45 * (c - 0.5) / 0.35 : 0); });
+            BB.forEach((b, i) => { const n = Math.floor((t + b.ph) / b.T), c = (t + b.ph) / b.T - n;
+              if (n !== b.n) { const h = Math.sin(n * 12.9898 + i * 78.233) * 43758.5453, u = h - Math.floor(h), a = u * 6.283, d = b.d * Math.sqrt((u * 7) % 1); b.n = n; // a new spot each time
+                if (b.p) { b.x = b.p.x + Math.cos(a) * d; b.z = b.p.z + Math.sin(a) * d; } else { b.x = MI.x + Math.cos(a) * d * MI.rx; b.z = MI.z + Math.sin(a) * d * MI.rz; b.y = heightAt(b.x, b.z) + 0.04; } }
+              set(bub, i, b.x, b.y, b.z, c < 0.6 ? b.sz * sm(c / 0.6) : 0); set(rg, i, b.x, b.y + 0.01, b.z, c >= 0.6 && c < 0.9 ? 0.12 + 0.6 * (c - 0.6) / 0.3 : 0); });
             bub.instanceMatrix.needsUpdate = rg.instanceMatrix.needsUpdate = true;
-            if (W.hit) { const [x, z, d, r, yaw] = W.hit; W.hit = null; const I = imp[ni++ % 2]; Object.assign(I, { t0: t, x, z, d, r }); I.m.position.set(x, heightAt(x, z) + 0.022, z); I.m.rotation.y = yaw; I.m.scale.set(r * 2.6, 1, r * 1.7); }
+            if (W.hit) { const [x, z, d, r, yaw] = W.hit; W.hit = null; const I = imp[ni++ % 2]; Object.assign(I, { t0: t, x, z, d, r }); I.m.position.set(x, heightAt(x, z) + 0.05, z); I.m.rotation.y = yaw; I.m.scale.set(r * 2.6, 1, r * 1.7); }
             let any = false; imp.forEach((I, j) => { const e = I.t0 == null ? -1 : t - I.t0, o = e < 0 ? 0 : sm((e - I.d * 0.4) / 1.5) * (1 - sm((e - I.d - 24) / 6)); I.m.visible = o > 0.01; I.m.material.opacity = 0.95 * o;
               for (let i = 0; i < SN / 2; i++) { const D = DR[j * SN / 2 + i], q = e - D.k * I.d * 0.9, R0 = I.r ?? 0; // each drop off at its own moment while it rolls, up and out and down
                 if (e < 0 || q < 0 || q > 0.65) { set(spl, j * SN / 2 + i, 0, 0, 0, 0); continue; }
@@ -932,10 +956,10 @@ void main() { ${V4 ? 'vec2 p = vUv * 2.0 - 1.0; float r2 = dot(p, p); if (r2 > 1
         im.instanceMatrix.needsUpdate = true; aA.needsUpdate = true;
       });
     }
-    function steam(px, py, pz, pr) { // little puffs rising off the warm water, growing and fading
+    function steam(px, py, pz, pr, op = 0.5) { // little puffs rising off the warm water, growing and fading
       const tex = softTex(), puffs = [];
       for (let i = 0; i < 9; i++) { const m = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }), sp = new THREE.Sprite(m); sp.renderOrder = 2; scene.add(sp); const a = rnd() * 6.28, d = rnd() * pr * 0.8; puffs.push({ sp, x: px + Math.cos(a) * d, z: pz + Math.sin(a) * d, ph: i / 9 }); }
-      ups.push(t => { for (const p of puffs) { const u = (t / 4 + p.ph) % 1; p.sp.position.set(p.x + Math.sin(u * 3 + p.ph * 9) * 0.2, py + 0.2 + u * 1.6, p.z); p.sp.scale.setScalar(0.6 + u * 1.3); p.sp.material.opacity = 0.5 * Math.sin(u * Math.PI); } });
+      ups.push(t => { for (const p of puffs) { const u = (t / 4 + p.ph) % 1; p.sp.position.set(p.x + Math.sin(u * 3 + p.ph * 9) * 0.2, py + 0.2 + u * 1.6, p.z); p.sp.scale.setScalar(0.6 + u * 1.3); p.sp.material.opacity = op * Math.sin(u * Math.PI); } });
     }
     // 143 B (?z143=1, zones.js reeds143): tall reed beds (2.4-3.4 m, two to three ducks high: a wall seen from afar, not a low
     // band like the grass), thick on the channel's east bank and round its two pockets (the swimmers hide there; thin on the

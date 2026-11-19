@@ -473,12 +473,17 @@ function bigdig143(s) {
 // little; a wallow between them, a shallow dip of wet dark mud (bare: no grass in it) where one rolls longer and the mud flies
 // (roll, to: the wal143: walk.js, zoneprops.js leaves its print in it); three-toed tracks in the mud from pool to wallow to
 // pool; cattails thick on the pools' far sides; a half-sunk log; puddles that grow in the rain. World m (the strip x -51..-39)
+// 162 B: the wallow a sheet of wet glossy mud (mire143: water.js, dark in the middle, paler to its rim); round it and the pools a
+// ring of dry mud cracked into plates (crack143: zoneprops.js) on darker ground, no grass (bare); the tracks on a trodden mud path
 function mudflat143(s) {
-  const W = { t: 'wal143', mud: 1, x: -44.9, z: 5.2, clr: 5.2 };
-  return [FACE(s, '#6e5a3a', 0.85, { pat: speck(['#5e4a30', '#7a6440', '#56703a'], 0.4, 0.5) }), POOL(s, 0.5, 0.28, 2.4, { murk: 1, mud: 1 }), POOL(s, 0.45, 0.72, 2.6, { murk: 1, mud: 1 }),
-    { t: 'hill', x: -44.9, z: 5.2, rx: 3.0, rz: 4.4, h: -0.28, top: 0.6 }, { t: 'tint', x: -44.9, z: 5.2, rx: 3.4, rz: 4.8, c: '#4a3220', a: 0.95, fo: 0.35, bare: [3.6, 5.0] }, { t: 'tint', x: -44.9, z: 5.2, rx: 1.9, rz: 3.0, c: '#38241a', a: 0.9, fo: 0.5 }, // the wallow, wetter in its middle
+  const W = { t: 'wal143', mud: 1, x: -44.9, z: 5.2, clr: 5.2 }, P = [POOL(s, 0.5, 0.28, 2.4, { murk: 1, mud: 1 }), POOL(s, 0.45, 0.72, 2.6, { murk: 1, mud: 1 })];
+  const T = [[[-42.6, 25.2], [-42.4, 20.5], [-43.2, 15.5], [-43.0, 10.4]], [[-43.2, 0.2], [-42.6, -4.6], [-43.1, -9.5], [-43.6, -13.2]]], dry = (x, z, rx, rz) => ({ t: 'tint', x, z, rx, rz, c: '#5a4530', a: 0.92, fo: 0.25, bare: [rx - 0.2, rz - 0.2] });
+  return [FACE(s, '#6e5a3a', 0.85, { pat: speck(['#5e4a30', '#7a6440', '#56703a'], 0.4, 0.5) }), ...P,
+    { t: 'hill', x: -44.9, z: 5.2, rx: 3.0, rz: 4.4, h: -0.28, top: 0.6 }, dry(-44.9, 5.2, 5.0, 6.7), { t: 'mire143', x: -44.9, z: 5.2, rx: 3.2, rz: 4.6 }, // the wallow
+    ...P.map(p => dry(p.x, p.z, p.r + 1.6, p.r + 1.6)), { t: 'crack143', rings: [[-44.9, 5.2, 3.2, 4.6, 0.33], ...P.map(p => [p.x, p.z, p.r - 0.3, p.r - 0.3, 0.7])] },
+    ...T.map(pts => ({ t: 'tint', pts, rw: 0.9, c: '#5e4832', a: 0.8, bare: 0.8 })),
     W, { t: 'spot', x: -45.0, z: 7.9, act: 'roll', r: 1.0, to: W }, { t: 'spot', x: -44.8, z: 2.5, act: 'roll', r: 1.0, to: W },
-    { t: 'track143', pts: [[-42.6, 25.2], [-42.4, 20.5], [-43.2, 15.5], [-43.0, 10.4]] }, { t: 'track143', pts: [[-43.2, 0.2], [-42.6, -4.6], [-43.1, -9.5], [-43.6, -13.2]] }, // pool to wallow to pool
+    ...T.map(pts => ({ t: 'track143', pts })), // pool to wallow to pool
     { t: 'mudlog143', x: -48.6, z: -4.2, ry: 1.25, clr: 2.4 }, { t: 'puddle143', pts: [[-41.6, 12.6, 0.7], [-47.6, 13.4, 0.55], [-41.4, -1.6, 0.6], [-48.3, 1.6, 0.5], [-46.8, 35.6, 0.6], [-42.2, -24.4, 0.55]] },
     SPOT(s, 0.3, 0.9, 'rest'), SPOT(s, 0.7, 0.14, 'nap'),
     { t: 'heap143', x: -49.6, z: 19.5, sc: 0.75, clr: 1.8 }, { t: 'heap143', x: -40.6, z: -33.5, sc: 0.7, clr: 1.6 }, { t: 'sign143', x: -40.4, z: 8.8 }];

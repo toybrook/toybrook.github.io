@@ -1867,6 +1867,7 @@ export default {
  "단짝 놀이: 단짝 둘이 좋아하는 소품 곁에 있으면 함께 놀아요(처음엔 ♥+20)": "Buddy play: Best buddies near their favorite decor play together (♥+20 the first time)",
  "첫 주 선물: 새로 시작하면 이틀째에 전설 알, 6일째에 영웅 알, 7일째에 신수 단서를 받아요": "First-week gifts: New players get a Legendary egg on day 2, an Epic egg on day 6 and a Mythic clue on day 7",
  "12월 5일부터 2주 동안 첫눈 이벤트: 눈 덮인 초원에서 눈더미를 모아 눈사람을 만들고, 친구에게 털모자를 씌워요": "First Snow event for 2 weeks from 12/5: Gather snow piles in the snowy Meadow to build a snowman, and give friends knit hats",
+ "신수 불갈기 천리마가 더 반짝이게 돌아왔어요: 거울 같은 옻칠, 유리 불꽃 날개": "The Mythic Firemane is back and shinier: a mirror-bright lacquer and glass flame wings",
  "새 신수 둘: 초원의 유니콘과 설원의 백록. 불갈기 천리마가 머물고 나면 차례로 이야기가 시작돼요": "Two new Mythics: the Unicorn of the Meadow and the White deer of the Snowfield. Once the Firemane settles, their stories begin one by one",
  "연못 알에 두 번째 전설 6종: 흑진주 오리·에메랄드 등껍질 거북·금박 레진 수달·흑요석 백조·네온 플라밍고·문스톤 카피바라": "Six new second Legendaries in the Pond egg: Black Pearl Duck, Emerald Shell Turtle, Gold Leaf Resin Otter, Obsidian Swan, Neon Flamingo, Moonstone Capybara",
  "초원 알에 새 전설: 무지개 티타늄 말": "A new Legendary in the Meadow egg: Rainbow Titanium Horse",
@@ -1911,6 +1912,13 @@ export default {
  "흑요석 백조": "Obsidian Swan",
  "네온 플라밍고": "Neon Flamingo",
  "문스톤 카피바라": "Moonstone Capybara",
+ // 163 D 설원 전설 2번째 (?m89)
+ "백금 북극곰": "Platinum Polar Bear",
+ "청동 조각상 순록": "Bronze Statue Reindeer",
+ "흑요석 은테 펭귄": "Silver-Rimmed Obsidian Penguin",
+ "블랙 오팔 물범": "Black Opal Seal",
+ "로즈쿼츠 여우": "Rose Quartz Arctic Fox",
+ "은 세공 올빼미": "Silver Filigree Snowy Owl",
  // 152 C 신수 (?m89)
  "신수 백록": "Mythic white deer",
  // 127 새 공유 재질 (?m89)
