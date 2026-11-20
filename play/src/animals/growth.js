@@ -85,7 +85,7 @@ export function makeEgg(mat, light) {
   const seamMat = new THREE.MeshBasicMaterial({ color: SEAM, toneMapped: false }), lit = light ? new THREE.Color(light).lerp(new THREE.Color('#fff'), 0.35) : SEAM;
   const seams = EGG.seams.map((g, i) => { const m = new THREE.Mesh(g, seamMat); m.visible = false; m.userData.d = i ? 0.06 + i * 0.03 : 0; pivot.add(m); return m; });
   return {
-    group,
+    group, dispose: () => seamMat.dispose(), // 195 B-10b M4: its own material (the geometry, EGG, is shared)
     // t = seconds since the tap. Returns true once the shell is gone.
     hatch(t) {
       if (t < HATCH.pop) { // wobble (builds up, rocks on the base), easing into a tremble while the seams run and light up

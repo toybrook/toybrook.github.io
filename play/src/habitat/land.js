@@ -48,7 +48,7 @@ export function landOf([x0, x1, z0, z1], ok, links = [], s = 0.5) {
       const pts = []; for (let k = B[3]; k !== A[3]; k = from[k]) pts.push(at(k)); pts.reverse();
       if (Math.hypot(bx - B[0], bz - B[1]) > 1e-6 && clear(B[0], B[1], bx, bz)) pts.push([bx, bz]);
       const out = []; let cx = ax, cz = az;
-      for (let i = 0; i < pts.length;) { let j = pts.length - 1; while (j > i && !clear(cx, cz, ...pts[j])) j--; out.push(pts[j]); [cx, cz] = pts[j]; i = j + 1; }
+      for (let i = 0; i < pts.length;) { let j = Math.min(pts.length - 1, i + 16); while (j > i && !clear(cx, cz, ...pts[j])) j--; out.push(pts[j]); [cx, cz] = pts[j]; i = j + 1; } // 195 B-10b P1: look 16 points ahead at most (was the path's end: O(n²) clear() on long paths, ~1.5 s stalls at CPU ×4)
       return out;
     },
   };

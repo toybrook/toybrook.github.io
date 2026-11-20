@@ -1349,8 +1349,8 @@ export function recolor(g, hex, byArea) {
     if (kv ? !(h.s > 0.12 && Math.abs(hue(h.h - K.h)) < 25 / 360) : !(h.s < 0.2 && Math.abs(h.l - K.l) < 0.25)) return false;
     col.setHSL(kv ? ((T.h + hue(h.h - K.h)) % 1 + 1) % 1 : T.h, cl(kv ? h.s * T.s / K.s : T.s + h.s - K.s), cl(h.l + T.l - K.l), SR); return true; };
   for (const o of parts) {
-    if (o.material.vertexColors && o.geometry.attributes.color) { o.geometry = o.geometry.clone(); each(o, (col, n, i, a) => { if (turn(col)) a.setXYZ(i, col.r, col.g, col.b); }); }
-    else { const m = o.material.clone(); if (turn(m.color)) o.material = m; else m.dispose(); }
+    if (o.material.vertexColors && o.geometry.attributes.color) { o.geometry = Object.assign(o.geometry.clone(), { userData: { own: 1 } }); each(o, (col, n, i, a) => { if (turn(col)) a.setXYZ(i, col.r, col.g, col.b); }); }
+    else { const m = o.material.clone(); m.userData.own = 1; if (turn(m.color)) o.material = m; else m.dispose(); } // 195 B-10b M2: the copies are this model's own (a clone's userData is the original's object: a new one)
   }
   return g;
 }
@@ -1426,7 +1426,7 @@ export function bake(g) { // 143 B: zoneprops.js too (the sandbar's fixtures)
     const t = o.material, k = own.uuid + (plain(t) ? `v${t.roughness},${t.metalness},${t.side}` : t.uuid) + o.castShadow + o.renderOrder; by.has(k) ? by.get(k).push([o, own]) : by.set(k, [[o, own]]); });
   for (const list of by.values()) if (list.length > 1) {
     const [[o0, own]] = list, t = o0.material, v = list.some(([o]) => o.material !== t); inv.copy(own.matrixWorld).invert();
-    const m = new THREE.Mesh(merge(list.map(([o]) => { const q = o.geometry.clone().applyMatrix4(o.matrixWorld).applyMatrix4(inv); return v ? tint(q, o.material.color) : q; })),
+    const m = new THREE.Mesh(Object.assign(merge(list.map(([o]) => { const q = o.geometry.clone().applyMatrix4(o.matrixWorld).applyMatrix4(inv); return v ? tint(q, o.material.color) : q; })), { userData: { own: 1 } }), // 195 B-10b M2: this model's own (habitat.js disown)
       v ? dm('#ffffff', { roughness: t.roughness, metalness: t.metalness, side: t.side, vertexColors: true }) : t);
     m.castShadow = o0.castShadow; m.receiveShadow = o0.receiveShadow; m.renderOrder = o0.renderOrder; for (const [o] of list) o.removeFromParent(); own.add(m);
   }

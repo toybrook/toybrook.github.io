@@ -86,7 +86,8 @@ function resize() {
   st.cam.position.z = 0.9 + EDGE / Math.tan(THREE.MathUtils.degToRad(st.cam.fov / 2)) / st.cam.aspect; // the side boards' fronts at the screen's edges
 }
 
-const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(roundedBox(w, h, d, Math.min(0.06, h / 2.2), 2), mat); m.position.set(x, y, z); return m; };
+let own = []; const ours = x => (own.push(x), x); // 195 B-10b M1: what build() makes for itself (geometries, plaques' textures and materials, sparkles' material), gone at the next build; shared materials stay
+const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(ours(roundedBox(w, h, d, Math.min(0.06, h / 2.2), 2)), mat); m.position.set(x, y, z); return m; };
 // a variant registered but never seen grown up stands as its baby (a little smaller)
 function figure(c, sil) {
   const baby = !sil && G.S.codex[c.key]?.adult == null;
@@ -100,6 +101,7 @@ async function build() {
   const cells = codexCells(tab, G.S), sps = [...new Set(cells.map(c => c.species))];
   if (!await Promise.all(sps.map(s => loadModel(s.model))).then(() => true, () => false)) { if (built === want) built = ''; return; } // 168: offline, a model never fetched: no shelves yet, the next open or change tries again
   if (want !== sig()) return;
+  st.root.traverse(o => { o.skeleton?.dispose(); if (o.isPoints) o.geometry.dispose(); }); /* a legendary's sparkles (figure.js effect): its own geometry, a shared material */ for (const x of own) x.dispose(); own = []; // 195 B-10b M1 (was clear() alone: ~470 KB a build)
   st.root.clear(); figs = []; fx = []; star = null; shelves = [];
   const rows = sps.length;
   const top = rows * SY, all = cells.every(c => G.S.codex[c.key]);
@@ -117,14 +119,14 @@ async function build() {
     const fades = [1, -1].map(s => { const m = new THREE.Mesh(fadeGeo, fadeMat); m.scale.x = s; m.position.set(-s * (W / 2 - 0.375), y + (SY - 0.14) / 2, 0.88); st.root.add(m); return m; });
     const s = { g, fades, y, min: Math.min(0, W - 0.5 - mine.length * SX), key: tab + row }; shelves.push(s); slide(s, offs[s.key] ?? 0);
     if (full) { // sparkles drifting up along the shelf
-      const n = Math.round(W * 2.5), pos = new Float32Array(n * 3), pts = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ map: sparkTex, size: 0.32, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      const n = Math.round(W * 2.5), pos = new Float32Array(n * 3), pts = new THREE.Points(ours(new THREE.BufferGeometry()), ours(new THREE.PointsMaterial({ map: sparkTex, size: 0.32, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
       for (let i = 0; i < n; i++) pos.set([(Math.random() - 0.5) * W, y + Math.random() * SY * 0.8, 0.3 + Math.random() * 0.6], i * 3);
       pts.geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pts.userData = { y, seed: row }; st.root.add(pts); fx.push(pts);
     }
   });
   if (all) { // the whole habitat: a gold star on top
     const s = new THREE.Shape(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.28 : 0.62, a = Math.PI / 2 + i * Math.PI / 5; s[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); }
-    star = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: 0.18, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2 }).center(), gold);
+    star = new THREE.Mesh(ours(new THREE.ExtrudeGeometry(s, { depth: 0.18, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2 }).center()), gold);
     star.position.set(0, top + 0.95, 0.2); st.root.add(star);
   }
   bounds = { top: top + (all ? 1.7 : 0.6), bot: -0.6 };
@@ -136,8 +138,8 @@ function plaque(text, x, y, z, full) {
   const cv = Object.assign(document.createElement('canvas'), { width: 256, height: 64 }), g = cv.getContext('2d');
   g.fillStyle = full ? '#f5c542' : '#fbf1e1'; g.beginPath(); g.roundRect(2, 2, 252, 60, 14); g.fill();
   g.fillStyle = '#5a3d24'; g.font = 'bold 34px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 34);
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.35), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false })); m.position.set(x, y, z); return m;
+  const tex = ours(new THREE.CanvasTexture(cv)); tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(ours(new THREE.PlaneGeometry(1.4, 0.35)), ours(new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false }))); m.position.set(x, y, z); return m;
 }
 
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), front = new THREE.Plane(new THREE.Vector3(0, 0, 1), -0.1), hitV = new THREE.Vector3();

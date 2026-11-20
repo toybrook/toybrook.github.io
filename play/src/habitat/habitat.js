@@ -444,7 +444,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const build = (P, r) => { if (P.ring) { const g = new THREE.Group(); for (const [x, z, q] of RING) { const o = D.model('railcurve'); o.position.set(x, 0, z); o.rotation.y = q * Math.PI / 2; g.add(o); } return g; } // inbox 37 작은 고리
     const o = D.model(P.id), c = r?.c && paletteOf(P)?.[r.c]?.[1]; if (c) recolor(o, c, P.pal === 'wood'); const f = SZ(r); if (f !== 1) o.scale.multiplyScalar(f); o.traverse(m => { if (m.userData.dome) m.visible = false; }); return o; }; // 28-6: the ground is the stamp's shape
   const seatY = (h, k) => D.y(h.x * U, h.z * U, PR[h.prop].water) + topAt(h, k).y; // inbox 42 A: a prop's height is in metres (only x, z are saved in U)
-  const unplace = e => { scene.remove(e.obj); for (const b of e.bodies) habitat.ctx.crowd.delete(b); for (const o of [e.spot, ...e.more ?? []]) { const i = D.list.indexOf(o); if (i >= 0) D.list.splice(i, 1); } if (e.roof) habitat.ctx.shelter.splice(habitat.ctx.shelter.indexOf(e.roof), 1); if (e.spot.twin?.on) scene.remove(e.spot.twin.g);
+  const disown = obj => obj?.traverse(o => { if (o.geometry?.userData.own) o.geometry.dispose(); if (o.material?.userData?.own) o.material.dispose(); }); // 195 B-10b M2: what build() made for this model alone (toyKit merge, recolor and drape copies); shared ones carry no mark
+  const unplace = e => { scene.remove(e.obj); disown(e.obj); for (const b of e.bodies) habitat.ctx.crowd.delete(b); for (const o of [e.spot, ...e.more ?? []]) { const i = D.list.indexOf(o); if (i >= 0) D.list.splice(i, 1); } if (e.roof) habitat.ctx.shelter.splice(habitat.ctx.shelter.indexOf(e.roof), 1); if (e.spot.twin?.on) scene.remove(e.spot.twin.g);
     const st = e.obj.userData.play, i = habitat.ctx.play.indexOf(st); if (st) st.gone = true; if (i >= 0) habitat.ctx.play.splice(i, 1); }; // 28-2: whoever is on it gets off
   // a placed prop's crowd.js bodies: itself, or (open: walked over or under) only its model's posts (userData.posts, turned with it)
   const bodiesOf = (P, obj, x, z, rot, f = 1) => !P.open ? [{ x, z, yaw: 0, r: P.r * f, seg: [0, 0] }] // 28-5 f: its size
@@ -458,7 +459,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const seeThrough = m => Object.assign(m.clone(), { transparent: true, opacity: 0.42, depthWrite: false });
   function syncGhosts(list) {
     const sg = JSON.stringify(list); if (sg === ghostSig) return; ghostSig = sg; ghostNow = list;
-    for (const o of [...ghosts.children]) { ghosts.remove(o); o.traverse(m => { if (m.material) [m.material].flat().forEach(x => x.dispose()); }); }
+    for (const o of [...ghosts.children]) { ghosts.remove(o); disown(o); o.traverse(m => { if (m.material) [m.material].flat().forEach(x => x.dispose()); }); } // 195 B-10b M5: its geometry too
     for (const g of list) {
       const P = PR[g.prop]; if (!P) continue;
       const obj = build(P, g); obj.traverse(o => { o.castShadow = o.receiveShadow = false; if (o.material) o.material = Array.isArray(o.material) ? o.material.map(seeThrough) : seeThrough(o.material); });
@@ -585,7 +586,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const c = Math.cos(rot), s = Math.sin(rot), y0 = obj.position.y, ya = D.y(x - 4 * c, z + 4 * s), yb = D.y(x + 4 * c, z - 4 * s);
     obj.traverse(m => { if (!m.isMesh) return; m.updateMatrix(); const g = m.geometry.clone().applyMatrix4(m.matrix), p = g.attributes.position; m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); m.scale.set(1, 1, 1);
       for (let i = 0; i < p.count; i++) { const lx = p.getX(i), lz = p.getZ(i); p.setY(i, p.getY(i) - y0 + (P.id === 'railbridge' ? ya + (yb - ya) * (lx + 4) / 8 : D.y(x + lx * c + lz * s, z - lx * s + lz * c))); }
-      g.computeBoundingSphere(); m.geometry = g; });
+      g.computeBoundingSphere(); g.userData = { own: 1 }; if (m.geometry.userData.own) m.geometry.dispose(); m.geometry = g; }); // 195 B-10b M2: the copy is this piece's own; the one it replaces too, when it was (held and dragged: one a move)
   }
   // the train: its cars (a model, a crowd body marked .rail, a blob each) and its play.js state (st: who waits beside a straight
   // piece to ride a wagon round, play.js K.train). Built again only when a piece under it goes (moveTo)
@@ -697,10 +698,11 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const [dx, dz] = ed.P.ring ? [0, 0] : (ed.P.id === 'railcurve' && RING.find(t => t[2] === q)) || RING[0];
     moveEdit(c[0] + dx, c[1] + dz); aim = { at: new THREE.Vector3(c[0], 0, c[1]), radius: camera.position.distanceTo(controls.target) }; goingHome = false; return true;
   }
-  function endEdit() { if (!ed) return; scene.remove(ed.obj, mark); ed = drag = null; syncProps(); railDots(); } // a placed one goes back where it was saved
+  function endEdit() { if (!ed) return; scene.remove(ed.obj, mark); disown(ed.obj); // 195 B-10b M2
+    ed = drag = null; syncProps(); railDots(); } // a placed one goes back where it was saved
   // 28-5: the held one's model as it looks now (ed.c, ed.sz), with what stands on it (records on it) riding on its top spots
   function heldModel(rec = propList.find(p => p.uid === ed.uid)) {
-    if (ed.obj) scene.remove(ed.obj);
+    if (ed.obj) { scene.remove(ed.obj); disown(ed.obj); } // 195 B-10b M2
     const obj = ed.nat ? nature.model(rec) : build(ed.P, ed), f = SZ(ed);
     if (ed.P.top) for (const o of propList) if (o.placed && o.on === ed.uid && PR[o.prop]) {
       const m = build(PR[o.prop], o), t = ed.P.top[o.sl]; if (!t) continue;

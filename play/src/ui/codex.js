@@ -110,7 +110,7 @@ function detail(c) {
     for (const b of box.querySelectorAll('[data-m]')) b.classList.toggle('on', b.dataset.m === c.key);
     box.querySelector('.crec').innerHTML = $t('처음 만난 날: {0}<br>처음 깬 곳: {1}{2}', e.at ? new Date(e.at).toLocaleDateString(LOC) : $t('기록 없음'), HAB[e.h] ? HAB[e.h].name + $t(' 둥지') : $t('기록 없음'), adult ? '' : $t('<br><small>다 자라면 성체 모습도 볼 수 있어요</small>'));
     if (!await loadModel(c.species.model).then(() => true, () => false) || !box.isConnected) return; // 168: offline, never fetched: no 3D yet (the next 새끼·성체 tap asks again)
-    if (v.fig) v.scene.remove(v.fig);
+    if (v.fig) { v.scene.remove(v.fig); v.fig.traverse(o => { o.skeleton?.dispose(); if (o.isPoints) o.geometry.dispose(); }); } // 195 B-10b M3: its bone texture (and a legendary's sparkles)
     const f = v.fig = makeFigure(c.species.id, c.variant.id, stage, null, displayColor(G.S, c.key)).obj;
     f.rotation.y = -Math.PI / 2 + 0.45; v.scene.add(f); // facing us, turned a little (as the cells' pictures)
     const b3 = new THREE.Box3().setFromObject(f), mid = b3.getCenter(new THREE.Vector3()), d = b3.getSize(new THREE.Vector3()).length() / 2 / Math.tan(THREE.MathUtils.degToRad(14));

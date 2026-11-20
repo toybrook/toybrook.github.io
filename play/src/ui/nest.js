@@ -133,7 +133,7 @@ export function initNest(nav) {
     if (!live) { live = true; last = performance.now(); requestAnimationFrame(frame); }
   }
   function stageOff() {
-    if (cur) { st.scene.remove(cur.look.obj); cur.look.dispose(); if (cur.egg) st.scene.remove(cur.egg.group); cur = null; }
+    if (cur) { st.scene.remove(cur.look.obj); cur.look.dispose(); if (cur.egg) { st.scene.remove(cur.egg.group); cur.egg.dispose(); } cur = null; }
     live = false; stageEl.hidden = true; eggsEl.hidden = false; stageEl.classList.remove('secret'); st.glow.style.opacity = 0;
   }
   function show(a, egg = null) { // the figure (hidden until it pops out of the egg), framed to its size
@@ -152,7 +152,7 @@ export function initNest(nav) {
         const k = (now - cur.t0) / 1000;
         if (k >= HATCH.pop && !look.obj.visible) { look.obj.visible = true; look.appear(); }
         st.glow.style.opacity = glowAt(k); // 69-1: the rarity's light behind the egg, with the seams
-        if (egg.hatch(k)) { st.scene.remove(egg.group); cur.egg = null; st.glow.style.opacity = 0; }
+        if (egg.hatch(k)) { st.scene.remove(egg.group); egg.dispose(); cur.egg = null; st.glow.style.opacity = 0; }
       }
       look.update(dt); look.obj.rotation.y = -Math.PI / 2 + 0.45 + (calm() ? 0 : Math.sin(t * 0.7) * 0.35); // 27-7d 움직임 줄이기: no sway
       look.fig.pose({ sq: 1 + Math.sin(t * 2.2) * 0.015, rot: 0, gait: 'still', ph: 0 });
@@ -194,7 +194,7 @@ export function initNest(nav) {
     if (r.sure) {
       await gaugeIn(r.rarity); if (tok !== run) return;
       shown = { ...shown, [r.rarity]: 0 }; drawGauges();
-      st.scene.remove(cur.egg.group); cur.egg = makeEgg(eggMat(r.rarity), light); st.scene.add(cur.egg.group); // now it is the guaranteed egg
+      st.scene.remove(cur.egg.group); cur.egg.dispose(); cur.egg = makeEgg(eggMat(r.rarity), light); st.scene.add(cur.egg.group); // now it is the guaranteed egg
       stageEl.classList.remove('flash'); void stageEl.offsetWidth; stageEl.classList.add('flash');
       await sleep(700); if (tok !== run) return;
     }
