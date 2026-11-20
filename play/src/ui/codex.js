@@ -73,7 +73,7 @@ const foot = () => { const n = Object.keys(G.S.sky?.got ?? {}).length;
 const mythRow = () => { if (HOLD.myth) return ''; const ms = MYTHIC.filter(m => m.habitat === tab), met = m => !!G.S.myth[m.id]?.here;
   const cells = ms.length ? ms.map(m => `<div class="cell myth${met(m) ? '' : ' unk'}" role="button" data-m="${m.id}">${m.model ? `<img alt="${met(m) ? m.name : $t('아직 못 만난 신수')}">` : ''}<span>${met(m) ? m.name : '?'}</span></div>`).join('')
     : `<div class="cell myth unk" role="button" data-m=""><span>?</span>${$t('<small>소문만 있어요</small>')}</div>`;
-  return (G167 ? x => x.replace('</h2>', `<button class="mq" data-mabout aria-label="${esc($t('신수란?'))}">?</button></h2>`) : x => x)($t('<h2 class="ctier myth">{0} <small>{1}/{2}</small></h2><div class="crow">{3}</div><button class="scards" data-story="{4}">이야기 카드 <b>{5}</b>장<small>신수·전설 친구를 만난 날</small></button>', EARNED.myth.name, ms.filter(met).length, ms.length || 1, cells, tab, cardsIn(tab).length)); }; // 14-2; 167: its 「?」
+  return (G167 ? x => x.replace('</h2>', `<button class="mq" data-mabout aria-label="${esc($t('신수란?'))}">?</button></h2>`) : x => x)($t('<h2 class="ctier myth">{0} <small>{1}/{2}</small></h2><div class="crow">{3}</div><button class="scards" data-story="{4}">이야기 카드 <b>{5}</b>장<small>신수·전설 동물을 만난 날</small></button>', EARNED.myth.name, ms.filter(met).length, ms.length || 1, cells, tab, cardsIn(tab).length)); }; // 14-2; 167: its 「?」
 function mythBox(id) {
   const m = MYTHIC.find(m => m.id === id), M = m && G.S.myth[m.id], met = !!M?.here, box = document.createElement('div'), n = [...Array(5)].filter((_, i) => M?.read & 1 << i).length;
   box.className = 'cdet pop myth';
@@ -136,7 +136,7 @@ function detail(c) {
 // found / all for a habitat, and what is left to open the next one (rules.unlockInfo)
 function bar(habId, cells, n) {
   const next = HABITATS[HABITATS.findIndex(h => h.id === habId) + 1], L = next && unlockInfo(G.S, next.id);
-  const left = L && !L.open && L.friends ? $t('{0}{이/가} 열리기까지 친구 {1}마리', next.name, Math.max(0, L.friends - L.got)) : L && !L.open && L.need ? $t('{0}{이/가} 열리기까지 도감 {1}칸{2}', next.name, Math.max(0, L.need - L.have), G.S.hearts < L.hearts ? $t(' · 하트 {0}개 더 <span style="white-space:nowrap">(친구를 쓰다듬으면 생겨요)</span>', L.hearts - G.S.hearts) : '') : '';
+  const left = L && !L.open && L.friends ? $t('{0}{이/가} 열리기까지 동물 {1}마리', next.name, Math.max(0, L.friends - L.got)) : L && !L.open && L.need ? $t('{0}{이/가} 열리기까지 도감 {1}칸{2}', next.name, Math.max(0, L.need - L.have), G.S.hearts < L.hearts ? $t(' · 하트 {0}개 더 <span style="white-space:nowrap">(동물을 쓰다듬으면 생겨요)</span>', L.hearts - G.S.hearts) : '') : '';
   const W = wholeOf(G.S, habId), R = COMPLETE[habId], i = G.S.whole?.[habId] || 0, at = R && i < R.length && Math.ceil(COMPLETE.at[i] * W.all - 1e-9);
   const gift = at ? $t('<small>모으기 선물까지 {0}칸: {1}</small>', at - W.got, R[i] === 'expand' ? $t('땅 넓히기 한 번 무료{0}', ZONES[habId]?.[levelOf(G.S, habId)] ? ` (${ZONES[habId][levelOf(G.S, habId)].name})` : '') : $t('큰 소품 「{0}」', PROP[R[i]]?.name)) : R ? $t('<small>모으기 선물을 다 받았어요</small>') : '';
   const ng = wanderersOf(habId).length, nm = W.all - cells.length - ng; // 133: what 모으기 counts besides the egg friends (the 도감 n/N above)
@@ -147,7 +147,7 @@ function bar(habId, cells, n) {
 const tabs = () => $t('<div class="ctabs">{0}<button data-tab="album"{1}>치장 앨범</button></div>', HABITATS.map(h => `<button ${open(h.id) ? `data-tab="${h.id}"` : `data-lock="${h.id}" class="lock"`}${h.id === tab ? ' class="on"' : ''}>${h.name}${open(h.id) ? '' : ' 🔒'}</button>`).join(''), tab === 'album' ? ' class="on"' : '');
 // 13-2 놀이 장면: one cell per SCENES one. Seen: the play prop (the friend in it pinned on) or, friends together, the friend; the
 // day. Not seen: the prop's (or a friend's) flat shape and the hint. Not part of the codex count
-const scenesHtml = () => $t('<details class="cscenes"{0}><summary>놀이 장면 <small>{1}/{2}</small></summary><div class="crow sc">{3}</div>\n<p class="cnote">친구가 놀이 소품에서 놀거나 친구끼리 노는 모습을 보면 담겨요 · 처음 볼 때 ♥{4} · 도감 수에는 들어가지 않아요</p></details>', sceneOpen ? ' open' : '', SCENES.filter(s => G.S.scenes[s.id]).length, SCENES.length, SCENES.map(s => { const e = G.S.scenes[s.id];
+const scenesHtml = () => $t('<details class="cscenes"{0}><summary>놀이 장면 <small>{1}/{2}</small></summary><div class="crow sc">{3}</div>\n<p class="cnote">동물이 놀이 소품에서 놀거나 동물끼리 노는 모습을 보면 담겨요 · 처음 볼 때 ♥{4} · 도감 수에는 들어가지 않아요</p></details>', sceneOpen ? ' open' : '', SCENES.filter(s => G.S.scenes[s.id]).length, SCENES.length, SCENES.map(s => { const e = G.S.scenes[s.id];
     return `<div class="cell scene${e ? '' : ' unk'}"><img alt="${e ? s.name : $t('아직 못 본 장면')}">${e?.sp && s.prop ? '<img class="who" alt="">' : ''}<span>${e ? s.name : '?'}</span><small>${e ? new Date(e.at).toLocaleDateString(LOC) : s.hint}</small></div>`; }).join(''), BALANCE.scene.hearts);
 let sceneOpen = false; // 66-3: the fold stays as the player left it while the codex is redrawn
 // 17-2 작품집: the 동물 작품 of this habitat kept (그대로 두기, 기록만 남기고 치우기), newest first: the 작품 itself (its model, as the
@@ -155,14 +155,14 @@ let sceneOpen = false; // 66-3: the fold stays as the player left it while the c
 let artOpen = false;
 const artBook = () => G.S.art.book.filter(b => b.hab === tab).reverse();
 const artHtml = () => { const L = artBook();
-  return $t('<details class="cscenes cart"{0}><summary>작품집 <small>{1}</small></summary>{2}\n<p class="cnote">친구가 만든 작품을 「그대로 두기」나 「기록만 남기고 치우기」로 고르면 담겨요 · 도감 수에는 들어가지 않아요</p></details>', artOpen ? ' open' : '', L.length, L.length ? `<div class="crow ab">${L.map(b => `<div class="cell art"><img alt="${PROP[b.prop]?.name}"><span>${PROP[b.prop]?.name}</span><small>${esc(b.who)}<br>${new Date(b.at).toLocaleDateString(LOC)}</small></div>`).join('')}</div>` : ''); };
+  return $t('<details class="cscenes cart"{0}><summary>작품집 <small>{1}</small></summary>{2}\n<p class="cnote">동물이 만든 작품을 「그대로 두기」나 「기록만 남기고 치우기」로 고르면 담겨요 · 도감 수에는 들어가지 않아요</p></details>', artOpen ? ' open' : '', L.length, L.length ? `<div class="crow ab">${L.map(b => `<div class="cell art"><img alt="${PROP[b.prop]?.name}"><span>${PROP[b.prop]?.name}</span><small>${esc(b.who)}<br>${new Date(b.at).toLocaleDateString(LOC)}</small></div>`).join('')}</div>` : ''); };
 const fillArt = () => { const L = artBook(); el.querySelectorAll('.cell.art img').forEach((img, i) => { if (hab?.decor) artThumb(L[i].prop, hab.decor.model, night).then(u => { img.src = u; }, () => {}); }); };
 // 17-3 들꽃 도감: the colours of the 들꽃 that spread by themselves (game/wild.js), one cell each: the flower (its petals and middle),
 // the name, the day it first bloomed; not yet: ? and how it comes (the two colours mixed, or where the colour is). The garden's
 // whole (the same in each tab, as the codex count is not). A fold as the 놀이 장면 are; not part of the count
 let wildOpen = false;
 const wildHtml = () => { const B = G.S.wild.book, ids = Object.keys(BLOOMS), day = d => new Date(d * 864e5).toLocaleDateString(LOC, { timeZone: 'UTC' });
-  return $t('<details class="cscenes cwild"{0}><summary>들꽃 도감 <small>{1}/{2}</small></summary><div class="crow ab">{3}</div>\n<p class="cnote">친구들이 꽃씨를 옮겨 들꽃이 저절로 퍼져요 · 다른 색이 가까이 피면 정해진 색으로 섞여요 · 도감 수에는 들어가지 않아요</p></details>', wildOpen ? ' open' : '', ids.filter(c => B[c] != null).length, ids.length, ids.map(c => { const b = BLOOMS[c], got = B[c] != null, r = recipe(c);
+  return $t('<details class="cscenes cwild"{0}><summary>들꽃 도감 <small>{1}/{2}</small></summary><div class="crow ab">{3}</div>\n<p class="cnote">동물들이 꽃씨를 옮겨 들꽃이 저절로 퍼져요 · 다른 색이 가까이 피면 정해진 색으로 섞여요 · 도감 수에는 들어가지 않아요</p></details>', wildOpen ? ' open' : '', ids.filter(c => B[c] != null).length, ids.length, ids.map(c => { const b = BLOOMS[c], got = B[c] != null, r = recipe(c);
     return `<div class="cell bloom${got ? '' : ' unk'}"><b class="fl" style="--p:${b.c[0]};--m:${b.c[1]}" aria-hidden="true"></b><span>${got ? b.name : '?'}</span><small>${got ? day(B[c]) : r ? r.map(x => BLOOMS[x].name).join(' + ') : b.from}</small></div>`; }).join('')); };
 function fillScenes() {
   const fig = sp => figureThumb(sp, variantsOf(SP[sp])[0].id, null, null, 'adult', night);
@@ -202,7 +202,7 @@ function draw() {
     const rows = [...new Set(ss.map(c => c.species))].map(sp => `<div class="crow">${ss.filter(c => c.species === sp).map(cell).join('')}</div>`);
     return `<h3>${r.name} <small>${cs.filter(got).length}/${cs.length}</small></h3>${rows.join('')}`;
   }).join('');
-  const egg = groups && $t('<h2 class="ctier">알 친구 <small>{0}/{1}</small></h2>', cells.filter(got).length, cells.length);
+  const egg = groups && $t('<h2 class="ctier">알 동물 <small>{0}/{1}</small></h2>', cells.filter(got).length, cells.length);
   const W = wholeOf(G.S, tab); // inbox 154 C: the head counts as 모으기 does (egg friends, guests, mythics); the rows below count only their own
   el.innerHTML = $t('<div class="chead"><b>도감</b><span>{0}/{1}</span>{2}<button class="back" data-close>닫기</button></div>\n{3}{4}\n<div class="cbody">{5}{6}{7}{8}</div>', W.got, W.all, nightBtn(), tabs(), cells.length ? bar(tab, cells, cells.filter(got).length) : '', groups ? egg + groups : $t('<p class="cnote">준비 중이에요</p>'), groups ? guestRow() + mythRow() + scenesHtml() + artHtml() + (tab === 'dino' ? '' : wildHtml()) : '', stored ? $t('<p class="cnote">보관함에 {0}마리 있어요</p>', stored) : '', foot());
   if (groups) fillScenes(), fillArt(); el.querySelector('.cscenes:not(.cart):not(.cwild)')?.addEventListener('toggle', e => { sceneOpen = e.target.open; });

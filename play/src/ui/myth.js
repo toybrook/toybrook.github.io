@@ -40,7 +40,7 @@ function draw() {
   const rows = [['hair', MY.hair, FIREHINT[0], 'walk', 1], ['play', $t('놀이 장면 {0}/{1}', sc, MY.scenes), FIREHINT[1], 'scenes', 2], ['big', $t('큰 소품 하나'), FIREHINT[2], 'big', 3]];
   const call = { altar: G167 ? $t('<p class="sub">단서(불) {0}/3 · 세 개가 다 켜지면 부를 수 있어요</p>', lit(M)) : $t('<p class="sub">불 세 개가 다 켜지면 부를 수 있어요 ({0}/3)</p>', lit(M)), ready: $t('<p class="sub">부르면 오늘 밤 제단에 찾아와요</p>'),
     called: $t('<p class="sub">{0} 제단에 찾아와요</p>', M.arrive <= G.now() ? $t('곧') : $t('오늘 밤')),
-    guest: $t('<p class="sub">손님으로 머물고 있어요 · 친해지기 {0}/{1}<br>하루에 한 번 쓰다듬거나, 제단 곁에 놀이 소품을 두면 친해져요</p>', M.bond || 0, C.guest),
+    guest: $t('<p class="sub">손님으로 머물고 있어요 · 친밀도 {0}/{1}<br>하루에 한 번 쓰다듬거나, 제단 곁에 놀이 소품을 두면 친밀도가 올라요</p>', M.bond || 0, C.guest),
     home: $t('{0}<p class="sub">들판에 머물고 있어요</p>', mythCard()) }[s] ?? '';
   box.innerHTML = $t('<div><h2>옛 제단</h2><ul>{0}</ul>{1}\n<div class="nbtns"><button class="sb" data-page="0">이야기 1</button>{2}<button class="sb" data-close>닫기</button></div></div>', rows.map(([k, t, hint, go, p]) => `<li><button ${M[k] ? `data-page="${p}"` : `data-go="${go}"`}><i aria-hidden="true">${M[k] ? '🔥' : '○'}</i><span>${t}<small>${M[k] ? $t('불이 켜졌어요 · 이야기 보기') : hint}</small></span></button></li>`).join(''), call, s === 'ready' ? $t('<button class="go" data-call>부르기</button>') : s === 'home' ? $t('<button class="go" data-page="4">이야기 5</button>') : '');
   if (G167) winExtra(MY);
@@ -65,7 +65,7 @@ async function goTo(m, go) {
   box.hidden = true; view = null; if (!m) return;
   if (at() !== m.habitat && (!nav || await nav.go(m.habitat) === false)) return;
   const api = hab(), g = m !== MY;
-  if (go === 'walk') { (await import('./friends.js')).openFriends(at(), api); toast(g ? $t('친구의 ⋯ › 산책에서 아무 곳이나 골라요') : $t('친구의 ⋯ › 산책에서 「불의 언덕」을 골라요'), 3200); }
+  if (go === 'walk') { (await import('./friends.js')).openFriends(at(), api); toast(g ? $t('동물의 ⋯ › 산책에서 아무 곳이나 골라요') : $t('동물의 ⋯ › 산책에서 「불의 언덕」을 골라요'), 3200); }
   if (go === 'decor') (await import('./decor.js')).decorTab('nature');
   if (go === 'camp') (await import('./decor.js')).decorTab('play'); // 167: the campfire
   if (go === 'scenes') (await import('./codex.js')).openCodex('scenes', api);
@@ -88,7 +88,7 @@ export function onMyth(k, a, id) {
 export function mythCut() {
   const L = H(); if (!L) return false;
   G.mythShown(); cutEl.hidden = false; cutEl.querySelector('p').textContent = `${MY.name}${mythNight(G.now()) ? $t('가 제단에 내려왔어요') : $t('가 제단에 내려왔던 밤이에요')}`;
-  L.cut(() => { cutEl.hidden = true; story('m'); const M = G.S.myth[MY.id]; if (!M.settled) toast($t('손님으로 머물러요 · 하루에 한 번 쓰다듬으면 친해져요 ({0}/{1})', M.bond || 0, BALANCE.myth.guest), 3400); });
+  L.cut(() => { cutEl.hidden = true; story('m'); const M = G.S.myth[MY.id]; if (!M.settled) toast($t('손님으로 머물러요 · 하루에 한 번 쓰다듬으면 친밀도가 올라요 ({0}/{1})', M.bond || 0, BALANCE.myth.guest), 3400); });
   return true;
 }
 cutEl.querySelector('button').onclick = () => { H()?.skip(); for (const m of NEXT) GL(m)?.skip(); };
@@ -97,11 +97,11 @@ G.on(ev => {
   for (const e of ev) if (e.type === 'myth' && e.id === MY.id) { // 152 D: the others' have no window yet
     if (e.what === 'trace' && H()) toast($t('모닥불 곁에 그을린 자국이 남았어요'), 2800, true);
     if (['hair', 'play', 'big'].includes(e.what)) toast($t('옛 제단에 불이 켜졌어요 ({0}/3) · 제단을 눌러 이야기를 읽어요', lit(G.S.myth[MY.id])), 3200);
-    if (e.what === 'bond' && !G.S.myth[MY.id].settled) toast($t('{0}와 조금 더 친해졌어요 ({1}/{2})', MY.name, e.n, BALANCE.myth.guest), 2600);
+    if (e.what === 'bond' && !G.S.myth[MY.id].settled) toast($t('{0} 친밀도가 올랐어요 ({1}/{2})', MY.name, e.n, BALANCE.myth.guest), 2600);
   }
   for (const e of ev) { const m = e.type === 'myth' && byId(e.id); if (!m) continue; // 158
     const i = m.clues.indexOf(e.what); if (i >= 0 && e.what !== 'jade') toast($t('{0}의 단서를 찾았어요: {1} ({2}/3)', m.name, m.cl[i][0], found(m, G.S.myth[m.id])), 3200);
-    if (e.what === 'bond' && !G.S.myth[m.id].settled) toast($t('{0}과 조금 더 친해졌어요 ({1}/{2})', m.name, e.n, m.guest), 2600); }
+    if (e.what === 'bond' && !G.S.myth[m.id].settled) toast($t('{0} 친밀도가 올랐어요 ({1}/{2})', m.name, e.n, m.guest), 2600); }
   syncG(); if (!box.hidden && view === 'altar') { if (cur === MY) draw(); else drawG(cur); }
 });
 // a quiet screen in the meadow: its coming not seen yet (the cutscene), then the last page and its card once it settled
@@ -147,7 +147,7 @@ function drawG(m) {
     const b = btn(mk('li', ul), null, null, got ? { page: i + 1 } : go ? { go } : {}); mk('i', b, got ? '✦' : '○').setAttribute('aria-hidden', 'true');
     mk('small', mk('span', b, name + n), got ? $t('단서를 찾았어요 · 이야기 보기') : hint); });
   const sub = { altar: G167 ? $t('단서 {0}/3 · 세 개를 다 찾으면 부를 수 있어요', found(m, M)) : $t('단서 세 개를 다 찾으면 부를 수 있어요 ({0}/3)', found(m, M)), ready: night ? $t('지금 부를 수 있어요') : m.say.night, called: m.say.called,
-    guest: $t('손님으로 머물고 있어요 · 친해지기 {0}/{1} · 하루에 한 번 쓰다듬으면 친해져요', M.bond || 0, m.guest), home: $t('{0}에 머물고 있어요', HAB[m.habitat].name) }[s];
+    guest: $t('손님으로 머물고 있어요 · 친밀도 {0}/{1} · 하루에 한 번 쓰다듬으면 친밀도가 올라요', M.bond || 0, m.guest), home: $t('{0}에 머물고 있어요', HAB[m.habitat].name) }[s];
   if (sub) mk('p', d, sub, 'sub');
   const nb = mk('div', d, null, s === 'ready' && night || s === 'home' ? 'nbtns callrow' : 'nbtns'); btn(nb, $t('이야기 1'), 'sb', { page: 0 });
   if (s === 'ready' && night) btn(nb, m.say.call, 'go', { call: '' }); else if (s === 'home') btn(nb, $t('이야기 5'), 'go', { page: 4 });
@@ -162,12 +162,12 @@ function onGuest(k, m) {
 }
 function cutG(m, L) { // its coming, on screen (the line and 건너뛰기 as the firemane's)
   G.mythShown(m.id); cutEl.hidden = false; cutEl.querySelector('p').textContent = m.say.came;
-  L.cut(() => { cutEl.hidden = true; const M = G.S.myth[m.id]; if (!M.settled) toast($t('손님으로 머물러요 · 하루에 한 번 쓰다듬으면 친해져요 ({0}/{1})', M.bond || 0, m.guest), 3400); });
+  L.cut(() => { cutEl.hidden = true; const M = G.S.myth[m.id]; if (!M.settled) toast($t('손님으로 머물러요 · 하루에 한 번 쓰다듬으면 친밀도가 올라요 ({0}/{1})', M.bond || 0, m.guest), 3400); });
 }
 
 // ---- 167 신수 안내·진행 표시: 「신수란?」 (A), each one's 4 steps and 지금 할 일 (B), the night it can be called (C)
 const myOf = id => MYTHIC.find(m => m.id === id);
-const FIREHINT = [$t('친구를 「불의 언덕」에 산책 보내면 찾아와요'), $t('친구들이 노는 모습을 보면 담겨요 (본 것도 세요)'), $t('꾸미기 › 큰 소품에서 하나 놓아요 (놓은 것도 세요)')]; // the altar's 3
+const FIREHINT = [$t('동물을 「불의 언덕」에 산책 보내면 찾아와요'), $t('동물들이 노는 모습을 보면 담겨요 (본 것도 세요)'), $t('꾸미기 › 큰 소품에서 하나 놓아요 (놓은 것도 세요)')]; // the altar's 3
 const nightText = () => $t('밤(오후 {0}시~오전 {1}시)', NIGHT[0] - 12, NIGHT[1]);
 const guestN = m => m.guest ?? BALANCE.myth.guest;
 const STEP = { prints: 0, fire: 0, trace: 0, altar: 1, ready: 2, called: 2, guest: 3, home: 3 };
@@ -175,7 +175,7 @@ let after = null; // what the card's 확인 opens next (이야기 1, or the wind
 // the 4 steps, `on` lit (-1: none), each label (the card: what they are; a window: where this one is)
 function steps(up, on, labels) {
   const ol = mk('ol', up, null, 'msteps');
-  [['🐾', $t('발자국 찾기')], ['✦', $t('단서 3개 모으기')], ['🌙', $t('밤에 부르기')], ['🏡', $t('손님 → 식구')]].forEach(([i, t], k) => {
+  [['🐾', $t('발자국 찾기')], ['✦', $t('단서 3개 모으기')], ['🌙', $t('밤에 부르기')], ['🏡', $t('손님 → 획득')]].forEach(([i, t], k) => {
     const li = mk('li', ol, null, k === on ? 'on' : k < on ? 'done' : ''); mk('i', li, i).setAttribute('aria-hidden', 'true'); mk('span', li, labels?.[k] ?? t); });
   return ol;
 }
@@ -183,7 +183,7 @@ function steps(up, on, labels) {
 function waitLine(m) {
   const p = MYTHIC[MYTHIC.indexOf(m) - 1];
   if (HOLD.myth) return $t('아직 아무 소식이 없어요');
-  if (p && !G.S.myth[p.id]?.settled) return $t('{0}{이/가} 식구가 되면 소식이 와요', p.name);
+  if (p && !G.S.myth[p.id]?.settled) return $t('{0}{을/를} 획득하면 소식이 와요', p.name);
   if (!G.S.unlocked.includes(m.habitat)) return $t('{0}{을/를} 열면 소식이 와요', HAB[m.habitat].name);
   const k = dayNo(mythPrints(G.S, m.id)) - dayNo(G.now());
   return k > 1 ? $t('{0}일 뒤 아침에 소식이 와요', k) : k === 1 ? $t('내일 아침에 소식이 와요') : $t('곧 소식이 와요');
@@ -191,7 +191,7 @@ function waitLine(m) {
 // 지금 할 일 and where its 「가 보기」 goes (goTo; null: nothing to go to)
 function nowOf(m, s, M) {
   if (s === 'altar') { const i = m.clues.findIndex(k => !M[k]); return m === MY ? [FIREHINT[i], ['walk', 'scenes', 'big'][i]] : [m.cl[i][1], m.cl[i][2] || 'hab']; }
-  if (s === 'guest') return [$t('손님 {0}/{1}일 · 하루 한 번 쓰다듬으면 친해져요', M.bond || 0, guestN(m)), 'hab'];
+  if (s === 'guest') return [$t('손님 {0}/{1}일 · 하루 한 번 쓰다듬으면 친밀도가 올라요', M.bond || 0, guestN(m)), 'hab'];
   if (s === 'ready' && m !== MY && !mythNight(G.now())) return [`${m.say.night} · ${nightText()}`, null];
   if (s === 'home') return [$t('{0}에 머물고 있어요', HAB[m.habitat].name), null];
   return [mythHint(m.id), { prints: 'hab', fire: 'camp', trace: 'hab', ready: 'win', called: 'hab' }[s] ?? null];
@@ -199,7 +199,7 @@ function nowOf(m, s, M) {
 // B: the steps with this one's place, 지금 할 일 and 「가 보기」 (inWin: in its own window, so no 「가 보기」 to it)
 function progress(up, m, inWin) {
   const s = G.mythStage(m.id), M = G.S.myth[m.id] || {}, n = m === MY ? lit(M) : found(m, M);
-  steps(up, STEP[s] ?? -1, [$t('발자국'), m === MY ? $t('단서(불) {0}/3', n) : $t('단서 {0}/3', n), $t('밤에 부르기'), s === 'home' ? $t('식구') : s === 'guest' ? $t('손님 {0}/{1}', M.bond || 0, guestN(m)) : $t('손님 → 식구')]);
+  steps(up, STEP[s] ?? -1, [$t('발자국'), m === MY ? $t('단서(불) {0}/3', n) : $t('단서 {0}/3', n), $t('밤에 부르기'), s === 'home' ? $t('획득') : s === 'guest' ? $t('손님 {0}/{1}', M.bond || 0, guestN(m)) : $t('손님 → 획득')]);
   const [t, go] = nowOf(m, s, M); if (!t) return;
   const r = mk('div', up, null, 'mnow'), p = mk('p', r); mk('b', p, $t('지금 할 일')); p.append(' ' + t);
   if (go && !(inWin && go === 'win')) btn(r, $t('가 보기'), 'sb', { mgo: go, mid: m.id });
@@ -220,9 +220,9 @@ function about(next) {
   const d = mk('div', box, null, 'mabout'), met = !!G.S.myth[MY.id]?.here; mk('h2', d, $t('신수란?'));
   const img = mk('img', mk('div', mk('figure', d, null, 'mcard'), null, 'mstand')); img.alt = met ? MY.name : $t('신수 실루엣');
   import('./thumbs.js').then(t => t.mythThumb(!met, false, met ? 0 : 1)).then(u => { img.src = u; }, () => {});
-  mk('p', d, $t('신수는 서식지를 지켜 주는 특별한 친구예요. 알에서 태어나지 않아요.'));
+  mk('p', d, $t('신수는 서식지를 지켜 주는 특별한 동물이에요. 알에서 태어나지 않아요.'));
   mk('small', steps(d, -1).children[2], nightText());
-  mk('p', d, $t('식구가 되면 서식지에 계속 머물고, 친구 자리를 차지하지 않아요. 이야기 카드도 받아요.'));
+  mk('p', d, $t('획득하면 서식지에 계속 머물고, 동물 자리를 차지하지 않아요. 이야기 카드도 받아요.'));
   const by = {}; if (!HOLD.myth) for (const m of MYTHIC) if (HAB[m.habitat]?.ready) (by[m.habitat] ??= []).push(m.name);
   mk('p', d, $t('지금 만날 수 있는 신수: {0}', Object.entries(by).map(([h, ns]) => `${HAB[h].name} ${ns.join(' · ')}`).join(SEP)), 'sub');
   btn(mk('div', d, null, 'nbtns'), $t('확인'), 'go', { next: '' }); box.hidden = false;

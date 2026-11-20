@@ -89,9 +89,9 @@ function plan181(S, k, now) {
   if (k === 'hatch') {
     const L = $('loading'), lf = q('.lfirst', L), go = q('#ncard [data-go]'), rd = q('#nslots .nslot.ready');
     if (!vis($('nstage'))) stAt = 0; else if (!vis($('ncard'))) { stAt ||= Date.now(); // 184 ③ Q1: the first egg rocking and cracking (animals/growth.js HATCH: pop at 1.15 s), not the friend out after it
-      return Date.now() - stAt < HPOP ? { t: null, text: $t('곧 깨어나요…'), wait: 1, near: $('nstage'), inBox: $('nest') } : { wait: 1, none: 1 }; }
+      return Date.now() - stAt < HPOP ? { t: null, text: $t('곧 부화해요…'), wait: 1, near: $('nstage'), inBox: $('nest') } : { wait: 1, none: 1 }; }
     const t = vis(go) ? go : vis(rd) ? rd : vis(lf) ? lf : F170 && !L.hidden && vis(q('.lbar', L)) ? q('.lbar', L) : vis($('nest')) ? (S.slots.some(Boolean) ? null : q('#neggs .negg[data-id]')) : $('nestBtn');
-    return { t, text: t === go ? '' : $t('알을 톡 눌러 깨워요'), fing: 'tap' }; // 서식지로 보내기: the button says it
+    return { t, text: t === go ? '' : $t('알을 톡 눌러 부화해요'), fing: 'tap' }; // 서식지로 보내기: the button says it
   }
   if (k === 'end') { const go = q('#ncard [data-go]'); return vis(go) ? { t: go, text: '', fing: 'tap' } : null; } // the 3rd egg's card still open; then 170's end card
   if (!a) return null;
@@ -100,7 +100,7 @@ function plan181(S, k, now) {
     if (k === 'pet' && mode === 'again' && ((S.stats.pet || 0) > mk.pet || vis($('bubble')) && !mk.bub)) return next(), null;
     if (!vis($('bubble'))) mk.bub = false;
     const f = k === 'aff' ? S.animals.find(x => !x.pending && !x.stored && R.affLevel(x, now) >= 2) ?? a : a;
-    return { pt: at(f.id), r: 60, text: k === 'aff' ? $t('자주 놀아 주면 정이 깊어져요') : $t('{0}{을/를} 톡 눌러 쓰다듬어요', nm(f)), fing: 'tap' };
+    return { pt: at(f.id), r: 60, text: k === 'aff' ? $t('자주 놀아 주면 친밀도가 올라요') : $t('{0}{을/를} 톡 눌러 쓰다듬어요', nm(f)), fing: 'tap' };
   }
   if (k === 'feed') {
     if (mode === 'again' && ((S.stats.feed || 0) > mk.feed || !R.growing(a) || !R.feedsLeft(a, now))) return next(), null;
@@ -111,19 +111,19 @@ function plan181(S, k, now) {
   if (k === 'codex') {
     const c = $('codex');
     if (vis(c)) { mk.open ??= now; const cell = q(`.cell[data-k="${a.species}:${a.variant}"]`, c) ?? q('.cell[data-k]:not(.unk)', c);
-      return { t: now - mk.open < 3e3 && cell ? cell : q('.cdet [data-shut]', c) ?? q('[data-close]', c), text: $t('만난 친구는 도감에 모여요'), fing: 'tap' }; }
+      return { t: now - mk.open < 3e3 && cell ? cell : q('.cdet [data-shut]', c) ?? q('[data-close]', c), text: $t('만난 동물은 도감에 모여요'), fing: 'tap' }; }
     if (mk.open) { if (mode === 'again') next(); else G.flag('tut181', 'nest'); return null; }
-    return { t: $('codexBtn'), text: $t('만난 친구는 도감에 모여요'), fing: 'tap' };
+    return { t: $('codexBtn'), text: $t('만난 동물은 도감에 모여요'), fing: 'tap' };
   }
   if (k === 'nest') {
     const go = q('#ncard [data-go]'), rd = q('#nslots .nslot.ready');
-    if (vis(go) || rd || !vis($('nest')) && S.slots.some(s => s && now >= s.end)) return { t: vis(go) ? go : vis(rd) ? rd : $('nestBtn'), text: vis(go) ? '' : $t('알을 톡 눌러 깨워요'), fing: 'tap' }; // the 2nd and 3rd eggs (step181 waits for 3 hatched); 184 ③: with the nest shut its slots are not redrawn, so a ready one is read from the save
+    if (vis(go) || rd || !vis($('nest')) && S.slots.some(s => s && now >= s.end)) return { t: vis(go) ? go : vis(rd) ? rd : $('nestBtn'), text: vis(go) ? '' : $t('알을 톡 눌러 부화해요'), fing: 'tap' }; // the 2nd and 3rd eggs (step181 waits for 3 hatched); 184 ③: with the nest shut its slots are not redrawn, so a ready one is read from the save
     const f = S.slots.filter(Boolean).length; if (f > nFill) waitAt = 0; nFill = f; // 184 ③ review: a new egg in another slot starts its own wait
     if (f) { waitAt ||= now; const w = now - waitAt, ni = S.slots.reduce((b, x, i) => x && now < x.end && (b < 0 || x.start > S.slots[b].start) ? i : b, -1), egg = ni < 0 ? null : q(`#nslots .nslot[data-i="${ni}"]:not(.ready)`); // the newest waiting egg
       if (vis($('nest')) && vis(egg)) { // 184 ③ Q1: the nest open on it: the egg rocks with one line over it, once a wait
         if (w < WOB[0] || w >= WOB[1]) return { wait: 1, none: 1 };
         if (wobAt !== waitAt) { wobAt = waitAt; egg.classList.remove('tutwob'); void egg.offsetWidth; egg.classList.add('tutwob'); setTimeout(() => egg.classList.remove('tutwob'), WOB[1] - WOB[0]); }
-        return { t: null, text: $t('곧 깨어나요…'), wait: 1, near: egg, inBox: $('nest') };
+        return { t: null, text: $t('곧 부화해요…'), wait: 1, near: egg, inBox: $('nest') };
       }
       return w < 5e3 ? { t: null, text: $t('깨는 동안 꾸며 봐요'), wait: 1, near: $('nestPill') } : { wait: 1, none: 1 }; } // then it leaves them be
     waitAt = 0; const e = q('#neggs .negg[data-id]');

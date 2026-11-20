@@ -22,7 +22,7 @@ const waiting = () => all().filter(m => mailOpen(G.S, m, G.now()));
 const cards = () => G.S.visit.cards.filter(c => !c.got); // 16-1: postcards from where a friend went
 const dot = () => { const on = waiting().length > 0 || cards().length > 0 || (G.S.giftEggs > 0 && legendRoom(G.S)); btn.classList.toggle('new', on); if (box.hidden) btn.hidden = !on; }; // 74: shown only with mail
 const day = s => { const m = /^\d{4}-(\d\d)-(\d\d)/.exec(String(s ?? '')); return m ? $t('{0}월 {1}일까지', +m[1], +m[2]) : ''; };
-const gifts = r => [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`, r?.candy > 0 && $t('꼬마 사탕 {0}개', Math.floor(r.candy)),
+const gifts = r => [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`, r?.candy > 0 && $t('성장 사탕 {0}개', Math.floor(r.candy)),
   r?.eggs > 0 && $t('둥지 알 {0}개', Math.floor(r.eggs)), PROP[r?.prop] && $t('소품 「{0}」', PROP[r.prop].name), r?.legendEggs > 0 && $t('전설 알 {0}개', Math.floor(r.legendEggs))].filter(Boolean).join(' · ');
 
 function draw() {

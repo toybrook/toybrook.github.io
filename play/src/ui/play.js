@@ -37,7 +37,7 @@ const growText = (r, now) => r.hold ? $t('성장 멈춤 · {0}%', pct(r, now)) :
 // baby's growth gauge, then the way to the next level. Numbers and our own words only (the name: callName, cleaned in rules.js)
 const affMark = L => L >= 5 ? `<i class="jstar${L >= 10 ? ' dj' : ''}" aria-hidden="true">★</i>` : '';
 const affLine = (r, now) => { const L = affLevel(r, now), w = Math.round(affBar(r, now) * 100);
-  return `<small class="jl"><b>${$t('정 Lv{0}', L)}</b><b class="gg${r.hold ? ' hold' : ''}"><i style="width:${w}%"></i></b>${r.stage === 'baby' && !r.hold ? growText(r, now) : (r.hold ? growText(r, now) + ' · ' : '') + (L >= 10 ? $t('단짝') : $t('다음 레벨까지 {0}%', w))}</small>`; };
+  return `<small class="jl"><b>${$t('친밀도 Lv{0}', L)}</b><b class="gg${r.hold ? ' hold' : ''}"><i style="width:${w}%"></i></b>${r.stage === 'baby' && !r.hold ? growText(r, now) : (r.hold ? growText(r, now) + ' · ' : '') + (L >= 10 ? $t('친밀도 MAX') : $t('다음 레벨까지 {0}%', w))}</small>`; };
 const actOf = L => L === 2 || L === 3 ? GROW_ACTS[L - 2].name : AFF_ACTS[L];
 // 69-1 출생 기록 한 줄: the day (한국 시간, as the 이야기 카드), the habitat whose nest it came from, that hour's weather, and that
 // night's sky if it was a special one. Read off what the save keeps already (its born and egg: the codex's day and habitat for
@@ -72,10 +72,10 @@ export function initPlay(nav) {
     if (r.guest) { bubble.hidden = true; bubbleFor = null; if (act === 'book') import('./visit.js').then(m => m.openBook()); return; } // 16-1: a guest has only 방명록
     if (act === 'feed') { if (G.feed(r.id)) return showBubble(r, $t('냠냠!')); }
     if (act === 'candy') {
-      if (!(G.S.candy > 0) && !G.buyCandy()) return toast($t('하트가 모자라요 (꼬마 사탕 ♥{0})', B.candy.price), 2200, true);
+      if (!(G.S.candy > 0) && !G.buyCandy()) return toast($t('하트가 모자라요 (성장 사탕 ♥{0})', B.candy.price), 2200, true);
       if (G.holdBaby(r.id)) { toast($t('{0}{은/는} 지금 모습 그대로 있어요', nm), 2400, true); return showBubble(r); }
     }
-    if (act === 'grow' && G.letGrow(r.id)) { toast($t('다시 자라요 · 꼬마 사탕을 돌려받았어요'), 2400, true); return showBubble(r); }
+    if (act === 'grow' && G.letGrow(r.id)) { toast($t('다시 자라요 · 성장 사탕을 돌려받았어요'), 2400, true); return showBubble(r); }
     if (act === 'accoff') { const k = G.accOff(r.id); if (k) { track('acc_off', { v: ko(ACCESSORIES[k].name) }, 'acc_off:' + k); toast($t('「{0}」{을/를} 떼어 보관함 › 치장에 넣었어요', ACCESSORIES[k].name), 2600); } return showBubble(r); } // 189
     if (act === 'accon') { bubble.hidden = true; bubbleFor = null; return dressUp(r); } // 189: the friends menu's 치장 끼우기 list
     if (act === 'store' && G.store(r.id)) toast($t('{0}{을/를} 보관함에 넣었어요', nm));
@@ -98,7 +98,7 @@ export function initPlay(nav) {
     const soon = run.length && Math.min(...run.map(s => s.end - now)), fill = eggs > 0 && G.S.slots.includes(null);
     const done = G.S.slots.filter(s => s && now >= s.end).length; // C11: a finished egg said in words, not only the button's glow
     const n = G.S.nests[habId], next = !soon && !done && n && !eggs && n.t + eggGap(G.S) - now; // 27-7a: nothing to do -> when the next egg comes
-    pillT.hidden = !soon && !done && !(next > 0); pillT.textContent = done ? $t('깨울 알 {0}개 · 둥지를 눌러요', done) : soon ? $t('부화까지 {0}', clock(soon)) : next > 0 ? $t('다음 알까지 {0}', clock(next)) : '';
+    pillT.hidden = !soon && !done && !(next > 0); pillT.textContent = done ? $t('부화할 알 {0}개 · 둥지를 눌러요', done) : soon ? $t('부화까지 {0}', clock(soon)) : next > 0 ? $t('다음 알까지 {0}', clock(next)) : '';
     pillB.hidden = !fill; pill.hidden = pillT.hidden && !fill; redodge();
   }
 
@@ -148,7 +148,7 @@ export function initPlay(nav) {
     if (r.wg) bubble.innerHTML = guestHtml(r, say); else // 66-1
     if (r.guest) bubble.innerHTML = $t('{0}{1}<small>손님 · {2}시간 더 머물러요</small><div class="row">{3}</div>', say ? say + ' ' : '', guestName(r), Math.max(1, Math.ceil((r.until - now) / 3600e3)), btn('book', $t('방명록'), true)); else // 16-1
     bubble.innerHTML = `${say ? say + ' ' : ''}${nameOf(r)}${F170 ? affMark(affLevel(r, now)) + affLine(r, now) : baby ? `<small>${growText(r, now)}</small>` : ''}<div class="row">${
-      baby && growing(r) ? btn('feed', n ? $t('먹이 주기 {0}/{1}', n, B.grow.feeds) : $t('오늘 먹이 다 줬어요')) + btn('candy', $t('꼬마 사탕 주기 {0}', c ? $t('({0}개)', c) : `♥${B.candy.price}`), true) : ''}${
+      baby && growing(r) ? btn('feed', n ? $t('먹이 주기 {0}/{1}', n, B.grow.feeds) : $t('오늘 먹이 다 줬어요')) + btn('candy', $t('성장 사탕 주기 {0}', c ? $t('({0}개)', c) : `♥${B.candy.price}`), true) : ''}${
       r.hold ? btn('grow', $t('다시 자라기')) : ''}${r.acc && ACCESSORIES[r.acc] ? btn('accoff', $t('치장 떼기 · {0}', ACCESSORIES[r.acc].name), true) : Object.keys(G.S.accs || {}).length ? btn('accon', $t('치장 끼우기'), true) : ''}${btn('walk', $t('산책 보내기'), true)}${btn('store', $t('보관함에 넣기'), true)}</div>`;
     bubble.querySelector('[data-act=feed]')?.toggleAttribute('disabled', !n); bubble.hidden = false;
     const go = !bubbleFor; bubbleFor = r; bubbleUntil = Date.now() + 10000; if (press) press.re = true;
@@ -166,7 +166,7 @@ export function initPlay(nav) {
 
   // what the game did (every tick, every action, and the catch-up at start)
   // 66-1 떠돌이 손님: its bubble (name, each wish with ✓ while it holds there, time left, what it leaves: shown before)
-  const wishText = w => { const W = WISH[w] || {}; return `${W.icon ?? ''} ${W.riddle ? `「${W.riddle}」` : W.k === 'pals' ? $t('친구 {0}마리 곁', W.n) : W.k === 'theme' ? $t('「{0}」 {1} 한자리에', W.name, W.v.map(t => WISH[t].icon + t).join(' ')) : w}`; }; // 69-3 테마 소원
+  const wishText = w => { const W = WISH[w] || {}; return `${W.icon ?? ''} ${W.riddle ? `「${W.riddle}」` : W.k === 'pals' ? $t('동물 {0}마리 곁', W.n) : W.k === 'theme' ? $t('「{0}」 {1} 한자리에', W.name, W.v.map(t => WISH[t].icon + t).join(' ')) : w}`; }; // 69-3 테마 소원
   function guestHtml(r, say = '') {
     const g = G.guestOf(r.wg); if (!g) return say || '';
     const R = rosterOf(g), J = G.guestMet(g), P = G.guestPreview(g), egg = P.egg && HAB[P.egg]?.name;
@@ -214,7 +214,7 @@ export function initPlay(nav) {
     if (e.what === 'arrive' && here && e.big != null) later(3300, () => say($t('{0}{이/가} 큰 소원을 들고 왔어요 ({1}/{2}) · 눌러서 보세요', nm, e.big + 1, GUEST.big), 3600));
     if (e.what === 'regular') later(3700, () => say($t('{0}{이/가} 단골이 됐어요 · 다음에 오면 큰 소원을 말해 줄 거예요', nm), 4200));
     if (e.what === 'step' && e.s < e.n) later(3700, () => say($t('큰 소원 {0}/{1} · {2}: 「내일 또 올게」', e.s, e.n, nm), 3600));
-    if (e.what === 'settle') later(3700, () => { say($t('{0}{이/가} 여기 살기로 했어요 · 떠돌이 친구{1}', nm, e.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 4800); sfx('level'); });
+    if (e.what === 'settle') later(3700, () => { say($t('{0}{이/가} 여기 살기로 했어요 · 떠돌이 동물{1}', nm, e.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 4800); sfx('level'); });
     if (e.what === 'dayEnd' && hab) dusk(e.k); // 69-3 하루 마무리
     if (e.what === 'hello') toast($t('떠돌이 손님이 찾아오기 시작했어요 · 소원을 들어주면 하트와 알을 두고 가요'), 4200, true);
     if (e.what === 'tutDone') { const R = e.night && rosterOf({ k: e.night }); toast(R ? $t('오늘 밤 손님 · 「{0}」{이/가} 올지도 몰라요', R.name) : $t('손님맞이를 다 익혔어요 · 이제 손님이 가끔 찾아와요'), 4200, true); }
@@ -239,7 +239,7 @@ export function initPlay(nav) {
     const eggs = ev.filter(e => e.type === 'egg').length;
     if (eggs && hab) toast(eggs > 1 ? $t('둥지에 알이 {0}개 생겼어요', eggs) : $t('둥지에 알이 생겼어요'));
     for (const e of ev) { // later ones matter more: they win the toast
-      if (e.type === 'stored') toast($t('서식지 자리가 모자라 오래된 친구가 보관함으로 갔어요 (최대 {0}마리)', capOf(G.S, habitatOf(e.animal))), 3200);
+      if (e.type === 'stored') toast($t('서식지 자리가 모자라 오래된 동물이 보관함으로 갔어요 (최대 {0}마리)', capOf(G.S, habitatOf(e.animal))), 3200);
       if (e.type === 'unlock') { toast($t('{0}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 월드맵에서 가 보세요', HAB[e.habitat].name), 3200); tip('unlock', '#habName'); }
       if (e.type === 'strollBack' && hab) { const a = e.animal, nm = nameOf(a); if (!a.stored && habitatOf(a) === habId) hab.drop(a); toast($t('{0}{이/가} 산책에서 돌아왔어요 · ♥+{1}{2}', nm, e.card.hearts, a.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 3000); } // 13-1
       if (e.type === 'whole') { const r = e.reward; toast($t('{0} 모으기 {1}/3 선물: {2}', HAB[e.habitat].name, e.step, r === 'expand' ? $t('다음 땅 넓히기가 무료예요') : $t('큰 소품 「{0}」{이/가} 보관함에 왔어요', PROP[r]?.name)), 3600); } // 66-3
@@ -252,7 +252,7 @@ export function initPlay(nav) {
     const a = e.animal; if (ev.some(x => x.type === 'grown' && x.animal === a) || ev.findLast(x => x.type === 'affLevel') !== e) return; // many at once (back after a while): the last one only
     const p = habitatOf(a) === habId && !a.stored && hab.where(a.id); if (p) for (let i = 0; i < 3; i++) setTimeout(() => heart(p[0] + (i - 1) * 44, p[1] + 34 - 14 * (i % 2), 'rim'), i * 120); // beside it, under the card that opens above it
     const nm = nameOf(a), act = actOf(e.level);
-    toast(e.level >= 10 ? $t('{0}{과/와} 단짝이 되었어요 · 정 Lv10', nm) : act ? $t('{0}{과/와} 정이 깊어졌어요 · 정 Lv{1} · {2}을 배웠어요', nm, e.level, act) : $t('{0}{과/와} 정이 깊어졌어요 · 정 Lv{1}', nm, e.level), 2800, true);
+    toast(e.level >= 10 ? $t('{0} 친밀도 MAX · Lv10', nm) : act ? $t('{0} 친밀도가 올랐어요 · Lv{1} · {2}{을/를} 배웠어요', nm, e.level, act) : $t('{0} 친밀도가 올랐어요 · Lv{1}', nm, e.level), 2800, true);
     if (bubbleFor?.id === a.id && !bubble.hidden) showBubble(bubbleFor);
   }
   G.on(events);
@@ -268,13 +268,13 @@ export function initPlay(nav) {
     if (busy()) { clearTimeout(later); later = setTimeout(cards, 800); return; }
     if (pal) { // 17-1 "○○와 ○○가 단짝이 되었어요!" (after the grown cards)
       const [a, b] = [pal.a, pal.b].map(id => G.S.animals.find(x => x.id === id)), na = nameOf(a), nb = nameOf(b);
-      card.innerHTML = $t('<div><h2>{0}{과/와} {1}{이/가} 단짝이 되었어요!</h2><p class="pair"><img alt="{2}"><span>♥</span><img alt="{3}"></p><p class="sub">{4} · {5} · 나란히 걷고, 같이 낮잠 자고, 시소도 같이 타요</p>{6}<button data-close>좋아요</button></div>', na, nb, na, nb, PE[a.pe].name, PE[b.pe].name, PROP[pal.prop] ? $t('<p class="sub">둘 다 {0}{을/를} 좋아해요</p>', PROP[pal.prop].name) : '');
+      card.innerHTML = $t('<div><h2>{0}{과/와} {1}{이/가} 콤비가 되었어요!</h2><p class="pair"><img alt="{2}"><span>♥</span><img alt="{3}"></p><p class="sub">{4} · {5} · 나란히 걷고, 같이 낮잠 자고, 시소도 같이 타요</p>{6}<button data-close>좋아요</button></div>', na, nb, na, nb, PE[a.pe].name, PE[b.pe].name, PROP[pal.prop] ? $t('<p class="sub">둘 다 {0}{을/를} 좋아해요</p>', PROP[pal.prop].name) : '');
       card.querySelectorAll('.pair img').forEach((m, i) => { const x = [a, b][i]; figureThumb(x.species, x.variant, x.color, x.acc, x.stage).then(u => { m.src = u; }, () => {}); });
       card.querySelector('button').onclick = () => { card.hidden = true; G.palSeen(); };
       card.hidden = false; sfx('grown'); return;
     }
     const one = list.length === 1, nm = one && nameOf(list[0]), more = list.length - 4;
-    card.innerHTML = $t('<div><h2>{0}</h2>{1}{2}{3}<button data-close>좋아요</button></div>', one ? $t('{0}{이/가} 다 자랐어요!', nm) : $t('친구 {0}마리가 다 자랐어요!', list.length), list.slice(0, 4).map(a => $t('<p class="pair"><img class="b" alt="새끼"><span>→</span><img alt="성체"></p>')).join(''), more > 0 ? $t('<p>그리고 {0}마리 더</p>', more) : '', one ? '' : $t('<p class="sub">자란 모습은 도감에서도 볼 수 있어요</p>'));
+    card.innerHTML = $t('<div><h2>{0}</h2>{1}{2}{3}<button data-close>좋아요</button></div>', one ? $t('{0}{이/가} 다 자랐어요!', nm) : $t('동물 {0}마리가 다 자랐어요!', list.length), list.slice(0, 4).map(a => $t('<p class="pair"><img class="b" alt="새끼"><span>→</span><img alt="성체"></p>')).join(''), more > 0 ? $t('<p>그리고 {0}마리 더</p>', more) : '', one ? '' : $t('<p class="sub">자란 모습은 도감에서도 볼 수 있어요</p>'));
     card.querySelectorAll('.pair').forEach((p, i) => { const a = list[i], [b, c] = p.querySelectorAll('img');
       figureThumb(a.species, a.variant, a.color, a.acc, 'baby').then(u => { b.src = u; }, () => {}); figureThumb(a.species, a.variant, a.color, a.acc, 'adult').then(u => { c.src = u; }, () => {}); });
     card.querySelector('button').onclick = () => { card.hidden = true; G.grownSeen(list.map(a => a.id)); setTimeout(cards, 600); }; // 17-1: then a 단짝 card, if one waits

@@ -28,11 +28,11 @@ const nm = a => a.nm || R.SP[a.species]?.name || R.kindName(a), free = () => !ha
 // arrival, 6 s either side of it (its toast, the camera going to it)
 const arriving = () => { const Q = G.S.guests; return Q?.tut >= 0 && (!Q.tt || Math.abs(G.now() - Q.tt) < 6e3); };
 const TEXT = { // nm: its name, else the short species name (the line keeps to 2 lines)
-  hatch: () => $t('둥지를 눌러 첫 알을 깨워요'),
+  hatch: () => $t('둥지를 눌러 첫 알을 부화해요'),
   name: a => $t('{0}에게 이름을 지어 줘요', nm(a)),
   pet: a => $t('{0}{을/를} 톡 눌러 쓰다듬어요', nm(a)),
   prop: () => $t('꾸미기에서 소품 하나 놓아요'),
-  egg3: () => $t('알 3개 깨우기 · {0}/3', Math.min(3, G.S.stats.hatch || 0)),
+  egg3: () => $t('알 3개 부화하기 · {0}/3', Math.min(3, G.S.stats.hatch || 0)),
   end: () => $t('다 했어요 · 첫날 선물 받기'),
 };
 const GO = { hatch: () => $('nestBtn').click(), name: a => naming(a), prop: () => $('decorBtn').click(), egg3: () => $('nestBtn').click(), end: () => ending() };
@@ -57,12 +57,12 @@ function ending() {
   const out = G.firstEnd(), S = G.S, d = el('div'), P = out?.got?.prop && R.PROP[out.got.prop];
   track('step170', { s: 'end' }, 'step170:end'); sfx('grown');
   d.append(el('h2', '', $t('첫날 할 일을 다 했어요!')));
-  if (P) d.append(el('p', 'sub', $t('첫날 선물 · 「{0}」 + 꼬마 사탕 {1}개 · 꾸미기 › 선물에 있어요', P.name, out.got.candy)));
+  if (P) d.append(el('p', 'sub', $t('첫날 선물 · 「{0}」 + 성장 사탕 {1}개 · 꾸미기 › 선물에 있어요', P.name, out.got.candy)));
   if (S.flags.week1 && S.attend.n === 1 && !R.attendDue(S, G.now())) { // the day-2 gift (rules attend, WEEK1[1]) still to come: shown here, given tomorrow as before
     const box = el('div', 'egg170'), img = el('img'), t = el('small');
     img.alt = ''; eggThumb('legendary').then(u => { img.src = u; }, () => {});
     box.append(img, el('b', '', $t('둥지에 전설 알이 왔어요')), t); d.append(box);
-    const up = () => { const now = G.now(); t.textContent = $t('내일 깨어나요 · {0}', clock(new Date(now).setHours(24, 0, 0, 0) - now)); };
+    const up = () => { const now = G.now(); t.textContent = $t('내일 부화해요 · {0}', clock(new Date(now).setHours(24, 0, 0, 0) - now)); };
     clearInterval(eggT); eggT = setInterval(up, 1000); up(); // stopped with the card (the 500 ms loop below)
     if (!S.flags.d2seen) { G.flag('d2seen'); send('d2_gift_seen'); } // first.js's 「내일 들어오면 전설 알…」 line: said here instead
   }
@@ -79,7 +79,7 @@ function ending() {
 function night() {
   const S = G.S, now = G.now();
   if (S.flags.nt170 || R.mythNight(now) || G.dayOf(now) !== G.dayOf(S.since) || !S.flags.nm170 || !(S.stats.pet > 0) || $('toast').classList.contains('on')) return;
-  G.flag('nt170'); toast($t('{0}이 되면 빛나는 친구들이 깨어나요', $t('밤(오후 {0}시~오전 {1}시)', R.NIGHT[0] - 12, R.NIGHT[1])), 4200, true);
+  G.flag('nt170'); toast($t('{0}이 되면 빛나는 동물들이 깨어나요', $t('밤(오후 {0}시~오전 {1}시)', R.NIGHT[0] - 12, R.NIGHT[1])), 4200, true);
 }
 
 setInterval(() => {

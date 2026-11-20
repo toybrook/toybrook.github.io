@@ -19,23 +19,23 @@ const setsDone = S => new Set(habs(S).flatMap(h => setsIn(S, h).map(s => s.id)))
 
 // [id, 칭호, what to do, n, v]
 export const ACH = [
-  ['first', $t('새내기 정원사'), $t('첫 친구를 도감에 올려요'), 1, S => cells(S).length],
+  ['first', $t('새내기 정원사'), $t('첫 동물을 도감에 올려요'), 1, S => cells(S).length],
   ['codex10', $t('도감 수집가'), $t('도감 10칸을 채워요'), 10, S => cells(S).length],
   ['codex30', $t('부지런한 수집가'), $t('도감 30칸을 채워요'), 30, S => cells(S).length],
   ['codex60', $t('도감 박사'), $t('도감 60칸을 채워요'), 60, S => cells(S).length],
   ['duck10', $t('오리 색 탐험가'), $t('오리 색 10가지를 모아요'), 10, S => Object.entries(S.colors).filter(([k]) => k.startsWith('duck:')).reduce((n, [, c]) => n + c.length, 0)],
-  ['rare', $t('반짝이 발견자'), $t('희귀 친구를 만나요'), 1, rarity('rare')],
-  ['heroic', $t('영웅의 친구'), $t('영웅 친구를 만나요'), 1, rarity('heroic')],
-  ['legendary', $t('전설의 친구'), $t('전설 친구를 만나요'), 1, rarity('legendary')],
+  ['rare', $t('반짝이 발견자'), $t('희귀 동물을 만나요'), 1, rarity('rare')],
+  ['heroic', $t('영웅의 친구'), $t('영웅 동물을 만나요'), 1, rarity('heroic')],
+  ['legendary', $t('전설의 친구'), $t('전설 동물을 만나요'), 1, rarity('legendary')],
   ['secret', $t('비밀 찾기 명수'), $t('시크릿 액세서리를 찾아요'), 1, S => Object.keys(S.album).length],
-  ['meadow6', $t('초원 친구들'), $t('초원 친구 6종을 모두 만나요'), 6, kinds('meadow')],
+  ['meadow6', $t('초원 친구들'), $t('초원 동물 6종을 모두 만나요'), 6, kinds('meadow')],
   ['pond', $t('연못 개척자'), $t('연못을 열어요'), 1, S => +S.unlocked.includes('pond')],
-  ['pond6', $t('연못 친구들'), $t('연못 친구 6종을 모두 만나요'), 6, kinds('pond')],
+  ['pond6', $t('연못 친구들'), $t('연못 동물 6종을 모두 만나요'), 6, kinds('pond')],
   ['snow', $t('설원 개척자'), $t('설원을 열어요'), 1, S => +S.unlocked.includes('snow')], // 25-1
-  ['snow6', $t('설원 친구들'), $t('설원 친구 6종을 모두 만나요'), 6, kinds('snow')],
+  ['snow6', $t('설원 친구들'), $t('설원 동물 6종을 모두 만나요'), 6, kinds('snow')],
   ['dino', $t('정글 탐험가'), $t('공룡 정글을 열어요'), 1, S => +S.unlocked.includes('dino')], // 14-3
-  ['dino6', $t('공룡 친구들'), $t('공룡 정글 친구 6종을 모두 만나요'), 6, kinds('dino')],
-  ['hatch50', $t('알 깨우기 장인'), $t('알 50개를 깨워요'), 50, st('hatch')],
+  ['dino6', $t('공룡 친구들'), $t('공룡 정글 동물 6종을 모두 만나요'), 6, kinds('dino')],
+  ['hatch50', $t('알 부화 장인'), $t('알 50개를 부화해요'), 50, st('hatch')],
   ['grown5', $t('꼬마 돌보미'), $t('새끼 5마리가 다 자라요'), 5, st('grown')],
   ['grown20', $t('든든한 보호자'), $t('새끼 20마리가 다 자라요'), 20, st('grown')],
   ['pet100', $t('쓰담쓰담 달인'), $t('하트가 나오게 100번 쓰다듬어요'), 100, st('pet')],
@@ -54,7 +54,7 @@ export const ACH = [
   ['big5', $t('큰 손 정원사'), $t('큰 소품 5가지를 놓아요'), 5, S => new Set(placed(S).filter(p => BIG.includes(p.prop)).map(p => p.prop)).size],
   ['expand3', $t('넓은 들'), $t('땅을 3단계까지 넓혀요'), 3, most((S, h) => levelOf(S, h))],
   ['expand6', $t('끝없는 들판'), $t('땅을 6단계까지 넓혀요'), 6, most((S, h) => levelOf(S, h))],
-  ['crowd', $t('북적북적 서식지'), $t('한 서식지에 친구 12마리가 나와 놀아요'), 12, most((S, h) => outIn(S, h).length)],
+  ['crowd', $t('북적북적 서식지'), $t('한 서식지에 동물 12마리가 나와 놀아요'), 12, most((S, h) => outIn(S, h).length)],
 ].filter(([id]) => !(HOLD.dino && id.startsWith('dino'))).map(([id, title, text, n, v]) => ({ id, title, text, n, v })); // inbox 65
 export const ACH_BY = Object.fromEntries(ACH.map(a => [a.id, a]));
 export const newlyDone = S => ACH.filter(a => !S.ach?.[a.id] && a.v(S) >= a.n);

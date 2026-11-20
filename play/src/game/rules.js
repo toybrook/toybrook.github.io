@@ -47,7 +47,7 @@ import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143
 import { lotus143off } from '../habitat/zones.js'; // 143 B the lotus marsh
 import { newlyDone } from './achieve.js';
 
-const byId = list => Object.fromEntries(list.map(x => [x.id, x]));
+const byId = list => Object.assign(Object.create(null), Object.fromEntries(list.map(x => [x.id, x]))); // 195 B-10 B·F: no prototype names (toString, __proto__) as ids
 export const SP = byId(SPECIES), HAB = byId(HABITATS), EGG = byId(EGG_TYPES), RAR = byId(RARITIES), EARNED = byId(EARNED_TIERS), PROP = byId(PROPS), NAT = byId(NATURE);
 if (YARD) HAB.yard = YARD_HAB; // 182 ④ 나의 뜰: a habitat for the rules (place, paint, expand, caps), not in HABITATS
 export const RANK = Object.fromEntries(RARITIES.map((r, i) => [r.id, i]));
@@ -93,7 +93,7 @@ const shape = v => v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v, 
 // so a field shown with innerHTML (a postcard's name, an artwork's maker) cannot carry markup.
 const BAD_KEY = new Set(['__proto__', 'constructor', 'prototype']);
 export const scrub = v => typeof v === 'string' ? v.replace(/[<>"'`]/g, '') : Array.isArray(v) ? v.map(scrub)
-  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).filter(([k]) => !BAD_KEY.has(k)).map(([k, x]) => [scrub(k), scrub(x)])) : v;
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [scrub(k), x]).filter(([k]) => !BAD_KEY.has(k)).map(([k, x]) => [k, scrub(x)])) : v; // 195 B-10 A: clean the key first, then test it
 export function fromSave(raw, now) {
   const snap = raw?.layoutUndo?.snap; // 135 review: 「불러오기 전으로」 keeps JSON text (layoutOf); scrub what it holds, not its quotes
   raw = scrub(raw);
@@ -106,6 +106,8 @@ export function fromSave(raw, now) {
     for (const [h, n] of Object.entries(S.nests)) if (!isObj(n) || !Array.isArray(n.eggs)) delete S.nests[h]; else n.eggs = n.eggs.filter(isObj); // advance lays it again
     S.slots = Array.from({ length: Math.max(B.slots, Math.min(S.slots.length, B.nest.slotsByLevel.at(-1)[1])) }, (_, i) => isObj(S.slots[i]?.egg) ? S.slots[i] : null);
     for (let v = raw.schemaVersion + 1; v <= SCHEMA_VERSION; v++) MIGRATIONS[v]?.(S, now); // each step in order, oldest first
+    { const known = k => { const [sp, v, x] = k.split(':'); return x === undefined && !!variantOf(sp, v); }; // 195 B-10 L: only real cells (the leaderboard and codex achievements count these keys)
+      S.codex = Object.fromEntries(Object.entries(S.codex).filter(([k, e]) => known(k) && isObj(e))); S.colors = Object.fromEntries(Object.entries(S.colors).filter(([k, v]) => known(k) && Array.isArray(v))); S.seen = S.seen.filter(k => typeof k === 'string' && known(k)); }
     { const num = (v, lo, hi) => Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo; // 143 C (135 audit): outside numbers in range; a save the game wrote keeps its own
       S.hearts = num(S.hearts, 0, 1e9); S.xp = num(S.xp, 0, 1e9); S.lv = Math.floor(num(S.lv, 1, 1e6));
       let top = 0; const ids = v => { if (Array.isArray(v)) v.forEach(ids); else if (isObj(v)) for (const [k, x] of Object.entries(v)) if ((k === 'id' || k === 'uid') && Number.isInteger(x)) top = Math.max(top, x); else ids(x); };

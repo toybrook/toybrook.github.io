@@ -135,7 +135,7 @@ function yPage() {
   const swim = S.animals.some(a => !walker(a) && !a.stored && !a.pending);
   el.innerHTML = GRIP() + $t('<div class="dhead"><b>동물 부르기</b><span{0}>뜰에 {1}/{2}</span><button class="back" data-yv="">뒤로</button></div>\n<div class="dlist"><div class="dgrid">{3}</div>\n<p class="dhint">{4}</p></div>', n >= cap ? ' class="no"' : '', n, cap,
     yList.map(([k, a]) => $t('<button class="dprop" data-{0}="{1}"><img alt=""><b>{2}</b><small>{3}</small><em>{4}</em></button>', k, a.id, esc(callName(a)), k === 'home' ? $t('뜰에 놀러 왔어요') : $t('{0}에 있어요', HAB[habitatOf(a)]?.name ?? ''), k === 'home' ? $t('집으로') : $t('부르기'))).join(''),
-    $t('걷는 친구만 올 수 있어요{0} · 넓히면 더 많이 와요 · 부른 친구는 언제든 집으로 돌아가요', swim ? $t(' (오리·백조는 다음에)') : ''));
+    $t('걷는 동물만 올 수 있어요{0} · 넓히면 더 많이 와요 · 부른 동물은 언제든 집으로 돌아가요', swim ? $t(' (오리·백조는 다음에)') : ''));
   el.querySelectorAll('.dprop img').forEach((img, i) => { const a = yList[i][1]; figureThumb(a.species, a.variant, a.color, a.acc, a.stage).then(u => { img.src = u; }, () => {}); });
 }
 function draw() {
@@ -242,7 +242,7 @@ async function clearBoard() {
 }
 // inbox 37 작은 고리: [hearts it costs, curves put away here it uses]; why it can't go now (null: it can); the corner button while a rail is held
 const ringCost = () => { const n = Math.min(4, stowed('railcurve').length); return [(4 - n) * PROP.railcurve.price, n]; };
-const ringNo = () => { const [k] = ringCost(); return capped(G.S, habId, 'railcurve', 3) ? full('railcurve') : k && !can(G.S, 'prop:railcurve') ? $t('정원사 레벨 {0}부터 살 수 있어요 · 지금 레벨 {1}', needFor('prop:railcurve'), G.S.lv) : G.S.hearts < k ? $t('하트 {0}개가 필요해요 · 지금 ♥{1}', k, G.S.hearts) : null; };
+const ringNo = () => { const [k] = ringCost(); return capped(G.S, habId, 'railcurve', 3) ? full('railcurve') : k && !can(G.S, 'prop:railcurve') ? $t('레벨 {0}부터 살 수 있어요 · 지금 레벨 {1}', needFor('prop:railcurve'), G.S.lv) : G.S.hearts < k ? $t('하트 {0}개가 필요해요 · 지금 ♥{1}', k, G.S.hearts) : null; };
 const ROOM = $t('<button class="sb droom" data-room>가까운 빈 자리로</button>');
 // inbox 42 F-4: the rails here now as train.js sees them (h: the held one counted where it is, else as it was): open ends, a loop
 const isRail = r => !!(r?.ring || PROP[r?.prop]?.rail);
@@ -267,7 +267,7 @@ function railHelp() {
 const railGuide = () => { if (!G.S.flags.railHelp && !G.S.flags.tipsOff && can(G.S, 'prop:railcurve')) { G.flag('railHelp'); railHelp(); } }; // 42 마무리: not while rails are still locked (27-7b at Lv 6)
 const railTip = () => G.S.flags.railHelp || tip('train', '#decor .droom'); // 42 F-4: the 3-picture guide (railHelp) already told it; the bubble only for a rail got some other way
 // 23-1: a thing the gardener's level hasn't opened yet
-const locked = k => toast($t('정원사 레벨 {0}부터 살 수 있어요 · 지금 레벨 {1}', needFor(k), G.S.lv));
+const locked = k => toast($t('레벨 {0}부터 살 수 있어요 · 지금 레벨 {1}', needFor(k), G.S.lv));
 // at the cap (inbox 16): 땅 넓히기 raises it, till the last step; then swap
 const full = id => habId === 'yard' && NAT[id] ? $t('자연물을 {0}개 다 놓았어요 · 놓은 것을 넣거나 땅을 넓혀 보세요', natCap(G.S)) : habId === 'yard' && YARD_B.bigIds.includes(id) && capped(G.S, habId, id) && placedIn(G.S, habId).length < decorCap(G.S, habId) ? $t('큰 소품은 {0}개까지 놓아요 · 놓은 큰 소품을 넣고 바꿔 보세요', YARD_B.big) : PROP[id]?.rail ? $t('레일 {0}조각을 다 놓았어요 · 놓은 레일을 넣고 바꿔 보세요', B.decor.rails) : $t('소품을 {0}개 다 놓았어요 · {1}', decorCap(G.S, habId), expPrice(G.S, habId) == null ? $t('놓은 것을 넣고 바꿔 보세요') : $t('서식지를 넓히면 더 놓을 수 있어요'));
 // 28-5: ⟳15° held down turns it on and on, a little at a time (the tap after that does not add 15°)

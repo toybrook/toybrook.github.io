@@ -173,7 +173,7 @@ export const seen = S => { S.wild.news = []; };
 export function newsOf(S) {
   const N = S.wild.news; if (!N.length || S.flags.wildOff) return null;
   const b = [...N].sort((x, y) => RANK.indexOf(x.k) - RANK.indexOf(y.k))[0];
-  const text = { bloom: () => $t('{0} 들꽃이 처음 피었어요', BLOOMS[b.c]?.name ?? ''), path: () => $t('{0}들이 다니는 길이 생겼어요', SP[b.sp]?.name ?? $t('친구')),
+  const text = { bloom: () => $t('{0} 들꽃이 처음 피었어요', BLOOMS[b.c]?.name ?? ''), path: () => $t('{0}들이 다니는 길이 생겼어요', SP[b.sp]?.name ?? $t('동물')),
     moss: () => $t('그늘에 이끼가 돋았어요'), mush: () => $t('이끼 사이에 작은 버섯이 났어요'), reed: () => $t('물가에 갈대가 자라기 시작했어요'),
     lily: () => $t('연못에 수련이 떴어요'), grow: () => $t('새 들꽃이 {0}곳에 피었어요', b.n) }[b.k]();
   return { text, sub: N.length > 1 ? $t('정원 변화 {0}가지 · 보러 가요', N.length) : $t('정원 변화 · 보러 가요'), hab: b.hab, at: b.at };

@@ -540,7 +540,7 @@ export const PART_NAME = { head: $t('머리'), back: $t('등'), rump: $t('엉덩
 // 69-2 자라며 배우는 몸짓: a baby on land (walk.js) picks these up as its growth gauge passes `at` (shown once: play.js)
 export const GROW_ACTS = [{ at: 1 / 3, id: 'twirl', name: $t('제자리에서 빙글 도는 법') }, { at: 2 / 3, id: 'bounce', name: $t('통통 뛰는 법') }];
 // 170 B: what a friend learns at each 정 레벨 past the two above (Lv4..Lv10; words on the level-up line, as 69-2's)
-export const AFF_ACTS = [null, null, null, null, $t('반갑게 고개를 끄덕이는 법'), $t('나란히 걸어 주는 법'), $t('기분 좋게 기지개 켜는 법'), $t('살금살금 따라오는 법'), $t('꾸벅꾸벅 조는 척하는 법'), $t('깡충 두 번 뛰는 법'), $t('단짝 인사를 하는 법')];
+export const AFF_ACTS = [null, null, null, null, $t('반갑게 고개를 끄덕이는 법'), $t('나란히 걸어 주는 법'), $t('기분 좋게 기지개 켜는 법'), $t('살금살금 따라오는 법'), $t('꾸벅꾸벅 조는 척하는 법'), $t('깡충 두 번 뛰는 법'), $t('가장 반가운 인사를 하는 법')];
 
 export const SPECIES = [
   { id: 'duck', fit: { cape: { adult: { s: 1.5 } } }, name: $t('오리'), habitat: 'pond', model: 'duck', colors: { accent: '#ff8a1e' },
@@ -1272,7 +1272,7 @@ export const EVENTS = [
       { id: 'flake', name: $t('눈 오는 날'), need: { sky: 'snow' } },
       { id: 'aurora', name: $t('오로라 밤'), need: { hab: 'snow', night: true } },
       { id: 'igloo', name: $t('이글루 옆에서'), need: { prop: 'ev_igloo' } }] },
-    news: $t('첫눈 이벤트: 눈더미를 눌러 눈송이를 모으고, 눈사람을 만들고, 친구에게 털모자를 씌워요'),
+    news: $t('첫눈 이벤트: 눈더미를 눌러 눈송이를 모으고, 눈사람을 만들고, 동물에게 털모자를 씌워요'),
     mail: { title: $t('첫눈이 왔어요'), body: $t('첫눈 이벤트가 시작됐어요. 따뜻하게 지내라고 작은 선물을 보내요!'), rewards: { hearts: 30, candy: 1 } } },
 ];
 // inbox 41 C 출석부: one slot a day (dayOf), the next one even after days away (no penalty), back to 1 after 7. eggs: plain nest
@@ -1315,12 +1315,12 @@ export const MYTHIC = [{
   model: { file: 'assets/models/myth_firemane157.glb', h: 2.517, r: 0.389, seg: [-0.43, 0.934], legs: { hip: 0.8432, foot: 0.165, x: [0.4, -0.42], z: 0.19 } }, // tools/bake-mythic.mjs prints these
   place: { id: 'firehill', name: $t('불의 언덕'), lines: [$t('{n}{은/는} 따뜻한 언덕에서 붉은 털 한 가닥을 물고 왔어요'), $t('{n}{이/가} 언덕의 그을린 풀밭을 한참 냄새 맡았어요'), $t('{n}{은/는} 언덕 꼭대기에서 불씨 같은 털을 찾았어요')] },
   tales: { at: $t('옛 제단'), // 14-2 이야기 카드 (game/story.js): its coming, its settling
-    meet: [$t('하늘에서 불씨 하나가 천천히 내려왔어요.'), $t('제단의 불 세 개가 한꺼번에 환해졌어요.'), $t('친구들이 모두 고개를 들고 바라봤어요.')],
-    settle: [$t('며칠 동안 들판을 함께 달렸어요.'), $t('이제 불갈기 천리마는 손님이 아니에요.'), $t('오늘부터 초원의 식구예요.')] },
+    meet: [$t('하늘에서 불씨 하나가 천천히 내려왔어요.'), $t('제단의 불 세 개가 한꺼번에 환해졌어요.'), $t('동물들이 모두 고개를 들고 바라봤어요.')],
+    settle: [$t('며칠 동안 들판을 함께 달렸어요.'), $t('이제 불갈기 천리마는 손님이 아니에요.'), $t('획득! 오늘부터 초원에서 살아요.')] },
   pages: [
     [$t('모닥불 곁에 그을린 발굽 자국이 남았어요.'), $t('자국을 따라가 보니 풀숲에 오래된 돌 제단이 있었어요.'), $t('이 들판을 아는 누군가가 다시 오고 싶은 것 같아요.')],
     [$t('불의 언덕에서 붉은 갈기 털을 찾았어요.'), $t('아직도 손에 따뜻해요. 제단에 첫 불이 켜졌어요.')],
-    [$t('친구들이 노는 소리가 들판 가득 퍼졌어요.'), $t('즐거운 소리를 좋아하는 손님이래요. 두 번째 불이 켜졌어요.')],
+    [$t('동물들이 노는 소리가 들판 가득 퍼졌어요.'), $t('즐거운 소리를 좋아하는 손님이래요. 두 번째 불이 켜졌어요.')],
     [$t('들판에 큰 놀거리가 생겼어요.'), $t('머물 곳이 있다는 걸 알았나 봐요. 세 번째 불이 켜졌어요.')],
     [$t('불갈기 천리마가 들판에 머물기로 했어요.'), $t('아침이면 들판을 한 바퀴 달리고, 밤이면 들판을 환히 밝혀 줘요.')],
   ],
@@ -1337,29 +1337,29 @@ export const MYTHIC152 = [
   { id: 'unicorn', name: $t('유니콘'), habitat: 'meadow', clues: ['feather', 'horn', 'ring'], guest: 6, dawn: true, luck: 0.25, pity: 3,
     ring: ['flowers', 'tulips', 'flowermound', 'pinwheel', 'gazebo', 'carousel'], need: 3,
     fig: { sp: 'horse', v: { id: 'unicorn', rarity: 'legendary', mat: 'unicorn152', effect: 'goldglints' } },
-    cl: [[$t('금빛 깃털'), $t('초원 친구를 산책 보내면 물어 와요'), 'walk'], [$t('진주 뿔 조각'), $t('초원 친구를 쓰다듬다 보면 반짝이며 떨어져요 (하루 한 번)'), ''],
+    cl: [[$t('금빛 깃털'), $t('초원 동물을 산책 보내면 물어 와요'), 'walk'], [$t('진주 뿔 조각'), $t('초원 동물을 쓰다듬다 보면 반짝이며 떨어져요 (하루 한 번)'), ''],
       [$t('꽃 고리'), $t('꽃밭·튤립·꽃 둔덕·바람개비·정자·회전 놀이기구를 초원에 3개 놓아요'), 'decor']],
     say: { where: $t('새벽 꽃밭에 무언가 남아 있어요'), seen: $t('누군가 꽃을 밟지 않고 지나갔어요'), call: $t('오르골을 감는다'), night: $t('밤이 되면 오르골을 감을 수 있어요'),
       called: $t('새벽에 꽃밭으로 찾아와요'), came: $t('유니콘이 꽃밭에 찾아왔어요'), happy: $t('유니콘이 기분 좋아해요') },
-    tales: { at: $t('꽃밭'), settle: [$t('오르골 소리를 따라 새벽 꽃밭에 왔어요.'), $t('엿새 동안 꽃밭을 함께 걸었어요.'), $t('이제 유니콘은 초원의 식구예요.')] },
+    tales: { at: $t('꽃밭'), settle: [$t('오르골 소리를 따라 새벽 꽃밭에 왔어요.'), $t('엿새 동안 꽃밭을 함께 걸었어요.'), $t('유니콘 획득! 이제 초원에서 살아요.')] },
     pages: [
       [$t('새벽 꽃밭에 진주빛 말굽 자국이 났어요.'), $t('자국 끝에 작은 무지개가 걸려 있었어요.'), $t('누군가 꽃을 하나도 밟지 않고 지나갔나 봐요.')],
-      [$t('산책 간 친구가 금빛 깃털 하나를 물고 왔어요.'), $t('햇빛에 비추니 무지갯빛이 돌아요. 첫 번째 단서예요.')],
-      [$t('쓰다듬던 친구 곁에 진주 뿔 조각이 반짝 떨어졌어요.'), $t('아주 작은데 따뜻해요. 두 번째 단서예요.')],
+      [$t('산책 간 동물이 금빛 깃털 하나를 물고 왔어요.'), $t('햇빛에 비추니 무지갯빛이 돌아요. 첫 번째 단서예요.')],
+      [$t('쓰다듬던 동물 곁에 진주 뿔 조각이 반짝 떨어졌어요.'), $t('아주 작은데 따뜻해요. 두 번째 단서예요.')],
       [$t('초원에 예쁜 것들이 동그랗게 모였어요.'), $t('꽃 고리를 좋아하는 손님이래요. 세 번째 단서예요.')],
       [$t('유니콘이 초원에 머물기로 했어요.'), $t('날개를 접고 꽃밭 사이를 천천히 걸어요.')],
     ] },
   { id: 'baengnok', name: $t('백록'), habitat: 'snow', clues: ['bell', 'frost', 'jade'], guest: 6, scenes: 3,
     fig: { sp: 'reindeer', v: { id: 'baengnok', rarity: 'legendary', mat: 'baengnok152' } },
-    cl: [[$t('은방울'), $t('설원 친구를 산책 보내면 주워 와요'), 'walk'], [$t('상고대 꽃'), $t('설원 친구가 나오는 놀이 장면을 3개 모아요 (본 것도 세요)'), 'scenes'],
+    cl: [[$t('은방울'), $t('설원 동물을 산책 보내면 주워 와요'), 'walk'], [$t('상고대 꽃'), $t('설원 동물이 나오는 놀이 장면을 3개 모아요 (본 것도 세요)'), 'scenes'],
       [$t('옥빛 뿔 조각'), $t('눈 더미 곁에서 옥빛이 반짝이는 곳을 눌러 봐요'), '']],
     say: { where: $t('새로 내린 눈 위에 무언가 남아 있어요'), seen: $t('흰 발자국이 숲 쪽으로 사라졌어요'), call: $t('방울을 흔든다'), night: $t('밤이 되면 방울을 흔들 수 있어요'),
       called: $t('방울 소리를 따라 곧 찾아와요'), came: $t('백록이 설원에 찾아왔어요'), happy: $t('백록이 기분 좋아해요') },
-    tales: { at: $t('설원'), settle: [$t('방울 소리를 듣고 눈 덮인 밤길을 걸어왔어요.'), $t('옛이야기에서는 한라산 꼭대기 못에 흰 사슴이 물을 마시러 내려왔대요.'), $t('이제 백록은 설원의 식구예요.')] },
+    tales: { at: $t('설원'), settle: [$t('방울 소리를 듣고 눈 덮인 밤길을 걸어왔어요.'), $t('옛이야기에서는 한라산 꼭대기 못에 흰 사슴이 물을 마시러 내려왔대요.'), $t('백록 획득! 이제 설원에서 살아요.')] },
     pages: [
       [$t('새로 내린 눈 위에 흰 사슴 발자국이 줄지어 났어요.'), $t('발자국은 숲 쪽으로 가다 사라졌어요.'), $t('추운 곳을 잘 아는 누군가가 지나간 것 같아요.')],
-      [$t('산책 간 친구가 은방울 하나를 주워 왔어요.'), $t('흔들면 맑은 소리가 나요. 첫 번째 단서예요.')],
-      [$t('설원 친구들이 노는 모습이 사진첩에 쌓였어요.'), $t('그 위에 상고대 꽃이 피었어요. 두 번째 단서예요.')],
+      [$t('산책 간 동물이 은방울 하나를 주워 왔어요.'), $t('흔들면 맑은 소리가 나요. 첫 번째 단서예요.')],
+      [$t('설원 동물들이 노는 모습이 사진첩에 쌓였어요.'), $t('그 위에 상고대 꽃이 피었어요. 두 번째 단서예요.')],
       [$t('눈 더미 곁에서 옥빛 뿔 조각을 찾았어요.'), $t('차갑고 맑아요. 세 번째 단서예요.')],
       [$t('백록이 설원에 머물기로 했어요.'), $t('밤이면 뿔 끝이 은은하게 빛나요.')],
     ] },
@@ -1370,8 +1370,8 @@ MYTHIC.push(...MYTHIC152); // 160 A: public (user OK 11/19), the call 158
 // 꾸미기 › 큰 소품 탭 (ui/decor.js TABS; first.js 「다음은 큰 소품」)
 export const BIGS = 'gazebo duckhouse barn windmill greenhouse treehouse well arch picnic falls lighthouse waterpav igloo mushroom tunnel snowslide carousel gym balloon tower waterwheel';
 export const FIRST = { days: 3, prop: 'firstday', candy: 2, tasks: [
-  { id: 'hatch', text: $t('알 3번 깨우기'), n: 3, hearts: 15 },
-  { id: 'pet', text: $t('친구 5번 쓰다듬기'), n: 5, hearts: 10 },
+  { id: 'hatch', text: $t('알 3번 부화하기'), n: 3, hearts: 15 },
+  { id: 'pet', text: $t('동물 5번 쓰다듬기'), n: 5, hearts: 10 },
   { id: 'prop', text: $t('소품 하나 놓기'), n: 1, hearts: 15 },
   { id: 'photo', text: $t('사진 한 장 찍기'), n: 1, hearts: 10 },
   { id: 'codex', text: $t('도감 열어 보기'), n: 1, hearts: 10 }] };
@@ -1408,39 +1408,39 @@ export const USES = { // 42 F-2: + the big props (tunnel ... snowslide) at the e
 // the first time it is seen (hearts: PACE scene). prop: the play prop's kind (play.js), sp: that species only, n: that many on the
 // prop at once, night: true after dark, false by day only, social: walk.js's kind (greet, follow, tag, herd, nap). hint: the "?" cell's line
 export const SCENES = [
-  { id: 'swing_rabbit', name: $t('토끼의 그네'), prop: 'swing', sp: 'rabbit', hint: $t('그네 근처에서 귀가 긴 친구가…') },
+  { id: 'swing_rabbit', name: $t('토끼의 그네'), prop: 'swing', sp: 'rabbit', hint: $t('그네 근처에서 귀가 긴 동물이…') },
   { id: 'swing_chicken', name: $t('닭의 그네'), prop: 'swing', sp: 'chicken', hint: $t('그네 위에서 깃털이 팔랑…') },
-  { id: 'slide_pig', name: $t('돼지의 미끄럼'), prop: 'slide', sp: 'pig', hint: $t('미끄럼틀에서 분홍빛 친구가…') },
-  { id: 'slide_otter', name: $t('수달의 미끄럼'), prop: 'slide', sp: 'otter', hint: $t('물가 친구가 미끄럼틀을…') },
+  { id: 'slide_pig', name: $t('돼지의 미끄럼'), prop: 'slide', sp: 'pig', hint: $t('미끄럼틀에서 분홍빛 동물이…') },
+  { id: 'slide_otter', name: $t('수달의 미끄럼'), prop: 'slide', sp: 'otter', hint: $t('물가 동물이 미끄럼틀을…') },
   { id: 'seesaw_two', name: $t('둘이 시소'), prop: 'seesaw', n: 2, hint: $t('시소는 혼자서는 못 타요…') },
-  { id: 'hammock_capybara', name: $t('카피바라의 해먹'), prop: 'hammock', sp: 'capybara', hint: $t('느긋한 연못 친구가 해먹에…') },
-  { id: 'hammock_seal', name: $t('물범의 해먹'), prop: 'hammock', sp: 'seal', hint: $t('설원의 동그란 친구가 해먹에…') },
+  { id: 'hammock_capybara', name: $t('카피바라의 해먹'), prop: 'hammock', sp: 'capybara', hint: $t('느긋한 연못 동물이 해먹에…') },
+  { id: 'hammock_seal', name: $t('물범의 해먹'), prop: 'hammock', sp: 'seal', hint: $t('설원의 동그란 동물이 해먹에…') },
   { id: 'hammock_night', name: $t('해먹에서 밤잠'), prop: 'hammock', night: true, hint: $t('밤에 해먹이 살랑…') },
   { id: 'fountain_duck', name: $t('오리의 분수 물놀이'), prop: 'fountain', sp: 'duck', hint: $t('연못 분수에서 꽥꽥…') },
   { id: 'fountain_swan', name: $t('백조의 분수'), prop: 'fountain', sp: 'swan', hint: $t('분수 둘레를 하얀 목이…') },
   { id: 'fountain_flamingo', name: $t('플라밍고의 분수'), prop: 'fountain', sp: 'flamingo', hint: $t('분수 옆에 긴 다리가…') },
-  { id: 'ball_sheep', name: $t('양의 공놀이'), prop: 'ball', sp: 'sheep', hint: $t('굴리는 공을 폭신한 친구가…') },
+  { id: 'ball_sheep', name: $t('양의 공놀이'), prop: 'ball', sp: 'sheep', hint: $t('굴리는 공을 폭신한 동물이…') },
   { id: 'ball_penguin', name: $t('펭귄의 공놀이'), prop: 'ball', sp: 'penguin', hint: $t('설원에서 공을 뒤뚱뒤뚱…') },
-  { id: 'feeder_horse', name: $t('말의 먹이통'), prop: 'feeder', sp: 'horse', hint: $t('먹이통에 갈기 달린 친구가…') },
+  { id: 'feeder_horse', name: $t('말의 먹이통'), prop: 'feeder', sp: 'horse', hint: $t('먹이통에 갈기 달린 동물이…') },
   { id: 'feeder_three', name: $t('먹이통 모임'), prop: 'feeder', n: 3, hint: $t('먹이통에 셋이 모이면…') },
   { id: 'campfire_three', name: $t('모닥불에 셋이'), prop: 'campfire', n: 3, hint: $t('모닥불을 셋이 둘러싸면…') },
   { id: 'campfire_night', name: $t('밤 모닥불'), prop: 'campfire', night: true, hint: $t('밤에 모닥불 근처에서…') },
-  { id: 'campfire_reindeer', name: $t('순록의 모닥불'), prop: 'campfire', sp: 'reindeer', hint: $t('뿔 달린 친구가 불 앞에…') },
+  { id: 'campfire_reindeer', name: $t('순록의 모닥불'), prop: 'campfire', sp: 'reindeer', hint: $t('뿔 달린 동물이 불 앞에…') },
   { id: 'train_ride', name: $t('기차 타기'), prop: 'train', hint: $t('장난감 기차가 다닐 때…') },
   { id: 'tunnel_cow', name: $t('소의 터널'), prop: 'tunnel', sp: 'cow', hint: $t('풀 터널로 얼룩무늬가…') },
-  { id: 'tunnel_polarBear', name: $t('북극곰의 터널'), prop: 'tunnel', sp: 'polarBear', hint: $t('아기 때만 터널에 쏙 들어가는 하얀 친구가…') },
+  { id: 'tunnel_polarBear', name: $t('북극곰의 터널'), prop: 'tunnel', sp: 'polarBear', hint: $t('아기 때만 터널에 쏙 들어가는 하얀 동물이…') },
   { id: 'tower_up', name: $t('전망대 오르기'), prop: 'tower', hint: $t('전망대 꼭대기에서…') },
   { id: 'gym_play', name: $t('큰 놀이터'), prop: 'gym', hint: $t('큰 놀이터 위에서…') },
   { id: 'carousel_ride', name: $t('회전 놀이기구'), prop: 'carousel', hint: $t('빙글빙글 도는 것에…') },
   { id: 'balloon_fox', name: $t('북극여우의 열기구'), prop: 'balloon', sp: 'arcticFox', hint: $t('열기구 바구니에 꼬리가 풍성한…') },
   { id: 'snowslide_penguin', name: $t('펭귄의 눈 미끄럼'), prop: 'snowslide', sp: 'penguin', hint: $t('눈 언덕을 배로…') },
-  { id: 'greet', name: $t('코 맞대기'), social: 'greet', hint: $t('두 친구가 가까이 다가가면…') },
-  { id: 'follow', name: $t('졸졸 따라가기'), social: 'follow', hint: $t('한 친구 뒤를 다른 친구가…') },
+  { id: 'greet', name: $t('코 맞대기'), social: 'greet', hint: $t('두 동물이 가까이 다가가면…') },
+  { id: 'follow', name: $t('졸졸 따라가기'), social: 'follow', hint: $t('한 동물 뒤를 다른 동물이…') },
   { id: 'tag', name: $t('술래잡기'), social: 'tag', hint: $t('깡충 뛰더니 쫓아가요…') },
-  { id: 'herd', name: $t('줄지어 걷기'), social: 'herd', hint: $t('같은 종 친구가 여럿이면…') },
-  { id: 'nap', name: $t('같이 낮잠'), social: 'nap', night: false, hint: $t('낮에 친구들이 모여 누우면…') },
-  { id: 'nap_night', name: $t('밤에 모여 자기'), social: 'nap', night: true, hint: $t('밤이 되면 친구들이…') },
-  { id: 'snowball', name: $t('눈싸움'), social: 'snowball', hint: $t('눈 쌓인 날 두 친구가 마주 보면…') }, // 15-2: on snow (the snow habitat, or 첫눈's cover)
+  { id: 'herd', name: $t('줄지어 걷기'), social: 'herd', hint: $t('같은 종 동물이 여럿이면…') },
+  { id: 'nap', name: $t('같이 낮잠'), social: 'nap', night: false, hint: $t('낮에 동물들이 모여 누우면…') },
+  { id: 'nap_night', name: $t('밤에 모여 자기'), social: 'nap', night: true, hint: $t('밤이 되면 동물들이…') },
+  { id: 'snowball', name: $t('눈싸움'), social: 'snowball', hint: $t('눈 쌓인 날 두 동물이 마주 보면…') }, // 15-2: on snow (the snow habitat, or 첫눈's cover)
 ];
 
 // 23-1 소품 세트: every small prop is in one. A level opens a set (BALANCE.level.unlock); the garden set is there from the start.

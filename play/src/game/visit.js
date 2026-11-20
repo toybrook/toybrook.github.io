@@ -14,7 +14,7 @@ import { when } from './story.js';
 export const GARDEN = [[$t('햇살'), $t('달빛'), $t('별빛'), $t('무지개'), $t('솜사탕'), $t('꽃잎'), $t('이슬'), $t('바람'), $t('조약돌'), $t('도토리'), $t('구름'), $t('노을')],
   [$t('언덕'), $t('들판'), $t('숲속'), $t('호숫가'), $t('오솔길'), $t('마을'), $t('골짜기'), $t('바닷가'), $t('꽃밭'), $t('풀밭'), $t('시냇가'), $t('섬')]];
 export const PICS = ['🌼', '🍀', '🌙', '⭐', '🌈', '🍓', '❄️', '🎈'];
-export const LINES = [$t('또 놀러 와요!'), $t('덕분에 즐거웠어요'), $t('우리 정원 친구들이 반겨 줬어요'), $t('사진을 많이 찍었어요'), $t('쓰다듬어 줬더니 좋아했어요'), $t('다음엔 우리 애가 놀러 갈게요')];
+export const LINES = [$t('또 놀러 와요!'), $t('덕분에 즐거웠어요'), $t('우리 정원 동물들이 반겨 줬어요'), $t('사진을 많이 찍었어요'), $t('쓰다듬어 줬더니 좋아했어요'), $t('다음엔 우리 애가 놀러 갈게요')];
 export const gardenName = ([a, b] = [0, 0]) => $t('{0} {1} 정원', GARDEN[0][a] ?? GARDEN[0][0], GARDEN[1][b] ?? GARDEN[1][0]);
 const okG = (a, b) => Number.isInteger(a) && Number.isInteger(b) && a >= 0 && b >= 0 && a < GARDEN[0].length && b < GARDEN[1].length;
 

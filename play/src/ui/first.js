@@ -45,7 +45,7 @@ setInterval(() => {
   const one = said.filter(e => e.type === 'first'), all = said.find(e => e.type === 'firstAll')?.got; said = [];
   const h = one.reduce((n, e) => n + e.hearts, 0), hab = all?.prop && HAB[G.S.props.findLast(p => p.prop === all.prop)?.hab];
   const nx = one.some(e => e.id === 'prop') ? bigFrom() : null, head = one.length === 1 ? `${T.find(t => t.id === one[0].id).text} · ♥${h}${nx != null ? $t(' · 다음은 큰 소품 ♥{0}부터', nx) : ''}` : one.length ? `♥${h}` : '';
-  toast([head, all && $t('첫날 선물 · 「{0}」 + 꼬마 사탕 {1}개{2}', PROP[all.prop]?.name ?? '', all.candy, hab ? $t(' · {0} 꾸미기 › 선물', hab.name) : '')].filter(Boolean).join(' · '), all ? 4200 : 3000);
+  toast([head, all && $t('첫날 선물 · 「{0}」 + 성장 사탕 {1}개{2}', PROP[all.prop]?.name ?? '', all.candy, hab ? $t(' · {0} 꾸미기 › 선물', hab.name) : '')].filter(Boolean).join(' · '), all ? 4200 : 3000);
   if (all) sfx('grown');
 }, 800);
 
@@ -54,8 +54,8 @@ setInterval(() => {
 const [, H2, H3] = HABITATS, goalEl = Object.assign(document.createElement('div'), { className: 'goal', hidden: true });
 goalEl.innerHTML = '<span></span><i><b></b></i>'; document.getElementById('habitat')?.append(goalEl);
 const GOALS = [
-  ['pond', S => S.unlocked.includes(H2.id), S => { const L = unlockInfo(S, H2.id); return L.friends ? [$t('{0} 친구 {1}/{2} → {3} 열림', L.prev.name, Math.min(L.got, L.friends), L.friends, H2.name), L.got / L.friends] : null; }],
-  ['decor', S => S.props.some(p => p.placed && !p.nat), () => [$t('꾸미기에서 소품 하나 놓기 → 친구들이 보러 와요'), 0]],
+  ['pond', S => S.unlocked.includes(H2.id), S => { const L = unlockInfo(S, H2.id); return L.friends ? [$t('{0} 동물 {1}/{2} → {3} 열림', L.prev.name, Math.min(L.got, L.friends), L.friends, H2.name), L.got / L.friends] : null; }],
+  ['decor', S => S.props.some(p => p.placed && !p.nat), () => [$t('꾸미기에서 소품 하나 놓기 → 동물들이 보러 와요'), 0]],
   ['adult', S => S.stats.grown > 0, S => { const g = Math.max(0, ...S.animals.filter(a => a.stage === 'baby' && !a.pending).map(a => gauge(a, G.now()))); return [$t('새끼 하나 다 키우기 {0}% → 성체 도감', Math.floor(g * 100)), g]; }],
   ['snow', S => S.unlocked.includes(H3.id), S => { const L = unlockInfo(S, H3.id); return L.need ? [$t('{0} 도감 {1}/{2} · ♥{3}/{4} → {5} 열림', L.prev.name, Math.min(L.have, L.need), L.need, Math.min(S.hearts, L.hearts), L.hearts, H3.name), Math.min(L.have / L.need, S.hearts / L.hearts)] : null; }],
 ];
@@ -75,7 +75,7 @@ addEventListener('visibilitychange', () => { if (document.hidden) left = true; }
 function hint() {
   const S = G.S; if (!S?.flags.ui64 || topWindow() || overlayOpen() || document.body.classList.contains('photo') || document.hidden || G.now() < hintAt) return;
   const tut = TUT181 && (step181(S, G.now()) || document.body.classList.contains('tut181')); // 182 ②: the tutorial says these itself
-  if (S.stats.hatch >= 2 && !S.stats.pet && !S.flags.hintPet && !tut) { G.flag('hintPet'); hintAt = G.now() + 8e3; return toast($t('친구를 톡 눌러 쓰다듬어 보세요 · 하트가 생겨요'), 3200, true); }
+  if (S.stats.hatch >= 2 && !S.stats.pet && !S.flags.hintPet && !tut) { G.flag('hintPet'); hintAt = G.now() + 8e3; return toast($t('동물을 톡 눌러 쓰다듬어 보세요 · 하트가 생겨요'), 3200, true); }
   if (S.flags.week1 && S.attend.n === 1 && !S.flags.d2seen && S.stats.hatch && (G.now() - S.since >= LATER || left) && G.dayOf(G.now()) === G.dayOf(S.since)) { // 92-5·93-1: once, on the first day
     const n = S.nests[HABITATS[0].id], w = n && n.eggs.length < BALANCE.nest.max ? Math.max(0, n.t + eggGap(S) - G.now()) : null;
     G.flag('d2seen'); hintAt = G.now() + 8e3; track('d2_gift_seen'); track('leave_hint', { at: left ? 'back' : '5m' });

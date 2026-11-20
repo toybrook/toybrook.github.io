@@ -24,7 +24,7 @@ function openStory(c) {
 // a habitat's cards (the codex's 신수 row)
 export function openStories(hab) {
   list = hab; const cs = cardsIn(hab).reverse();
-  el.innerHTML = $t('<div><h2>이야기 카드 · {0}</h2>{1}\n<div class="nbtns"><button class="go" data-close>닫기</button></div></div>', HAB[hab].name, cs.length ? `<ul class="slist">${cs.map((c, i) => `<li><button data-i="${i}"><span>${esc(cardTitle(c))}<small>${mark(c)}</small></span></button></li>`).join('')}</ul>` : $t('<p class="sub">신수를 만나거나 전설 친구가 태어나면 그날의 카드가 생겨요</p>'));
+  el.innerHTML = $t('<div><h2>이야기 카드 · {0}</h2>{1}\n<div class="nbtns"><button class="go" data-close>닫기</button></div></div>', HAB[hab].name, cs.length ? `<ul class="slist">${cs.map((c, i) => `<li><button data-i="${i}"><span>${esc(cardTitle(c))}<small>${mark(c)}</small></span></button></li>`).join('')}</ul>` : $t('<p class="sub">신수를 만나거나 전설 동물이 태어나면 그날의 카드가 생겨요</p>'));
   el.hidden = false; el._cs = cs;
 }
 

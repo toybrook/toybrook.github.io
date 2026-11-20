@@ -29,7 +29,7 @@ export function retRow(hab) {
   const last = d[d.length - 1].art, names = [...new Set(d.map(x => esc(x.art.who)))]; // 137 A: into main.js's 돌아왔어요 innerHTML
   G.artTold(d.map(x => x.uid));
   return d.length === 1 ? ['🎨', $t('{0} {1}{이/가} 작품을 만들었어요', when(last), esc(last.who)), $t('{0} · 보러 가요', PROP[d[0].prop].name), 'art']
-    : ['🎨', $t('{0} 친구들이 작품 {1}개를 만들었어요', when(last), d.length), $t('{0}{1} · 보러 가요', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : ''), 'art'];
+    : ['🎨', $t('{0} 동물들이 작품 {1}개를 만들었어요', when(last), d.length), $t('{0}{1} · 보러 가요', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : ''), 'art'];
 }
 
 // the choice, one at a time (the camera on it); 나중에 / a tap beside the card: it waits (the chip's count, a tap on it asks again)

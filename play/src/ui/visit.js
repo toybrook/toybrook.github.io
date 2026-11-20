@@ -29,14 +29,15 @@ async function send(url, text) {
   toast(copyNow(url) !== false ? $t('링크를 복사했어요 · 메신저에 붙여 넣어 보내 주세요') : $t('복사하지 못했어요'), 2800);
 }
 
-function readHash() {
+function readHash() { try { readHash1(); } catch { /* 195 B-10 B: a bad link never stops the page */ } }
+function readHash1() {
   if (/^#see=/.test(location.hash)) return location.reload(); // 69-4: a 구경 link opened in a tab already playing: the page opens it (seeHash)
   const m = /^#(visit|postcard)=([A-Za-z0-9._-]+)$/.exec(location.hash); if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);
   if (m[1] === 'visit') { wait = V.readVisit(m[2]); return; } // a cut or edited link: nothing, quietly
   const c = V.readCard(m[2]); if (!c) return;
   const out = G.takeCard(c);
-  setTimeout(() => toast(out?.err === 'got' ? $t('이미 받은 엽서예요') : out?.err ? $t('이 기기에서 보낸 친구의 엽서가 아니에요') : $t('엽서가 왔어요 · 우편함(✉)에서 받아요'), 3000), 600);
+  setTimeout(() => toast(out?.err === 'got' ? $t('이미 받은 엽서예요') : out?.err ? $t('이 기기에서 보낸 동물의 엽서가 아니에요') : $t('엽서가 왔어요 · 우편함(✉)에서 받아요'), 3000), 600);
   if (!out?.err) { const b = $('mailBtn'); b?.classList.add('new'); if (b) b.hidden = false; }
 }
 // a new player: the guest on the intro card, and its button says why to start
@@ -44,14 +45,14 @@ function onIntro() {
   const intro = $('intro'); if (!wait || intro.hidden || intro.querySelector('.vfig')) return;
   fresh = true; const nm = kindName(wait);
   intro.querySelector('h2').insertAdjacentHTML('afterend', $t('<figure class="vfig"><img alt="{0}"><figcaption>{1}의 {2}{이/가} 놀러 오려고 해요</figcaption></figure>', esc(nm), esc(V.gardenName(wait.g)), esc(nm)));
-  thumb(intro.querySelector('.vfig img'), wait); $('introStart').textContent = $t('이 친구를 만나러 시작하기');
+  thumb(intro.querySelector('.vfig img'), wait); $('introStart').textContent = $t('이 동물을 만나러 시작하기');
 }
 const ERR = { own: $t('내가 보낸 링크예요 · 친구에게 보내 주세요'), got: $t('이미 다녀간 손님이에요'), full: $t('손님이 가득해요 · 한 번에 {0}마리까지 머물러요', B.visit.max) };
 function arrive(v) {
   const r = G.takeVisit(v); if (!r) return;
   if (r.err) return void toast(ERR[r.err], 2800);
   track('visit_got', undefined, 'visit_got#'); const g = r.guest, nm = kindName(g);
-  box.innerHTML = $t('<div><h2>{0}의 {1}{이/가} 놀러 왔어요</h2><figure class="vfig"><img alt=""></figure>\n<p class="sub">{2}에서 {3}시간 머물러요 · 내 친구가 되지는 않아요<br>쓰다듬고 사진도 찍어 주세요</p>\n<div class="nbtns"><button class="sb" data-close>나중에</button><button class="go" data-see="{4}" data-hab="{5}">보러 가기</button></div></div>', esc(V.gardenName(g.g)), esc(nm), HAB[g.hab].name, H, g.id, g.hab);
+  box.innerHTML = $t('<div><h2>{0}의 {1}{이/가} 놀러 왔어요</h2><figure class="vfig"><img alt=""></figure>\n<p class="sub">{2}에서 {3}시간 머물러요 · 내 동물이 되지는 않아요<br>쓰다듬고 사진도 찍어 주세요</p>\n<div class="nbtns"><button class="sb" data-close>나중에</button><button class="go" data-see="{4}" data-hab="{5}">보러 가기</button></div></div>', esc(V.gardenName(g.g)), esc(nm), HAB[g.hab].name, H, g.id, g.hab);
   thumb(box.querySelector('img'), g); box.hidden = false;
 }
 // when a guest left: the host picks a postcard (or none)
@@ -65,16 +66,16 @@ function pick(e) {
 const myGarden = () => G.S.visit.garden || G.setGarden([Math.floor(Math.random() * V.GARDEN[0].length), Math.floor(Math.random() * V.GARDEN[1].length)]);
 // 친구네 놀러 가기 (stroll.js, a branch of 산책 since 74): a grown friend of this save
 export function sendSheet(a) {
-  if (a.stage === 'baby') return void toast($t('다 자란 친구만 놀러 갈 수 있어요'), 2400);
+  if (a.stage === 'baby') return void toast($t('다 자란 동물만 놀러 갈 수 있어요'), 2400);
   myGarden(); const nm = callName(a);
-  box.innerHTML = $t('<div><h2>{0} 친구네 놀러 가기</h2><figure class="vfig"><img alt=""></figure>\n<p class="sub">링크를 받은 사람의 서식지에 {1}시간 손님으로 머물러요. 내 친구는 그대로 여기 있어요</p>\n<p class="vgarden">우리 정원 <b>{2}</b> <button class="sb" data-garden>바꾸기</button></p>\n<div class="nbtns"><button class="sb" data-close>닫기</button><button class="go" data-send="{3}">링크 보내기</button></div></div>', esc(nm), H, V.gardenName(G.S.visit.garden), a.id);
+  box.innerHTML = $t('<div><h2>{0} 친구네 놀러 가기</h2><figure class="vfig"><img alt=""></figure>\n<p class="sub">링크를 받은 사람의 서식지에 {1}시간 손님으로 머물러요. 내 동물은 그대로 여기 있어요</p>\n<p class="vgarden">우리 정원 <b>{2}</b> <button class="sb" data-garden>바꾸기</button></p>\n<div class="nbtns"><button class="sb" data-close>닫기</button><button class="go" data-send="{3}">링크 보내기</button></div></div>', esc(nm), H, V.gardenName(G.S.visit.garden), a.id);
   thumb(box.querySelector('img'), a); box.hidden = false;
 }
 // 방명록: who is here now, who came, the postcards back
 export function openBook() {
   const { guests, book, cards } = G.S.visit, row = (a, t, s, b = '') => `<li><img class="vth" data-i="${a.i}" alt=""><span>${esc(t)}<small>${esc(s)}</small></span>${b}</li>`, all = [];
   const L = (list, f) => list.map(x => { x = { ...x, i: all.push(x) - 1 }; return f(x); }).join('');
-  box.innerHTML = $t('<div><h2>방명록</h2>{0}\n{1}\n{2}\n{3}\n<div class="nbtns"><button class="go" data-close>닫기</button></div></div>', guests.length + book.length + cards.length ? '' : $t('<p class="note">아직 다녀간 손님이 없어요. 친구 ⋯ › 산책 › 「친구네 놀러 가기」로 링크를 보내 보세요</p>'), guests.length ? $t('<b class="vhd">지금 머무는 손님</b><ul>{0}</ul>', L(guests, g => row(g, V.guestName(g), `${HAB[g.hab].name} · ${left(g)}`, $t('<button data-see="{0}" data-hab="{1}">보기</button>', g.id, g.hab)))) : '', book.length ? $t('<b class="vhd">다녀간 손님</b><ul>{0}</ul>', L([...book].reverse(), e => row(e, V.guestName(e), `${md(e.at)}${e.pic != null ? $t(' · 엽서 {0} {1}', V.PICS[e.pic], V.LINES[e.line]) : ''}`, e.pick ? $t('<button data-pickof="{0}">엽서</button>', e.lid) : ''))) : '', cards.length ? $t('<b class="vhd">받은 엽서</b><ul>{0}</ul>', L([...cards].reverse(), c => row(c, `${V.PICS[c.pic]} ${V.LINES[c.line]}`, `${V.gardenName(c.g)} · ${kindName(c)}${c.got ? '' : $t(' · 우편함에서 받기')}`))) : '');
+  box.innerHTML = $t('<div><h2>방명록</h2>{0}\n{1}\n{2}\n{3}\n<div class="nbtns"><button class="go" data-close>닫기</button></div></div>', guests.length + book.length + cards.length ? '' : $t('<p class="note">아직 다녀간 손님이 없어요. 동물 ⋯ › 산책 › 「친구네 놀러 가기」로 링크를 보내 보세요</p>'), guests.length ? $t('<b class="vhd">지금 머무는 손님</b><ul>{0}</ul>', L(guests, g => row(g, V.guestName(g), `${HAB[g.hab].name} · ${left(g)}`, $t('<button data-see="{0}" data-hab="{1}">보기</button>', g.id, g.hab)))) : '', book.length ? $t('<b class="vhd">다녀간 손님</b><ul>{0}</ul>', L([...book].reverse(), e => row(e, V.guestName(e), `${md(e.at)}${e.pic != null ? $t(' · 엽서 {0} {1}', V.PICS[e.pic], V.LINES[e.line]) : ''}`, e.pick ? $t('<button data-pickof="{0}">엽서</button>', e.lid) : ''))) : '', cards.length ? $t('<b class="vhd">받은 엽서</b><ul>{0}</ul>', L([...cards].reverse(), c => row(c, `${V.PICS[c.pic]} ${V.LINES[c.line]}`, `${V.gardenName(c.g)} · ${kindName(c)}${c.got ? '' : $t(' · 우편함에서 받기')}`))) : '');
   box.querySelectorAll('img.vth').forEach(img => thumb(img, all[+img.dataset.i])); box.hidden = false;
 }
 
@@ -85,7 +86,7 @@ box.onclick = e => {
   if (d.garden != null) { const [a, c] = G.S.visit.garden; G.setGarden([(a + 1 + Math.floor(Math.random() * 11)) % V.GARDEN[0].length, (c + 1 + Math.floor(Math.random() * 11)) % V.GARDEN[1].length]);
     box.querySelector('.vgarden b').textContent = V.gardenName(G.S.visit.garden); return; }
   if (d.send) { const out = G.sendVisit(+d.send); box.hidden = true; if (!out) return void toast($t('지금은 보낼 수 없어요'));
-    track('visit_sent', undefined, 'visit_sent#'); const a = G.S.animals.find(x => x.id === +d.send), nm = a ? kindName(a) : $t('친구');
+    track('visit_sent', undefined, 'visit_sent#'); const a = G.S.animals.find(x => x.id === +d.send), nm = a ? kindName(a) : $t('동물');
     return void send(link('visit', out.code), $t('{0}의 {1}{이/가} 놀러 가요 · 토이브룩', V.gardenName(G.S.visit.garden), nm)); }
   if (d.pickof) { const x = G.S.visit.book.find(y => y.lid === d.pickof); if (x) pick(x); return; }
   if (d.pic != null) { pic = +d.pic; box.querySelectorAll('[data-pic]').forEach(x => x.setAttribute('aria-pressed', x === b)); box.querySelector('[data-card]').disabled = false; return; }
@@ -131,7 +132,7 @@ export function seeCard(photo, hab, url, qrcode) {
   const tw = (q ? qx : W - P) - P - 30, line = (t, size, w, color, y) => { x.font = `${w} ${size}px ${font}`; while (x.measureText(t).width > tw && size > 20) x.font = `${w} ${--size}px ${font}`; x.fillStyle = color; x.fillText(t, P, y); };
   x.textBaseline = 'top'; const out = outIn(G.S, hab).length;
   line(V.gardenName(G.S.visit.garden), 58, 800, '#4a3220', top + 10);
-  line(`${HAB[hab].name}${out ? $t(' · 친구 {0}', out) : ''}`, 40, 600, '#8a6646', top + 92);
+  line(`${HAB[hab].name}${out ? $t(' · 동물 {0}', out) : ''}`, 40, 600, '#8a6646', top + 92);
   line(q ? $t('카메라로 QR을 비추면') : $t('링크를 열면'), 34, 500, '#6b4a2b', top + 190); line($t('이 정원을 구경할 수 있어요'), 34, 500, '#6b4a2b', top + 236);
   line($t('토이브룩'), 44, 800, '#c0704f', top + (q ? qs : 300) - 50);
   return c;

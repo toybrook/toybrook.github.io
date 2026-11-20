@@ -48,7 +48,7 @@ const meta = c => esc($t('{0} · {1}시간 · {2} · ♥+{3}{4}{5}{6}', PL[c.pl]
 const el = document.getElementById('cards');
 export function openCards() {
   const list = [...G.S.cards].reverse(), been = new Set(G.S.cards.map(c => c.pl).filter(p => p !== FH.id)).size;
-  el.innerHTML = $t('<div class="chead"><b>엽서</b><span>{0}장 · 가 본 곳 {1}/{2}</span><button class="back" data-close>닫기</button></div>\n<div class="cbody">{3}<div class="pcards">{4}</div></div>', list.length, been, PLACES.length, list.length ? '' : $t('<p class="cnote">친구를 산책 보내면 엽서가 와요 · 친구를 누르거나 보관함에서 「산책」</p>'), list.map(c => PHOTO_PLACES.includes(c.pl) ? photoCard(c, cardLine(c), meta(c), PL[c.pl].name) : `<figure class="pcard">
+  el.innerHTML = $t('<div class="chead"><b>엽서</b><span>{0}장 · 가 본 곳 {1}/{2}</span><button class="back" data-close>닫기</button></div>\n<div class="cbody">{3}<div class="pcards">{4}</div></div>', list.length, been, PLACES.length, list.length ? '' : $t('<p class="cnote">동물을 산책 보내면 엽서가 와요 · 동물을 누르거나 보관함에서 「산책」</p>'), list.map(c => PHOTO_PLACES.includes(c.pl) ? photoCard(c, cardLine(c), meta(c), PL[c.pl].name) : `<figure class="pcard">
 <div class="ppic">${scene(c.pl)}<img alt="${esc(c.nm)}">${c.new ? '<i>NEW</i>' : ''}</div><figcaption><b>${esc(cardLine(c))}</b><small>${meta(c)}</small></figcaption></figure>`).join(''));
   el.querySelectorAll('.pcard').forEach((f, i) => { const c = list[i], img = f.querySelector('img'), fig = () => figureThumb(c.sp, c.v, c.c, c.acc, c.st);
     (f.classList.contains('photo') ? cardPhoto(c).catch(fig) : fig()).then(u => { img.src = u; f.classList.add('shot'); }, () => {}); }); // 78: a photo (shot once, kept); no WebGL: the figure

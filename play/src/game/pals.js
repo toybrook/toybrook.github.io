@@ -17,7 +17,7 @@ export const PERSONAS = [
   { id: 'curious', name: $t('호기심쟁이'), line: $t('새 소품이 놓이면 제일 먼저 가 봐요'), good: ['prank', 'collector'] },
   { id: 'glutton', name: $t('먹보'), line: $t('먹이통과 열매 앞에서 한참 머물러요'), good: ['sleepy', 'prank'] },
   { id: 'sleepy', name: $t('잠꾸러기'), line: $t('낮잠을 길게 자요'), good: ['glutton', 'easy'] },
-  { id: 'prank', name: $t('장난꾸러기'), line: $t('친구에게 술래잡기를 자주 걸어요'), good: ['curious', 'glutton'] },
+  { id: 'prank', name: $t('장난꾸러기'), line: $t('다른 동물에게 술래잡기를 자주 걸어요'), good: ['curious', 'glutton'] },
   { id: 'tidy', name: $t('깔끔이'), line: $t('몸을 자주 털고 빗물에 첨벙대지 않아요'), good: ['shy', 'collector'] },
   { id: 'collector', name: $t('수집가'), line: $t('여기저기 구경하며 돌아다녀요'), good: ['curious', 'tidy'] },
   { id: 'easy', name: $t('느긋이'), line: $t('천천히 걷고 오래 쉬어요'), good: ['shy', 'sleepy'] },

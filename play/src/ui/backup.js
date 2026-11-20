@@ -13,7 +13,7 @@ import { ask, toast } from './hud.js';
 const UNDO = 'toyhabitat.save.undo', DONE = 'toyhabitat.imported', DAY = 864e5;
 const $ = id => document.getElementById(id), el = $('backup');
 const date = t => new Date(t).toLocaleDateString(LOC);
-const sumUp = s => $t('도감 {0}칸 · 친구 {1} · 하트 {2}', Object.keys(s.codex || {}).length, (s.animals || []).length, s.hearts ?? 0);
+const sumUp = s => $t('도감 {0}칸 · 동물 {1} · 하트 {2}', Object.keys(s.codex || {}).length, (s.animals || []).length, s.hearts ?? 0);
 const undoSave = () => { try { return JSON.parse(localStorage.getItem(UNDO)); } catch { return null; } };
 
 // the reminder (a dot on 설정 and one line on the 「자리 비운 사이」 card): codex 10+ and no backup for 7 days; can be turned off

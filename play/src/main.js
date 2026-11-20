@@ -138,14 +138,14 @@ const build = (id, opt) => { lv[id] = G.S.expand[id] || 0; return new Promise(r 
 const firstHere = id => code().then(() => new Promise(done => {
   const L = $('loading'), b = L.querySelector('.lfirst'), say = L.firstChild, off = () => document.body.classList.remove('building');
   document.body.classList.add('building');
-  say.textContent = $t('첫 알이에요! 눌러서 깨워 보세요'); b.hidden = false; b.focus?.();
+  say.textContent = $t('첫 알이에요! 눌러서 부화해 보세요'); b.hidden = false; b.focus?.();
   if (F170 && eggTap) setTimeout(() => b.onclick?.(), 300); // 170 A: tapped while it was coming: cracked as soon as it can be
   b.onclick = () => { b.onclick = null; b.hidden = true; eggTap = true; /* cracked: later taps say nothing */ say.textContent = ''; play.firstEgg(id, () => { say.textContent = $t('서식지 불러오는 중…'); done(); }, () => (built[id] ??= build(id)).then(off, off)); };
 }), () => {});
 // 170 A (?f170): the egg on the loading screen is the 바로 깨기 button too; tapped before its code is here, it says so and cracks when it can
 let eggTap = F170 && !!window.__eggTap; // tapped on the start cover (index.html) before this code was here
 if (F170) $('loading').addEventListener('click', e => { if (!e.target.closest('.lbar')) return; const L = $('loading'), b = L.querySelector('.lfirst');
-  if (b && !b.hidden) return b.onclick?.(); if (!firstEgg(G.S) || eggTap) return; eggTap = true; L.firstChild.textContent = $t('알이 꿈틀거려요… 곧 깨어나요'); });
+  if (b && !b.hidden) return b.onclick?.(); if (!firstEgg(G.S) || eggTap) return; eggTap = true; L.firstChild.textContent = $t('알이 꿈틀거려요… 곧 부화해요'); });
 async function enter(id) {
   cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + $t(' 서식지 3D'));
   $('habName').querySelector('b').textContent = HAB[id].short ?? HAB[id].name; // 14-3: the chip's room (375 wide) fits two letters
@@ -267,8 +267,8 @@ function showRet() {
   const top = newsDue && (news.querySelector('li[data-top] span') || news.querySelector('li:not([data-upd]) span'))?.textContent; // 76: this version's line (data-top), on one line (137 A: escaped where it goes in, below)
   const full = Object.keys(eggs).filter(h => G.S.nests[h].eggs.length >= BALANCE.nest.max); // 27-7c: 「알 3개」 with 20 in the nest: say it is full (no more come)
   const d2 = att && att[2], wk = att && weekOn(); // 93-1: the second day's legendary egg, the card's top row (a tap: into the nest, then the nest)
-  const rows = [mn && ['🌙', esc(mythNightText(mn)), $t('가 보기'), 'mnight'], d2 && ['🥚', $t('이틀째 선물 · 전설 알이 왔어요'), $t('누르면 둥지로 · 기다림 없이 바로 깨요'), 'd2'], myth && ['🔥', $t('밤사이 제단에 불갈기 천리마가 내려왔어요'), $t('다시 보기'), 'myth'], sk && ['🌌', sk.text, $t('다시 보기'), 'sky'], back.length && ['🐾', $t('산책에서 돌아왔어요'), $t('{0}{1} · 엽서 {2}장 보기', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : '', back.length), 'cards'], !d2 && att && ['📅', wk ? $t('첫 주 선물 {0}일째', att[0]) : $t('{0}일째 출석 · {1}주차', att[0], att[3]), att[1], 'attend'], ar, wr, n && ['🥚', $t('알 {0}개', n), `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? $t('둥지가 가득 찼어요') : $t('둥지에 생겼어요{0}', full.length ? $t(' · {0} 가득', full.map(h => HAB[h].name).join('·')) : '')}`, 'eggs'],
-    grown.length && ['🌱', $t('다 자란 친구 {0}', grown.length), $t('보러 가요'), 'grown'], ready && ['✨', $t('부화 끝난 알 {0}', ready), $t('깨우러 가요'), 'ready']].filter(Boolean);
+  const rows = [mn && ['🌙', esc(mythNightText(mn)), $t('가 보기'), 'mnight'], d2 && ['🥚', $t('이틀째 선물 · 전설 알이 왔어요'), $t('누르면 둥지로 · 기다림 없이 바로 부화해요'), 'd2'], myth && ['🔥', $t('밤사이 제단에 불갈기 천리마가 내려왔어요'), $t('다시 보기'), 'myth'], sk && ['🌌', sk.text, $t('다시 보기'), 'sky'], back.length && ['🐾', $t('산책에서 돌아왔어요'), $t('{0}{1} · 엽서 {2}장 보기', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : '', back.length), 'cards'], !d2 && att && ['📅', wk ? $t('첫 주 선물 {0}일째', att[0]) : $t('{0}일째 출석 · {1}주차', att[0], att[3]), att[1], 'attend'], ar, wr, n && ['🥚', $t('알 {0}개', n), `${Object.keys(eggs).map(h => HAB[h].name).join('·')} ${full.length === Object.keys(eggs).length ? $t('둥지가 가득 찼어요') : $t('둥지에 생겼어요{0}', full.length ? $t(' · {0} 가득', full.map(h => HAB[h].name).join('·')) : '')}`, 'eggs'],
+    grown.length && ['🌱', $t('다 자란 동물 {0}', grown.length), $t('보러 가요'), 'grown'], ready && ['✨', $t('부화 끝난 알 {0}', ready), $t('부화하러 가요'), 'ready']].filter(Boolean);
   const today = G.dayOf(now); // inbox 21: the backup reminder, at most once a day
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', $t('백업해 두면 기기를 바꿔도 이어서 할 수 있어요'), $t('설정 › 내 저장 백업'), 'backup']); G.flag('backupNag', today); }
   if (top) rows.push(['📰', $t('새 소식 {0}', VERSION), esc(top), 'news']); // 133: last. Opened on the older build, the new one reloads in (offline.js fresh) and this row is the only new one: the rows above stay put

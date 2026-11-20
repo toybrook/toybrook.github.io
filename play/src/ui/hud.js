@@ -51,7 +51,7 @@ import { unlockInfo, step181 } from '../game/rules.js';
 import { TUT181 } from '../game/data.js'; // 182 ②
 const stageEl = () => document.getElementById('stage');
 // why a habitat is shut, and how far along: "초원 도감 8칸 + 하트 30개면 열려요 (지금 3칸 · ♥12)"
-export const lockText = id => { const L = unlockInfo(G.S, id); return L.friends ? $t('{0} 친구 {1}마리가 태어나면 열려요 (지금 {2}마리)', L.prev.name, L.friends, Math.min(L.got, L.friends)) : L.need ? $t('{0} 도감 {1}칸 + 하트 {2}개면 열려요 (지금 {3}칸 · ♥{4})', L.prev.name, L.need, L.hearts, L.have, G.S.hearts) : $t('아직 잠겨 있어요'); };
+export const lockText = id => { const L = unlockInfo(G.S, id); return L.friends ? $t('{0} 동물 {1}마리가 태어나면 열려요 (지금 {2}마리)', L.prev.name, L.friends, Math.min(L.got, L.friends)) : L.need ? $t('{0} 도감 {1}칸 + 하트 {2}개면 열려요 (지금 {3}칸 · ♥{4})', L.prev.name, L.need, L.hearts, L.have, G.S.hearts) : $t('아직 잠겨 있어요'); };
 
 // a question over everything: true for ok; 취소, a tap outside, Esc / back = false
 export function ask(text, ok = $t('확인'), no = $t('취소')) {
