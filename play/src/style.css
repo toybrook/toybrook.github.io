@@ -276,8 +276,8 @@ body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visi
 /* 꾸미기 panel */
 .decor{position:absolute;left:0;right:0;bottom:0;z-index:1200;background:#f3e2c7;color:#4a3626;border-radius:22px 22px 0 0;padding:2px calc(12px + var(--sa-r)) calc(12px + var(--sa-b)) calc(12px + var(--sa-l));box-shadow:0 -6px 24px rgba(60,35,15,.25)}
 .decor[hidden]{display:none}
-/* 86-3다: the main view takes the bottom 40 % (the ground stays in sight), dragged up 85 %; only its list (진열대, tabs, props) scrolls, the tabs stay on top */
-.decor:has(>.dlist){box-sizing:border-box;display:flex;flex-direction:column;max-height:40%}.decor.tall:has(>.dlist){max-height:85%}.decor>*{flex:none}
+/* 194 0-1 ② (was 86-3다's 40 %): the main view takes the bottom 28 % (the ground stays in sight), dragged up 85 %; only its list (진열대, tabs, props) scrolls, the tabs stay on top */
+.decor:has(>.dlist){box-sizing:border-box;display:flex;flex-direction:column;max-height:28%}.decor.tall:has(>.dlist){max-height:85%}.decor>*{flex:none}
 .dlist{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}.dlist .dgrid{max-height:none;overflow:visible}.dlist .dtabs{position:sticky;top:0;z-index:1;background:#f3e2c7;padding:0 0 8px;margin:0}
 .dhead{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 0 6px;cursor:pointer;touch-action:none}
 /* inbox 25: the grip and the head fold the panel to one line (.min); dragging a held prop folds it till the finger lifts (.pdrag, habitat.js) */
@@ -318,6 +318,7 @@ body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visi
 .dsw .on{box-shadow:0 0 0 3px #6b4a2b}
 .dsz button{min-height:36px;border-radius:999px;border:1px solid #d6bb93;background:#fbf1e1;color:#6b4a2b;font:inherit;font-weight:700;font-size:calc(13px*var(--fs));padding:0 11px;cursor:pointer}.dsz .on{background:#6b4a2b;border-color:#6b4a2b;color:#fff}
 .dhead b,.dhead .back{white-space:nowrap}.dhead span{word-break:keep-all}
+.nbtns.dsub{margin-top:8px}.nbtns.dsub:empty{display:none}.nbtns.dsub .sb{flex:1;min-height:44px;font-size:calc(14px*var(--fs))} /* 194 0-1 ⑧: 보관함에 넣기 · 하나 더 · 더보기, a row away from 놓기 */
 .nbtns.dpad{margin:0 0 8px}.nbtns.dpad button{font-size:calc(18px*var(--fs))}.nbtns.dpad [data-grot]{font-size:calc(14px*var(--fs))}
 .dtabs{display:flex;gap:6px;overflow-x:auto;margin:0 0 8px;scrollbar-width:none}.dtabs button{flex:none;min-height:36px;border-radius:999px;font:inherit;font-size:calc(13px*var(--fs));font-weight:700;padding:0 12px;cursor:pointer}
 .dbrush{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:0 0 8px}

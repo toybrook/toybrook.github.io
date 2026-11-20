@@ -680,7 +680,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (N) syncNat(propList); else if (P.top) syncProps(); // its spot on the board goes while it is held; 28-5: what stands on it goes with it
     moveEdit(...(rec.placed ? [rec.x * U, rec.z * U] : at ? [at.x * U, at.z * U] : nearest((x, z) => fits(P, x, z, SZ(ed)), near && [near.x * U, near.z * U])));
     back ??= { at: controls.target.clone(), radius: camera.position.distanceTo(controls.target), phi: sph.setFromVector3(off.copy(camera.position).sub(controls.target)).phi };
-    aim = { at: new THREE.Vector3(ed.x, 0, ed.z), radius: Math.min(camera.position.distanceTo(controls.target), HOME.wide * 0.45) }; goingHome = false; // glide a little closer
+    // 194 0-1 ③: the camera stays as it is on a pick-up (it used to glide a little closer)
   }
   // inbox 37 가까운 빈 자리로: the held rail to the nearest open 8x8 (rail tiles, round where it is) a 작은 고리 fits in, the view
   // after it; a curve onto the corner of it its turn belongs to (so four make the ring). false: none on this board
@@ -716,7 +716,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }
   container.addEventListener('pointerdown', e => {
     if (!ed || drag || e.target !== renderer.domElement) return;
-    const [sx, sy] = project(ed.obj, 0.4); if (Math.hypot(sx - e.clientX, sy - e.clientY) > 70) return;
+    const [sx, sy] = project(ed.obj, 0.4); if (Math.hypot(sx - e.clientX, sy - e.clientY) > Math.max(70, pxR(ed.x, ed.z, ed.P.r * SZ(ed)) + 12)) return; // 194 0-1 ③ a big one: its whole footprint
     dragPlane.constant = -(ed.obj.position.y - 0.25); const p = groundAt(e); if (!p) return;
     drag = { id: e.pointerId, dx: ed.x - p.x, dz: ed.z - p.z, at: [e.clientX, e.clientY] }; downAt = null; aim = null; e.stopPropagation(); // OrbitControls never sees it; the camera holds still under the finger
   }, { capture: true, ...sig });
@@ -759,6 +759,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const objs = [...placed.values()].map(p => p.obj), hit = ray.intersectObjects([...objs, ...nature.meshes], true)[0];
     if (hit && nature.meshes.includes(hit.object)) return nature.pick(hit);
     if (hit) return [...placed].find(([, p]) => { let o = hit.object; while (o && o !== p.obj) o = o.parent; return o; })?.[0] ?? null;
+    let near = null, nd = 1e9; // 194 0-1 ③: the nearest placed one whose footprint (+ 12px, 22px round at least) is under the finger
+    for (const [uid, p] of placed) { const s = p.spot, [sx, sy] = project({ position: new THREE.Vector3(s.x, D.y(s.x, s.z), s.z) }, 0), d = Math.hypot(sx - e.clientX, sy - e.clientY);
+      if (d < nd && d < Math.max(22, pxR(s.x, s.z, s.r) + 12)) { nd = d; near = uid; } }
+    if (near != null) return near;
     const g = groundHit(e); if (!g) return null; // a wildflower patch is low: the ground in it counts
     let best = null, bd = 1e9; for (const o of natSpots) { const d = Math.hypot(o.x - g.x, o.z - g.z); if (o.open && d < o.r && d < bd) { bd = d; best = o.uid; } }
     return best;
@@ -886,9 +890,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     },
     // inbox 52: the band of the screen the panel and its buttons leave (client y top..bottom), once the panel shows the held prop.
     // One just taken out (its spot picked by editProp, ed.auto) goes to the open spot nearest the band's middle that shows whole
-    // in the band (its middle and four points at its radius); the view glides a little closer about it (it stays where it shows),
-    // only as far as it still shows whole. None shows: it stays where editProp picked it, and the view slides it to the band's
-    // middle on the way closer
+    // in the band (its middle and four points at its radius). None shows: it stays where editProp picked it, and the view slides
+    // it to the band's middle (194 0-1 ③: no gliding closer any more)
     show(top, bottom) {
       if (!ed?.auto) return; ed.auto = false; const r = renderer.domElement.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (top + bottom) / 2;
       const ground = (sx, sy) => { ray.setFromCamera(ndc.set((sx - r.left) / r.width * 2 - 1, 1 - (sy - r.top) / r.height * 2), camera); return ray.ray.intersectPlane(flat, new THREE.Vector3()); };
@@ -896,12 +899,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       const R = ed.P.r * SZ(ed), FOOT = [[R, 0], [-R, 0], [0, R], [0, -R]], L = r.left + 8, Rt = r.right - 8, Tp = top + 8, B = bottom - 8;
       const scr = (x, z) => project({ position: new THREE.Vector3(x, D.y(x, z), z) }, 0), inBand = ([sx, sy]) => sy > Tp && sy < B && sx > L && sx < Rt;
       const ok = (x, z) => inBand(scr(x, z)) && FOOT.every(([a, b]) => inBand(scr(x + a, z + b))) && fits(ed.P, x, z, SZ(ed)), c = nearest(ok, [g.x, g.z]), seen = ok(...c);
-      if (seen) moveEdit(...c);
-      const T = controls.target, P = new THREE.Vector3(ed.x, 0, ed.z), r0 = camera.position.distanceTo(T); let k = Math.min(1, HOME.wide * 0.45 / r0);
-      if (seen) { const [px, py] = scr(ed.x, ed.z); // closer by k, what is d px from it shows about d / k px from it: keep the four points in
-        for (const [a, b] of FOOT) { const [sx, sy] = scr(ed.x + a, ed.z + b), dx = sx - px, dy = sy - py; k = Math.max(k, dx > 0 ? dx / (Rt - px) : dx < 0 ? dx / (L - px) : 0, dy > 0 ? dy / (B - py) : dy < 0 ? dy / (Tp - py) : 0); } }
-      const T1 = seen ? T.clone() : T.clone().add(P).sub(g); k = Math.min(1, k); // not seen: P shows where g did; then closer about P (it stays put on the screen)
-      aim = { at: P.clone().add(T1.sub(P).multiplyScalar(k)), radius: r0 * k, phi: sph.setFromVector3(off.copy(camera.position).sub(T)).phi };
+      if (seen) return moveEdit(...c); // 194 0-1 ③: it shows in the band: the camera stays (it used to glide closer)
+      const T = controls.target, P = new THREE.Vector3(ed.x, 0, ed.z); // none shows: the view only slides, so P shows where g did
+      aim = { at: T.clone().add(P).sub(g), radius: camera.position.distanceTo(T), phi: sph.setFromVector3(off.copy(camera.position).sub(T)).phi };
       aim.at.set(THREE.MathUtils.clamp(aim.at.x, ...panX), 0, THREE.MathUtils.clamp(aim.at.z, ...panZ)); goingHome = false;
     },
     get held() { return ed?.uid ?? null; },
@@ -1349,6 +1349,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       if (a && a !== focus) { setFocus(a); glide = { radius: 3 * near, phi: 1.05 }; } }
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off); sph.theta += dt * (calm() ? 0.02 : 0.05); camera.position.copy(controls.target).add(off.setFromSpherical(sph));
   }
+  const camR = new THREE.Vector3(); // 194 0-1 ③: a ground circle's radius on the screen (px), across the view
+  function pxR(x, z, r) { const c = new THREE.Vector3(x, D.y(x, z), z), [ax, ay] = project({ position: c }, 0); camR.setFromMatrixColumn(camera.matrixWorld, 0).setY(0).normalize().multiplyScalar(r);
+    const [bx, by] = project({ position: c.add(camR) }, 0); return Math.hypot(bx - ax, by - ay); }
   function project(obj, lift = 2.4) { const v = obj.position.clone(); v.y += lift; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }
   function resize() {
     pr = Math.min(pr, maxPR()); renderer.setPixelRatio(pr); renderer.setSize(W(), H());

@@ -43,13 +43,17 @@ export const tabName = id => TABS.find(t => t.id === tabOf({ id })).name; // 66-
 const NAT = Object.fromEntries(NATURE.map(n => [n.id, n])), cut = id => id === 'rock' ? $t('치우기') : $t('베기');
 const UNDO = 20;
 
-let habId = null, hab = null, held = null, fresh = null, ok = false, shown = ''; // fresh: the uid bought for this hold (취소 refunds it)
+let habId = null, hab = null, held = null, ok = false, shown = '';
+// 194 0-1 ①: a card tapped holds a 미리보기 (not bought yet: held.buy = { price, shelf? }); its hearts go at 놓기, 취소 changes nothing.
+// Its uid is the one buying will give it (tut181 follows it)
+const preview = (P, buy, c) => ({ uid: G.S.nextId, prop: P.id, hab: habId === 'yard' ? 'yard' : P.habitat ?? habId, placed: false, x: 0, z: 0, rot: 0, ...c && { c }, buy });
 let yv = null, y3 = false, ypan = false, ytop = false, yk = -1; // 182 ④ (the yard only)
+let lookMore = false; // 194 0-1 ⑧: the held one's sizes shown (under 더보기)
 let tab = 'nature', brush, grid = false, undo = [], redo = [], min = false, moreT = false, sy = null, swiped = 0, pick = null, sweep = 0; // sweep: 자연 정리 on (1: asks at the first box, 2: asked) // pick: the uids picked (고르기), null: not picking; // min (inbox 25): the panel folded to its head // brush: BRUSHES index, null: the eraser, undefined: not painting
 const mine = () => PROPS.filter(P => (habId === 'yard' ? !P.water && !P.art : (P.habitat ?? habId) === habId) && (!P.gift || G.S.props.some(p => p.prop === P.id && p.hab === habId))); // 41: a gift one only once had here
 const stowed = id => G.S.props.filter(p => p.prop === id && p.hab === habId && !p.placed && !p.nat);
 const stowedNat = id => G.S.props.filter(p => p.nat && p.prop === id && p.hab === habId && !p.placed);
-const sig = () => JSON.stringify([yv, y3, ypan, ytop, yk, moreT, G.S.hearts, G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], held?.uid, ok, held?.ring && hab.decor.clears(), tab, brush, sweep, grid, undo.length, redo.length, pick && [...pick], isRail(held) && heldLine(), G.S.wild.h[habId]?.v]);
+const sig = () => JSON.stringify([lookMore, yv, y3, ypan, ytop, yk, moreT, G.S.hearts, G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], held?.uid, ok, held?.ring && hab.decor.clears(), tab, brush, sweep, grid, undo.length, redo.length, pick && [...pick], isRail(held) && heldLine(), G.S.wild.h[habId]?.v]);
 const picks = () => G.S.props.filter(p => pick?.has(p.uid) && p.placed && p.hab === habId); // those picked still on the board
 // a size in 1 m cells (its footprint across; inbox 52: 1 m as the sizes and the rails step, not the 1.5 m 격자, so 작게·보통·크게·아주 크게
 // differ in number too - text only, the sizes and snapping are as they were), its set, a light at night
@@ -90,11 +94,11 @@ G.on(() => { if (!el.hidden && sig() !== shown) draw(); });
 const tabsHere = () => TABS.filter(t => t.id === 'nature' || mine().some(P => tabOf(P) === t.id));
 const ghostOf = rec => !rec.placed && !rec.nat ? G.S.ghost?.[habId]?.find(g => g.prop === rec.prop) : null; // 24-2: it starts on its 미리보기
 // inbox 52: then the band the panel leaves (under the top bar and the BETA badge, over the panel less room for 가까운 빈 자리로) for its first spot and the view
-function hold(rec, bought = false, near) { held = rec; fresh = bought ? rec.uid : null; hab.decor.edit(rec, ghostOf(rec), near); draw();
+function hold(rec, near) { held = rec; lookMore = false; hab.decor.edit(rec, ghostOf(rec), near); draw();
   hab.decor.show(Math.max(...['#habitat .bar', '.beta'].map(q => document.querySelector(q)?.getBoundingClientRect().bottom ?? 0)), el.getBoundingClientRect().top - 56); }
 function step(from, to) { // 되돌리기 (from undo) / 다시 하기 (from redo)
   if (!from.length) return;
-  if (held) { hab.decor.cancel(); held = fresh = null; }
+  if (held) { hab.decor.cancel(); held = null; }
   to.push(layoutOf(G.S, habId)); G.setLayout(habId, from.pop()); draw(); sfx('undo');
 }
 // 86-3다: the full row shows only ↶ ↷ 땅 칠하기, the rest (격자 고르기 링크 사진) under 더보기, a second row (74: 사진 moved here from the top tools)
@@ -122,7 +126,7 @@ function yPage() {
     yList = [...by(there, p => p.prop + '@' + p.hab).map(g => ['imp', g]), ...by(here, p => p.prop).map(g => ['ret', g])];
     const card = ([k, g]) => { const P = PROP[g[0].prop], from = k === 'imp' ? homeIn(g[0]) : HAB[g[0].from ?? P.habitat]?.name ?? HAB.meadow.name;
       return $t('<button class="dprop" data-{0}="{1}"><img alt=""><b>{2}</b><small>{3}{4}</small><em>{5} {6}</em></button>', k, g[0].uid, P.name, k === 'imp' ? $t('{0} 보관함', from) : $t('뜰 보관함 · {0}{으로/로} 돌려보내요', from), P.effect ? $t(' · {0}에서 {1}{을/를} 불러요', HAB[P.habitat]?.name ?? from, SP[P.effect].name) : '', k === 'imp' ? $t('가져오기') : $t('돌려보내기'), g.length); };
-    el.innerHTML = GRIP() + $t('<div class="dhead"><b>보관함에서 가져오기</b><span>다른 서식지에 넣어 둔 소품 · 값 없이 옮겨요</span><button class="back" data-yv="">뒤로</button></div>\n<div class="dlist"><div class="dgrid">{0}</div>\n<p class="dhint">{1}</p></div>', yList.map(card).join(''), yList.length ? $t('가져온 소품은 뜰 보관함에 들어가요 · 꾸미기 목록에서 꺼내 놓아요 · 물가 소품은 아직 못 가져와요') : $t('다른 서식지 보관함에 넣어 둔 소품이 없어요 · 그 서식지에서 「넣기」를 하면 여기에 나와요'));
+    el.innerHTML = GRIP() + $t('<div class="dhead"><b>보관함에서 가져오기</b><span>다른 서식지에 넣어 둔 소품 · 값 없이 옮겨요</span><button class="back" data-yv="">뒤로</button></div>\n<div class="dlist"><div class="dgrid">{0}</div>\n<p class="dhint">{1}</p></div>', yList.map(card).join(''), yList.length ? $t('가져온 소품은 뜰 보관함에 들어가요 · 꾸미기 목록에서 꺼내 놓아요 · 물가 소품은 아직 못 가져와요') : $t('다른 서식지 보관함에 넣어 둔 소품이 없어요 · 그 서식지에서 「보관함에 넣기」를 하면 여기에 나와요'));
     el.querySelectorAll('.dprop img').forEach((img, i) => propThumb(yList[i][1][0].prop, hab.decor.model).then(u => { img.src = u; }, () => {}));
     return;
   }
@@ -144,7 +148,9 @@ function draw() {
     const N = held.nat && NAT[held.prop], P = N ? { ...N, r: N.r * (held.s || 1) } : PROPS.find(P => P.id === held.prop), name = P.name;
     const sx = !N && stowed(P.id).some(s => s.uid !== held.uid), more = !N && (sx || !P.paid && !P.gift); // 하나 더: one put away first, else bought (41: a gift one is never bought)
     const lk = !N && hab.decor.look(), pal = lk && paletteOf(P), big = lk && sizable(P); // 28-5 its look now (c, sz)
-    el.innerHTML = GRIP() + (P.rail || !ok ? ROOM : '') + $t('<div class="dhead"><b>{0}</b><span class="{1}">{2}</span></div>\n{3}{4}\n<div class="dinfo"><span>{5}</span>{6}{7}</div>\n<div class="nbtns"><button class="sb" data-cancel>취소</button>{8}<button class="sb" data-rot="90">⟳90°</button>{9}<button class="go" data-place{10}>놓기</button></div>\n<p class="dhint">끌어서 옮겨요 · {11}{12}</p>', name, ok ? 'ok' : 'no', ok ? $t('여기에 놓을 수 있어요') : $t('빨간 곳엔 놓을 수 없어요'), P.rail ? heldLine() : '', pal || big ? `<div class="dlook">${pal ? $t('<span class="dsw" role="group" aria-label="색">{0}</span>', pal.map(([nm, hx, x], i) => x && lk.c !== i && !G.S.looks[P.id]?.includes(i) ? '' : `<button class="${lk.c === i ? 'on' : ''}${hx ? '' : ' orig'}" data-c="${i}" aria-label="${nm}" title="${nm}"${hx ? ` style="background:${hx}"` : ''}></button>`).join('')) : ''}${big ? $t('<span class="dsz" role="group" aria-label="크기">{0}</span>', [1, 0, 2, 3].map(i => `<button class="${lk.sz === i ? 'on' : ''}" data-sz="${i}">${SIZES[i]}</button>`).join('')) : ''}</div>` : '', info(P, N, N ? 1 : sizeF(P, lk?.sz)), N ? `<button class="sb dcut" data-stow>${cut(held.prop)}</button>` : '', more ? $t('<button class="sb" data-more>하나 더 {0}</button>', sx ? $t('꺼내기') : can(G.S, 'prop:' + P.id) ? `<span class="hrt">♥</span>${P.price}` : `· Lv ${needFor('prop:' + P.id)}`) : '', P.rail ? '' : $t('<button class="sb" data-rot="15" aria-label="15도 돌리기 · 길게 누르면 자유롭게">⟳15°</button>'), N ? '' : $t('<button class="sb" data-stow>넣기</button>'), ok ? '' : ' disabled', P.rail ? $t('레일은 큰 칸에 맞춰 이어져요') : P.small ? $t('탁자·선반·평상 가까이 끌면 위에 올라가요') : grid ? $t('격자 칸에 맞춰 놓여요') : $t('⟳15°를 길게 누르면 자유롭게 돌아요'), N ? $t(' · {0} 것은 자연 탭에서 다시 심어요', held.prop === 'rock' ? $t('치운') : $t('벤')) : '');
+    const dsz = big && lookMore ? $t('<span class="dsz" role="group" aria-label="크기">{0}</span>', [1, 0, 2, 3].map(i => `<button class="${lk.sz === i ? 'on' : ''}" data-sz="${i}">${SIZES[i]}</button>`).join('')) : '';
+    // 194 0-1 ⑧: 놓기 (with its price, a 미리보기) on the first row; 보관함에 넣기 ⑦, 하나 더 and 더보기 (colors and sizes, ② keeps the held panel near 28 %) on a row of their own
+    el.innerHTML = GRIP() + (P.rail || !ok ? ROOM : '') + $t('<div class="dhead"><b>{0}</b><span class="{1}">{2}</span></div>\n{3}{4}\n<div class="dinfo"><span>{5}</span>{6}</div>\n<div class="nbtns"><button class="sb" data-cancel>취소</button>{7}<button class="sb" data-rot="90">⟳90°</button><button class="go" data-place{8}>놓기{9}</button></div>\n<div class="nbtns dsub">{10}{11}{12}</div>\n<p class="dhint">끌어서 옮겨요 · {13}{14}</p>', name, ok ? 'ok' : 'no', ok ? $t('여기에 놓을 수 있어요') : $t('빨간 곳엔 놓을 수 없어요'), P.rail ? heldLine() : '', lookMore && (pal || dsz) ? `<div class="dlook">${pal ? $t('<span class="dsw" role="group" aria-label="색">{0}</span>', pal.map(([nm, hx, x], i) => x && lk.c !== i && !G.S.looks[P.id]?.includes(i) ? '' : `<button class="${lk.c === i ? 'on' : ''}${hx ? '' : ' orig'}" data-c="${i}" aria-label="${nm}" title="${nm}"${hx ? ` style="background:${hx}"` : ''}></button>`).join('')) : ''}${dsz}</div>` : '', info(P, N, N ? 1 : sizeF(P, lk?.sz)), N ? `<button class="sb dcut" data-stow>${cut(held.prop)}</button>` : '', P.rail ? '' : $t('<button class="sb" data-rot="15" aria-label="15도 돌리기 · 길게 누르면 자유롭게">⟳15°</button>'), ok ? '' : ' disabled', held.buy ? ` <span class="hrt">♥</span>${held.buy.price}` : '', N || held.buy ? '' : $t('<button class="sb" data-stow>보관함에 넣기</button>'), more ? $t('<button class="sb" data-more>하나 더 {0}</button>', sx ? $t('꺼내기') : can(G.S, 'prop:' + P.id) ? `<span class="hrt">♥</span>${P.price}` : `· Lv ${needFor('prop:' + P.id)}`) : '', pal || big ? $t('<button class="sb{0}" data-hmore aria-expanded="{1}">더보기</button>', lookMore ? ' on' : '', lookMore) : '', P.rail ? $t('레일은 큰 칸에 맞춰 이어져요') : P.small ? $t('탁자·선반·평상 가까이 끌면 위에 올라가요') : grid ? $t('격자 칸에 맞춰 놓여요') : $t('⟳15°를 길게 누르면 자유롭게 돌아요'), N ? $t(' · {0} 것은 자연 탭에서 다시 심어요', held.prop === 'rock' ? $t('치운') : $t('벤')) : '');
     return;
   }
   if (pick) { // 26-6 고르기: taps pick and let go; the arrows move all of them a cell, ⟳90° turns them round their middle
@@ -178,9 +184,18 @@ function draw() {
 
 // put the held one down where it is (null: red there, or the cap)
 function put() {
+  const b = held?.buy, P = b && PROP[held.prop];
+  if (b && G.S.hearts < b.price) { toast($t('하트 {0}개가 필요해요 · 지금 ♥{1}', b.price, G.S.hearts)); return null; }
+  if (b && capped(G.S, habId, P.id)) { toast(full(P.id)); return null; }
   const r = hab.decor.confirm(); if (!r) { toast($t('빨간 곳엔 놓을 수 없어요')); return null; }
+  if (b) { // 194 0-1 ①: bought now (the shelf's price while that shelf still shows it, else the list's)
+    const h = G.S.hearts, it = b.shelf != null && G.shelf(habId).items[b.shelf], rec = it?.id === P.id && it.price === b.price ? G.buyShelf(habId, b.shelf) : G.buyProp(P.id, habId);
+    if (!rec) { toast($t('지금은 살 수 없어요')); held = null; draw(); return null; }
+    r.uid = rec.uid; toast($t('{0} 샀어요 · ♥-{1}', P.name, h - G.S.hearts));
+  }
   const was = layoutOf(G.S, habId), ran = G.S.flags['train:' + habId], first = !G.S.props.some(p => p.placed && !p.nat), p = r.ring ? G.placeRing(habId, r.cells, r.clear) : G.placeProp(r.uid, r.x, r.z, r.rot, r); // 28-5 r: its colour, size, and the prop it stands on
   if (p && first) hab.decor.cheer(); // 92-3 (first.js's toast says what the task gave)
+  if (!p && b) G.refundProp(r.uid); // bought just now and could not go down: its hearts back
   if (!p) toast(r.ring ? ringNo() ?? $t('놓을 수 없어요') : full(held?.prop)); else { sfx('place'); undo.push(was); if (undo.length > UNDO) undo.shift(); redo = []; if (r.ring && ran) toast($t('고리가 닫혔어요! 태엽 기차가 달려요'), 2600, true); } // the first loop: main.js says so
   held = null; draw(); hab.decor.reveal(r.x, r.z, el.getBoundingClientRect().top); return p;
 }
@@ -190,11 +205,10 @@ function another() {
   const P = PROPS.find(P => P.id === held.prop), s = stowed(P.id).find(s => s.uid !== held.uid);
   if (capped(G.S, habId, P.id, held.placed ? 0 : 1)) return toast(full(P.id));
   if (!s && !can(G.S, 'prop:' + P.id)) return locked('prop:' + P.id);
-  if (!s && G.S.hearts < P.price) return toast($t('하트 {0}개가 필요해요 · 지금 ♥{1}', P.price, G.S.hearts));
+  const need = (held.buy?.price ?? 0) + (s ? 0 : P.price); // this one (a 미리보기 is bought as it goes down) and the next, at 놓기
+  if (G.S.hearts < need) return toast($t('하트 {0}개가 필요해요 · 지금 ♥{1}', need, G.S.hearts));
   const p = put(); if (!p) return;
-  const at = { x: p.x, z: p.z, rot: p.rot }, rec = s ?? G.buyProp(P.id, habId); if (!rec) return;
-  if (!s) toast($t('{0} 하나 더 샀어요 · ♥-{1}', P.name, P.price));
-  hold(rec, !s, at);
+  hold(s ?? preview(P, { price: P.price }), { x: p.x, z: p.z, rot: p.rot });
 }
 // 26-6: the layout with these entries ([uid, placed, x, z, rot]) changed, for G.setLayout
 // 28-1 넓히기 전과 비교: the first board and the board now, from straight above, side by side (habitat.js topView)
@@ -272,10 +286,7 @@ el.addEventListener('click', async e => {
   else if (d.gstow != null) { const ps = picks(); if (!ps.length) return; keep(); G.setLayout(habId, moved(ps.map(p => [p.uid, 0, p.x, p.z, p.rot]))); toast($t('{0}개를 넣어 뒀어요 · ↶로 되돌릴 수 있어요', ps.length)); sfx('place'); }
   else if (d.clear != null) clearBoard();
   else if (d.more != null) another();
-  else if (d.cancel != null) { // back where it was before it was picked up; one just bought goes back to the shop
-    const n = held.uid === fresh ? G.refundProp(fresh) : 0; hab.decor.cancel(); held = fresh = null;
-    if (n) toast($t('구매를 취소했어요 · ♥+{0}', n)); draw();
-  }
+  else if (d.cancel != null) { hab.decor.cancel(); held = null; draw(); } // back where it was before it was picked up; a 미리보기 was never bought (194 0-1 ①)
   else if (d.expand != null) {
     const L = levelOf(G.S, habId), price = expPrice(G.S, habId);
     if (habId !== 'yard' && !can(G.S, 'expand:' + (L + 1))) return locked('expand:' + (L + 1));
@@ -286,6 +297,7 @@ el.addEventListener('click', async e => {
   else if (d.share != null) openShare(habId, hab, keep); // 24-2 꾸미기 코드; 69-4 구경 링크
   else if (d.snap != null) { closeDecor(); document.getElementById('snapBtn').click(); }
   else if (d.moretools != null) { moreT = !moreT; draw(); }
+  else if (d.hmore != null) { lookMore = !lookMore; draw(); }
   else if (d.grid != null) { grid = !grid; hab.decor.grid(grid); draw(); }
   else if (d.undo != null) step(undo, redo);
   else if (d.redo != null) step(redo, undo);
@@ -313,7 +325,7 @@ el.addEventListener('click', async e => {
     const it = G.shelf(habId).items[+d.shelf], P = it && PROP[it.id]; if (!P) return draw();
     if (capped(G.S, habId, P.id)) toast(full(P.id));
     else if (G.S.hearts < it.price) toast($t('하트 {0}개가 필요해요 · 지금 ♥{1}', it.price, G.S.hearts));
-    else { const rec = G.buyShelf(habId, +d.shelf); if (rec) { toast($t('{0} 샀어요 · ♥-{1}{2}', P.name, it.price, it.c ? $t(' · 진열대 색 「{0}」', paletteOf(P)[it.c][0]) : '')); hold(rec, true); } }
+    else { hold(preview(P, { price: it.price, shelf: +d.shelf }, it.c)); if (it.c) toast($t('진열대 색 「{0}」 · 놓으면 ♥{1}에 사요', paletteOf(P)[it.c][0], it.price)); }
   }
   else if (d.place != null) put(); else if (d.n) { const s = stowedNat(d.n)[0] ?? (habId === 'yard' ? G.takeNat(d.n) : null); if (s) hold(s); else if (habId === 'yard') toast(full(d.n)); } // 182 ④ the yard's free nature
   else if (d.yv != null) { yv = d.yv || null; draw(); }
@@ -333,6 +345,6 @@ el.addEventListener('click', async e => {
     else if (P.gift) toast($t('{0}{은/는} 선물로만 받아요 · 받은 것은 다 놓았어요', P.name));
     else if (!can(G.S, 'prop:' + P.id)) locked('prop:' + P.id);
     else if (G.S.hearts < P.price) toast($t('하트 {0}개가 필요해요 · 지금 ♥{1}', P.price, G.S.hearts));
-    else { const rec = G.buyProp(P.id, habId); if (rec) { toast($t('{0} 샀어요 · ♥-{1}', P.name, P.price)); hold(rec, true); if (P.rail) railTip(); } }
+    else { hold(preview(P, { price: P.price })); if (P.rail) railTip(); }
   }
 });
