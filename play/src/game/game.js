@@ -48,7 +48,7 @@ export const hold = () => { held = true; };
 export function save() {
   if (off || frozen) return;
   if (held) return;
-  try { localStorage.setItem(KEY, JSON.stringify(YARD ? Y.yardOut(S) : S)); if (YARD) { const y = Y.yardPart(S); if (y) localStorage.setItem(Y.YKEY, JSON.stringify(y)); } failed = false; } catch { if (!failed) { failed = true; hooks.fail?.(); } } // keep playing
+  try { localStorage.setItem(KEY, JSON.stringify(YARD ? Y.yardOut(S) : S)); if (YARD) { const y = Y.yardPart(S); if (y) localStorage.setItem(Y.YKEY, JSON.stringify(y)); } failed = false; } catch (e) { if (!failed) { failed = true; hooks.fail?.(e); } } // keep playing (195 B-10 S2: the error tells blocked storage from full)
 }
 // 26-7 한 번에 한 탭: the tab that holds the lock saves. A reload or a tab just let go may still hold it a moment: asked twice.
 // ponytail: no Web Locks (Safari < 15.4) = no guard, two tabs both save as before

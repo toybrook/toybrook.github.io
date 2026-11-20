@@ -34,7 +34,7 @@ function tabOff(first) {
   el.querySelector('[data-take]').onclick = e => { e.target.disabled = true; G.takeOver(); }; $('stage').append(el);
 }
 // 26-7: a save that failed (full storage etc.) is told once, with the way to a backup code (made from the game in memory)
-const saveFail = () => ask($t('저장하지 못했어요. 기기 저장 공간이 꽉 찼을 수 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.'), $t('백업 코드 만들기'), $t('닫기')).then(ok => ok && BK.open());
+const saveFail = e => ask(e?.name === 'SecurityError' ? $t('저장하지 못했어요. 이 브라우저 설정에서 사이트 저장이 막혀 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.') : $t('저장하지 못했어요. 기기 저장 공간이 꽉 찼을 수 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.'), $t('백업 코드 만들기'), $t('닫기')).then(ok => ok && BK.open()); // 195 B-10 S2: blocked site data is SecurityError
 // 69-4 서식지 구경 링크: someone's habitat to look at. This page stores nothing at all (the player's own save, prefs, counts
 // stay as they were): every storage write is a no-op till 「내 정원으로」 opens the page again without the link
 const SEE = seeHash();

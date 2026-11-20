@@ -7,6 +7,7 @@ export default {
  "이 탭은 멈췄어요. 여기서 다시 하려면 아래를 누르세요.": "This tab is paused. Tap below to play here again.",
  "<div><h2>{0}</h2><p>{1}</p><button data-take>여기서 하기</button></div>": "<div><h2>{0}</h2><p>{1}</p><button data-take>Play here</button></div>",
  "저장하지 못했어요. 기기 저장 공간이 꽉 찼을 수 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.": "Couldn't save. Your device storage may be full. Make a backup code so you won't lose your collection.",
+ "저장하지 못했어요. 이 브라우저 설정에서 사이트 저장이 막혀 있어요. 백업 코드를 만들어 두면 모은 것을 잃지 않아요.": "Couldn't save. Site storage is blocked in this browser's settings. Make a backup code so you won't lose your collection.",
  "백업 코드 만들기": "Make a backup code",
  "닫기": "Close",
  "지금은 볼 수 없어요": "Not available right now",
