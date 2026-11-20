@@ -304,6 +304,7 @@ ret.onclick = async e => {
   else if (ok && d.go !== 'grown') play.openNest();
   if (far) { world.classList.remove('now'); hab.classList.remove('now'); fade(false); }
 };
+addEventListener('toss:ad', e => api?.setActive(!e.detail?.on)); // 184 ⑤ src/toss.js: the habitat still while an interstitial plays (ADI184)
 let hiddenAt = null;
 const eggsNow = () => Object.fromEntries(Object.entries(G.S.nests).map(([h, x]) => [h, x.eggs.length]));
 addEventListener('visibilitychange', () => {

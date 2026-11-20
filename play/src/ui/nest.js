@@ -221,6 +221,7 @@ export function initNest(nav) {
   }
   function answer(go, e) {
     const a = G.S.animals.find(x => x.id === +cardEl.dataset.id && x.pending); if (!a) return;
+    if (TOSS) dispatchEvent(new CustomEvent('toss:adi', { detail: { at: 'nest' } })); // 184 ⑤: src/toss.js may show the interstitial its 「Ad」 chip told of (ADI184)
     if (ready) { const f = ready; ready = null; setTimeout(f, 500); } // 64-A: the first habitat builds while this card is read (not during the hatch: it took 2.7 s longer)
     if (G.S.stats.hatch === 1 && !G.S.flags.next61) { G.flag('next61'); tip('next', '#nestBtn'); } // inbox 61 B: once, after the first (64-A: a tip, one at a time with the rest)
     const nm = nameOf(a), gift = go && B.codexHeart && !G.S.codex[key(a.species, a.variant)] ? ` · ♥+${B.codexHeart}` : ''; // inbox 38

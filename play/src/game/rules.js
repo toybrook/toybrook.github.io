@@ -41,7 +41,7 @@ import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's nam
 import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD, YARD, YARD_B, YARD_HAB } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
-import { dayOf } from './clock.js';
+import { dayOf, dayNo } from './clock.js';
 import { F170 } from './data.js'; // 170 B
 import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore, falls143fore } from '../habitat/zones.js';
 import { lotus143off } from '../habitat/zones.js'; // 143 B the lotus marsh
@@ -137,6 +137,7 @@ export function fromSave(raw, now) {
     clear143(S); // 145 B; 150: public
     if (S129 === 4) clear149(S); // 149
     if (Z143) clear143reeds(S); // 143 B
+    delete S.noAds; // 184 ⑤: 광고 제거 is never read from a save (a backup, a link): src/toss.js sets it each run (game.js setNoAds)
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
     advance(structuredClone(S), now, () => 0.5);
@@ -478,7 +479,7 @@ export const slotsAt = L => B.nest.slotsByLevel.filter(([l]) => L >= l).at(-1)[1
 // 112 선물 알: the first egg of the gift row (eggs given over a full nest) straight into an empty slot
 export function takeGift(S, now) {
   const i = S.slots.indexOf(null); if (i < 0 || !S.giftRow.length) return -1;
-  const e = S.giftRow.shift(); S.slots[i] = { egg: e, start: now, end: now + B.hatch[e.rarity] * (EGG[e.type]?.hatchScale ?? 1) }; return i;
+  const e = S.giftRow.shift(); S.slots[i] = { egg: e, start: now, end: now + hatchMs(S, e) }; return i;
 }
 // 112 놓아주기: nest eggs let go for hearts (BALANCE.nest.release). Never cracked, so the shard gauges don't count them; gifts stay
 export const canLetGo = e => !e.gift && !e.gv && !e.now;
@@ -499,7 +500,7 @@ export function takeEgg(S, habId, now, eggId) {
   const first = firstEgg(S); // inbox 61 B: a new save's very first egg is ready at once (바로 깨기), and the next one is laid now
   if (first) n.t = Math.min(n.t, now - eggGap(S)); // (「둥지에 다음 알이 있어요」); from the second on, the usual waits
   const fast = B.nest.fast?.[(S.stats.hatch || 0) + S.slots.filter(Boolean).length]; // 92-1: a new save's first eggs (hatched + in slots before this one)
-  S.slots[i] = { egg: e, start: now, end: first || e.now ? now : now + (fast ?? B.hatch[e.rarity] * (EGG[e.type]?.hatchScale ?? 1)) };
+  S.slots[i] = { egg: e, start: now, end: first || e.now ? now : now + (fast ?? hatchMs(S, e)) };
   return i;
 }
 // A ready slot cracks. The animal waits (pending) for the reveal card's answer, so a reload shows the same card again.
@@ -1220,10 +1221,14 @@ export const firstFriend = S => S.animals.reduce((m, a) => a.pending || a.stored
 // (flags.tut181: a step key, 'done', 'skip' or 'again'; anything else = from the start). No day limit (170's is only for `end`:
 // the end card shows while step170 does). decor·codex pass only through the saved key (the tutorial saw them done). null: none
 export const STEPS181 = ['hatch', 'name', 'pet', 'feed', 'decor', 'codex', 'nest', 'end'];
+// 184 ③ (the web build turns the tutorial on for new saves only): a save that has played. Anything hatched or met (an animal in any
+// state, a codex cell, a hatch counted). Not betaIntro nor nestTapped: the intro's 시작 and the nest button set them, and a new player's tap
+// there can come before tut181.js has run once (a slow phone), which would cost them the tutorial (184 ③ review)
+export const played = S => S.animals.length > 0 || Object.keys(S.codex || {}).length > 0 || (S.stats?.hatch || 0) > 0;
 export const fedOnce = a => !!a && (a.fedDay != null || !growing(a)); // fed once, or no feed button (not a growing baby)
 export function step181(S, now) {
   const v = S.flags.tut181; if (v === 'done' || v === 'skip' || v === 'again') return null;
-  if (v == null && (S.stats?.hatch || 0) >= 3 && step170(S, now) === null) return null; // 182 ② review: an old save past the first day (3 eggs, 170 over): nothing to teach, 'done'
+  if (v == null && played(S)) return null; // 184 ③: no step kept and played already (a save from before the tutorial): none, 'done' (tut181.js)
   const a = firstFriend(S), from = Math.max(0, STEPS181.indexOf(typeof v === 'string' ? v : '')), done = { hatch: !!a, name: !!S.flags.nm170 || !!a?.nm,
     pet: (S.stats?.pet || 0) > 0, feed: fedOnce(a) || !!a && !feedsLeft(a, now), decor: false, codex: false, nest: (S.stats?.hatch || 0) >= 3, end: !!S.flags.end170 || step170(S, now) === null };
   return STEPS181.find((k, i) => i >= from && !done[k]) ?? null;
@@ -1243,6 +1248,47 @@ export function firstEnd(S, now, rng = Math.random) {
 export function hurry(S, i, ms, now) {
   const s = S.slots[i]; if (!s || !(ms > 0) || now >= s.end) return null;
   const cut = Math.min(ms, s.end - now); s.start -= cut; s.end -= cut; return { cut, events: [] };
+}
+// 184 ⑤: a hatch slot's time, the one place for it (takeEgg, takeGift, guests.js); 광고 제거 (S.noAds) x AD.perk.hatchX
+export const hatchMs = (S, e, type = e.type) => B.hatch[e.rarity] * (EGG[type]?.hatchScale ?? 1) * (S.noAds ? B.ad.perk.hatchX : 1);
+// 184 ⑤ (docs/ad-interstitial.md 3-2): src/toss.js's KEY.ad text -> { o: today's record, prev: the last day before today { d, fi, el } | null }.
+// Local storage can break: through scrub (135-2), then each field by its shape; broken or missing text is an empty record.
+// o: d (dayOf), n (rewarded today), fi (interstitials today; the control group's counted ones), el (today in the measurement),
+// fa / ra (last interstitial / rewarded shown; a time ahead of now becomes now: a clock turned back blocks 30 min, not for ever), eggs
+export function adLog(text, now) {
+  let r = null; try { r = scrub(JSON.parse(text)); } catch { /* none, broken */ }
+  if (!isObj(r)) r = {};
+  const int = (v, hi) => Number.isInteger(v) && v >= 0 ? Math.min(v, hi) : 0, t = v => Number.isFinite(v) && v > 0 ? Math.min(v, now) : 0;
+  const d = typeof r.d === 'string' && r.d.length < 40 ? r.d : '', today = dayOf(now), el = r.el === 1 ? 1 : 0;
+  const o = { d: today, n: 0, fi: 0, el: 0, fa: t(r.fa), ra: t(r.ra), eggs: Array.isArray(r.eggs) ? r.eggs.filter(Number.isInteger).slice(-30) : [] };
+  if (d === today) Object.assign(o, { n: int(r.n, 9), fi: int(r.fi, 9), el });
+  return { o, prev: d && d !== today ? { d, fi: int(r.fi, 9), el } : null, fix: [r.fa, r.ra].some(v => Number.isFinite(v) && v > now) }; // fix: write o back (a time ahead clamped)
+}
+// 184 ⑤ the control group (Q3): by the Toss user's hash (src/toss.js OWNER, hex), the same group on every phone of that account
+export const adHo = (h, share) => typeof h === 'string' && /^[0-9a-f]{2}/.test(h) && parseInt(h.slice(0, 2), 16) / 256 < share;
+// 184 ⑤ the interstitial's gate (3-1), in this order: 'show' | 'load' (show once one is loaded) | 'ho' (the control group: counted, not
+// shown) | why not: 'off' (not a place) 'tut' 'new' (calendar days 0~2) 'paid' (광고 제거) 'day' 'gap' 'rw' (after a rewarded) 'busy'
+// 'session' (a visit's first minutes). o: adLog(...).o; c: the screen's side { at, tut, noAds, busy, since (this visit), ho, loaded }
+export function adGate(S, o, now, c) {
+  const I = B.ad.i;
+  if (!I.at.includes(c.at)) return 'off';
+  if (c.tut || step181(S, now) !== null || step170(S, now) !== null) return 'tut';
+  if (!Number.isFinite(S.since) || dayNo(now) - dayNo(S.since) < I.days) return 'new';
+  if (c.noAds || S.noAds) return 'paid';
+  if (o.fi >= I.day) return 'day';
+  if (now - o.fa < I.gap) return 'gap';
+  if (now - o.ra < I.afterRw) return 'rw';
+  if (c.busy) return 'busy';
+  if (now - c.since < I.session) return 'session';
+  if (c.ho) return 'ho';
+  return c.loaded ? 'show' : 'load';
+}
+// 184 ⑤ the rewarded one (174/182, Q4): asked once per egg (o.eggs), B.ad.day a day, not in an egg's last B.ad.minLeft, not before
+// B.ad.after hatches. 'ad' (ask, the ad loaded) | 'free' (광고 제거: the same offer without an ad) | null. c: { egg, left, ready }
+export function rwGate(S, o, c) {
+  const A = B.ad;
+  if (c.egg == null || o.n >= A.day || o.eggs.includes(c.egg) || !(c.left >= A.minLeft) || (S.stats?.hatch || 0) < A.after) return null;
+  return S.noAds ? 'free' : c.ready ? 'ad' : null;
 }
 // debug: pretend `ms` passed (every timestamp moves back), then catch up
 export function skip(S, ms, now, rng = Math.random) {

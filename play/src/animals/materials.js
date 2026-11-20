@@ -2546,9 +2546,9 @@ LOOKS.baengnok152 = () => { const body = look(P152(), 'baengnok152', body155C(SE
     bn157tassel: sway157(look(phys('#a3121c', { roughness: 0.55, sheen: 1, sheenColor: '#ff7a68', sheenRoughness: 0.45 }), 'tassel157', '')), bn152jade: look(phys('#2a8a6a', { roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.04 }), 'jade155C', JADE155C, {}, { studio: 0.3 }),
     bn152bead: look(phys('#f0fff8', { roughness: 0.12, clearcoat: 1 }), 'bead155C', BEAD155C), bn152calf: calf, bn152calfhorn: calfHorn, parts: (b, G, S) => parts152C(b, G, S, body, calf, horn, calfHorn) }; };
 
-// ---- 183 B 설원 전설 2번째 ① 다시 (?m89 시범; data.js LEGEND163, LEG183: ?m89 = 안 1, ?m89&leg183=2 = 안 2): 백금 북극곰,
+// ---- 183 B 설원 전설 2번째 ① 다시 (?m89 시범; data.js LEGEND163; 184: 183 B's 안 2 of each, 안 1 gone): 백금 북극곰,
 // 청동 순록 with nothing added (163 D ~ 182's aurora, collar, pear gem, frost beads, gold ring, bell and garnet nose gone): only the
-// material and the way it is cut or worn, two finishes of one metal side by side, as the ruby rabbit (cut gem + gold rim) and the
+// material and the way it is cut or engraved, as the ruby rabbit (cut gem + gold rim) and the
 // emerald turtle (gold frame + gem) read. Each one draw (+ the eyes; the bear's enamel nose its own).
 // facet183(n, N): n (object space) to the nearest of N directions over the +z half (a Fibonacci hemisphere), mirrored to -z: each
 // facet flat and its edges straight, both flanks cut alike (a ridge down the back and the face's middle); id the facet (the same on
@@ -2560,65 +2560,51 @@ const FN183 = `vec3 facet183(vec3 n, int N, out float id, out float e) {
   e = min(b - b2, 2.0 * m.z * d.z); d.z *= n.z < 0.0 ? -1.0 : 1.0; return d; }
 `;
 const fn183 = m => { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.fragmentShader = sh.fragmentShader.replace('void main() {', FN183 + 'void main() {'); }; return m; };
-// the cut: each pixel's normal turned to its facet's (the turn added to the skinned normal, so a walking leg keeps its facets; a facet
-// turned away at the silhouette still faces us a little, as the ruby's: no dark band of floor there), and a pixel-thin arris along each
-// edge (ed183, 0..1)
-const CUT183 = n => `float id183, e183; vec3 d183 = facet183(on, ${n}, id183, e183), sn183 = normalize(normal + normalMatrix * (d183 - on));
-  normal = normalize(sn183 + vdir * max(0.0, 0.25 - dot(sn183, vdir))); nv = clamp(dot(normal, vdir), 0.0, 1.0);
-  float ed183 = 1.0 - smoothstep(0.0, 0.003 + 1.5 * fwidth(e183), e183);`;
-// 백금 북극곰 안 1 「면 컷 백금 조각」: the bear's own round body cut into big flat facets (14 a flank), every other facet a mirror (the
-// studio's lights crisp in it) or hairline-brushed (fine straight lines across it, each facet its own way, a satin glow): turned in the
-// light the facets swap, bright and dull, as a cut stone does. A thin glint of light on every edge (the polished arris). Far off (the
-// lines under a pixel) the brushed facets keep their satin, the lines fade out
-const PLAT183A = CUT183(14) + `float hl_ = mod(id183, 2.0);
-  vec3 ax_ = normalize(cross(d183, vec3(0.31, 1.0, 0.17))); ax_ = normalize(mix(ax_, cross(d183, ax_), h31(vec3(id183, 9.0, 1.0))));
-  float ac_ = dot(p, cross(d183, ax_)) * 300.0, ln_ = mix(vn3(vec3(ac_, dot(p, ax_) * 3.0, id183 * 3.1)), 0.5, smoothstep(0.35, 0.9, fwidth(ac_)));
-  diffuseColor.rgb = mix(vec3(0.93, 0.91, 0.87), vec3(0.82, 0.81, 0.78) * (0.88 + 0.24 * ln_), hl_);
-  metalnessFactor = 1.0; roughnessFactor = mix(0.04, 0.22 + 0.1 * ln_, hl_); lookStudio = 1.0; // all the studio: the sky env's green lower half on a facet read as olive patches
-  totalEmissiveRadiance += vec3(0.95, 0.93, 0.9) * 0.2 * ed183;`;
-// 백금 북극곰 안 2 「털결 각인 백금」: the bear's own soft round body, its fur engraved as shallow grooves: one short tapered stroke per
-// cell of a grid 1/40 of the height, through a point of its own, laid on the surface along the fur (back and a little down, down the
+// 백금 북극곰 「털결 각인 백금」 (183 B 안 2): the bear's own soft round body, its fur engraved as shallow grooves: one short tapered
+// stroke per cell of a grid 1/40 of the height, through a point of its own, laid on the surface along the fur (back and a little down, down the
 // legs), turned a little each; only the points near the surface draw. In the grooves the silver darkened (oxidised: a warm grey, dull),
 // the raised places between them a mirror. The face's front, the muzzle and the soles smooth polish (no lines round the eyes); the
-// strokes fade out where they would be under a pixel (the habitat: a plain mirror a shade greyer). uHx, uHy, uHr: the head (pattern space)
-const PLAT183B = BUMP115 + `vec3 F_ = mix(vec3(-1.0, -0.25, 0.0), vec3(-0.15, -1.0, 0.0), smoothstep(0.3, 0.2, p.y));
-  F_ = normalize(F_ - on * dot(F_, on) + vec3(0.0, 0.0, 1e-4)); vec3 S_ = cross(on, F_), q_ = p * 40.0, i_ = floor(q_); float h_ = 0.0, fw_ = length(fwidth(q_));
+// strokes fade out where they would be under a pixel (the habitat: a plain mirror a shade greyer). uHx, uHy, uHr: the head (pattern space).
+// The grooves' slope worked out from the stroke itself (184; not BUMP115's screen differences, one per 2x2 pixels: seen very close, the
+// grooves' lit rims went in steps): the deepest stroke's slope in the surface (q_ space), to view space over Hw_ (view units a unit of
+// p, the same everywhere on a figure), the normal tilted by it as BUMP115 does for a groove 0.0015 deep
+const PLAT183B = `vec3 F_ = mix(vec3(-1.0, -0.25, 0.0), vec3(-0.15, -1.0, 0.0), smoothstep(0.3, 0.2, p.y));
+  F_ = normalize(F_ - on * dot(F_, on) + vec3(0.0, 0.0, 1e-4)); vec3 S_ = cross(on, F_), q_ = p * 40.0, i_ = floor(q_), gq_ = vec3(0.0); float h_ = 0.0, fw_ = length(fwidth(q_));
   for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-    vec3 c_ = i_ + vec3(x, y, z), r_ = h33(c_), o_ = q_ - c_ - r_; float a_ = dot(o_, F_), L_ = 0.7 + 0.3 * r_.x, s_ = dot(o_, S_) + a_ * (r_.y - 0.5) * 0.5, u_ = a_ / L_;
-    h_ = max(h_, (1.0 - smoothstep(0.0, 0.15 * (1.0 - u_ * u_) + 0.6 * fw_, abs(s_))) * step(abs(u_), 1.0) * (1.0 - smoothstep(0.3, 0.5, abs(dot(o_, on))))); }
+    vec3 c_ = i_ + vec3(x, y, z), r_ = h33(c_), o_ = q_ - c_ - r_; float a_ = dot(o_, F_), L_ = 0.7 + 0.3 * r_.x, k_ = (r_.y - 0.5) * 0.5, s_ = dot(o_, S_) + a_ * k_, u_ = a_ / L_;
+    float w_ = 0.15 * (1.0 - u_ * u_) + 0.6 * fw_, t_ = min(abs(s_) / w_, 1.0), dv_ = step(abs(u_), 1.0) * (1.0 - smoothstep(0.3, 0.5, abs(dot(o_, on)))), v_ = (1.0 - t_ * t_ * (3.0 - 2.0 * t_)) * dv_;
+    if (v_ > h_) { h_ = v_; gq_ = -6.0 * t_ * (1.0 - t_) * dv_ * (sign(s_) * (S_ + F_ * k_) + t_ * 0.3 * u_ / L_ * F_) / w_; } }
   float hd_ = length(vec3(p.x - uHx, p.y - uHy, p.z)), sm_ = max(max(smoothstep(uHr, uHr * 0.7, hd_) * smoothstep(-0.2, 0.3, on.x), smoothstep(uHx + 0.06, uHx + 0.12, p.x)), smoothstep(0.035, 0.015, p.y));
-  float fa_ = (1.0 - sm_) * (1.0 - smoothstep(0.15, 0.4, fw_)), g_ = h_ * fa_;
-  BUMP115(-g_, 0.0015); nv = clamp(dot(normal, vdir), 0.0, 1.0);
+  float fa_ = (1.0 - sm_) * (1.0 - smoothstep(0.15, 0.4, fw_)), g_ = h_ * fa_, Hw_ = (length(dFdx(vViewPosition)) + length(dFdy(vViewPosition))) / (length(dFdx(p)) + length(dFdy(p)) + 1e-9);
+  vec3 gv_ = normalMatrix * gq_; gv_ = gv_ - normal * dot(gv_, normal); normal = normalize(normal + gv_ * (0.0015 * 40.0 * fa_ * length(gq_) / (max(length(normalMatrix * gq_), 1e-9) * Hw_)));
+  nv = clamp(dot(normal, vdir), 0.0, 1.0);
   diffuseColor.rgb = mix(vec3(0.93, 0.91, 0.87), vec3(0.36, 0.33, 0.3), g_) * (1.0 - 0.06 * (1.0 - sm_) * (1.0 - fa_));
   metalnessFactor = 1.0; roughnessFactor = mix(0.05, 0.5, g_); lookStudio = mix(1.0, 0.6, g_);`;
-// 청동 순록 안 1 「박물관 청동」: an old bronze statue: a dark brown bronze, mottled, a soft sheen (not a mirror); verdigris (a dull teal
-// crust, chalky lighter where it is thick) only in the hollows (the forks of the antler, where the legs meet the body, under the jaw and
-// the neck, the ears' roots: tools/bake-reindeer183.mjs bakes how shut in each vertex is into _thickness, < 0) and a little on the
-// undersides, a dark line where it meets the metal; where hands rub it (the muzzle and nose, the antler tips (_thickness > 0), the knees'
-// fronts, the top of the back and the head) the bronze worn back to bright polished gold. The antler the same bronze (no gold antler);
-// the hooves darker. uNose (p.x the rub starts), uKnee (p.y of the knee), uBack (p.y the back's rub starts): per stage (the calf its own)
-const BRONZE183A = BUMP115 + `float tip_ = max(vT183, 0.0), oc_ = max(-vT183, 0.0), n1_ = fbm3(p * 7.0 + 3.0), n2_ = fbm3(p * 31.0 + 1.0);
-  float rub_ = max(max(smoothstep(uNose, uNose + 0.06, p.x), smoothstep(0.25, 0.8, tip_)), max(
-    0.8 * (1.0 - smoothstep(0.0, 0.05, abs(p.y - uKnee))) * smoothstep(0.8, 0.98, on.x), smoothstep(0.75, 0.97, on.y) * smoothstep(uBack, uBack + 0.05, p.y)));
-  rub_ = smoothstep(0.2, 0.7, rub_ * (0.6 + 0.8 * n1_));
-  float pa_ = smoothstep(0.25, 0.45, oc_ + 0.22 * smoothstep(-0.4, -0.9, on.y) + (n1_ - 0.5) * 0.45 + (n2_ - 0.5) * 0.4) * (1.0 - rub_), ln_ = smoothstep(0.0, 0.25, pa_) * (1.0 - smoothstep(0.25, 0.6, pa_)), cr_ = smoothstep(0.35, 0.6, pa_);
-  BUMP115(pa_ * n2_, 0.002 * (1.0 - uHab));
-  vec3 br_ = mix(vec3(0.33, 0.2, 0.1), vec3(0.24, 0.145, 0.072), smoothstep(0.3, 0.7, 0.7 * n1_ + 0.3 * n2_ + 0.3 * oc_)) * mix(1.0, 0.6, smoothstep(0.065, 0.05, p.y));
-  diffuseColor.rgb = mix(mix(mix(br_, vec3(0.95, 0.69, 0.38), rub_), br_ * 0.45, ln_), mix(vec3(0.2, 0.42, 0.36), vec3(0.42, 0.62, 0.54), smoothstep(0.5, 0.9, pa_ * n2_ * 1.6)), cr_);
-  metalnessFactor = 1.0 - cr_; roughnessFactor = mix(mix(0.5 - 0.1 * n2_, 0.14, rub_), 0.85, cr_); lookStudio = 0.9 * rub_ * metalnessFactor; // the studio is a mirror (its strip lights crisp at any roughness): the satin bronze only the soft sky, the rubbed gold the studio`;
-// 청동 순록 안 2 「면 컷 청동 조각」: the same slim body cut into big flat facets (12 a flank), each facet its own bronze, a little warmer
-// (red gold) or cooler (olive brown), a shade lighter or darker and its own sheen, so the facets stand apart in depth; the edges only a
-// faint line (bright lines all round read a giraffe's net), the antler tips a little brighter, the hollows darker (the same _thickness),
-// the hooves darker
-const BRONZE183B = CUT183(12) + `float t_ = h31(vec3(id183, 4.0, 7.0)), k_ = h31(vec3(id183, 2.0, 5.0)), tip_ = max(vT183, 0.0), oc_ = max(-vT183, 0.0);
+// 청동 순록 「면 컷 청동 조각」 (183 B 안 2): the same slim body cut into big flat facets, each facet its own bronze, a little warmer (red
+// gold) or cooler (olive brown), a shade lighter or darker and its own sheen, so the facets stand apart in depth; the edges only a faint
+// line (bright lines all round read a giraffe's net), the antler tips a little brighter, the hollows darker (_thickness, < 0), the hooves
+// darker. The cut: each pixel's normal turned to its facet's (the turn added to the skinned normal, so a walking leg keeps its facets; a
+// facet turned away at the silhouette still faces us a little, as the ruby's: no dark band of floor there): the nearest of 12 directions
+// a flank (facet183), then (184) cut again by parallel planes, each piece tilted its own way (uTilt): across the body (uSlab a unit of
+// height, both flanks alike: the flat back's one big facet and the barrel's long strips in pieces nearer one size) and, below uLegY, across
+// the legs (uSlabL: their long strips cut into short facets, a cut stone's column). By night (184) the facets' own tints drawn together,
+// the arrises fainter, less of the studio's softbox in them (lookStudio 0.8 to 0.5) and the facets turned from it lifted a little in their
+// own colour (NIGHT_LOOK, uLift): the softbox's white facets beside the dark ones read a giraffe's patches by night
+const BRONZE183U = { uSlab: 3.5, uSlabL: 9.0, uLegY: 0.27, uTilt: 0.35, uLift: 0.15 };
+const BRONZE183B = `float id183, e183, n_ = uNight; vec3 d183 = facet183(on, 12, id183, e183), pm_ = vec3(p.xy, abs(p.z));
+  float sa_ = dot(pm_, vec3(0.95, 0.12, 0.28)) * uSlab + 0.31, sb_ = dot(pm_, vec3(0.12, 0.98, 0.15)) * uSlabL + 0.67, lg_ = step(p.y, uLegY);
+  float cid_ = floor(sa_) + lg_ * (17.0 * floor(sb_) + 301.0);
+  vec3 tl_ = h33(vec3(cid_, id183, 5.0)) - 0.5; tl_.z *= p.z < 0.0 ? -1.0 : 1.0; d183 = normalize(d183 + uTilt * (tl_ - d183 * dot(tl_, d183)));
+  vec3 sn183 = normalize(normal + normalMatrix * (d183 - on));
+  normal = normalize(sn183 + vdir * max(0.0, 0.25 - dot(sn183, vdir))); nv = clamp(dot(normal, vdir), 0.0, 1.0);
+  float ed183 = 1.0 - smoothstep(0.0, 0.003 + 1.5 * fwidth(e183), e183);
+  float t_ = mix(h31(vec3(id183, 4.0, 7.0)), 0.5, 0.6 * n_), k_ = mix(h31(vec3(id183, 2.0, 5.0)), 0.5, 0.6 * n_), tip_ = max(vT183, 0.0), oc_ = max(-vT183, 0.0);
   vec3 br_ = mix(vec3(0.54, 0.31, 0.14), vec3(0.4, 0.28, 0.15), t_) * (0.9 + 0.2 * k_) * mix(1.0, 0.55, smoothstep(0.065, 0.05, p.y)) * (1.0 - 0.4 * smoothstep(0.2, 0.6, oc_));
-  diffuseColor.rgb = mix(br_, vec3(0.95, 0.7, 0.4), max(ed183 * 0.35, smoothstep(0.4, 0.9, tip_) * 0.6));
-  metalnessFactor = 1.0; roughnessFactor = mix(0.14 + 0.2 * k_, 0.1, ed183); lookStudio = 0.8;`;
+  diffuseColor.rgb = mix(br_, vec3(0.95, 0.7, 0.4), max(ed183 * 0.35 * (1.0 - 0.6 * n_), smoothstep(0.4, 0.9, tip_) * 0.6));
+  metalnessFactor = 1.0; roughnessFactor = mix(0.14 + 0.2 * k_, 0.1, ed183); lookStudio = 0.8 - 0.3 * n_;`;
 Object.assign(NIGHT_LOOK, {
-  plat183a: 'totalEmissiveRadiance += uNight * vec3(0.72, 0.8, 0.95) * (0.03 + 0.1 * pow(1.0 - nv, 2.0) + 0.18 * ed183);', // the arrises catch a cool light
   plat183b: 'totalEmissiveRadiance += uNight * vec3(0.72, 0.8, 0.95) * (0.03 + 0.1 * pow(1.0 - nv, 2.0)) * (1.0 - g_);',
-  bronze183a: 'totalEmissiveRadiance += uNight * diffuseColor.rgb * 0.12;', // by night the dark bronze lifted a little, all of it alike (no glow of the nose's own)
-  bronze183b: 'totalEmissiveRadiance += uNight * vec3(1.0, 0.72, 0.4) * (0.02 + 0.06 * ed183);',
+  bronze183b: 'totalEmissiveRadiance += uNight * (br_ * uLift + vec3(1.0, 0.72, 0.4) * 0.05 * ed183);', // 184: the facets turned from the softbox lifted (the bronze's own colour)
 });
 // _thickness to the bronze's GLSL as vT183
 const vt183 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey();
@@ -2628,28 +2614,21 @@ const vt183 = m => { const prev = m.onBeforeCompile, k = m.customProgramCacheKey
   m.customProgramCacheKey = () => k + '-vt183'; return m; };
 // the bronze reindeer's parts: the reindeer's body, ruff and antler out, the legend file's in (figure.js adds them: the look has
 // r183body / r183horn and the calf's r183calfbody / r183calfhorn), its leg and hoof on the four leg bones (pivot at the hip as the
-// reindeer's: the bones stay); the calf in its own material (its wear heights). The leg copies made once per leg position (their _op
-// differs), kept in L183, freed by dispose163. (Without the legend file, not under ?m89, the look is not given: nothing to swap)
+// reindeer's: the bones stay). The leg copies made once per leg position (their _op differs), kept in L183, freed by dispose163. (Without the legend file, not under ?m89, the look is not given: nothing to swap)
 const L183 = new Map();
-const parts183 = (body, G, S, adult, calf) => { const L = G.legend, pre = L.r183body ? 'r183' : 'r183calf'; if (!L[pre + 'leg']) return;
+const parts183 = (body, G, S) => { const L = G.legend, pre = L.r183body ? 'r183' : 'r183calf'; if (!L[pre + 'leg']) return;
   for (const o of [...body.children]) if (o.geometry && (o.geometry === G.body || o.geometry === G.accent || o.geometry === G.horn)) body.remove(o);
   const H = G.body.boundingBox.max.y, mine = L183.get(L[pre + 'leg']) ?? L183.set(L[pre + 'leg'], G.legs.map(({ x, z }) => [L[pre + 'leg'], L[pre + 'hoof']].map(geo => {
     const c = geo.clone(), op = c.attributes._op; for (let i = 0; i < op.count; i++) op.setXYZ(i, op.getX(i) + x / H, op.getY(i) + S.legs.hip / H, op.getZ(i) + z / H); return c; }))).get(L[pre + 'leg']);
   body.children.filter(o => o.userData.front !== undefined).forEach((g, i) => { g.children[0].geometry = mine[i][0]; if (g.children[1]) g.children[1].geometry = mine[i][1]; });
-  if (pre === 'r183calf') body.traverse(o => { if (o.material === adult) o.material = calf; });
 };
 Object.assign(LOOKS, {
-  plat183a: () => { const b = fn183(look(phys('#ffffff', { roughness: 0.05, metalness: 1 }), 'plat183a', PLAT183A, {}, { studio: 1 }));
-    return { body: b, accent: b, hoof: b, beak: phys('#17171a', { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04 }) }; },
-  plat183b: () => { const mk = h => hab89(look(phys('#ffffff', { roughness: 0.05, metalness: 1 }), 'plat183b', PLAT183B, h, { studio: 1 }));
+  plat183b: () => { const mk = h => look(phys('#ffffff', { roughness: 0.05, metalness: 1 }), 'plat183b', PLAT183B, h, { studio: 1 });
     const b = mk({ uHx: 0.453, uHy: 0.83, uHr: 0.17 }), cub = mk({ uHx: 0.32, uHy: 0.75, uHr: 0.21 }); // the head (pattern space): the adult's, the cub's
     return { body: b, accent: b, hoof: b, cub, beak: phys('#17171a', { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04 }),
       parts: (r, G, S) => { if (S.legs.hip < 0.5) r.traverse(o => { if (o.material === b) o.material = cub; }); } }; }, // the cub (hip 0.39; the adult's 0.76)
-  ...Object.fromEntries([['bronze183a', BRONZE183A], ['bronze183b', BRONZE183B]].map(([key, glsl]) => [key, () => {
-    const mk = u => vt183(hab89((key === 'bronze183b' ? fn183 : m => m)(look(phys('#ffffff', { roughness: 0.3, metalness: 1 }), key, glsl, u, { studio: 0.85 }))));
-    const adult = mk({ uNose: 0.5, uKnee: 0.222, uBack: 0.68 }), calf = mk({ uNose: 0.47, uKnee: 0.146, uBack: 0.58 }); // knee: hip less 0.4 (0.2) over the height
-    return { body: adult, accent: adult, hoof: adult, horn: adult, beak: adult, r183body: adult, r183horn: adult, r183calfbody: calf, r183calfhorn: calf,
-      parts: (b, G, S) => parts183(b, G, S, adult, calf) }; }])),
+  bronze183b: () => { const b = vt183(fn183(look(phys('#ffffff', { roughness: 0.3, metalness: 1 }), 'bronze183b', BRONZE183B, BRONZE183U, { studio: 0.85 })));
+    return { body: b, accent: b, hoof: b, horn: b, beak: b, r183body: b, r183horn: b, r183calfbody: b, r183calfhorn: b, parts: parts183 }; }, // one material (184: the calf's own was 183 B 안 1's wear heights)
 });
 // ---- 163 D ② (?m89 시범): 흑요석 은테 펭귄, 블랙 오팔 물범 (both again in 165 D).
 // 흑요석 은테 펭귄 (165 D, again; not black plastic): the back, head and flippers rainbow obsidian: a black mirror (studio 1) with violet
@@ -2815,5 +2794,5 @@ Object.assign(LOOKS, {
       parts: (r, G) => { const s = new Set(G.wings.map(w => w.spot)); r.traverse(x => { if (x.isMesh && s.has(x.geometry)) x.material = spot163; }); } }; }, // the wing flecks: the wing's feathers
 });
 // the sets are made once and kept (as every look's); dispose163 frees them and the copies (no caller yet: nothing tears the looks down)
-export const dispose163 = () => { for (const [k, s] of cache) if (/^((obsidian|blackopal|rosequartz|filigree)163|(plat|bronze)183[ab])\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
+export const dispose163 = () => { for (const [k, s] of cache) if (/^((obsidian|blackopal|rosequartz|filigree)163|(plat|bronze)183b)\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
   for (const v of L183.values()) for (const p of v) for (const g of p) g.dispose(); L183.clear(); for (const g of TIP163.values()) g.dispose(); TIP163.clear(); for (const c of T163.values()) { c.body.dispose(); c.accent.dispose(); } T163.clear(); };

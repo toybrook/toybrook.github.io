@@ -2119,6 +2119,9 @@ export default {
  "광고를 보여 주지 못했어요 · 잠시 뒤에 다시 해 주세요": "Couldn't show the ad · Please try again in a moment",
  "게임 안내": "About the game",
  "모은 동물은 이 기기의 토스 앱에 저장돼요. 광고는 둥지에서 원할 때만 보는 보상형 광고(알 빨리 깨우기)뿐이고, 게임 안에 결제는 없어요.": "Your animals are saved in the Toss app on this device. The only ads are optional rewarded ads in the nest (hatch an egg sooner), and there are no payments in the game.",
+ "모은 동물은 이 기기의 토스 앱에 저장돼요. 광고는 둥지에서 원할 때만 보는 보상형 광고(알 빨리 깨우기)와, 알이 깨어난 뒤 「Ad」 표시가 붙은 버튼을 누르면 나오는 전면 광고(하루 2번까지)예요.": "Your animals are saved in the Toss app on this device. Ads are the optional rewarded ads in the nest (hatch an egg sooner) and a full-screen ad when you tap a button marked \"Ad\" after an egg hatches (2 a day at most).", // 184 ⑤
+ "이 알을 {0}분 빨리 깨울까요?": "Hatch this egg {0} minutes sooner?", // 184 ⑤
+ "깨우기": "Hatch sooner", // 184 ⑤
  "토스 계정을 확인하지 못했어요": "Couldn't check your Toss account",
  "잠시 뒤에 다시 해 주세요. 계속 안 되면 토스 앱을 최신 버전으로 업데이트해 주세요.": "Please try again in a moment. If it keeps failing, update the Toss app to the latest version.",
  "다시 시도": "Try again",
@@ -2154,6 +2157,7 @@ export default {
  "놓은 것도 톡 누르면 다시 옮겨요": "Tap a placed item to move it again",
  "다 꾸몄으면 완료를 눌러요": "Tap Done when you're finished",
  "설정에서 다시 볼 수 있어요": "You can see it again in Settings",
+ "곧 깨어나요…": "Almost hatching…", // 184 ③ Q1
  "<div class=\"row\"><b>튜토리얼</b><div class=\"seg\"><button data-act=\"tut\">튜토리얼 다시 보기</button></div></div>": "<div class=\"row\"><b>Tutorial</b><div class=\"seg\"><button data-act=\"tut\">Show the tutorial again</button></div></div>",
  // 182 ④ 나의 뜰 (?yard trial)
  "나의 뜰": "My Yard",

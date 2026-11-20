@@ -46,8 +46,9 @@ export function track(name, data, key = name) {
   if (!allowed()) return;
   const today = dayOf(Date.now()); if (st.day !== today) { st.day = today; st.sent = []; }
   if (key.endsWith('#')) key += st.sent.length;
-  const err = key.startsWith('error:'); // errors: 5 kinds a day at most, the rest 25 (30 a device a day)
-  if (st.sent.includes(key) || st.sent.filter(k => k.startsWith('error:') === err).length >= (err ? 5 : 25)) return;
+  const err = key.startsWith('error:'), tut = key.startsWith('tut:'); // errors: 5 kinds a day at most, the rest 25 (30 a device a day)
+  // 184 ③ Q2: the tutorial's tut: keys (a step each, once a day: 13 kinds at most) sit outside the 25 and don't count in it
+  if (st.sent.includes(key) || !tut && st.sent.filter(k => k.startsWith('error:') === err && !k.startsWith('tut:')).length >= (err ? 5 : 25)) return;
   st.sent.push(key); keep();
   if (window.umami || TOSS) send(name, data); else { queue.push([name, data]); load(); }
 }

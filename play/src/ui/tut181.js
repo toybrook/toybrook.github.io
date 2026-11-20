@@ -1,4 +1,4 @@
-// 182 ② the 181 A tutorial (?tut181 only: main.js imports this then; docs/tutorial.md, reports/182t.md). It rides on the 170 first
+// 182 ② the 181 A tutorial (TUT181: ?tut181, the Toss build, and since 184 ③ the web build for new saves only; main.js imports this then; docs/tutorial.md, reports/182t.md). It rides on the 170 first
 // day (first170.js keeps the naming and end cards): one place lit at a time (a hole in a dim layer that takes no taps, so a tap
 // anywhere still does what it always does), a finger, a bubble with 건너뛰기. The steps come from rules step181; the save keeps the
 // step in flags.tut181 (decor's 7 cells start over after a reload). Later, once each: map (a second habitat open) and aff (정 Lv2).
@@ -7,7 +7,7 @@
 import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import * as R from '../game/rules.js';
-import { HABITATS } from '../game/data.js';
+import { HABITATS, F170 } from '../game/data.js'; // 184 ③: F170 off on the web: no naming card, no 정 (name and aff pass, end is the 3rd card)
 import { toast, topWindow } from './hud.js';
 import { track } from './stats.js';
 let tabOf = () => ''; // decor.js's, fetched at the decor step: a static import pulled the 3D code and held the first light ~6.5 s on slow 4G
@@ -25,10 +25,11 @@ fing.innerHTML = '<svg viewBox="0 0 40 48" width="40" height="48"><path d="M12 5
 const STEP = 250, AUTO = 25e3, LATE = 30e3; // the loop; a decor cell (drag·turn·move) passes itself after 25 s, map·aff after 30 s
 const DFULL = ['d_open', 'd_pick', 'd_drag', 'd_turn', 'd_put', 'd_move', 'd_done'], DSHORT = ['d_open', 'd_move', 'd_turn', 'd_put', 'd_done']; // §2-4: one placed already
 let getCur = () => null, getApi = () => null, iv = 0, raf = 0, plan = null, key, mode = 'main', AG = [], ai = 0, late = null, lateT = 0, lateB = true, auto = new Set();
-let seen = null, path = DFULL, sub = null, subT = 0, mk = {}, n0 = 0, backs = 0, waitAt = 0, shook = false;
+let seen = null, path = DFULL, sub = null, subT = 0, mk = {}, n0 = 0, backs = 0, waitAt = 0, wobAt = 0, nFill = 0, shook = false;
+let stAt = 0; const HPOP = 1100, WOB = [600, 3300]; // 184 ③ Q1: a nest egg's wait: 곧 깨어나요… from 0.6 s (the egg has dropped in) to 3.3 s, the egg rocking 3 times (wob .9 s)
 
 const hab2 = S => HABITATS.find((h, i) => i > 0 && h.ready && R.unlockInfo(S, h.id).open)?.id; // the second habitat, once open
-const affDue = S => S.animals.some(a => !a.pending && R.affLevel(a, G.now()) >= 2);
+const affDue = S => F170 && S.animals.some(a => !a.pending && R.affLevel(a, G.now()) >= 2);
 const placedHere = S => S.props.filter(p => p.placed && !p.nat && p.hab === getCur() && !R.PROP[p.prop]?.art);
 const stowedHere = S => S.props.filter(p => !p.placed && !p.nat && p.hab === getCur()).sort((a, b) => (b.prop === 'tulips') - (a.prop === 'tulips'));
 // a guest of 66-1 coming (its camera, its toast): the tutorial waits, 6 s either side (170's rule, from its first hatch on)
@@ -44,17 +45,19 @@ function clear(t, inBox) {
 function tick() {
   const S = G.S; if (!S) return;
   const v = S.flags.tut181, now = G.now();
-  if (v === 'skip' || v === 'done' && !late && S.flags.tutMap && S.flags.tutAff) return stop();
+  if (v === 'skip' || v === 'done' && !late && S.flags.tutMap && (S.flags.tutAff || !F170)) return stop(); // 184 ③: no 정 on the web, so no aff to wait for
   let k, P = null;
   if (v === 'again') { k = AG[ai]; if (!k) { G.flag('tut181', 'done'); return stop(); } }
   else {
     k = R.step181(S, now);
-    if (k === 'name' && R.step170(S, now) !== 'name') { auto.add('name'); G.flag('tut181', 'pet'); return; } // an older save past 170's days: no naming card comes
+    if (!k && v == null) { G.flag('tutMap', 1); G.flag('tutAff', 1); G.flag('tut181', 'done'); return stop(); } // 184 ③: a save played before the tutorial (rules played): never shown, map·aff too
+    if (k === 'end' && !F170 && !S.animals.some(a => a.pending)) k = null; // no 170 end card: the 3rd egg's card answered is the end
+    if (k === 'name' && (!F170 || R.step170(S, now) !== 'name')) { auto.add('name'); G.flag('tut181', 'pet'); return; } // an older save past 170's days: no naming card comes
     if (k && v !== k) G.flag('tut181', k); // the step, kept for a reload (rules step181 never goes back before it)
     if (!k && v !== 'done') G.flag('tut181', 'done');
   }
   if (k !== key) { if (mode === 'main' && key) passed(key, k); key = k; enter(k); }
-  const busy = arriving();
+  const busy = arriving() && !(k === 'hatch' && vis($('nstage')) && !vis($('ncard'))); // 184 ③ Q1: the first egg's 곧 깨어나요… over the open nest (the guest's camera is under it)
   if (!busy) P = k ? plan181(S, k, now) : null;
   // map·aff: when the first day's steps are done, or in the nest's wait (Q7)
   if (!busy && mode === 'main' && (!k || k === 'nest' && P?.wait)) {
@@ -85,7 +88,9 @@ function plan181(S, k, now) {
   const a = R.firstFriend(S), api = getApi(), at = id => () => { const p = api?.where(id); return p && [p[0], p[1] + 34]; };
   if (k === 'hatch') {
     const L = $('loading'), lf = q('.lfirst', L), go = q('#ncard [data-go]'), rd = q('#nslots .nslot.ready');
-    const t = vis(go) ? go : vis(rd) ? rd : vis(lf) ? lf : !L.hidden && vis(q('.lbar', L)) ? q('.lbar', L) : vis($('nest')) ? (S.slots.some(Boolean) ? null : q('#neggs .negg[data-id]')) : $('nestBtn');
+    if (!vis($('nstage'))) stAt = 0; else if (!vis($('ncard'))) { stAt ||= Date.now(); // 184 ③ Q1: the first egg rocking and cracking (animals/growth.js HATCH: pop at 1.15 s), not the friend out after it
+      return Date.now() - stAt < HPOP ? { t: null, text: $t('곧 깨어나요…'), wait: 1, near: $('nstage'), inBox: $('nest') } : { wait: 1, none: 1 }; }
+    const t = vis(go) ? go : vis(rd) ? rd : vis(lf) ? lf : F170 && !L.hidden && vis(q('.lbar', L)) ? q('.lbar', L) : vis($('nest')) ? (S.slots.some(Boolean) ? null : q('#neggs .negg[data-id]')) : $('nestBtn');
     return { t, text: t === go ? '' : $t('알을 톡 눌러 깨워요'), fing: 'tap' }; // 서식지로 보내기: the button says it
   }
   if (k === 'end') { const go = q('#ncard [data-go]'); return vis(go) ? { t: go, text: '', fing: 'tap' } : null; } // the 3rd egg's card still open; then 170's end card
@@ -112,8 +117,15 @@ function plan181(S, k, now) {
   }
   if (k === 'nest') {
     const go = q('#ncard [data-go]'), rd = q('#nslots .nslot.ready');
-    if (vis(go) || rd) return { t: vis(go) ? go : vis(rd) ? rd : $('nestBtn'), text: vis(go) ? '' : $t('알을 톡 눌러 깨워요'), fing: 'tap' }; // the 2nd and 3rd eggs (step181 waits for 3 hatched)
-    if (S.slots.some(Boolean)) { waitAt ||= now; return now - waitAt < 5e3 ? { t: null, text: $t('깨는 동안 꾸며 봐요'), wait: 1, near: $('nestPill') } : { wait: 1, none: 1 }; } // then it leaves them be
+    if (vis(go) || rd || !vis($('nest')) && S.slots.some(s => s && now >= s.end)) return { t: vis(go) ? go : vis(rd) ? rd : $('nestBtn'), text: vis(go) ? '' : $t('알을 톡 눌러 깨워요'), fing: 'tap' }; // the 2nd and 3rd eggs (step181 waits for 3 hatched); 184 ③: with the nest shut its slots are not redrawn, so a ready one is read from the save
+    const f = S.slots.filter(Boolean).length; if (f > nFill) waitAt = 0; nFill = f; // 184 ③ review: a new egg in another slot starts its own wait
+    if (f) { waitAt ||= now; const w = now - waitAt, ni = S.slots.reduce((b, x, i) => x && now < x.end && (b < 0 || x.start > S.slots[b].start) ? i : b, -1), egg = ni < 0 ? null : q(`#nslots .nslot[data-i="${ni}"]:not(.ready)`); // the newest waiting egg
+      if (vis($('nest')) && vis(egg)) { // 184 ③ Q1: the nest open on it: the egg rocks with one line over it, once a wait
+        if (w < WOB[0] || w >= WOB[1]) return { wait: 1, none: 1 };
+        if (wobAt !== waitAt) { wobAt = waitAt; egg.classList.remove('tutwob'); void egg.offsetWidth; egg.classList.add('tutwob'); setTimeout(() => egg.classList.remove('tutwob'), WOB[1] - WOB[0]); }
+        return { t: null, text: $t('곧 깨어나요…'), wait: 1, near: egg, inBox: $('nest') };
+      }
+      return w < 5e3 ? { t: null, text: $t('깨는 동안 꾸며 봐요'), wait: 1, near: $('nestPill') } : { wait: 1, none: 1 }; } // then it leaves them be
     waitAt = 0; const e = q('#neggs .negg[data-id]');
     return { t: vis($('nest')) ? e : $('nestBtn'), text: $t('다음 알을 둥지에 넣어요'), fing: 'tap' };
   }
@@ -209,7 +221,7 @@ export function again() {
   const S = G.S; if (!S) return; stop();
   if (R.step181(S, G.now())) { mode = 'main'; return start(); } // the first run still going: it carries on where it is
   G.flag('tut181', 'again'); track('tut', { s: 'again' }, 'tut:again');
-  mode = 'again'; ai = 0; AG = ['pet', 'feed', 'decor', 'codex', ...hab2(S) ? ['map'] : [], 'aff']; start();
+  mode = 'again'; ai = 0; AG = ['pet', 'feed', 'decor', 'codex', ...hab2(S) ? ['map'] : [], ...F170 ? ['aff'] : []]; start();
 }
 export function initTut(cur, api) {
   getCur = cur; getApi = api; const S = G.S;

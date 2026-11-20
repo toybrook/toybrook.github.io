@@ -15,7 +15,7 @@
 import { $t } from '../i18n/i18n.js';
 import { GUEST as G, GUESTS, WISH, CLASH, GROUND, TAGS, GROUNDS, GUEST_PROPS, PROP_TAGS, TUTORIAL } from './guests-data.js';
 import { BALANCE as B, GIFT, PROPS } from './data.js';
-import { HAB, EGG, PROP, layEgg, needFor, outIn, colorsOf, fits } from './rules.js';
+import { HAB, EGG, PROP, hatchMs, layEgg, needFor, outIn, colorsOf, fits } from './rules.js';
 import { peOf } from './pals.js';
 import { nightNo } from './sky.js';
 import { dayOf } from './clock.js';
@@ -111,7 +111,7 @@ function leaveEgg(S, g, now, rng) {
   if (i < 0 && n.eggs.length >= B.nest.max) { S.hearts += GIFT.eggHearts; return { hearts: GIFT.eggHearts }; }
   Q.eggs++; const e = layEgg(S, type, rng);
   if (i < 0) { n.eggs.push(e); return { hab: h, nest: true }; }
-  S.slots[i] = { egg: e, start: now, end: now + B.hatch[e.rarity] * (EGG[type]?.hatchScale ?? 1) };
+  S.slots[i] = { egg: e, start: now, end: now + hatchMs(S, e, type) };
   return { hab: h, slot: i };
 }
 // 대만족's chance of a guest prop of the habitat not owned yet (all owned, or not in PROPS yet: hearts)

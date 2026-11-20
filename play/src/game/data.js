@@ -70,7 +70,12 @@ export const DUO = { kinds: ['seesaw', 'swing', 'fountain', 'campfire', 'feeder'
 const MYTH = { beta: { day: 1, nights: 1, guest: 3 }, release: { day: 3, nights: 3, guest: 7 } }; // release: it comes in about a week, settles in about two (check-eggs 14-1)
 // 174·182: the Toss rewarded ad (src/toss.js): an egg `cut` sooner, `day` a day, asked only when it has `minLeft` or more to go
 // and the save has hatched `after` or more (the first day's fast eggs are never asked about)
-const AD = { cut: 60 * MIN, day: 3, minLeft: 5 * MIN, after: 12 };
+const AD = { cut: 60 * MIN, day: 3, minLeft: 5 * MIN, after: 12,
+  // 184 ⑤ (docs/ad-interstitial.md 4절): the interstitial, behind ADI184 (below). at: its places (only the hatch card's last answer),
+  // days: none on a new game's calendar days 0~2, day: a day (Q2: 2), gap / afterRw: after the last interstitial / rewarded, session: a
+  // visit's first minutes, left: a leave this soon after it counts as 이탈, holdout: the control group's share (Q3: 20 %, 2 weeks)
+  i: { at: ['nest'], days: 3, day: 2, gap: 30 * MIN, afterRw: 30 * MIN, session: 5 * MIN, left: 60e3, holdout: 0.2 },
+  perk: { hatchX: 0.8 } }; // 184 ⑤ 광고 제거 (S.noAds; not sold yet, Q6): a hatch slot's time x0.8
 export const PACE = {
   release: {
     // 182 ① (177 A 2판, docs/balance-release.md 9절): the Toss build is this edition (build-web toss() sets EDITION)
@@ -775,15 +780,15 @@ export const SPECIES = [
 // ?m89 (photos only; without it nothing here changes): trials not yet public. The 97~111 concept-sheet looks (Tier_fox_rex,
 // Legends8: glass, lacquer, moon sheep, jade rabbit, 구미호 A·B) were dropped in 114 (user 2026-11-17); they are in git 598fc3a
 export const M89 = false; // release build: the 89-4·90 trial looks stay off (89-2)
-// 183 B (?m89 only; photos): which of the two looks the platinum polar bear and the bronze reindeer wear (1: cut facets / museum
-// bronze, 2: engraved fur / cut bronze). build-web.mjs pins it to 1
-export const LEG183 = 1; // release build: the 183 B trial choice off (behind M89 anyway)
 // 170 trial flag (photos only until the user OKs it): first 10 seconds, 애정 레벨, 「다음 할 일」 줄, day-2 legend egg·night notice·install prompt·attendance preview
 export const F170 = false; // release build: the 170 trial stays off
 // 182 ② trial flag (181 A tutorial, docs/tutorial.md): it runs on the 170 flow, so F170 above is on with it too; off in the release build
-export const TUT181 = false; // release build: the 181 tutorial stays off
+export const TUT181 = true; // the 181 tutorial on in both builds: Toss with 170 (182 ② Q6), the web for new saves only with F170 off (184 ③)
 // 182 ④ trial flag (docs/concepts/custom-zone.md 13-1, 「나의 뜰」): the yard habitat, photos only; off in the release build (build-web.mjs)
 export const YARD = false; // release build: the 182 ④ yard trial stays off
+// 184 ⑤ flag (?adi184, docs/ad-interstitial.md): the interstitial ad (src/toss.js, so Toss only). Off in every build (build-web.mjs ADI)
+// until it opens with the 광고 제거 sale (Q6)
+export const ADI184 = false; // release build: the 184 ⑤ interstitial stays off
 // bigIds: measured 2026-11-20 (decorModel triangles over 8,000; the median prop 2,258; rails aside)
 // the yard's steps 0..3 (5-1): open land cells a side, props / natives / animals at once; price: ♥ for steps 1..3; big: the props over
 // 8,000 triangles (measured in the browser, report 182y) at most this many together; level: the garden level it opens at, free
@@ -883,8 +888,8 @@ for (const [sp, L] of Object.entries(LEGEND151)) SPECIES.find(s => s.id === sp).
 // 163 D 설원 전설 2번째 ① (?m89 시범; inbox 163 D): platinum, bronze statue (materials.js 163 D) on the snow bodies as they are.
 // Appended last; late: visit.js VL puts them after every look made before, so old link numbers stay
 export const LEGEND163 = {
-  polarBear: { id: 'platinum', name: $t('백금 북극곰'), mat: LEG183 === 2 ? 'plat183b' : 'plat183a', effect: 'clearglints', late: 163 }, // 183 B
-  reindeer: { id: 'bronze', name: $t('청동 조각상 순록'), mat: LEG183 === 2 ? 'bronze183b' : 'bronze183a', effect: 'goldglints', late: 163 },
+  polarBear: { id: 'platinum', name: $t('백금 북극곰'), mat: 'plat183b', effect: 'clearglints', late: 163 }, // 184: 183 B's look 2 (engraved fur); look 1 gone
+  reindeer: { id: 'bronze', name: $t('청동 조각상 순록'), mat: 'bronze183b', effect: 'goldglints', late: 163 }, // 184: 183 B's look 2 (cut bronze)
   penguin: { id: 'obsidian', name: $t('흑요석 은테 펭귄'), mat: 'obsidian163', effect: 'silversparks', late: 163 }, // 163 D ②
   seal: { id: 'blackopal', name: $t('블랙 오팔 물범'), mat: 'blackopal163', effect: 'twinkle', late: 163 },
   arcticFox: { id: 'rosequartz', name: $t('로즈쿼츠 여우'), mat: 'rosequartz163', effect: 'roseglints', late: 163 }, // 163 D ③
@@ -893,14 +898,14 @@ export const LEGEND163 = {
 // 172 A: the penguin, seal, fox and owl public (user OK 11/19); the polar bear and the reindeer again (171 B, 172 B), still ?m89
 export const HOLD163 = ['polarBear', 'reindeer'];
 for (const [sp, L] of Object.entries(LEGEND163)) if (M89 || !HOLD163.includes(sp)) SPECIES.find(s => s.id === sp).legendary.push(L);
-// 183 B: 176 B's own platinum bear body (hump, collar, gem; pilot89_polarbear176_*.glb, tools/bake-polarbear176.mjs, git efe7235)
-// dropped: both 183 looks are cut / engraved into the polar bear's own body
+// 184: 176 B's own platinum bear body (pilot89_polarbear176_*.glb, tools/bake-polarbear176.mjs) deleted (kept in git efe7235): the
+// platinum is engraved into the polar bear's own body
 // 152 C 백록 (160 A 공개): the white deer of Halla, on the reindeer's own legend files (tools/bake-baengnok152.mjs: slimmer, a big
 // smooth antler, a silver cord and bell) in white porcelain, frost flowers at its feet (materials.js 152 C). 158: no longer a reindeer
 // legendary slot: the 신수 백록 (MYTHIC152 fig) wears it
 MODELS.reindeer.legend = { adult: 'assets/models/baengnok152_adult.glb', baby: 'assets/models/baengnok152_baby.glb' }; // 160 A: public (the pilot89 files renamed) // 156 C: the calf's own file too
 // 183 B (?m89): the bronze reindeer's own bodies (tools/bake-reindeer183.mjs: slim knee-jointed legs, a big sweeping antler, no ruff
-// or collar; hollows and worn ends baked in), a second file for each stage (figure.js loads a list); materials.js bronze183a/b put them on
+// or collar; hollows and worn ends baked in), a second file for each stage (figure.js loads a list); materials.js bronze183b puts them on
 if (M89) for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st] = [MODELS.reindeer.legend[st], `assets/models/pilot89_reindeer183_${st}.glb`];
 // 163 A 공룡 방향 다시 (?m89 시범; tools/bake-dino163.mjs, from 161 A's crisp horns, plates, spikes, toes and claws): the
 // triceratops and stegosaurus as toys: the head 1.35x / 1.38x on a shorter neck, the body 0.85x as long and rounder (shoulders and
