@@ -25,7 +25,7 @@ export function initAttend(cur) { at = cur; }
 export const weekOn = () => !!G.S.flags.week1 && G.S.attend.n < WEEK1.length; // 93-2 첫 주 선물 (rules attend)
 // the 7 cells: got (도장), today's, the rest faint (93-2)
 export const weekCells = () => { const n = G.S.attend.n; return `<p class="week">${WEEK1.map((r, i) => `<span class="${i < n ? 'got' : i === n ? 'now' : ''}"><b>${i + 1}</b>${i < n ? '✓' : cell(r)}</span>`).join('')}</p>`; };
-export const todayRow = () => { const n = G.S.attend.n, k = n % L; if (weekOn()) return [n + 1, cell(WEEK1[n]), n === 1]; return [k + 1, cell(ATTEND[k]) + (k === L - 1 ? ` + ${PROP[ATTEND_PROPS[Math.floor(n / L) % ATTEND_PROPS.length]].name}` : '')]; };
+export const todayRow = () => { const n = G.S.attend.n, k = n % L; if (weekOn()) return [n + 1, cell(WEEK1[n]), n === 1]; return [n + 1, cell(ATTEND[k]) + (k === L - 1 ? ` + ${PROP[ATTEND_PROPS[Math.floor(n / L) % ATTEND_PROPS.length]].name}` : ''), false, Math.floor(n / L) + 1]; }; // 196-3: the running day (n + 1) and the week, not the slot in the 7-day turn
 export function takeToday(where) {
   const out = G.attend(where); if (!out) return null;
   track('attend', { day: G.S.attend.n }); if (out.got.week) track('week_day', { v: out.got.week }); if (out.got.week === 2) track('d2_gift_open'); sfx('grown');
