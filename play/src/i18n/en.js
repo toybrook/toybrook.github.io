@@ -1049,6 +1049,8 @@ export default {
  "불러오기 전 저장으로 돌아왔어요": "Back to the save from before loading",
  "백업을 불러왔어요 · 설정 › 내 저장 백업에서 되돌릴 수 있어요": "Backup loaded · You can undo it in Settings › My save backup",
  "저장을 읽을 수 없어서 처음부터 시작해요. 백업 코드가 있으면 설정 › 내 저장 백업에서 불러올 수 있어요.": "Your save couldn't be read, so you're starting fresh. If you have a backup code, you can load it in Settings › My save backup.",
+ "새 버전에서 만든 저장이에요. 이번에는 저장하지 않아요. 새로 고침하면 이어서 할 수 있어요.": "This save was made in a newer version. Nothing is saved this time. Reload to pick up where you left off.",
+ "저장을 읽을 수 없고 따로 둘 공간도 없어서 이번에는 저장하지 않아요. 기기 공간을 비우고 다시 열거나, 백업 코드로 불러오세요.": "Your save couldn't be read and there's no room to set it aside, so nothing is saved this time. Free up space and reopen, or load a backup code.",
  "베타 데이터는 정식판으로 옮길 수 없어요. 처음부터 시작해요.": "Beta data can't be moved to the full release. You're starting fresh.",
  "<div class=\"chead\"><b>진열장</b><span id=\"cabn\"></span><button class=\"back\" data-night>밤에 보기</button><button class=\"back\" data-close>닫기</button></div>\n<div class=\"ctabs\">{0}</div>\n<div class=\"cview\" id=\"cview\">{1}</div><div class=\"cchips\" id=\"cchips\"><p>피규어를 누르면 본 색 중에서 고를 수 있어요</p></div>": "<div class=\"chead\"><b>Display shelf</b><span id=\"cabn\"></span><button class=\"back\" data-night>Night view</button><button class=\"back\" data-close>Close</button></div>\n<div class=\"ctabs\">{0}</div>\n<div class=\"cview\" id=\"cview\">{1}</div><div class=\"cchips\" id=\"cchips\"><p>Tap a figure to pick from colors you've seen</p></div>",
  "낮에 보기": "Day view",

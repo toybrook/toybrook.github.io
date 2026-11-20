@@ -160,7 +160,7 @@ async function enter(id) {
   api.setActive(true); play.attach(api, id);
   if (G.S.refit?.includes(id)) G.refit(id, api.decor.refit(G.S.props)); // inbox 42 A: the board grew (rules.js to11): what no longer fits moves
   if (!SEE) artPlace(id); // 17-2: the 작품 made while away, on this board's empty ground
-  await api.warm().catch(() => {}); loadBar(false); // 168: shaders made ahead or not, the curtain lifts (style.css hides the buttons while it shows) idle(mapUp); return true;
+  await api.warm().catch(() => {}); loadBar(false); idle(mapUp); return true; // 168: shaders made ahead or not, the curtain lifts (style.css hides the buttons while it shows); 202: these two were inside the comment since 168
 }
 const mapUi = initWorldMap(world, { enter });
 G.on(ev => { if (ev.some(e => e.type === 'unlock' || e.type === 'reset')) mapUi.refresh(); });

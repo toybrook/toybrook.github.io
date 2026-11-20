@@ -88,8 +88,8 @@ setTimeout(() => {
   if (linked) { let t = ''; try { t = decodeURIComponent(linked); } catch { /* cut short */ } open(); $('bkText').value = t; load(t); return; }
   let done = null; try { done = sessionStorage.getItem(DONE); sessionStorage.removeItem(DONE); } catch { /* storage off (a frame's blocked storage): nothing to say */ }
   if (done) toast(done === 'undo' ? $t('불러오기 전 저장으로 돌아왔어요') : $t('백업을 불러왔어요 · 설정 › 내 저장 백업에서 되돌릴 수 있어요'), 3500, true);
-  else if (G.refused === 'beta' || G.bad) { // on the start card when it is up (a toast would sit under it)
-    const t = G.bad ? $t('저장을 읽을 수 없어서 처음부터 시작해요. 백업 코드가 있으면 설정 › 내 저장 백업에서 불러올 수 있어요.') : $t('베타 데이터는 정식판으로 옮길 수 없어요. 처음부터 시작해요.'), i = $('intro');
+  else if (G.refused === 'beta' || G.bad || G.frozen) { // on the start card when it is up (a toast would sit under it)
+    const t = G.frozen === 'new' ? $t('새 버전에서 만든 저장이에요. 이번에는 저장하지 않아요. 새로 고침하면 이어서 할 수 있어요.') : G.frozen ? $t('저장을 읽을 수 없고 따로 둘 공간도 없어서 이번에는 저장하지 않아요. 기기 공간을 비우고 다시 열거나, 백업 코드로 불러오세요.') : G.bad ? $t('저장을 읽을 수 없어서 처음부터 시작해요. 백업 코드가 있으면 설정 › 내 저장 백업에서 불러올 수 있어요.') : $t('베타 데이터는 정식판으로 옮길 수 없어요. 처음부터 시작해요.'), i = $('intro');
     if (i.hidden) toast(t, 4000, true); else i.querySelector('p').insertAdjacentHTML('afterend', `<p><b>${t}</b></p>`);
   }
 }, 600);

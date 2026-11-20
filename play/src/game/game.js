@@ -7,7 +7,7 @@ import * as P from './pals.js'; // 113
 import * as GU from './guests.js'; import { guestWear } from './guests-data.js'; // 66-1, 86-3마
 import * as A from './art.js'; // 17-2
 import * as W from './wild.js'; // 17-3
-import { PROPS, YARD } from './data.js';
+import { PROPS, YARD, SCHEMA_VERSION } from './data.js';
 import * as Y from './yard.js'; // 182 ④ (?yard): the yard's part of the save, under its own key
 import { EDITION } from '../config.js';
 import { now as clock } from './clock.js';
@@ -16,6 +16,7 @@ export { now, dayOf } from './clock.js'; // the UI reads game time as G.now()
 const KEY = 'toyhabitat.save';
 export let S = null;
 export let refused = null; // inbox 22: the edition of a save this build would not open (release: a beta save), else null
+export let frozen = false; // 202 (195 B-10 S1): 'new' a save from a newer build, 'full' an unreadable save with no room to keep it aside: this run never writes KEY, so nothing is lost
 export let bad = false; // 27-1: there was a save but it could not be read or is another edition's (kept under KEY.bad / KEY.<edition>): told on the start card
 const listeners = [];
 export const on = f => listeners.push(f); // f(events) after every tick and action
@@ -31,7 +32,11 @@ function load(now) {
   if (ed !== EDITION) refused = ed; // inbox 22: beta saves stay out of the release build (kept once under KEY.beta)
   const keep = S ? (v < S.schemaVersion ? KEY + '.v' + v : null) : KEY + (refused ? '.' + refused : '.bad');
   bad = !S && refused !== 'beta'; // a beta save in the release build has its own notice
-  try { if (keep && !localStorage.getItem(keep)) localStorage.setItem(keep, raw); } catch { /* full: keep playing */ }
+  if (S) { try { if (keep && !localStorage.getItem(keep)) localStorage.setItem(keep, raw); } catch { /* full: the migrated save still holds it all */ } return S; }
+  // 202 S1: the original is not overwritten unless a copy of it is kept (a second accident gets its own slot; ponytail: one slot per accident, no cap)
+  let kept = false;
+  try { const at = localStorage.getItem(keep), k = at == null || at === raw ? keep : keep + '.' + now; if (localStorage.getItem(k) !== raw) localStorage.setItem(k, raw); kept = true; } catch { /* full */ }
+  if (v > SCHEMA_VERSION) frozen = 'new'; else if (!kept) frozen = 'full'; // a newer build's save: back on that build it opens again
   return S;
 }
 // 26-7: off: another tab has the game (Web Locks), so this one saves nothing; failed: the last save threw (full storage etc.), told
@@ -41,7 +46,7 @@ let off = !!navigator.locks, failed = false, hooks = {};
 export let held = false;
 export const hold = () => { held = true; };
 export function save() {
-  if (off) return;
+  if (off || frozen) return;
   if (held) return;
   try { localStorage.setItem(KEY, JSON.stringify(YARD ? Y.yardOut(S) : S)); if (YARD) { const y = Y.yardPart(S); if (y) localStorage.setItem(Y.YKEY, JSON.stringify(y)); } failed = false; } catch { if (!failed) { failed = true; hooks.fail?.(); } } // keep playing
 }

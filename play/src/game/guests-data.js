@@ -36,14 +36,14 @@ export const GUEST = {
 // Wishes. k: tag (a prop tag or the ground there), not (no such tag near), pals (n friends near), alone (none near),
 // sp (that species near), baby (a baby near), env (time and weather, the real clock: never made by the player, so a guest
 // with one only comes while it holds; see `when`). A wish with a riddle shows the riddle, the rest an icon.
-export const TAGS = [$t('꽃'), $t('빛'), $t('소리'), $t('놀이'), $t('먹을 것'), $t('쉼터')]; // prop tags
-export const GROUNDS = [$t('물가'), $t('풀밭'), $t('높은 곳'), $t('그늘')];         // ground tags (a prop may carry one too: puddle 물가)
+export const TAGS = ['꽃', '빛', '소리', '놀이', '먹을 것', '쉼터']; // prop tags
+export const GROUNDS = ['물가', '풀밭', '높은 곳', '그늘'];         // ground tags (a prop may carry one too: puddle 물가)
 export const WISH = {
-  꽃: { k: 'tag', v: $t('꽃'), icon: '🌸' }, 빛: { k: 'tag', v: $t('빛'), icon: '💡' }, 소리: { k: 'tag', v: $t('소리'), icon: '🎵' },
-  놀이: { k: 'tag', v: $t('놀이'), icon: '🎈' }, '먹을 것': { k: 'tag', v: $t('먹을 것'), icon: '🍎' }, 쉼터: { k: 'tag', v: $t('쉼터'), icon: '🏠' },
-  물가: { k: 'tag', v: $t('물가'), icon: '💧' }, 풀밭: { k: 'tag', v: $t('풀밭'), icon: '🌿' }, 그늘: { k: 'tag', v: $t('그늘'), icon: '🌳' },
-  '높은 곳': { k: 'tag', v: $t('높은 곳'), icon: '⛰️', riddle: $t('멀리까지 내다보고 싶어') },
-  quiet: { k: 'not', v: $t('소리'), icon: '🤫', riddle: $t('쉿, 조용한 데서 쉬고 싶어') },
+  꽃: { k: 'tag', v: '꽃', icon: '🌸' }, 빛: { k: 'tag', v: '빛', icon: '💡' }, 소리: { k: 'tag', v: '소리', icon: '🎵' },
+  놀이: { k: 'tag', v: '놀이', icon: '🎈' }, '먹을 것': { k: 'tag', v: '먹을 것', icon: '🍎' }, 쉼터: { k: 'tag', v: '쉼터', icon: '🏠' },
+  물가: { k: 'tag', v: '물가', icon: '💧' }, 풀밭: { k: 'tag', v: '풀밭', icon: '🌿' }, 그늘: { k: 'tag', v: '그늘', icon: '🌳' },
+  '높은 곳': { k: 'tag', v: '높은 곳', icon: '⛰️', riddle: $t('멀리까지 내다보고 싶어') },
+  quiet: { k: 'not', v: '소리', icon: '🤫', riddle: $t('쉿, 조용한 데서 쉬고 싶어') },
   alone: { k: 'alone', icon: '🍃', riddle: $t('잠깐만 혼자 있고 싶어') },
   pals1: { k: 'pals', n: 1, icon: '🐾' }, pals2: { k: 'pals', n: 2, icon: '🐾' },
   pals3: { k: 'pals', n: 3, icon: '🐾', riddle: $t('동물 셋이랑 둘러앉고 싶어') },
@@ -57,14 +57,14 @@ export const WISH = {
   밤: { k: 'env', v: 'night', icon: '🌙' }, 비: { k: 'env', v: 'rain', icon: '🌧️' },
   눈: { k: 'env', v: 'snow', icon: '❄️' }, 하늘: { k: 'env', v: 'sky', icon: '🌠' },
   // 69-3 테마 소원: a little scene, all its tags at one spot (one wish); met, the guest leaves the habitat's 기념 소품 (memo, once)
-  'theme:meadow': { k: 'theme', v: [$t('꽃'), $t('먹을 것'), $t('쉼터')], name: $t('꽃길 소풍'), icon: '🧺', memo: 'gst_picnicbox' },
-  'theme:pond': { k: 'theme', v: [$t('물가'), $t('놀이'), $t('그늘')], name: $t('바닷가 놀이터'), icon: '🏖️', memo: 'gst_beachdoll' },
-  'theme:snow': { k: 'theme', v: [$t('쉼터'), $t('먹을 것'), $t('빛')], name: $t('겨울 찻집'), icon: '🍵', memo: 'gst_tealamp' },
+  'theme:meadow': { k: 'theme', v: ['꽃', '먹을 것', '쉼터'], name: $t('꽃길 소풍'), icon: '🧺', memo: 'gst_picnicbox' },
+  'theme:pond': { k: 'theme', v: ['물가', '놀이', '그늘'], name: $t('바닷가 놀이터'), icon: '🏖️', memo: 'gst_beachdoll' },
+  'theme:snow': { k: 'theme', v: ['쉼터', '먹을 것', '빛'], name: $t('겨울 찻집'), icon: '🍵', memo: 'gst_tealamp' },
 };
 // wishes that cannot both hold at one spot: a pair of guests comes with one of each (보상을 미리 보여 주고 고르게)
 export const CLASH = [['소리', 'quiet'], ['pals1', 'alone']];
 // the ground each habitat has from the start (the world adapter reports it at a spot); the rest comes from props
-export const GROUND = { meadow: [$t('물가'), $t('풀밭'), $t('높은 곳'), $t('그늘')], pond: [$t('물가'), $t('풀밭'), $t('그늘')], snow: [$t('높은 곳'), $t('그늘')] };
+export const GROUND = { meadow: ['물가', '풀밭', '높은 곳', '그늘'], pond: ['물가', '풀밭', '그늘'], snow: ['높은 곳', '그늘'] };
 
 // Rosters. k: id; sp: an existing species (no new one); mark: bundle (보따리) or hat (모자); stay: short/normal/long;
 // egg: the habitat whose egg it leaves (not open yet: the host's); lv: it comes from this Lv; wish: its pool (a visit draws
@@ -107,19 +107,19 @@ export const GUESTS = [
 // 손님 선물 (소품): 3 a habitat, only from a guest's 대만족. New ids; the main session adds them to PROPS (gift: '떠돌이 손님',
 // price 0) with a model. as: the existing model to start from (props.js `as`), so they work before their own model.
 export const GUEST_PROPS = [
-  { id: 'gst_kite', name: $t('가오리연'), hab: 'meadow', tags: [$t('놀이')], as: 'pinwheel' },
-  { id: 'gst_basket', name: $t('꽃바구니'), hab: 'meadow', tags: [$t('꽃')], as: 'tulips' },
-  { id: 'gst_milkcan', name: $t('우유 통'), hab: 'meadow', tags: [$t('먹을 것')], as: 'trough' },
-  { id: 'gst_bottle', name: $t('편지 병'), hab: 'pond', tags: [$t('물가')], as: 'jar' },
-  { id: 'gst_reedpipe', name: $t('갈대 피리'), hab: 'pond', tags: [$t('소리')], as: 'tallgrass' },
-  { id: 'gst_parasol', name: $t('연잎 양산'), hab: 'pond', tags: [$t('그늘'), $t('쉼터')], as: 'lily' },
-  { id: 'gst_teapot', name: $t('따뜻한 주전자'), hab: 'snow', tags: [$t('먹을 것')], as: 'icelamp' },
-  { id: 'gst_sleighbell', name: $t('썰매 방울'), hab: 'snow', tags: [$t('소리')], as: 'bell' },
-  { id: 'gst_scarfpost', name: $t('목도리 걸이'), hab: 'snow', tags: [$t('쉼터')], as: 'vane' },
+  { id: 'gst_kite', name: $t('가오리연'), hab: 'meadow', tags: ['놀이'], as: 'pinwheel' },
+  { id: 'gst_basket', name: $t('꽃바구니'), hab: 'meadow', tags: ['꽃'], as: 'tulips' },
+  { id: 'gst_milkcan', name: $t('우유 통'), hab: 'meadow', tags: ['먹을 것'], as: 'trough' },
+  { id: 'gst_bottle', name: $t('편지 병'), hab: 'pond', tags: ['물가'], as: 'jar' },
+  { id: 'gst_reedpipe', name: $t('갈대 피리'), hab: 'pond', tags: ['소리'], as: 'tallgrass' },
+  { id: 'gst_parasol', name: $t('연잎 양산'), hab: 'pond', tags: ['그늘', '쉼터'], as: 'lily' },
+  { id: 'gst_teapot', name: $t('따뜻한 주전자'), hab: 'snow', tags: ['먹을 것'], as: 'icelamp' },
+  { id: 'gst_sleighbell', name: $t('썰매 방울'), hab: 'snow', tags: ['소리'], as: 'bell' },
+  { id: 'gst_scarfpost', name: $t('목도리 걸이'), hab: 'snow', tags: ['쉼터'], as: 'vane' },
   // 69-3 기념 소품: a 테마 소원's (memo: never a 대만족 gift)
-  { id: 'gst_picnicbox', name: $t('소풍 오르골'), hab: 'meadow', tags: [$t('소리')], as: 'musicbox', memo: true },
-  { id: 'gst_beachdoll', name: $t('물놀이 오뚝이'), hab: 'pond', tags: [$t('놀이')], as: 'doll', memo: true },
-  { id: 'gst_tealamp', name: $t('찻집 등불'), hab: 'snow', tags: [$t('빛')], as: 'lantern', memo: true },
+  { id: 'gst_picnicbox', name: $t('소풍 오르골'), hab: 'meadow', tags: ['소리'], as: 'musicbox', memo: true },
+  { id: 'gst_beachdoll', name: $t('물놀이 오뚝이'), hab: 'pond', tags: ['놀이'], as: 'doll', memo: true },
+  { id: 'gst_tealamp', name: $t('찻집 등불'), hab: 'snow', tags: ['빛'], as: 'lantern', memo: true },
 ];
 
 // Prop tags (every PROPS and NATURE id; a prop may have none): what judge() reads off the props near a guest.

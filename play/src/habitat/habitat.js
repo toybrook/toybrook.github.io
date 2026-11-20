@@ -1461,10 +1461,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     // 66-1 떠돌이 손님 (game/guests.js judge): what is round x, z (m) within r: ground tags, prop ids, friends (not guests)
     guestLook(x, z, r) { const c = habitat.ctx, h = c.heightAt, near = (o, rr = 0) => Math.hypot(o.x - x, o.z - z) < r + rr, ground = [];
       const ring = [0, 1, 2, 3, 4, 5, 6, 7].map(k => [x + Math.cos(k * 0.785) * r, z + Math.sin(k * 0.785) * r]);
-      if (c.water != null && [[x, z], ...ring.map(([a, b]) => [(a + x) / 2, (b + z) / 2]), ...ring].some(([a, b]) => h(a, b) < c.water - 0.05)) ground.push($t('물가'));
-      if (underfoot(x, h(x, z), z) === 'grass') ground.push($t('풀밭'));
-      if (h(x, z) - ring.reduce((s, [a, b]) => s + h(a, b), 0) / 8 > GUEST_HIGH) ground.push($t('높은 곳'));
-      if ((c.shelter || []).some(o => near(o, o.r || 1))) ground.push($t('그늘'));
+      if (c.water != null && [[x, z], ...ring.map(([a, b]) => [(a + x) / 2, (b + z) / 2]), ...ring].some(([a, b]) => h(a, b) < c.water - 0.05)) ground.push('물가');
+      if (underfoot(x, h(x, z), z) === 'grass') ground.push('풀밭');
+      if (h(x, z) - ring.reduce((s, [a, b]) => s + h(a, b), 0) / 8 > GUEST_HIGH) ground.push('높은 곳');
+      if ((c.shelter || []).some(o => near(o, o.r || 1))) ground.push('그늘');
       const props = [...[...placed.values()].filter(e => near(e.spot, e.spot.r)).map(e => e.prop), ...natSpots.filter(o => near(o, o.r)).map(o => o.prop)];
       const pals = [...actors.values()].filter(a => !a.rec.guest && a.obj.visible && near(a.position)).map(a => ({ species: a.rec.species, baby: a.rec.stage === 'baby' }));
       return { ground, props, pals }; },
