@@ -593,7 +593,7 @@ export function createActor(ctx, rec) {
       if (W.water === 'swim') { const S = M[look.stage], lie = ['graze', 'sleep', 'idle'].includes(h.state) && bed < ctx.water - 0.06 && ctx.deckAt(h.x, h.z) === -Infinity ? (W.shallow ? Math.max(0, bed - ctx.water + W.float * S.h * S.s) : (S.legs?.hip ?? 0) * S.s) : 0; // the seal: no legs
         h.low = (h.low || 0) + (lie - (h.low || 0)) * Math.min(1, dt * 1.5); }
       const gy = ground(bed); if (py != null) lift = py - gy;
-      const wet = W.water && ctx.deckAt(h.x, h.z) === -Infinity && bed < ctx.water - 0.06; // in the pond: no shadow on the water
+      const wet = W.water && ctx.deckAt(h.x, h.z) === -Infinity && bed < ctx.water - 0.06; root.userData.wet = !!wet; // in the pond: no shadow on the water (192 A: and no snow prints, materials.js snowMesh192)
       if (wet && gy > bed + 0.01 && !h.pad) lift +=Math.sin(t * 2.2 + h.ph) * 0.04; // afloat: bobs like the ducks
       if (h.soak && h.state !== 'sleep') h.soak = null; // picked up, called away: out at once
       { const S = M[look.stage]; const k = h.soak; if (k) k.lv ??= Math.min(...Array.from({ length: 32 }, (_, i) => { const [x, z] = poolAt(k.pool, i / 32, k.pool.r - 0.7); return heightAt(x, z); })) + 0.02; // 129: the pool's level (as water.js)

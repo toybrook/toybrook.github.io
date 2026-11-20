@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.85.10-18c2821c">
+<meta name="build" content="toybrook-0.85.11-35f7feb1">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -28,7 +28,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="1280915" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="1282719" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected || document.getElementById('intro')?.hidden === false) return; /* 176: not under the intro card (170 A keeps #boot there) */ const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -103,7 +103,8 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
       <li data-upd><i aria-hidden="true">🔄</i><span>새 판이 나오면 위에 「새로 고침」 띠가 떠요</span></li>
-      <li data-top><i aria-hidden="true">🛠️</i><span>화면을 더 깔끔하게 다듬는 중이에요. 잠시 예전 모습으로 돌아갔어요</span></li>
+      <li data-top><i aria-hidden="true">❄️</i><span>설원 알에 새 전설: 극야 곰</span></li>
+      <li><i aria-hidden="true">🛠️</i><span>화면을 더 깔끔하게 다듬는 중이에요. 잠시 예전 모습으로 돌아갔어요</span></li>
       <li><i aria-hidden="true">❄️</i><span>설원 알에 두 번째 전설 4종: 흑요석 은테 펭귄·블랙 오팔 물범·로즈쿼츠 여우·은 세공 올빼미</span></li>
       <li><i aria-hidden="true">🌙</i><span>신수 창과 도감에 「지금 할 일」과 네 단계 길잡이가 생겼어요. 처음이라면 「신수란?」을 눌러 보세요</span></li>
       <li><i aria-hidden="true">🔥</i><span>신수 불갈기 천리마가 더 반짝이게 돌아왔어요: 거울 같은 옻칠, 유리 불꽃 날개</span></li>

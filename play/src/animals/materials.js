@@ -2796,3 +2796,169 @@ Object.assign(LOOKS, {
 // the sets are made once and kept (as every look's); dispose163 frees them and the copies (no caller yet: nothing tears the looks down)
 export const dispose163 = () => { for (const [k, s] of cache) if (/^((obsidian|blackopal|rosequartz|filigree)163|(plat|bronze)183b)\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
   for (const v of L183.values()) for (const p of v) for (const g of p) g.dispose(); L183.clear(); for (const g of TIP163.values()) g.dispose(); TIP163.clear(); for (const c of T163.values()) { c.body.dispose(); c.accent.dispose(); } T163.clear(); };
+// ---- 192 A 「전설」 기준으로 다시 (?m89 시범; data.js LEGEND192, ?m89&leg192=a|b one pair): the polar bear and the reindeer, two
+// concepts each, on their own bodies (the bear's public body; 183 B's reindeer body and legs, parts183), nothing added: the body, the
+// antler, the fur's tips made the concept. The bear's two are clear() glass (fake mode: the screen copy bent through them).
+// 빙산 곰: the body an iceberg: above a wavy line (uSn of the height: the cub's head sits lower) snow-white crystal, opaque (the glass's
+// own see-through taken back out in post: lit = (out - see - rim) / its dark band), cut in small flat facets (each cell's normal its own
+// tilt) with points of glitter; just under the line milky ice; below it clear sea-ice blue, deeper and clearer toward the feet (tint and
+// inner by height), a few small bubbles in it (not in the habitat: there under a pixel). By night the ice glows a soft cyan from inside,
+// the snow takes the moon. Not the 빙하 얼음 bear's (an opaque pale ice netted with cracks): no cracks, the scene seen through it
+const ICE192W = 'float w_ = 0.09 * (vn3(P_ * 6.0) - 0.5) + 0.04 * (vn3(P_ * 19.0 + 4.0) - 0.5), sn_ = smoothstep(uSn - 0.03, uSn + 0.03, P_.y + w_), mk_ = smoothstep(uSn - 0.26, uSn - 0.01, P_.y + w_) * (1.0 - sn_);';
+const ICE192_NRM = `vec3 P_ = vOp; ${ICE192W}
+  vec3 cc_ = cells(P_ * mix(30.0, 13.0, uHab)), tl_ = normalMatrix * (h33(vec3(cc_.z * 91.0, 3.0, 7.0)) - 0.5);
+  normal = normalize(normal + tl_ * (0.55 * sn_ + 0.3 * mk_));
+  diffuseColor.rgb = vec3(0.93, 0.955, 0.98) * sn_; roughnessFactor = mix(roughnessFactor, 0.5, sn_);
+  float tw_ = pow(max(0.0, sin(uTime * (0.8 + 2.0 * cc_.z) + cc_.z * 60.0)), 8.0) * step(0.72, cc_.z) * (1.0 - smoothstep(0.07, 0.07 + 1.5 * fwidth(cc_.x), cc_.x));
+  totalEmissiveRadiance += vec3(1.0, 0.99, 0.96) * 1.6 * tw_ * sn_;`;
+const ICE192 = `vec3 P_ = p; ${ICE192W}
+      vec3 rc_ = vec3(1.0, 0.98, 0.94) * 0.5 * rim /* 0.5 = iceberg192's rimK (LOOKS): change both together */, lit_ = (gl_FragColor.rgb - see - rc_) / (1.0 - 0.5 * dark * (1.0 - rim));
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, lit_ + rc_ * 0.3, sn_);
+      gl_FragColor.rgb += (vec3(0.72, 0.86, 0.95) * (0.42 + 0.2 * nv) - see * 0.65) * mk_;
+      gl_FragColor.rgb += vec3(0.08, 0.42, 0.68) * 0.14 * pow(nv, 2.0) * (1.0 - sn_) * (1.0 - fr);
+      if (uHab < 0.5) { vec3 bc_ = cells((p + rd * 0.05) * 26.0 + 5.0); float bb_ = step(0.86, bc_.z) * (1.0 - smoothstep(0.06, 0.06 + 1.5 * fwidth(bc_.x), bc_.x)) * (1.0 - sn_ - mk_);
+        gl_FragColor.rgb += vec3(0.85, 0.95, 1.0) * 0.3 * bb_ * (1.0 - fr); }`;
+const ICE192_PRE = `{ float y_ = smoothstep(0.05, 1.0, p.y / uSn); tint = mix(vec3(0.12, 0.55, 0.86), vec3(0.62, 0.88, 0.98), y_); inner = mix(vec3(0.02, 0.17, 0.38), vec3(0.3, 0.6, 0.8), y_); }`;
+// 극야 곰: the deep night sky: navy glass, darkest on the back, a lighter steel-blue low down (the sky at the horizon); on the fur's
+// tips the frost: a broken silver edge along the outline, and cold points of starlight there and along the top, each twinkling on its
+// own (white-blue dots with a soft halo: no lines between them, no gold: not 별자리 거북's or the 별빛 fox's). A small snow crystal at
+// each step (snowMesh192); by night the frost and the stars brighter. rimK 0: the frost is its outline.
+// 198 A: read at game distance as the night sky, not "a dark blue bear": the frost edge wider (never under ~3 px: px = fwidth(s)) and
+// brighter, whole far off, broken by its noise near (no white sticker line; the inner frost patches only near the edge); the horizon (hz_)
+// a glowing steel-blue to teal band from the belly down to the feet; a few big stars (bq_: round on the screen, on the back and upper
+// flanks, never under ~2 px, twinkling 0.3..1, so two or three always show) over the fine ones (those a little bigger, brighter); the eyes
+// one small white catchlight (pnEye198)
+const PN192_PRE = `tint = mix(vec3(0.16, 0.3, 0.62), vec3(0.06, 0.14, 0.42), smoothstep(0.1, 0.75, p.y)); inner = mix(vec3(0.04, 0.08, 0.24), vec3(0.006, 0.014, 0.06), smoothstep(0.08, 0.7, p.y));`;
+const PN192 = `float aa_ = length(fwidth(p)); // far off (a pixel spans more of p) the fine noise fades to its mean: no shimmer at game distance
+  float fn_ = mix(vn3(p * 48.0), 0.5, smoothstep(0.005, 0.012, aa_)) + 0.3 * mix(vn3(p * 130.0), 0.5, smoothstep(0.0015, 0.004, aa_)), fq_ = clamp(3.0 * px, 0.07, 0.32);
+      float fz_ = max(smoothstep(1.0 - fq_, 1.0 - 0.4 * fq_, s) * (0.55 + 0.45 * smoothstep(0.35, 0.7, fn_)), 0.7 * smoothstep(0.86, 0.97, s) * smoothstep(0.55, 0.8, fn_)), hz_; // 201 A: the cub (uCub 1) half the frost on its face and neck (x past the chest, above the legs), none on the tail nub
+      fz_ *= 1.0 - uCub * (0.5 * smoothstep(0.12, 0.24, p.x) * smoothstep(0.45, 0.6, p.y) + (1.0 - smoothstep(-0.6, -0.54, p.x)) * smoothstep(0.42, 0.5, p.y) * (1.0 - smoothstep(0.14, 0.24, abs(p.z))));
+      hz_ = smoothstep(0.62, 0.2, p.y) * (1.0 - fz_);
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(vec3(0.27, 0.45, 0.74), vec3(0.22, 0.68, 0.76), smoothstep(0.42, 0.06, p.y)) * (0.7 + 0.4 * nv), 0.55 * hz_) + vec3(0.72, 0.84, 1.0) * fz_ * 0.62;
+      vec3 st_ = cells(p * mix(32.0, 14.0, uHab)); float wt_ = 0.2 + 0.8 * max(smoothstep(0.45, 0.92, s), smoothstep(0.25, 0.9, vn.y));
+      float pt_ = step(1.0 - 0.4 * wt_, st_.z), tw_ = 0.3 + 0.7 * pow(0.5 + 0.5 * sin(uTime * (0.7 + 1.5 * st_.z) + st_.z * 40.0), 3.0), fw_ = fwidth(st_.x) + 1e-4;
+      float core_ = 1.0 - smoothstep(0.08, 0.08 + 1.5 * fw_, st_.x), halo_ = pow(max(0.0, 1.0 - st_.x / 0.32), 3.0);
+      // the big stars: a 2D cell grid on p.xz (4 cells a unit, one point in each, some lit) on the back and the upper flanks (dark navy,
+      // p.y > ~0.7: scattered, not one row along the spine), none on the head. Measured round ON THE SCREEN (198 A review: discs on the
+      // surface came out as flat glossy ovals): bj_ = det of the screen-to-cell map (dFdx/dFdy of bq_), bs_ the screen pixels to the point,
+      // bd_ back in cells (pixels x bk_, the cells a pixel). Radius 0.12 of a cell (~2 css px at the home view), never under ~2 px far off;
+      // the glow (bh_) 0.3 of a cell. Twinkle 0.3..1 over 2.4..4.5 s (the core 1.2: no longer clipped at its low)
+      vec2 bq_ = p.xz * 4.0 + 3.7, bf_ = fract(bq_), bx_ = dFdx(bq_), by_ = dFdy(bq_); float bj_ = bx_.x * by_.y - bx_.y * by_.x; bj_ = abs(bj_) < 1e-9 ? 1e-9 : bj_;
+      float bd_ = 1e12, bz_ = 0.0;
+      for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) { vec3 bh3_ = h33(vec3(floor(bq_) + vec2(i, j), 5.0)); vec2 bo_ = vec2(i, j) + 0.2 + 0.6 * bh3_.xy - bf_;
+        vec2 bs_ = vec2(by_.y * bo_.x - by_.x * bo_.y, bx_.x * bo_.y - bx_.y * bo_.x) / bj_; float be_ = dot(bs_, bs_); if (be_ < bd_) { bd_ = be_; bz_ = bh3_.z; } }
+      float bw_ = sqrt(abs(bj_)); bd_ = sqrt(bd_) * bw_; float br_ = max(0.12 * clamp(bw_ * 60.0, 0.4, 1.0), 2.0 * bw_); // near (a cell over ~60 px) the core shrinks to 0.4: a point of light in its glow, not a painted dot
+      float bp_ = step(0.5, bz_) * smoothstep(0.66, 0.8, p.y) * (1.0 - smoothstep(0.3, 0.42, p.x));
+      float bt_ = 0.3 + 0.7 * pow(0.5 + 0.5 * sin(uTime * (0.9 + 1.4 * bz_) + bz_ * 53.0), 2.0), bc_ = 1.0 - smoothstep(br_ - 1.5 * bw_, br_, bd_), bh_ = pow(max(0.0, 1.0 - bd_ / 0.3), 3.0);
+      // 201 A: the big stars a very faint sky blue (core and glow), told from the white snowflakes; the fine ones as they were
+      gl_FragColor.rgb += (vec3(0.86, 0.93, 1.0) * pt_ * tw_ * (core_ * 2.0 + halo_ * 0.7) + bp_ * bt_ * (vec3(0.7, 0.87, 1.0) * bc_ * 1.2 + vec3(0.5, 0.76, 1.0) * bh_ * 0.6)) * (1.0 - 0.5 * fr);`;
+Object.assign(NIGHT_CLEAR, {
+  iceberg192: 'gl_FragColor.rgb += uNight * (vec3(0.12, 0.55, 0.9) * (0.12 + 0.3 * pow(nv, 2.0)) * (1.0 - sn_) + vec3(0.5, 0.65, 0.95) * 0.1 * sn_) * (1.0 - fr);',
+  polarnight192: 'gl_FragColor.rgb += uNight * (vec3(0.72, 0.84, 1.0) * (fz_ * 0.45 + pt_ * tw_ * core_ * 0.9) + vec3(0.58, 0.8, 1.0) * bp_ * bt_ * (bc_ + 0.4 * bh_) + vec3(0.08, 0.4, 0.5) * 0.25 * hz_ + vec3(0.1, 0.16, 0.45) * 0.14 * pow(nv, 2.0) * (1.0 - fr));',
+});
+// the snow crystals: as the 백록's frost flowers (frostOf152: N quads, every position 0, the corners in aQ, shared for the page), smaller
+// (uS 0.3 of the body unit: a paw's width), simpler (six arms, one pair of side twigs), silver-white with a pale blue edge, gone in
+// LIFE192; one at each step while it walks (every 0.38 s if it moved 0.12 of its body unit), four on its first draw (a still photo shows
+// them), none standing. dispose192 frees the shared geometry and material
+const N192 = 8, LIFE192 = 2.2;
+let snow192 = null;
+const snowOf192 = () => snow192 ??= (() => {
+  const g = new THREE.BufferGeometry(), q = [], ix = [];
+  for (let i = 0; i < N192; i++) { for (const [x, y] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) q.push(x, y, i); ix.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3); }
+  g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(q.length), 3)); g.setAttribute('aQ', new THREE.Float32BufferAttribute(q, 3)); g.setIndex(ix);
+  const m = new THREE.ShaderMaterial({ uniforms: { uF: { value: Array.from({ length: N192 }, () => new THREE.Vector4(0, 0, 0, -99)) }, uS: { value: 0.1 }, uTime: windTime, uNight: nightGlow },
+    transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, extensions: { derivatives: true },
+    vertexShader: `uniform vec4 uF[${N192}]; uniform float uS, uTime; attribute vec3 aQ; varying vec2 vQ; varying float vA;
+      void main() { vec4 f = uF[int(aQ.z + 0.5)]; float age = uTime - f.w, on = step(0.0, age) * step(age, ${LIFE192.toFixed(1)});
+        vA = on * (1.0 - smoothstep(${(LIFE192 - 0.8).toFixed(1)}, ${LIFE192.toFixed(1)}, age)); vQ = aQ.xy;
+        float r = f.w * 7.3 + aQ.z * 1.7, c = cos(r), s = sin(r);
+        vec2 q = mat2(c, s, -s, c) * aQ.xy * uS * (0.4 + 0.6 * smoothstep(0.0, 0.3, age)) * on;
+        gl_Position = projectionMatrix * viewMatrix * vec4(f.xyz + vec3(q.x, 0.0, -q.y), 1.0); }`,
+    fragmentShader: `uniform float uNight; varying vec2 vQ; varying float vA;
+      void main() { float r = length(vQ), k = 1.0471976, an = mod(atan(vQ.y, vQ.x) + k * 0.5, k) - k * 0.5; vec2 p = vec2(cos(an), abs(sin(an))) * r, e = vec2(0.5, 0.866), d1 = p - vec2(0.5, 0.0);
+        float d = min(length(p - vec2(clamp(p.x, 0.0, 0.9), 0.0)), length(d1 - e * clamp(dot(d1, e), 0.0, 0.24)));
+        float fw = fwidth(d) + 1e-4, w = 0.07 * (1.0 - 0.4 * r), arm = 1.0 - smoothstep(w, w + 1.2 * fw, d), core = 1.0 - smoothstep(0.0, 0.16, r);
+        float a = max(arm, core * 0.85) * vA; if (a < 0.01) discard;
+        vec3 c = mix(vec3(0.6, 0.74, 1.0), vec3(0.97, 0.99, 1.0), max(1.0 - smoothstep(0.0, 0.5 * w + fw, d), core));
+        gl_FragColor = vec4(c * a * (1.0 + 1.6 * uNight), a * (0.9 - 0.5 * uNight)); }` });
+  return { g, m }; })();
+const snowMesh192 = (w, legs, S) => {
+  const { g, m } = snowOf192(), o = new THREE.Mesh(g, m), F = Array.from({ length: N192 }, () => new THREE.Vector4(0, 0, 0, -99)), v = new THREE.Vector3(), at = new THREE.Vector3();
+  let t0 = null, last = 0, foot = 0, slot = 0, sc = 1; const hind = legs.filter(l => !l.userData.front);
+  const put = (t, l = legs[foot++ % legs.length], k = 0) => { for (let r = w; r; r = r.parent) if (r.userData.wet !== undefined) { if (r.userData.wet) return; break; } // swimming (walk.js marks it): no prints on the water
+    l.localToWorld(v.set(-k, -S.legs.hip, 0)); F[slot++ % N192].set(v.x, w.matrixWorld.elements[13] + 0.01 * sc, v.z, t); };
+  o.renderOrder = 5; o.frustumCulled = false; o.raycast = () => {};
+  o.onBeforeRender = () => {
+    const t = windTime.value; sc = w.matrixWorld.getMaxScaleOnAxis() * S.s;
+    if (t !== t0) {
+      const fresh = t0 === null || t < t0 || t - t0 > 5; t0 = t;
+      if (fresh) { for (let i = 0; i < 4; i++) put(t - 0.3 - 0.4 * i, hind[i % hind.length] ?? legs[0], 0.5 + 0.45 * (i >> 1) + 0.2 * (i & 1)); last = t; w.getWorldPosition(at); } // the first draw: the last few steps behind the hind feet (under the paws they would hide)
+      else if (t - last > 0.38) { if (w.getWorldPosition(v).distanceTo(at) > 0.12 * sc) put(t); last = t; w.getWorldPosition(at); }
+    }
+    m.uniforms.uF.value.forEach((u, i) => u.copy(F[i])); m.uniforms.uS.value = 0.3 * sc; m.uniformsNeedUpdate = true; };
+  return o; };
+// 상고대 순록: the antler a winter tree's bare branch (its own file, pilot89_reindeer192: crooked twigs, forked) with rime frost on it:
+// dark bark, white feathery rime on the tops and the windward (front) side, the forks' hollows bare (_thickness < 0), and on the twigs'
+// ends (_thickness > 0) clear ice crystals: pale ice blue, glassy, cut in small facets, glinting in turn, glowing by night. The body the
+// same winter: a smoky cool grey coat, darker down the legs (a trunk), a white rime fringe along the topline (where the coat faces
+// up), a hoar dusting below it on the back, shoulders and flanks (hz_), glints in both. Nose and eyes as the reindeer's
+const RIME192B = `float n_ = fbm3(p * 8.0), f_ = mix(fbm3(p * vec3(70.0, 30.0, 70.0)), 0.47, smoothstep(0.0015, 0.006, length(fwidth(p)))); // the fine rime noise fades to its mean far off (no shimmer)
+  vec3 col_ = mix(vec3(0.085, 0.082, 0.09), vec3(0.15, 0.145, 0.155), n_) * mix(0.55, 1.0, smoothstep(0.04, 0.3, p.y));
+  float up_ = dot(on, normalize(vec3(0.2, 1.0, 0.0))) + 0.3 * (f_ - 0.5) + 0.12 * (n_ - 0.5), rm_ = smoothstep(0.62, 0.9, up_), hz_ = smoothstep(0.1, 0.62, up_) * smoothstep(0.2, 0.5, p.y) * (1.0 - rm_);
+  diffuseColor.rgb = mix(mix(col_, vec3(0.5, 0.56, 0.64), 0.45 * hz_ * f_), vec3(0.9, 0.93, 0.97) * (0.9 + 0.1 * f_), rm_); roughnessFactor = mix(0.62, 0.5, rm_);
+  vec3 c_ = cells(p * mix(55.0, 24.0, uHab)); float tw_ = pow(max(0.0, sin(uTime * (0.8 + 2.0 * c_.z) + c_.z * 60.0)), 8.0) * step(0.75, c_.z) * (1.0 - smoothstep(0.06, 0.06 + 1.5 * fwidth(c_.x), c_.x));
+  totalEmissiveRadiance += vec3(1.0, 0.99, 0.96) * 1.4 * tw_ * max(rm_, hz_);`;
+const RIME192H = `float tip_ = max(vT183, 0.0), oc_ = max(-vT183, 0.0), aa_ = length(fwidth(p)), n_ = mix(fbm3(p * 40.0), 0.47, smoothstep(0.0025, 0.01, aa_)), f_ = mix(fbm3(p * vec3(70.0, 28.0, 70.0)), 0.47, smoothstep(0.0015, 0.006, aa_)); // far off: to the mean (no shimmer)
+  vec3 bark_ = mix(vec3(0.085, 0.07, 0.062), vec3(0.2, 0.16, 0.135), n_) * (1.0 - 0.35 * smoothstep(0.1, 0.5, oc_));
+  float rm_ = smoothstep(-0.05, 0.4, dot(on, normalize(vec3(0.5, 0.85, 0.0))) + 0.55 * (f_ - 0.5)) * (1.0 - smoothstep(0.1, 0.45, oc_));
+  float ice_ = smoothstep(0.3, 0.6, tip_);
+  vec3 c_ = cells(p * mix(80.0, 36.0, uHab));
+  normal = normalize(normal + normalMatrix * (h33(vec3(c_.z * 77.0, 1.0, 9.0)) - 0.5) * 0.7 * ice_); nv = clamp(dot(normal, vdir), 0.0, 1.0);
+  diffuseColor.rgb = mix(mix(bark_, vec3(0.9, 0.935, 0.97) * (0.88 + 0.12 * f_), rm_), vec3(0.42, 0.66, 0.82), ice_);
+  roughnessFactor = mix(mix(0.72, 0.5, rm_), 0.04, ice_); lookStudio = 0.4 * ice_;
+  float tw_ = pow(max(0.0, sin(uTime * (0.9 + 2.2 * c_.z) + c_.z * 60.0)), 8.0) * step(0.6, c_.z) * (1.0 - smoothstep(0.07, 0.07 + 1.5 * fwidth(c_.x), c_.x));
+  totalEmissiveRadiance += vec3(0.55, 0.82, 1.0) * ice_ * (0.1 + 0.3 * pow(1.0 - nv, 2.0)) + vec3(1.0, 0.99, 0.96) * tw_ * (1.8 * ice_ + 0.6 * rm_);`;
+// 등불 순록: 183 B's antler in amber: dark resin at its rim, a warm honey light deep inside where you look into it (nv), stirring
+// slowly in swirls along the branch, brighter toward the tips (_thickness > 0), dimmer in the forks (< 0), a few small dark inclusions,
+// breathing gently; by night much brighter (NIGHT_LOOK). The body a deep cocoa satin, the legs darker, and the antler's light on the
+// head, neck and back near its base (uB: the base in pattern space, the calf's own; uR how far): a warm glow there, more by night. Not
+// the 겨울 등불 reindeer's (all of it an orange lantern, a gold antler): only the antler is lit. The nose its own colour (#5a4034)
+const AMB192B = `vec3 q_ = vec3(p.x, p.y, abs(p.z)) - vec3(uBx, uBy, uBz), o_ = vec3(on.x, on.y, on.z * sign(p.z + 1e-5)); float d_ = length(q_);
+  diffuseColor.rgb = mix(vec3(0.11, 0.064, 0.042), vec3(0.18, 0.108, 0.07), fbm3(p * 6.0)) * mix(0.62, 1.0, smoothstep(0.04, 0.3, p.y)); roughnessFactor = 0.42;
+  float bo_ = exp(-d_ * d_ / (2.2 * uR * uR)) * (0.3 + 0.7 * clamp(dot(o_, -q_ / max(d_, 1e-4)), 0.0, 1.0));
+  totalEmissiveRadiance += vec3(1.0, 0.52, 0.16) * bo_ * 0.16 * (0.92 + 0.08 * sin(uTime * 0.8));`;
+const AMB192H = `float tip_ = max(vT183, 0.0), oc_ = max(-vT183, 0.0), sw_ = fbm3(p * vec3(8.0, 15.0, 8.0) - vec3(0.0, uTime * 0.04, 0.0)), co_ = pow(nv, 1.6);
+  vec3 c_ = cells(p * 30.0 + 2.0); float inc_ = step(0.84, c_.z) * (1.0 - smoothstep(0.05, 0.05 + 1.5 * fwidth(c_.x), c_.x));
+  float br_ = (0.2 + 1.1 * sw_) * (0.8 + 0.6 * smoothstep(0.1, 0.9, tip_)) * (1.0 - 0.55 * smoothstep(0.1, 0.6, oc_)) * (0.88 + 0.12 * sin(uTime * 0.8 + p.y * 4.0));
+  diffuseColor.rgb = vec3(0.05, 0.012, 0.002); roughnessFactor = 0.16;
+  totalEmissiveRadiance += mix(vec3(0.3, 0.06, 0.005), mix(vec3(1.0, 0.42, 0.04), vec3(1.0, 0.78, 0.4), co_ * sw_), co_) * br_ * (0.06 + 0.55 * co_) * (1.0 - 0.75 * inc_) * (1.0 - 0.6 * pow(1.0 - nv, 2.0));`;
+Object.assign(NIGHT_LOOK, {
+  rime192: 'totalEmissiveRadiance += uNight * vec3(0.55, 0.7, 1.0) * rm_ * 0.1;',
+  rime192horn: 'totalEmissiveRadiance += uNight * (vec3(0.4, 0.75, 1.0) * ice_ * 0.55 + vec3(0.6, 0.75, 1.0) * rm_ * 0.07);',
+  amberlamp192: 'totalEmissiveRadiance += uNight * vec3(1.0, 0.52, 0.16) * bo_ * 0.9;',
+  amberlamp192horn: 3.2,
+});
+const unGreen192 = m => { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); unGreen(sh); }; return m; }; // the snow's white without the grass's green
+const cub192 = (b, c) => (r, G, S) => { if (S.legs.hip < 0.5) r.traverse(o => { if (o.material === b) o.material = c; }); }; // the cub / calf its own uniforms (hip: the cub 0.39, the calf 0.46; adults 0.76, 0.86)
+Object.assign(LOOKS, {
+  iceberg192: () => { const ice = sn => unGreen192(C141({ key: 'iceberg192', tint: '#7fc8ee', absorb: 2.2, inner: '#1d5f94', dark: 0.5, rough: 0.06, neutral: 0.8, bend: 0.16, rimK: 0.5,
+      uniforms: { uSn: sn }, pre: ICE192_PRE, nrm: ICE192_NRM, post: ICE192 })), b = ice(0.6), cub = ice(0.52);
+    return { body: b, accent: b, hoof: b, cub, beak: phys('#1c2433', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03 }), parts: cub192(b, cub) }; },
+  polarnight192: () => { const pn = c => hab89(clear({ key: 'polarnight192', tint: '#3a5cb0', absorb: 2.6, inner: '#0b1440', dark: 0.35, color: '#03050f', rough: 0.1, coat: 1, neutral: 0.9, bend: 0.14, rimK: 0, uniforms: { uCub: c }, pre: PN192_PRE, post: PN192 })), b = pn(0), cub = pn(1); // 201 A: the cub its own (uCub)
+    const eye = eyeMat.clone(); eye.customProgramCacheKey = () => 'eye198'; // 198 A: one small white catchlight, fixed to the view a little up-left of the bead's middle (the bead turns under it; set in so the bead shows only its front cap: nearer the middle, or it hides)
+    eye.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      totalEmissiveRadiance += vec3(0.85, 0.92, 1.0) * 1.4 * smoothstep(0.95, 0.972, dot(normal, normalize(vec3(-0.2, 0.3, 0.93))));`); };
+    return { ...same(b), cub, beak: phys('#0e1220', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03 }), pnEye198: eye, // in the set: dispose192 frees it
+      parts: (body, G, S) => { cub192(b, cub)(body, G, S); const legs = body.children.filter(o => o.userData.front !== undefined); if (legs.length) body.parent.add(snowMesh192(body.parent, legs, S));
+        for (const o of body.children) if (o.material === eyeMat) o.material = eye; } }; },
+  rime192: () => { const b = hab89(look(phys('#ffffff', { roughness: 0.6 }), 'rime192', RIME192B)), h = vt183(hab89(look(phys('#ffffff', { roughness: 0.6 }), 'rime192horn', RIME192H, {}, { studio: 0 })));
+    return { body: b, accent: b, hoof: toyMat('#2a2426'), beak: toyMat('#5a4034'), r183body: b, r183calfbody: b, r192horn: h, r192calfhorn: h, parts: parts183 }; },
+  amberlamp192: () => { const mk = (x, y, z, r) => look(phys('#ffffff', { roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.25 }), 'amberlamp192', AMB192B, { uBx: x, uBy: y, uBz: z, uR: r });
+    const b = mk(0.299, 0.957, 0.063, 0.24), calf = mk(0.186, 0.944, 0.09, 0.26), h = vt183(look(phys('#ffffff', { roughness: 0.16, specularIntensity: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.05 }), 'amberlamp192horn', AMB192H, {}, { studio: 0.2 }));
+    return { body: b, accent: b, calf, hoof: toyMat('#3a2a22'), beak: toyMat('#5a4034'), r183body: b, r183calfbody: calf, r183horn: h, r183calfhorn: h,
+      parts: (body, G, S) => { parts183(body, G, S); cub192(b, calf)(body, G, S); } }; }, // uB: 183 B's antler base (0.88, 1.98, 0.13), the calf's (0.5, 1.68, 0.16), less cx over H
+});
+// the sets are made once and kept (as every look's); dispose192 frees them and the snow crystals' shared geometry and material (no caller
+// yet, as dispose163: nothing tears the looks down; the 183 leg copies are dispose163's L183)
+export const dispose192 = () => { for (const [k, s] of cache) if (/^(iceberg|polarnight|rime|amberlamp)192\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
+  snow192?.g.dispose(); snow192?.m.dispose(); snow192 = null; };

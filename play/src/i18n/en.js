@@ -1885,6 +1885,7 @@ export default {
  "새 신수 둘: 초원의 유니콘과 설원의 백록. 불갈기 천리마가 머물고 나면 차례로 이야기가 시작돼요": "Two new Mythics: the Unicorn of the Meadow and the White deer of the Snowfield. Once the Firemane settles, their stories begin one by one",
  "연못 알에 두 번째 전설 6종: 흑진주 오리·에메랄드 등껍질 거북·금박 레진 수달·흑요석 백조·네온 플라밍고·문스톤 카피바라": "Six new second Legendaries in the Pond egg: Black Pearl Duck, Emerald Shell Turtle, Gold Leaf Resin Otter, Obsidian Swan, Neon Flamingo, Moonstone Capybara",
  "초원 알에 새 전설: 무지개 티타늄 말": "A new Legendary in the Meadow egg: Rainbow Titanium Horse",
+ "설원 알에 새 전설: 극야 곰": "A new Legendary in the Snowfield egg: Polar Night Bear",
  "초원의 꽃 언덕·작은 숲·개울 갈래가 새로 꾸며졌어요: 꽃 언덕 굴러 내려오기, 큰 나무 그늘 낮잠, 물레방아와 징검다리": "Three Meadow zones are made anew: Flower hill, Little grove and Forked creek, with rolls down the hill, naps in the big tree's shade, a waterwheel and stepping stones",
  "모든 동물에 새 재질 11가지: 원목·크롬·플로킹·대리석·이슬 코팅(희귀), 쪽매 나무·십자수·두드린 동판·비즈 공예·페이퍼 퀼링·가죽 공예(영웅)": "11 new materials for every animal: Wood, Chrome, Velvet, Marble, Dewdrop (Rare); Wood Inlay, Cross-stitch, Hammered Copper, Beadwork, Paper Quilling, Leatherwork (Epic)",
  "설원의 김 나는 온천이 넓어졌어요: 큰 탕에 여섯 마리까지": "The Snowfield's Steamy hot spring is bigger: up to six can soak in the big pool",
@@ -1933,6 +1934,11 @@ export default {
  "블랙 오팔 물범": "Black Opal Seal",
  "로즈쿼츠 여우": "Rose Quartz Arctic Fox",
  "은 세공 올빼미": "Silver Filigree Snowy Owl",
+ // 192 A 설원 전설 다시 (?m89)
+ "빙산 곰": "Iceberg Bear",
+ "극야 곰": "Polar Night Bear",
+ "상고대 순록": "Rime Frost Reindeer",
+ "등불 순록": "Lamplight Reindeer",
  // 152 C 신수 (?m89)
  "신수 백록": "Mythic white deer",
  // 127 새 공유 재질 (?m89)

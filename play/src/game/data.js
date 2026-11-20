@@ -897,7 +897,7 @@ export const LEGEND163 = {
 };
 // 172 A: the penguin, seal, fox and owl public (user OK 11/19); the polar bear and the reindeer again (171 B, 172 B), still ?m89
 export const HOLD163 = ['polarBear', 'reindeer'];
-for (const [sp, L] of Object.entries(LEGEND163)) if (M89 || !HOLD163.includes(sp)) SPECIES.find(s => s.id === sp).legendary.push(L);
+for (const [sp, L] of Object.entries(LEGEND163)) if (!HOLD163.includes(sp)) SPECIES.find(s => s.id === sp).legendary.push(L); // 192 A: the platinum bear and bronze reindeer kept (materials.js, the 183 files) but not shown, ?m89 too
 // 184: 176 B's own platinum bear body (pilot89_polarbear176_*.glb, tools/bake-polarbear176.mjs) deleted (kept in git efe7235): the
 // platinum is engraved into the polar bear's own body
 // 152 C 백록 (160 A 공개): the white deer of Halla, on the reindeer's own legend files (tools/bake-baengnok152.mjs: slimmer, a big
@@ -907,6 +907,19 @@ MODELS.reindeer.legend = { adult: 'assets/models/baengnok152_adult.glb', baby: '
 // 183 B (?m89): the bronze reindeer's own bodies (tools/bake-reindeer183.mjs: slim knee-jointed legs, a big sweeping antler, no ruff
 // or collar; hollows and worn ends baked in), a second file for each stage (figure.js loads a list); materials.js bronze183b puts them on
 if (M89) for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st] = [MODELS.reindeer.legend[st], `assets/models/pilot89_reindeer183_${st}.glb`];
+// 192 A 「전설」 기준으로 다시 (?m89 시범; ?m89&leg192=a|b shows one pair): the polar bear and the reindeer, each two concepts on their
+// own bodies (the bear's public body, 183 B's reindeer body and legs), nothing added: materials.js 192 A. The 상고대 antler is its own
+// file (tools/bake-reindeer192.mjs: a winter branch); the 등불 one is 183 B's antler. Appended last (late), old link numbers stay
+export const LEG192 = ''; // release build: the 192 A trial pick stays off (M89 off too)
+export const LEGEND192 = {
+  polarBear: [{ id: 'iceberg', name: $t('빙산 곰'), mat: 'iceberg192', effect: 'clearglints', late: 192 }, { id: 'polarnight', name: $t('극야 곰'), mat: 'polarnight192', effect: 'silversparks', late: 192 }],
+  reindeer: [{ id: 'rime', name: $t('상고대 순록'), mat: 'rime192', effect: 'clearglints', late: 192 }, { id: 'amberlamp', name: $t('등불 순록'), mat: 'amberlamp192', effect: 'goldglints', late: 192 }],
+};
+if (M89) { for (const [sp, L] of Object.entries(LEGEND192)) L.forEach((v, i) => (!LEG192 || 'ab'[i] === LEG192) && SPECIES.find(s => s.id === sp).legendary.push(v));
+  for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st].push(`assets/models/pilot89_reindeer192_${st}.glb`); }
+// 202 A 공개 (user OK 11/21, was 201 A's trial flag): the 극야 곰 alone (materials.js polarnight192), for everyone; the other three
+// 192 A looks stay under ?m89. late 192: appended last, old link numbers stay
+{ const L = SPECIES.find(s => s.id === 'polarBear').legendary; if (!L.includes(LEGEND192.polarBear[1])) L.push(LEGEND192.polarBear[1]); }
 // 163 A 공룡 방향 다시 (?m89 시범; tools/bake-dino163.mjs, from 161 A's crisp horns, plates, spikes, toes and claws): the
 // triceratops and stegosaurus as toys: the head 1.35x / 1.38x on a shorter neck, the body 0.85x as long and rounder (shoulders and
 // hips up a little, the waist in), short thick legs thinning to the ankle on wide three-toed feet, the beak one shape with the face
