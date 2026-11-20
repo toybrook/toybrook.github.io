@@ -1322,6 +1322,8 @@ export default {
  "이름 짓기": "Name",
  "<button data-do=\"accoff\">치장 떼기 · {0}</button>": "<button data-do=\"accoff\">Remove accessory · {0}</button>",
  "<button data-do=\"accon\">치장 끼우기</button>": "<button data-do=\"accon\">Add accessory</button>",
+ "치장 떼기 · {0}": "Remove accessory · {0}", // 189
+ "치장 끼우기": "Add accessory", // 189
  "<div><h2>{0}{1}</h2>{2}{3}<div class=\"col\"><button data-do=\"go\">보러 가기</button>\n<button data-do=\"fav\" aria-pressed=\"{4}\">{5}</button><button data-do=\"name\">{6}</button>\n<button data-do=\"pet\">쓰다듬기</button><button data-do=\"walk\">산책 보내기</button>{7}<button data-do=\"store\">보관함으로</button><button data-do=\"move\">다른 서식지로</button><button class=\"sb\" data-shut>닫기</button></div></div>": "<div><h2>{0}{1}</h2>{2}{3}<div class=\"col\"><button data-do=\"go\">Go see</button>\n<button data-do=\"fav\" aria-pressed=\"{4}\">{5}</button><button data-do=\"name\">{6}</button>\n<button data-do=\"pet\">Pet</button><button data-do=\"walk\">Send on a stroll</button>{7}<button data-do=\"store\">To the toy box</button><button data-do=\"move\">Move habitat</button><button class=\"sb\" data-shut>Close</button></div></div>",
  "「{0}」{을/를} 떼어 보관함 › 치장에 넣었어요": "Took off “{0}” and put it in Toy box › Accessories",
  "{0}{이/가} 좋아해요 ♥+{1}": "{0} loved it ♥+{1}",

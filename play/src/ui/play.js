@@ -1,10 +1,10 @@
 // Habitat HUD and what taps do: hearts, codex, nest and tool buttons (보관함 / 진열장 / 꾸미기), the bubble over an animal,
 // game toasts. Eggs, hatching and the reveal card live in the nest menu (nest.js).
-import { $t } from '../i18n/i18n.js';
+import { $t, ko } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
 import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage, PROP, affLevel, affBar, step181 } from '../game/rules.js';
-import { PROPS, HABITATS, PART_NAME, GROW_ACTS, F170, AFF_ACTS, TUT181 } from '../game/data.js';
+import { PROPS, HABITATS, PART_NAME, GROW_ACTS, F170, AFF_ACTS, TUT181, ACCESSORIES } from '../game/data.js';
 import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
 import { weatherAt } from '../habitat/weather.js';
@@ -14,7 +14,7 @@ import { openCodex, hasNew } from './codex.js';
 import { initNest } from './nest.js';
 import { openStore, leaveStore } from './store.js';
 import { pickStroll } from './stroll.js';
-import { openFriends, leaveFriends } from './friends.js';
+import { openFriends, leaveFriends, dressUp } from './friends.js';
 import { openDecor, leaveDecor, onPropTap, onEdit, onPaint, onSweep, tabName } from './decor.js';
 import { openCabinet } from './cabinet.js';
 import { figureThumb, silhouetteThumb } from './thumbs.js';
@@ -76,6 +76,8 @@ export function initPlay(nav) {
       if (G.holdBaby(r.id)) { toast($t('{0}{은/는} 지금 모습 그대로 있어요', nm), 2400, true); return showBubble(r); }
     }
     if (act === 'grow' && G.letGrow(r.id)) { toast($t('다시 자라요 · 꼬마 사탕을 돌려받았어요'), 2400, true); return showBubble(r); }
+    if (act === 'accoff') { const k = G.accOff(r.id); if (k) { track('acc_off', { v: ko(ACCESSORIES[k].name) }, 'acc_off:' + k); toast($t('「{0}」{을/를} 떼어 보관함 › 치장에 넣었어요', ACCESSORIES[k].name), 2600); } return showBubble(r); } // 189
+    if (act === 'accon') { bubble.hidden = true; bubbleFor = null; return dressUp(r); } // 189: the friends menu's 치장 끼우기 list
     if (act === 'store' && G.store(r.id)) toast($t('{0}{을/를} 보관함에 넣었어요', nm));
     bubble.hidden = true; bubbleFor = null;
     if (act === 'walk') pickStroll(r);
@@ -147,7 +149,7 @@ export function initPlay(nav) {
     if (r.guest) bubble.innerHTML = $t('{0}{1}<small>손님 · {2}시간 더 머물러요</small><div class="row">{3}</div>', say ? say + ' ' : '', guestName(r), Math.max(1, Math.ceil((r.until - now) / 3600e3)), btn('book', $t('방명록'), true)); else // 16-1
     bubble.innerHTML = `${say ? say + ' ' : ''}${nameOf(r)}${F170 ? affMark(affLevel(r, now)) + affLine(r, now) : baby ? `<small>${growText(r, now)}</small>` : ''}<div class="row">${
       baby && growing(r) ? btn('feed', n ? $t('먹이 주기 {0}/{1}', n, B.grow.feeds) : $t('오늘 먹이 다 줬어요')) + btn('candy', $t('꼬마 사탕 주기 {0}', c ? $t('({0}개)', c) : `♥${B.candy.price}`), true) : ''}${
-      r.hold ? btn('grow', $t('다시 자라기')) : ''}${btn('walk', $t('산책 보내기'), true)}${btn('store', $t('보관함에 넣기'), true)}</div>`;
+      r.hold ? btn('grow', $t('다시 자라기')) : ''}${r.acc && ACCESSORIES[r.acc] ? btn('accoff', $t('치장 떼기 · {0}', ACCESSORIES[r.acc].name), true) : Object.keys(G.S.accs || {}).length ? btn('accon', $t('치장 끼우기'), true) : ''}${btn('walk', $t('산책 보내기'), true)}${btn('store', $t('보관함에 넣기'), true)}</div>`;
     bubble.querySelector('[data-act=feed]')?.toggleAttribute('disabled', !n); bubble.hidden = false;
     const go = !bubbleFor; bubbleFor = r; bubbleUntil = Date.now() + 10000; if (press) press.re = true;
     if (go) requestAnimationFrame(place);
