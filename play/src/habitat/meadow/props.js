@@ -1349,8 +1349,8 @@ export function recolor(g, hex, byArea) {
     if (kv ? !(h.s > 0.12 && Math.abs(hue(h.h - K.h)) < 25 / 360) : !(h.s < 0.2 && Math.abs(h.l - K.l) < 0.25)) return false;
     col.setHSL(kv ? ((T.h + hue(h.h - K.h)) % 1 + 1) % 1 : T.h, cl(kv ? h.s * T.s / K.s : T.s + h.s - K.s), cl(h.l + T.l - K.l), SR); return true; };
   for (const o of parts) {
-    if (o.material.vertexColors && o.geometry.attributes.color) { o.geometry = Object.assign(o.geometry.clone(), { userData: { own: 1 } }); each(o, (col, n, i, a) => { if (turn(col)) a.setXYZ(i, col.r, col.g, col.b); }); }
-    else { const m = o.material.clone(); m.userData.own = 1; if (turn(m.color)) o.material = m; else m.dispose(); } // 195 B-10b M2: the copies are this model's own (a clone's userData is the original's object: a new one)
+    if (o.material.vertexColors && o.geometry.attributes.color) { const old = o.geometry; o.geometry = Object.assign(old.clone(), { userData: { own: 1 } }); if (old.userData.own) old.dispose(); each(o, (col, n, i, a) => { if (turn(col)) a.setXYZ(i, col.r, col.g, col.b); }); }
+    else { const m = o.material.clone(); m.userData.own = 1; if (turn(m.color)) { if (o.material.userData.own) o.material.dispose(); o.material = m; } else m.dispose(); } // 195 B-10b M2 (+ the own one it replaces): the copies are this model's own (a clone's userData is the original's object: a new one)
   }
   return g;
 }

@@ -166,7 +166,7 @@ export function initPlay(nav) {
 
   // what the game did (every tick, every action, and the catch-up at start)
   // 66-1 떠돌이 손님: its bubble (name, each wish with ✓ while it holds there, time left, what it leaves: shown before)
-  const wishText = w => { const W = WISH[w] || {}; return `${W.icon ?? ''} ${W.riddle ? `「${W.riddle}」` : W.k === 'pals' ? $t('동물 {0}마리 곁', W.n) : W.k === 'theme' ? $t('「{0}」 {1} 한자리에', W.name, W.v.map(t => WISH[t].icon + t).join(' ')) : w}`; }; // 69-3 테마 소원
+  const wishText = w => { const W = WISH[w] || {}; return `${W.icon ?? ''} ${W.riddle ? `「${W.riddle}」` : W.k === 'pals' ? $t('동물 {0}마리 곁', W.n) : W.k === 'theme' ? $t('「{0}」 {1} 한자리에', W.name, W.v.map(t => (Object.values(WISH).find(x => x.k === 'tag' && x.v === t)?.icon ?? '') + t).join(' ')) : $t(w)}`; }; // 201: keys stay Korean (guests-data), the label is the language's // 69-3 테마 소원
   function guestHtml(r, say = '') {
     const g = G.guestOf(r.wg); if (!g) return say || '';
     const R = rosterOf(g), J = G.guestMet(g), P = G.guestPreview(g), egg = P.egg && HAB[P.egg]?.name;

@@ -267,4 +267,4 @@ export function moveGuest(S, id, x, z) {
 // the shop's one tutorial prop (등불 at step 3, before its Lv) while that step's guest is here
 export const tutShop = S => { const Q = S.guests, st = Q && TUTORIAL[Q.tut]; return st?.shop && Q.list.some(g => g.tut === Q.tut) ? st.shop : null; };
 // 「오늘 밤 손님」: the night guest of an open habitat at this Lv, one a night (by the night's number)
-export const tonightGuest = (S, now) => { const L = GUESTS.filter(R => R.when === $t('밤') && R.lv <= (S.lv || 1) && S.unlocked.includes(R.hab)); return L.length ? L[nightNo(now) % L.length] : null; };
+export const tonightGuest = (S, now) => { const L = GUESTS.filter(R => R.when === '밤' && R.lv <= (S.lv || 1) && S.unlocked.includes(R.hab)); return L.length ? L[nightNo(now) % L.length] : null; };
