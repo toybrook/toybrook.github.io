@@ -1867,7 +1867,7 @@ export default {
  "단짝 놀이: 단짝 둘이 좋아하는 소품 곁에 있으면 함께 놀아요(처음엔 ♥+20)": "Buddy play: Best buddies near their favorite decor play together (♥+20 the first time)",
  "첫 주 선물: 새로 시작하면 이틀째에 전설 알, 6일째에 영웅 알, 7일째에 신수 단서를 받아요": "First-week gifts: New players get a Legendary egg on day 2, an Epic egg on day 6 and a Mythic clue on day 7",
  "12월 5일부터 2주 동안 첫눈 이벤트: 눈 덮인 초원에서 눈더미를 모아 눈사람을 만들고, 친구에게 털모자를 씌워요": "First Snow event for 2 weeks from 12/5: Gather snow piles in the snowy Meadow to build a snowman, and give friends knit hats",
- "화면이 나무 선반으로 새 단장했어요: 단추·창·알림이 나무 판으로 바뀌고, 누르면 「톡」 소리가 나요": "A fresh look: the screen is now a wooden shelf. Buttons, windows and notices are wooden boards, and they go “tok” when you tap",
+ "화면을 더 깔끔하게 다듬는 중이에요. 잠시 예전 모습으로 돌아갔어요": "We are reworking the screens to look cleaner. For now they are back to the earlier look",
  "설원 알에 두 번째 전설 4종: 흑요석 은테 펭귄·블랙 오팔 물범·로즈쿼츠 여우·은 세공 올빼미": "Four new second Legendaries in the Snowfield egg: Silver-Rimmed Obsidian Penguin, Black Opal Seal, Rose Quartz Arctic Fox, Silver Filigree Snowy Owl",
  "신수 창과 도감에 「지금 할 일」과 네 단계 길잡이가 생겼어요. 처음이라면 「신수란?」을 눌러 보세요": "The Mythic window and the Collection now show “Next:” and the four steps. New to Mythics? Tap “What are Mythics?”",
  "신수 불갈기 천리마가 더 반짝이게 돌아왔어요: 거울 같은 옻칠, 유리 불꽃 날개": "The Mythic Firemane is back and shinier: a mirror-bright lacquer and glass flame wings",
