@@ -26,6 +26,7 @@ export function initLevel(getApi) {
   const stage = $('stage'), pill = document.createElement('button');
   pill.className = 'pill lvl'; pill.id = 'lvPill'; pill.setAttribute('aria-label', $t('레벨'));
   pill.innerHTML = '<b></b><i><s></s></i>'; $('hearts').after(pill);
+  if (document.documentElement.dataset.ui187) { const t = document.createElement('span'); t.className = 'btag'; t.setAttribute('aria-hidden', 'true'); t.textContent = 'BETA'; pill.after(t); } // 202 B-1 (?rc200): BETA a small tag by Lv (the floating one stays on the world map)
   const sheet = mk('lvSheet', 'intro pop lvs', $t('레벨')), card = mk('lvup', 'intro pop lvup', $t('레벨이 올랐어요')), achs = mk('achSheet', 'intro pop lvs ach', $t('업적'));
   function mk(id, cls, label) { const el = document.createElement('section'); el.id = id; el.className = cls; el.hidden = true; el.setAttribute('aria-label', label); stage.append(el); return el; }
   const part = L => { const a = xpAt(L), b = xpAt(L + 1); return [G.S.xp - a, b - a]; };

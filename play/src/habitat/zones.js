@@ -14,7 +14,7 @@ export const BOARD0 = [-18, 18, -29, 29].map(v => v * S);
 const SIDE = { '+x': [1, 1], '-x': [0, -1], '+z': [3, 1] };
 // the board after step L (0: the first board)
 export function rectAt(hab, L) {
-  if (hab === 'yard') { const h = YARD_B.cells[Math.min(L, 3)] * S / 2; return [-h, h, -h, h]; } // 182 ④: the open land, a square round the middle
+  if (hab === 'yard') { const [w, d] = YARD_B.cells[Math.min(L, YARD_B.cells.length - 1)].map(n => n * S / 2); return [-w, w, -d, d]; } // 182 ④: the open land round the middle (184 ④: w×d)
   const r = [...BOARD0];
   for (const z of ZONES[hab].slice(0, L)) { const [i, s] = SIDE[z.side]; r[i] += s * z.w * S; }
   return r;
@@ -90,6 +90,8 @@ export const REVEAL = { k: 0, skip: null }; // 129 넓히는 순간 (?s129, ?z14
 // with a landmark read from the home view, its own fixtures and a thing only the animals there do, opened with 129's 넓히는 순간.
 // Now the flower hill (flowerhill143), the small wood (grove143) and the fork (fork143); the reeds and the sandbar come under this flag next
 export const Z143 = 0; // release build: the 143 zone trial stays off
+// 194 0-7 (?d07): the opened zones filled to 4-5's density (zoneprops.js) and the natives drawn zone by zone (nature.js); off in every build until judged (tools/build-web.mjs)
+export const D07 = 1; // release build: 218-5f, 194 0-7 density (and 221 C) on with RC200
 // 150 (user OK 11/18): the flower hill, the small wood and the fork are public (no flag); the others still under ?z143=1
 // 176: the jungle opens with its 143 zones, tied to the jungle's own gate (HOLD.dino: the source has it open, the release build holds it,
 // tools/build-web.mjs), so opening the gate opens these too; the other habitats' 143 stays the trial
@@ -699,3 +701,64 @@ export function zoneSet(hab, top) {
   };
   return Z;
 }
+
+// 194 0-5 (?s186, decor-redesign.md 4-1·4-2·10-3·11): each habitat's 꾸미기 자리. id, L (the 넓히기 step it opens at), k (big | mid |
+// small | water), r (metres), x, z (saved units: x 1.5 = metres), egg (its 「알이 놓일 점」 beside it, saved units). Picked by a scan of
+// each board (open walkable ground with room round it; L 0 in the home view, L > 0 in the strip that step opens); rules.js and
+// habitat.js read them. ART_SPOTS: 2~3 「작품 자리」 a habitat (saved units), where a new 작품 goes first
+export const SPOTS = {
+  meadow: [{ id: 'm1', L: 0, k: 'big', r: 6.5, x: -6.2, z: -2.7, egg: [-5.6, 2.2] },
+    { id: 'm2', L: 0, k: 'mid', r: 3, x: -6, z: 7.5, egg: [-5.7, 10.1] },
+    { id: 'm3', L: 0, k: 'mid', r: 3, x: 7.5, z: -1.5, egg: [7.2, 1.1] },
+    { id: 'm4', L: 0, k: 'mid', r: 3, x: 0, z: 14.5, egg: [0, 17.1] },
+    { id: 'm5', L: 0, k: 'small', r: 1.25, x: -3.7, z: -10.7, egg: [-5.1, -10.6] },
+    { id: 'm6', L: 0, k: 'small', r: 1.25, x: 3.3, z: 10.8, egg: [3.2, 12.3] },
+    { id: 'm7', L: 1, k: 'small', r: 1.25, x: 23.8, z: -4.7, egg: [24.4, -3.4] },
+    { id: 'm8', L: 2, k: 'big', r: 5, x: -21.7, z: -3.7, egg: [-20.3, 0] },
+    { id: 'm9', L: 3, k: 'mid', r: 3, x: 12.5, z: 29.5, egg: [11.3, 31.8] },
+    { id: 'm10', L: 4, k: 'small', r: 1.25, x: 29.8, z: 31.8, egg: [28.7, 32.7] },
+    { id: 'm11', L: 5, k: 'big', r: 5, x: -23.2, z: 14.3, egg: [-21.2, 17.7] },
+    { id: 'm12', L: 6, k: 'mid', r: 3, x: -3, z: 38, egg: [-1.6, 40.2] }],
+  snow: [{ id: 's1', L: 0, k: 'big', r: 6.5, x: -0.2, z: 16.3, egg: [-0.1, 21.3] },
+    { id: 's2', L: 0, k: 'mid', r: 3, x: -7.5, z: 13, egg: [-7, 15.6] },
+    { id: 's3', L: 0, k: 'mid', r: 3, x: 8, z: 14.5, egg: [7.5, 17] },
+    { id: 's4', L: 0, k: 'mid', r: 3, x: -2, z: -18.5, egg: [-3.8, -16.6] },
+    { id: 's5', L: 0, k: 'small', r: 1.25, x: -6.2, z: -15.7, egg: [-6.6, -14.3] },
+    { id: 's6', L: 0, k: 'small', r: 1.25, x: 6.3, z: 18.8, egg: [6.1, 20.2] },
+    { id: 's7', L: 1, k: 'small', r: 1.25, x: 21.8, z: 0.8, egg: [21.3, 2.2] },
+    { id: 's8', L: 2, k: 'big', r: 5, x: -22.2, z: -5.2, egg: [-20.8, -1.5] },
+    { id: 's9', L: 3, k: 'mid', r: 3, x: 4, z: 33.5, egg: [3.5, 36.1] },
+    { id: 's10', L: 4, k: 'small', r: 1.25, x: 30.3, z: 4.3, egg: [29.6, 5.6] },
+    { id: 's11', L: 5, k: 'big', r: 5, x: -30.7, z: 14.3, egg: [-28.3, 17.4] },
+    { id: 's12', L: 6, k: 'mid', r: 3, x: 0, z: 42, egg: [-2.4, 42.9] }],
+  pond: [{ id: 'p1', L: 0, k: 'big', r: 6.5, x: -6.2, z: 24.3, egg: [-5.2, 29.2] },
+    { id: 'p2', L: 0, k: 'mid', r: 3, x: 9.5, z: -20.5, egg: [10.2, -18] },
+    { id: 'p3', L: 0, k: 'mid', r: 3, x: -12.5, z: -18, egg: [-12.1, -15.4] },
+    { id: 'p4', L: 0, k: 'water', r: 3.25, x: 0.2, z: 8.2, egg: [-5, 20.2] },
+    { id: 'p5', L: 0, k: 'small', r: 1.25, x: 2.8, z: -20.7, egg: [1.8, -19.7] },
+    { id: 'p6', L: 0, k: 'small', r: 1.25, x: 1.8, z: 24.8, egg: [1.7, 26.3] },
+    { id: 'p7', L: 1, k: 'small', r: 1.25, x: 20.3, z: -1.2, egg: [19.8, 0.2] },
+    { id: 'p8', L: 2, k: 'big', r: 5, x: -17.2, z: 1.3, egg: [-16, 5.1] },
+    { id: 'p9', L: 3, k: 'water', r: 4.5, x: 4.5, z: 20, egg: [3.9, 24.6] },
+    { id: 'p10', L: 4, k: 'small', r: 1.25, x: 26.3, z: 3.8, egg: [25.7, 5.1] },
+    { id: 'p11', L: 5, k: 'big', r: 5, x: -30.7, z: -5.7, egg: [-28.9, -2.2] },
+    { id: 'p12', L: 6, k: 'mid', r: 3, x: 2, z: 40.5, egg: [1.6, 43.1] }],
+  dino: [{ id: 'd1', L: 0, k: 'big', r: 5.5, x: -10.8, z: 23.7, egg: [-9.4, 27.7] },
+    { id: 'd2', L: 0, k: 'mid', r: 3, x: -8, z: 2, egg: [-7.6, 4.6] },
+    { id: 'd3', L: 0, k: 'mid', r: 3, x: 5.5, z: 11, egg: [5.2, 13.6] },
+    { id: 'd4', L: 0, k: 'mid', r: 3, x: -0.5, z: 11.5, egg: [-0.5, 14.1] },
+    { id: 'd5', L: 0, k: 'small', r: 1.25, x: -4.2, z: -16.2, egg: [-4.6, -14.8] },
+    { id: 'd6', L: 0, k: 'small', r: 1.25, x: 3.3, z: 15.3, egg: [3.2, 16.8] },
+    { id: 'd7', L: 1, k: 'small', r: 1.25, x: 20.3, z: 2.8, egg: [19.8, 4.2] },
+    { id: 'd8', L: 2, k: 'big', r: 5, x: -18.7, z: 18.3, egg: [-16.8, 21.8] },
+    { id: 'd9', L: 3, k: 'mid', r: 3, x: -5, z: 29.5, egg: [-6.5, 31.6] },
+    { id: 'd10', L: 4, k: 'small', r: 1.25, x: 31.8, z: 2.8, egg: [30.7, 3.7] },
+    { id: 'd11', L: 5, k: 'big', r: 5, x: -30.2, z: 2.8, egg: [-28.2, 6.2] },
+    { id: 'd12', L: 6, k: 'mid', r: 3, x: 2, z: 39, egg: [1.7, 41.6] }],
+};
+export const ART_SPOTS = {
+  meadow: [[-5.7, -13.7], [7.8, -21.2], [-6.2, 29.8]],
+  snow: [[-7.7, -18.7], [7.8, -17.2], [-0.7, 32.3]],
+  pond: [[0.3, 32.8], [-23.2, 1.3], [24.3, 0.3]],
+  dino: [[-7.7, -18.7], [7.8, -18.7], [-10.7, 30.3]],
+};

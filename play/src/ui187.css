@@ -1,0 +1,281 @@
+/* 187 ② 새 UI 시안 「조용한 판」. 깃발 ?ui187: index.html이 html[data-ui187]을 달고 이 파일을 부름(?ui183과 같이 오면 이것만).
+   tools/build-web.mjs가 UI187 = false이면 스크립트와 이 파일을 빌드에서 뺌. 칠만 바꿈: 새 DOM·동작 없음.
+   판: 따뜻한 오프화이트 하나 + 옅은 그림자 하나 / 강조색 하나(주 버튼·둥지) / 글자 진한 회색 두 단계 / 모서리 14px 하나 / 간격 4·8 / 굵기 400·600.
+   아이콘: Tabler Icons 3.19.0 (outline 13개 + filled star 1개, 187f에서 4개 더함) 14개를 CSS mask(data URI)로 옮김. (tabler.io/icons, github.com/tabler/tabler-icons; 표는 docs/assets.md)
+   ---- Tabler Icons license ----
+   MIT License
+
+   Copyright (c) 2020-2024 Paweł Kuna
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+   ---- */
+/* 202 B-3·5 (rc201): 바탕은 앞 화면 베이지(#f1d3ae)와 흰색 사이 크림, 칸은 따뜻한 칠 + 옅은 테두리(--u-bd)·부드러운 그림자(--u-sh2),
+   주황은 한 톤 밝고 따뜻하게(#b9532f 4.84:1 → #bc5928 흰 글자 4.57:1), 보조 버튼은 크림 + 갈색 글자(--u-sbi 7.13:1) + 테두리(--u-sbb) */
+[data-ui187]{--u-bg:#fbf3e7;--u-bga:rgba(251,243,231,.94);--u-fill:#f3e7d6;--u-ink:#2e2a26;--u-ink2:#6a625a;--u-acc:#bc5928;--u-line:rgba(90,60,30,.12);--u-th:#fbf1e1;
+  --u-bd:rgba(140,95,50,.2);--u-sh2:0 1px 4px rgba(90,60,30,.08);--u-sb:#fffaf3;--u-sbi:#7a4a26;--u-sbb:#dcc3a2;
+  --u-r:14px;--u-sh:0 4px 16px rgba(90,60,30,.12);--u-dim:rgba(30,26,22,.16);
+  --i-store:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z'/><path d='M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10'/><path d='M10 12l4 0'/></svg>");
+    --i-friends:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14.7 13.5c-1.1 -2 -1.441 -2.5 -2.7 -2.5c-1.259 0 -1.736 .755 -2.836 2.747c-.942 1.703 -2.846 1.845 -3.321 3.291c-.097 .265 -.145 .677 -.143 .962c0 1.176 .787 2 1.8 2c1.259 0 3 -1 4.5 -1s3.241 1 4.5 1c1.013 0 1.8 -.823 1.8 -2c0 -.285 -.049 -.697 -.146 -.962c-.475 -1.451 -2.512 -1.835 -3.454 -3.538z'/><path d='M20.188 8.082a1.039 1.039 0 0 0 -.406 -.082h-.015c-.735 .012 -1.56 .75 -1.993 1.866c-.519 1.335 -.28 2.7 .538 3.052c.129 .055 .267 .082 .406 .082c.739 0 1.575 -.742 2.011 -1.866c.516 -1.335 .273 -2.7 -.54 -3.052z'/><path d='M9.474 9c.055 0 .109 0 .163 -.011c.944 -.128 1.533 -1.346 1.32 -2.722c-.203 -1.297 -1.047 -2.267 -1.932 -2.267c-.055 0 -.109 0 -.163 .011c-.944 .128 -1.533 1.346 -1.32 2.722c.204 1.293 1.048 2.267 1.933 2.267z'/><path d='M16.456 6.733c.214 -1.376 -.375 -2.594 -1.32 -2.722a1.164 1.164 0 0 0 -.162 -.011c-.885 0 -1.728 .97 -1.93 2.267c-.214 1.376 .375 2.594 1.32 2.722c.054 .007 .108 .011 .162 .011c.885 0 1.73 -.974 1.93 -2.267z'/><path d='M5.69 12.918c.816 -.352 1.054 -1.719 .536 -3.052c-.436 -1.124 -1.271 -1.866 -2.009 -1.866c-.14 0 -.277 .027 -.407 .082c-.816 .352 -1.054 1.719 -.536 3.052c.436 1.124 1.271 1.866 2.009 1.866c.14 0 .277 -.027 .407 -.082z'/></svg>");
+    --i-codex:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 4v16h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12z'/><path d='M19 16h-12a2 2 0 0 0 -2 2'/><path d='M9 8h6'/></svg>");
+    --i-decor:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 21v-4a4 4 0 1 1 4 4h-4'/><path d='M21 3a16 16 0 0 0 -12.8 10.2'/><path d='M21 3a16 16 0 0 1 -10.2 12.8'/><path d='M10.6 9a9 9 0 0 1 4.4 4.4'/></svg>");
+    --i-nest:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 14.083c0 4.154 -2.966 6.74 -7 6.917c-4.2 0 -7 -2.763 -7 -6.917c0 -5.538 3.5 -11.09 7 -11.083c3.5 .007 7 5.545 7 11.083z'/></svg>");
+    --i-mail:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z'/><path d='M3 7l9 6l9 -6'/></svg>");
+    --i-prefs:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z'/><path d='M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0'/></svg>");
+    --i-back:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 6l-6 6l6 6'/></svg>");
+    --i-close:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M18 6l-12 12'/><path d='M6 6l12 12'/></svg>");
+    --i-heart:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572'/></svg>");
+    --i-undo:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 14l-4 -4l4 -4'/><path d='M5 10h11a4 4 0 1 1 0 8h-1'/></svg>");
+    --i-redo:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 14l4 -4l-4 -4'/><path d='M19 10h-11a4 4 0 1 0 0 8h1'/></svg>");
+    --i-star:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z'/></svg>");
+    --i-map:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13'/><path d='M9 4v13'/><path d='M15 7v13'/></svg>");
+    --i-starf:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8.243 7.34l-6.38 .925l-.113 .023a1 1 0 0 0 -.44 1.684l4.622 4.499l-1.09 6.355l-.013 .11a1 1 0 0 0 1.464 .944l5.706 -3l5.693 3l.1 .046a1 1 0 0 0 1.352 -1.1l-1.091 -6.355l4.624 -4.5l.078 -.085a1 1 0 0 0 -.633 -1.62l-6.38 -.926l-2.852 -5.78a1 1 0 0 0 -1.794 0l-2.853 5.78z'/></svg>")
+}
+
+/* ── 글자: 굵기 두 단계(400·600) ── */
+[data-ui187] :is(#stage,#bubble) *{font-weight:400}
+[data-ui187] :is(#stage,#bubble) :is(b,strong,h1,h2,h3,summary,.nestbtn,.nbtns .go,.sbtns .go,.npill .back,.nname){font-weight:600}
+/* 187f: 창(설정·#fmenu·소식 등, #stage 밖)과 BETA도 두 단계: 굵은 것은 모두 600 */
+[data-ui187] :is(.intro,.toast,.beta,.tip) :is(*,b,strong,h1,h2,h3,h4,th,summary,button){font-weight:400}
+[data-ui187] :is(.intro,.toast,.tip) :is(b,strong,h1,h2,h3,h4,th,summary,button:not(.sb)),[data-ui187] .beta{font-weight:600}
+[data-ui187] :is(button,select,input){font-family:inherit}
+/* 아이콘: 글자색을 따르는 가림판(mask) 하나 */
+[data-ui187] :is(#habName,#back,#mailBtn,#prefsBtn,.bar #overview,.dock .back,.nestbtn,:is(.chead,.fhead) [data-close],#prefsClose)::before{content:'';display:block;flex:none;width:22px;height:22px;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;position:static;animation:none;border:0;box-shadow:none;transform:none;color:inherit}
+[data-ui187] :is(#habName,#back){--ic:var(--i-back)}
+[data-ui187] #mailBtn{--ic:var(--i-mail)}
+[data-ui187] #prefsBtn{--ic:var(--i-prefs)}
+[data-ui187] #storeBtn{--ic:var(--i-store)}
+[data-ui187] #friendsBtn{--ic:var(--i-friends)}
+[data-ui187] #codexBtn{--ic:var(--i-codex)}
+[data-ui187] #decorBtn{--ic:var(--i-decor)}
+[data-ui187] .nestbtn{--ic:var(--i-nest)}
+[data-ui187] :is(.chead,.fhead) [data-close],[data-ui187] #prefsClose{--ic:var(--i-close)}
+[data-ui187] :is(.bar,.nestbtn) svg{display:none}
+/* 187f: 글자 기호(↶ ↷ ☆ ★)와 #fmenu 「닫기」 글자도 같은 세트의 아이콘으로(글자는 font-size 0으로 숨기고 이름은 그대로 읽힘) */
+[data-ui187] :is(.dtools [data-undo],.dtools [data-redo],.scell .sfav,.fmenu [data-shut]){font-size:0}
+[data-ui187] :is(.dtools [data-undo],.dtools [data-redo],.scell .sfav,.fmenu [data-shut])::before{content:'';display:block;margin:auto;width:20px;height:20px;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+[data-ui187] .dtools [data-undo]{--ic:var(--i-undo)}
+[data-ui187] .dtools [data-redo]{--ic:var(--i-redo)}
+[data-ui187] .scell .sfav{--ic:var(--i-star);color:var(--u-ink2);text-shadow:none}
+[data-ui187] :is(.scell .sfav.on,.scell i.sfav){--ic:var(--i-starf);color:var(--u-ink)}
+[data-ui187] .fmenu [data-shut]{--ic:var(--i-close)}
+
+/* ── 누름: 살짝 작아졌다 돌아옴(튀지 않음) ── */
+[data-ui187] :is(.back,.nestbtn,.nslot,.cell,.frow,.dprop,.dsh,.ctabs button,.dtabs button,.dtools button,.nbtns button,.sbtns button,.seg button,.intro button){transition:transform .12s ease-out}
+[data-ui187] :is(.back,.nestbtn,.nslot,.cell,.frow,.dprop,.dsh,.ctabs button,.dtabs button,.dtools button,.nbtns button,.sbtns button,.seg button,.intro button):active{transform:scale(.96)}
+@keyframes u187up{from{transform:translateY(32px);opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  [data-ui187] :is(.back,.nestbtn,.nslot,.cell,.frow,.dprop,.dsh,.ctabs button,.dtabs button,.dtools button,.nbtns button,.sbtns button,.seg button,.intro button){transition:none}
+  [data-ui187] :is(.back,.nestbtn,.nslot,.cell,.frow,.dprop,.dsh,.ctabs button,.dtabs button,.dtools button,.nbtns button,.sbtns button,.seg button,.intro button):active{transform:none}
+  [data-ui187] :is(.nsheet,.codex,.decor,.intro>div){animation:none}
+}
+/* 반짝이·빛남·튀는 효과 없음 */
+[data-ui187] :is(.nestbtn.ready,.nslot.ready,.nslot.ready img,.gauge.full svg,.hearts.pop,.nsecret em){animation:none}
+[data-ui187] .nestbtn.ready::after,[data-ui187] .gauge.full::after,[data-ui187] .nsecret i{content:none;display:none}
+
+/* ── 위: 얇은 판 하나, ♥·Lv는 작고 조용하게 ── */
+[data-ui187] .bar{gap:0;padding:2px 4px;background:var(--u-bga);border-radius:var(--u-r);box-shadow:var(--u-sh)}
+[data-ui187] :is(.bar .back,.bar .pill){background:none;border:0;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;color:var(--u-ink);min-height:44px;border-radius:var(--u-r);padding:0 8px;font-size:calc(14px*var(--fs));gap:4px;text-shadow:none}
+[data-ui187] .bar .back.sq{width:44px;min-width:44px;padding:0}
+[data-ui187] :is(#habName,#back)::before{width:18px;height:18px}
+[data-ui187] .hearts span{font-size:0;width:16px;height:16px;background:var(--u-ink2);-webkit-mask:var(--i-heart) center/contain no-repeat;mask:var(--i-heart) center/contain no-repeat}
+[data-ui187] .lvl{color:var(--u-ink);font-size:calc(13px*var(--fs));gap:4px;min-height:44px}
+[data-ui187] .lvl i{background:var(--u-line)}
+[data-ui187] .lvl s{background:var(--u-ink2)}
+[data-ui187] .back.new::after{background:var(--u-acc);box-shadow:0 0 0 2px var(--u-bg);right:6px;top:6px;width:8px;height:8px;animation:none}
+[data-ui187] .beta{background:var(--u-bga);color:var(--u-ink2);border:0;box-shadow:none;text-shadow:none}
+/* 187f: 서식지에서는 BETA를 위 줄 판 안의 글자로(칩 없음). 월드맵은 위 줄이 없어 판을 남김 */
+[data-ui187]:has(#habitat:not(.hidden)) .beta{background:none;top:calc(30px + var(--sa-t));left:auto;right:calc(112px + var(--sa-r));padding:0;border-radius:0}
+/* 떠 있는 작은 것들: 같은 판 */
+[data-ui187] :is(.camb .back,.tools .back,.fb,.label,.tag,.scnote,.toast){background:var(--u-bga);color:var(--u-ink);border:0;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:var(--u-sh);border-radius:var(--u-r);text-shadow:none}
+[data-ui187] .tag .gg{background:var(--u-line)}
+[data-ui187] .tag .gg i{background:var(--u-ink2)}
+[data-ui187] .tag.jstar:not(.grow)::before{content:none}
+
+/* ── 아래: 떠 있는 얇은 막대 하나(보관함·친구들 | 둥지 | 도감·꾸미기), 둥지만 강조색 ── */
+[data-ui187] #habitat::after{content:'';position:absolute;left:calc(12px + var(--sa-l));right:calc(12px + var(--sa-r));bottom:calc(12px + var(--sa-b));height:64px;z-index:1000;pointer-events:none;border-radius:var(--u-r);background:var(--u-bga);box-shadow:var(--u-sh)}
+[data-ui187] #habitat.decorating::after,[data-ui187] .photo #habitat::after,[data-ui187] .skyview #habitat::after,[data-ui187] .see #habitat::after,[data-ui187] #loading:not([hidden])~#habitat::after,[data-ui187] #habitat:has(>#loading:not([hidden]))::after{display:none}
+[data-ui187] .dock{flex-direction:row;gap:0;bottom:calc(16px + var(--sa-b));z-index:1001}
+[data-ui187] .dock.l{left:calc(16px + var(--sa-l));right:calc(50% + 40px)}
+[data-ui187] .dock.r{right:calc(16px + var(--sa-r));left:calc(50% + 40px)}
+[data-ui187] .dock .back{position:relative;flex:1 1 0;min-width:0;height:56px;flex-direction:column;justify-content:center;gap:4px;padding:0 4px;background:none;border:0;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;border-radius:var(--u-r);color:var(--u-ink2);font-size:calc(11px*var(--fs));line-height:1.2;white-space:nowrap;text-shadow:none}
+[data-ui187] .dock .back::before{color:var(--u-ink)}
+[data-ui187] #friendsBtn span{position:absolute;right:2px;top:2px;margin:0;font-size:calc(10px*var(--fs));color:var(--u-ink2);font-variant-numeric:tabular-nums}
+[data-ui187] .nestbtn{left:calc(50% - 36px);transform:none;bottom:calc(16px + var(--sa-b));z-index:1001;width:72px;min-width:0;min-height:0;height:56px;flex-direction:column;justify-content:center;gap:4px;padding:0;border:0;border-radius:var(--u-r);background:var(--u-acc);color:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;font-size:calc(11px*var(--fs));line-height:1.2;text-shadow:none}
+[data-ui187] .nestbtn:active{transform:scale(.96)}
+[data-ui187] .nestbtn.ready{border:0;box-shadow:none;background:var(--u-acc)}
+[data-ui187] .nestbtn i{right:-4px;top:-8px;min-width:20px;height:20px;line-height:20px;padding:0 4px;border:0;border-radius:var(--u-r);background:#fff;color:var(--u-acc);box-shadow:0 0 0 1px var(--u-line);font-size:calc(11px*var(--fs));font-weight:600;animation:none}
+[data-ui187] .npill{bottom:calc(88px + var(--sa-b))}
+/* 187f: 알 안내와 「부화 시작」을 판 하나에(안내는 칩 없이 판 위 글자) */
+[data-ui187] .npill:has(>*){padding:4px;gap:8px;background:var(--u-bga);border-radius:var(--u-r);box-shadow:var(--u-sh)}
+[data-ui187] .npill .pill{background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;color:var(--u-ink);padding:0 4px 0 8px;text-shadow:none}
+[data-ui187] :is(.npill .back,.nbtns .go,.sbtns .go,.tip button[data-close]){background:var(--u-acc);color:#fff;border:0;box-shadow:none;border-radius:var(--u-r);text-shadow:none}
+
+/* ── 창: 아래에서 올라오는 같은 시트, 제목 왼쪽, 닫기는 오른쪽 위 아이콘 하나 ── */
+[data-ui187] .nest{background:var(--u-dim)}
+[data-ui187] :is(.nsheet,.decor,.codex){background:var(--u-bg);color:var(--u-ink);border:0;border-radius:var(--u-r) var(--u-r) 0 0;box-shadow:var(--u-sh)}
+[data-ui187] .nsheet{animation:u187up .28s cubic-bezier(.2,.8,.2,1)}
+[data-ui187] .codex{animation:u187up .28s cubic-bezier(.2,.8,.2,1)}
+[data-ui187] :is(.chead,.fhead){padding-top:12px;padding-bottom:8px;gap:4px}
+[data-ui187] :is(.chead,.fhead,.dhead) b{font-size:calc(18px*var(--fs));color:var(--u-ink)}
+[data-ui187] :is(.chead,.fhead,.dhead) span{font-size:calc(13px*var(--fs));color:var(--u-ink2)}
+/* 머리줄 버튼: 옅은 칠, 테두리 없음(누르는 칸 44px, 보이는 칸 36px) */
+[data-ui187] :is(.chead,.fhead,.dhead) .back{background:var(--u-fill);background-clip:padding-box;border:4px solid transparent;color:var(--u-ink);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;border-radius:calc(var(--u-r) + 4px);padding:0 8px;font-size:calc(13px*var(--fs));text-shadow:none}
+[data-ui187] :is(.chead,.fhead) [data-close]{width:44px;min-width:44px;padding:0;border:0;background:none;font-size:0;color:var(--u-ink2)}
+[data-ui187] .chead .back.on{box-shadow:inset 0 0 0 2px var(--u-ink2)}
+/* 탭·고르기(187f): 고른 탭은 채움 회색 + 진한 글자, 나머지는 글자만. 세그먼트는 채움 바탕 위 흰 칸. 강조색은 주 버튼에만 */
+[data-ui187] :is(.ctabs button,.dtabs button,.seg button,.sfilt .pick){background:none;border:0;color:var(--u-ink2);border-radius:var(--u-r);box-shadow:none;min-height:44px;min-width:44px;text-shadow:none}
+[data-ui187] :is(.ctabs button.on,.dtabs button.on,.sfilt .pick.on){background:var(--u-fill);color:var(--u-ink);font-weight:600}
+[data-ui187] .seg button.on{background:#fff;color:var(--u-ink);font-weight:600;box-shadow:0 0 0 1px var(--u-line)}
+[data-ui187] :is(.fbar,.sfilt,.cdet) .seg{border:0;border-radius:var(--u-r);background:var(--u-fill)}
+[data-ui187] :is(.fbar,.sfilt) select{border:0;border-radius:var(--u-r);background-color:var(--u-fill);color:var(--u-ink);min-height:44px}
+/* 칸들: 테두리 없이 옅은 칠 하나, 카드 안의 카드 없음 */
+[data-ui187] :is(.ntop,.gauge,.nslot,.cell,.dprop,.ngift){background:var(--u-fill);border:0;border-radius:var(--u-r);box-shadow:none}
+[data-ui187] .neggs{background:none;border:0;box-shadow:none}
+/* 피규어 사진 칸: 사진 바탕색(thumbs.js BG)과 같은 색이라 칸 안의 칸이 안 보임 */
+[data-ui187] .ntop{background:none}
+[data-ui187] :is(.cell,.nslot){background:var(--u-th)}
+[data-ui187] .nslot b{color:var(--u-ink)}
+[data-ui187] :is(.nnote,.gauge small,.gauge span,.nslot small,.cell small,.dprop small,.dsh small,.fsum,.fnote,.cnote,.cbar,.cbar small,.nwhy,.frow small){color:var(--u-ink2)}
+[data-ui187] .nslot.empty{background:none;box-shadow:inset 0 0 0 1px var(--u-line)}
+[data-ui187] .nslot.ready{background:var(--u-acc);color:#fff}
+[data-ui187] .nslot.ready :is(b,small){color:#fff}
+[data-ui187] .dsh{border:0;border-radius:var(--u-r);box-shadow:none}
+[data-ui187] .cell.unk span{color:var(--u-ink2)}
+[data-ui187] .cell i:not(.sfav){background:none;color:var(--u-ink);border:0;border-radius:0;box-shadow:none;padding:0;left:8px;top:8px;font-weight:600;text-shadow:none}
+[data-ui187] .cbar u{background:var(--u-line)}
+[data-ui187] .cbar u i{background:var(--u-ink2)}
+[data-ui187] :is(.cbody h3 small,.cbody h2.ctier small){color:var(--u-ink2)}
+[data-ui187] .ctier .mq{border:0;background:var(--u-fill);color:var(--u-ink)}
+[data-ui187] .cbody h2.ctier{border:0;border-top:1px solid var(--u-line);color:var(--u-ink);background:none}
+[data-ui187] .frow{border:0;background:none;border-radius:var(--u-r);box-shadow:none}
+[data-ui187] .frow+.frow{border-top:1px solid var(--u-line);border-radius:0}
+[data-ui187] .frow .fmore{border-left:0;color:var(--u-ink2)}
+[data-ui187] .frow em{background:none!important;color:var(--u-ink2);box-shadow:none;padding:0 4px;display:flex;align-items:center;gap:4px}
+/* 187f: 등급 점 되살림(색은 data-r로, 글자는 회색) */
+[data-ui187] .frow em::before{content:'';flex:none;width:8px;height:8px;border-radius:50%;background:var(--rc,var(--u-ink2))}
+[data-ui187] .frow em[data-r=common]{--rc:#a08a6e}[data-ui187] .frow em[data-r=rare]{--rc:#d9667f}[data-ui187] .frow em[data-r=heroic]{--rc:#4a6fd0}[data-ui187] .frow em[data-r=legendary]{--rc:#d39a12}
+[data-ui187] .frow em[data-r=wanderer]{--rc:#7a9a5a}[data-ui187] .frow em[data-r=myth]{--rc:#c8452e}[data-ui187] .frow em[data-r=season]{--rc:#d88a3a}[data-ui187] .frow em[data-r=sky]{--rc:#5a6ec8}
+[data-ui187] .frow.card{background:var(--u-fill)}
+/* 부화 카드: 알약 칩 대신 글자 한 줄 */
+[data-ui187] .ncard{background:var(--u-bg);border:0;border-radius:var(--u-r);box-shadow:none}
+[data-ui187] :is(.ncard .rar,.ncard .new,.ncard .gift,.ncard .sure){background:none;color:var(--u-ink2);padding:0;border:0;border-radius:0;box-shadow:none;font-size:calc(13px*var(--fs));text-shadow:none}
+[data-ui187] .ncard .rar::before{content:'';display:inline-block;width:8px;height:8px;margin-right:4px;border-radius:50%;background:var(--rc);vertical-align:1px}
+[data-ui187] .ncard .new{color:var(--u-ink)}
+/* 버튼 두 가지: 주(강조색)·보조(옅은 칠) */
+[data-ui187] :is(.nbtns .sb,.sbtns .sb,.dtools button:not(.on)){background:var(--u-fill);border:0;color:var(--u-ink);box-shadow:none;border-radius:var(--u-r);text-shadow:none}
+[data-ui187] .sbtns .go:disabled{background:var(--u-fill);color:var(--u-ink2)}
+/* 꾸미기: 손잡이·도구·탭도 44px */
+[data-ui187] .dgrip{height:44px;margin:-8px 0 -20px;padding:16px 0 0;box-sizing:border-box}
+[data-ui187] .dtools button{min-height:44px}
+[data-ui187] .dgrip::before{background:var(--u-line);width:36px;height:4px}
+[data-ui187] .dlist .dtabs{background:var(--u-bg)}
+[data-ui187] .dshelf{background:none;border:0;padding:0}
+[data-ui187] .dshelf>p span{color:var(--u-ink2)}
+[data-ui187] :is(.dsh,.dsh.sale,.dprop){background:var(--u-th)}
+[data-ui187] .dbrush button{border:0;background:var(--u-fill);color:var(--u-ink)}
+/* 설정·도움말·새 소식: 같은 시트 */
+[data-ui187] .intro:is(.prefs,.help,.news,.fmenu,#intro){align-items:flex-end;padding:calc(56px + var(--sa-t)) 0 0;background:var(--u-dim)}
+[data-ui187] .intro:is(.prefs,.help,.news,.fmenu,#intro)>div{position:relative;box-sizing:border-box;width:100%;max-width:none;max-height:100%;overflow:auto;border-radius:var(--u-r) var(--u-r) 0 0;padding:16px calc(16px + var(--sa-r)) calc(16px + var(--sa-b)) calc(16px + var(--sa-l));text-align:left;animation:u187up .28s cubic-bezier(.2,.8,.2,1)}
+[data-ui187] .intro>div{background:var(--u-bg);color:var(--u-ink);border:0;border-radius:var(--u-r);box-shadow:var(--u-sh)}
+[data-ui187] .intro h2{font-size:calc(18px*var(--fs));color:var(--u-ink)}
+[data-ui187] .intro:is(.prefs,.help,.news,.fmenu,#intro) h2{margin:4px 48px 12px 0;text-align:left}
+/* 187f: #fmenu(치장 끼우기·친구 ⋯·산책)와 첫 화면 오픈 베타 창도 같은 아래 시트. 「닫기」는 오른쪽 위 X 아이콘(같은 버튼이라 흐름은 그대로) */
+[data-ui187] .fmenu .sub{margin:-8px 48px 12px 0}
+[data-ui187] .fmenu .col button[data-shut]{position:absolute;top:4px;right:4px;width:44px;height:44px;min-height:0;padding:0;background:none;color:var(--u-ink2)}
+[data-ui187] #introStart{display:block;width:100%;margin-top:8px;font-weight:600}
+:where([data-ui187]) .intro button{background:var(--u-acc);color:#fff;border:0;border-radius:var(--u-r);box-shadow:none;text-shadow:none}
+[data-ui187] #prefsClose{position:absolute;top:4px;right:4px;min-width:0;width:44px;height:44px;margin:0;padding:0;background:none;font-size:0;color:var(--u-ink2);display:flex;align-items:center;justify-content:center}
+[data-ui187] .prefs input[type=range]{accent-color:var(--u-ink2)}
+[data-ui187] .prefs .seg{background:var(--u-fill);border:0;border-radius:var(--u-r)}
+[data-ui187] .prefs .seg button{background:none;color:var(--u-ink2)}
+[data-ui187] .prefs .seg button.on{background:#fff;color:var(--u-ink);box-shadow:0 0 0 1px var(--u-line)}
+/* 목록 앞 이모지: 뜻 없는 장식이라 뺌 */
+[data-ui187] :is(.news,.ret) li>i[aria-hidden]{display:none}
+[data-ui187] :is(.tip,.bubble){background:var(--u-bg);color:var(--u-ink);border:0;box-shadow:var(--u-sh);border-radius:var(--u-r)}
+/* 189: the animal card (#bubble: 먹이·사탕 = accent; 치장 떼기/끼우기·산책·보관함 = .sub fill) and the 치장 끼우기 / friend menu (#fmenu: choices fill, 닫기 text) */
+[data-ui187] .bubble::after{background:var(--u-bg)}
+[data-ui187] .bubble :is(small,small.jl,.gw li){color:var(--u-ink2)}
+[data-ui187] .bubble button{background:var(--u-acc);color:#fff;border-radius:var(--u-r);box-shadow:none}
+[data-ui187] .bubble button.sub{background:var(--u-fill);color:var(--u-ink)}
+[data-ui187] .bubble button:disabled{background:var(--u-fill);color:var(--u-ink2)}
+[data-ui187] .fmenu .sub{color:var(--u-ink2)}
+[data-ui187] .fmenu .col button{background:var(--u-fill);color:var(--u-ink)}
+[data-ui187] .fmenu .col button.sb{background:none;color:var(--u-ink2)}
+/* the first egg (#loading 바로 깨기, and the 170 first screen): one accent button, no yellow glow */
+[data-ui187] .loading{color:var(--u-ink)}
+[data-ui187] .loading .lfirst{background:var(--u-acc);color:#fff;border:0;border-radius:var(--u-r);box-shadow:none;font-weight:600}
+[data-ui187].f170 :is(.boot,.loading) .ltip,[data-ui187].f170 .loading>p:first-child:not(:empty){background:var(--u-bga);color:var(--u-ink);border-radius:var(--u-r)}
+[data-ui187].f170 #loading:has(.lfirst:not([hidden])) .lbar::before{box-shadow:none}
+[data-ui187] .ltip{opacity:1;color:var(--u-ink2)}
+/* 187f: 둥지 게이지 선을 회색(ink2)으로, 칸 바탕은 채움 회색 계열(nest.js gaugeSvg의 속성 색을 CSS로 덮음) */
+[data-ui187] .gauge svg [stroke="#b08a5e"]{stroke:var(--u-ink2)}
+[data-ui187] .gauge svg .gbase{fill:var(--u-fill)}
+[data-ui187] .gauge svg [fill="#efdfc4"]{fill:var(--u-bg)}
+/* 187f: 낮은 대비 3곳(옛 값 2.66·☆ 2.09·♥ 2.45) → ink2(#fbf1e1 위 5.35:1) */
+[data-ui187] .dsh s{color:var(--u-ink2)}
+[data-ui187] .hrt{display:inline-block;width:calc(13px*var(--fs));height:calc(13px*var(--fs));vertical-align:middle;font-size:0;color:transparent;background:var(--u-ink2);-webkit-background-clip:border-box;background-clip:border-box;-webkit-mask:var(--i-heart) center/contain no-repeat;mask:var(--i-heart) center/contain no-repeat}
+[data-ui187] .nbtns [data-back]{white-space:nowrap} /* 214 A ①: 「판매 ♥+6」 한 줄로. 위 .hrt는 font-size:0이라 -.15em이 0이 되고 속 줄 기준선 탓에 ♥가 아래로 처졌음 → middle */
+/* 187f: 노란 빛 고리 없앰(새 기능 알림은 그대로 버튼 위치로) */
+[data-ui187] .newly{animation:none;outline:0}
+[data-ui187] .zz{font-weight:600}
+
+/* ── 202 B rc201 다듬기: 따뜻함과 색 정보를 되찾되 구조는 그대로 ── */
+/* 1: 위 줄은 낮은(보이는 높이 36px, 누르는 칸 44px 그대로) 반투명 크림 띠, BETA는 Lv 옆 작은 꼬리표(level.js .btag), 오른쪽 아이콘 셋은 끝으로 */
+[data-ui187] #habitat>.bar{padding:0 4px;background:none;box-shadow:none;isolation:isolate}
+[data-ui187] #habitat>.bar::before{content:'';position:absolute;inset:4px 0;z-index:-1;pointer-events:none;border-radius:var(--u-r);background:rgba(251,243,231,.72);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 2px 10px rgba(90,60,30,.1),inset 0 0 0 1px rgba(255,255,255,.5)}
+[data-ui187] .bar .btag{flex:none;margin:0 auto 0 0;padding:1px 5px;border-radius:6px;background:var(--u-fill);box-shadow:inset 0 0 0 1px var(--u-bd);color:var(--u-ink2);font-size:calc(9px*var(--fs));font-weight:600;letter-spacing:.08em;line-height:1.5;pointer-events:none}
+[data-ui187] #habitat>.bar{padding:0 2px}[data-ui187] #habitat>.bar :is(#habName,#hearts,#lvPill){padding-inline:5px}[data-ui187] .bar .btag{padding:0 4px;letter-spacing:.03em;font-size:calc(8.5px*var(--fs))}
+[data-ui187] #habitat>.bar.tight{gap:2px}[data-ui187] #habitat>.bar.tight :is(#habName,#hearts,#lvPill){padding-inline:2px} [data-ui187] #habitat>.bar.tight2 .btag{font-size:0;padding:0;box-shadow:none} /* 214 A ②: 이름이 잘리면 먼저 여백을 줄이고(play.js fitBar), 그래도 잘리면 ♥를 짧게, 그래도면 BETA 글자를 뺌(자리는 남아 아이콘은 오른쪽 끝 그대로) */
+[data-ui187] .bar #mailBtn{margin-left:0!important}
+[data-ui187]:has(#habitat:not(.hidden)) .beta{display:none}
+/* 2: 「전체 보기」는 위 줄 안 아이콘(지도), 전체에서는 「친구들 보기」(친구들 아이콘). 이름은 글자 그대로 읽힘 */
+[data-ui187] .bar #overview{width:44px;min-width:44px;padding:0;font-size:0;justify-content:center;--ic:var(--i-map)}
+[data-ui187] .bar #overview[data-s=w]{--ic:var(--i-friends)}
+[data-ui187] .bar #overview[hidden]{display:none}
+/* 3: 칸에 옅은 테두리 + 부드러운 그림자 */
+[data-ui187] :is(.gauge,.nslot:not(.empty),.cell,.dprop,.dsh,.ngift,.frow.card){box-shadow:inset 0 0 0 1px var(--u-bd),var(--u-sh2)}
+[data-ui187] .ncard{box-shadow:inset 0 0 0 1px var(--u-bd),var(--u-sh)}
+[data-ui187] .nslot.empty{box-shadow:none;border:1.5px dashed var(--u-sbb)}
+/* 4: 보조 버튼 한 가지(크림 + 갈색 글자 + 테두리, 머리줄 버튼은 보이는 칸 36px 그대로라 테두리를 안쪽 그림자로) */
+[data-ui187] :is(.chead,.fhead,.dhead) .back:not([data-close]),[data-ui187] :is(.nbtns .sb,.sbtns .sb,.dtools button:not(.on),.bubble button.sub,.fmenu .col button:not(.sb):not([data-shut]),.dbrush button:not(.on)){background-color:var(--u-sb);color:var(--u-sbi);border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:inset 0 0 0 1px var(--u-sbb),0 1px 0 rgba(140,95,50,.12)}
+[data-ui187] .chead .back.on{box-shadow:inset 0 0 0 2px var(--u-sbi)}
+/* 6: 둥지 알 20칸(5×4), 빈 자리는 점선, 알은 칸에 조금 크게 */
+[data-ui187] .ngrid{grid-template-columns:repeat(5,1fr);gap:6px}
+[data-ui187] .neggs .negg{overflow:hidden;border-radius:12px}
+[data-ui187] .neggs .negg img{transform:scale(1.18)}
+[data-ui187] .negg.ph{display:block;aspect-ratio:1;box-sizing:border-box;border:1.5px dashed var(--u-sbb);border-radius:12px;cursor:default;pointer-events:none}
+/* 7: 영웅 파랑·전설 금색(테두리·숫자) + 얇은 진행 막대(nest.js .gbar) */
+[data-ui187] .gauge{--gc:var(--u-ink2);--gn:var(--u-ink2)}
+[data-ui187] .gauge[data-k=heroic]{--gc:#4a6fd0;--gn:#3d5fc2}
+[data-ui187] .gauge[data-k=legendary]{--gc:#d39a12;--gn:#845d00}
+[data-ui187] .gauge[data-k]{box-shadow:inset 0 0 0 1.5px var(--gc),var(--u-sh2)}
+[data-ui187] .gauge span{color:var(--gn);font-weight:600}
+[data-ui187] .gbar{display:block;height:4px;margin-top:4px;border-radius:2px;background:var(--u-line);overflow:hidden}
+[data-ui187] .gbar s{display:block;height:100%;border-radius:2px;background:var(--gc)}
+/* 8: 고른 칩은 진한 색 */
+[data-ui187] :is(.ctabs button.on,.dtabs button.on,.sfilt .pick.on){background:var(--u-ink);color:#fff}
+/* 9: 부화 카드 등급은 등급 색 알약, NEW는 강조색 꼬리표 */
+[data-ui187] .ncard .rar{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;background:color-mix(in srgb,var(--rc) 16%,#fff);box-shadow:inset 0 0 0 1px var(--rc);color:var(--u-ink);font-weight:600}
+[data-ui187] .ncard .new{padding:2px 8px;border-radius:999px;background:var(--u-acc);color:#fff;font-weight:600;letter-spacing:.04em}
+/* 11: 친구들 수는 이름 옆 작은 글자(위첨자 아님) */
+[data-ui187] .dock #friendsBtn{display:grid;grid-template-columns:auto auto;justify-content:center;align-content:center;column-gap:3px;row-gap:4px}
+[data-ui187] .dock #friendsBtn::before{grid-column:1/-1;justify-self:center}
+[data-ui187] #friendsBtn span{position:static;margin:0;font-size:calc(10px*var(--fs));color:var(--u-ink2);align-self:end}
+/* 14: 되돌리기·다시하기는 작은 아이콘 칸, 남는 폭은 땅 칠하기·더보기에 */
+[data-ui187] .dtools :is([data-undo],[data-redo]){flex:0 0 44px;min-width:44px;padding:0}

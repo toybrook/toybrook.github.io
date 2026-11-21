@@ -1,7 +1,7 @@
 // Meadow props, all from the shared toy kit so they share one lighting/gloss look.
 // Repeated things are InstancedMesh (one draw call per kind) to keep phones at 60fps.
 import * as THREE from 'three';
-import { S, BW0 as BW, BD0 as BD, O, Z, SW, stream, pond, bridgeT, bP, bN, BL, bridgeArch as arch, paddock, fences, heightAt, occupied, freeBase as free, free as freeOpen, rand, dist2D, sPts0 as sPts, CLIFF_Z, WATER_Y } from './layout.js';
+import { S, BW0 as BW, BD0 as BD, O, Z, SW, stream, pond, bridgeT, bP, bN, BL, bridgeArch as arch, paddock, fences, heightAt, occupied, freeBase as free, free as freeOpen, rand, dist2D, sPts0 as sPts, CLIFF_Z, WATER_Y, path, pPts0, bridgeEnds } from './layout.js';
 import { ringIn, Z143 } from '../zones.js';
 import { zoneProps } from '../zoneprops.js';
 import { toyMat, roundedBox, merge, lathe, addSway, instanced, windTime, nightGlow, snowNow, snowTop, SNOW_RGB } from '../toyKit.js';
@@ -10,7 +10,7 @@ import { G as PLAY, newPlay, propTick } from '../../animals/play.js';
 import { playing } from '../../ui/sound.js';
 import { PIECES, ARCH } from '../train.js';
 import { shape } from '../stamps.js';
-import { PROPS, NAT_K } from '../../game/data.js';
+import { PROPS, NAT_K, THEMES, S186 } from '../../game/data.js';
 
 const pickOf = arr => arr[Math.floor(rand() * arr.length)];
 // inbox 42 A: the board spread by S (layout.js): spots below in the old board's metres times S, counts by its area
@@ -170,16 +170,7 @@ export function buildProps(scene) {
     for (let i = 0; i < 4; i++) { const q = spot(1.1); if (q) N.add('bush', nk.bush, q[0], q[1], 0.8 + rand() * 0.45); }
     for (let i = 0; i < 3; i++) { const q = spot(0.6); if (q) mushrooms(...q); }
 
-    const logGeo = new THREE.CylinderGeometry(0.3, 0.3, 1, 14, 3); logGeo.rotateZ(Math.PI / 2);
-    { const p = logGeo.attributes.position, n = logGeo.attributes.normal, cols = [];
-      const bark = new THREE.Color('#8a5733'), cut = new THREE.Color('#e3b97f'), core = new THREE.Color('#c48c55'), c = new THREE.Color();
-      for (let i = 0; i < p.count; i++) {
-        const end = Math.abs(n.getX(i)) > 0.5, r = Math.hypot(p.getY(i), p.getZ(i));
-        if (!end) { const k = 1 + 0.05 * Math.sin(Math.atan2(p.getZ(i), p.getY(i)) * 7 + p.getX(i) * 5); p.setY(i, p.getY(i) * k); p.setZ(i, p.getZ(i) * k); c.copy(bark).multiplyScalar(0.85 + 0.15 * Math.sin(Math.atan2(p.getZ(i), p.getY(i)) * 7)); }
-        else c.copy(r > 0.01 ? cut : core); // cut end: pale rim, darker heartwood
-        cols.push(c.r, c.g, c.b);
-      }
-      logGeo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); logGeo.computeVertexNormals(); }
+    const logGeo = barkLog();
     const stemGeo = lathe([[0.07, 0], [0.085, 0.05], [0.072, 0.18], [0.06, 0.29], [0, 0.3]], 12);
     const capGeo = lathe([[0, 0.255], [0.08, 0.265], [0.2, 0.25], [0.25, 0.29], [0.24, 0.35], [0.18, 0.41], [0.09, 0.44], [0, 0.45]], 16);
     scene.add(instanced(logGeo, toyMat('#ffffff', { vertexColors: true, roughness: 0.7 }), logs));
@@ -204,7 +195,54 @@ export function buildProps(scene) {
   } });
   const zp = zoneProps(scene, 'meadow', { L, N, heightAt, occupied, free: freeOpen, O, Z, back: CLIFF_Z - 1.4, cliff: CLIFF_Z });
   const list = N.done();
+  if (S186) pathSide(scene, L);
   return { natives: list, zone: zp, ...finish(scene, L, { rand, occupied }) };
+}
+// 202 B-15 (rc201): four little groups along the path, sides taking turns: a bush, two or three stones, grass, and at one a fallen
+// log. Their own random, so the board's (rand) and the save stay as they were; on the strip by the path that no prop may take
+// (free(): 1.4 + r from it); 209 B: each in occupied like the board's own (the log keeps animals off, walkable). No flowers (inbox 203-0). Their grass is
+// big (finish(): no rand for those) and in L.grass, so a painted path hides it like the rest (habitat.js hideGrass).
+function pathSide(scene, L) {
+  let sd = 20202; const rnd = () => (sd = sd * 16807 % 2147483647) / 2147483647;
+  const pick = a => a[Math.floor(rnd() * a.length)], logs = [], spots = [];
+  const ok = (x, z) => dist2D(pPts0, x, z) > 1.0 && dist2D(sPts, x, z) > SW + 1.6 && Math.hypot(x - pond.x, z - pond.z) > pond.r + 1.6
+    && bridgeEnds.every(b => Math.hypot(b.x - x, b.z - z) > 2.2) && !(Math.abs(x - paddock.x) < paddock.w / 2 + 2 && Math.abs(z - paddock.z) < paddock.d / 2 + 2)
+    && occupied.every(o => Math.hypot(o.x - x, o.z - z) > o.r + 0.5);
+  for (let t = 0.06, side = 1; t < 0.97 && spots.length < 4; t += 0.02) {
+    if (spots.length && t - spots[spots.length - 1].t < 0.17) continue;
+    const p = path.getPointAt(t), tn = path.getTangentAt(t);
+    for (const sg of [side, -side]) { const x = p.x - tn.z * sg * 1.2, z = p.z + tn.x * sg * 1.2; if (ok(x, z)) { spots.push({ t, x, z, sg, ry: Math.atan2(-tn.z, tn.x) }); side = -sg; break; } }
+  }
+  spots.forEach(({ x, z, sg, ry }, k) => {
+    const out = (d, a) => [x + Math.cos(ry + a) * d, z - Math.sin(ry + a) * d]; // d along the path, turned a (-sg: off it)
+    const [bx, bz] = out(0.15, 0), h = heightAt(bx, bz), base = pick(['#6daf3b', '#7cbc40', '#5fa83c']), c0 = L.canopy.length;
+    L.canopy.push({ x: bx, y: h + 0.22, z: bz, s: [0.42, 0.34, 0.42], c: base });
+    for (let i = 0; i < 4; i++) { const a = i * 1.57 + rnd(); L.canopy.push({ x: bx + Math.cos(a) * 0.28, y: h + 0.16 + rnd() * 0.12, z: bz + Math.sin(a) * 0.28, s: 0.24 + rnd() * 0.06, c: pick(['#6daf3b', '#7cbc40', '#8bc64a']) }); }
+    occupied.push({ x: bx, z: bz, r: 0.55, h: 0.6, fade: [['canopy', c0, L.canopy.length - c0]] }); // 209 B: in occupied like the board's own bushes, rocks and logs (no prop, wild growth or fade goes through them)
+    for (let i = 0, n = 2 + (k % 2); i < n; i++) { const [rx, rz] = out(0.55 + i * 0.28, -sg * (0.5 + rnd() * 0.5)), s = 0.13 + rnd() * 0.1;
+      L.rock.push({ x: rx, y: heightAt(rx, rz) + s * 0.12, z: rz, s: [s * 1.2, s * 0.65, s], ry: rnd() * 6, c: pick(['#bdb6a9', '#aaa499', '#c9c2b4']) }); occupied.push({ x: rx, z: rz, r: s * 1.05, h: s, fade: [['rock', L.rock.length - 1, 1]] }); } // as rock()
+    for (let i = 0; i < 5; i++) { const a = rnd() * 6.28, d = 0.35 + rnd() * 0.45, gx = bx + Math.cos(a) * d, gz = bz + Math.sin(a) * d;
+      if (dist2D(pPts0, gx, gz) > 0.9) L.grass.push({ x: gx, y: heightAt(gx, gz) - 0.03, z: gz, s: 1.0 + rnd() * 0.4, big: 1, ry: rnd() * 6, c: pick(['#5e9c35', '#6aa83a', '#4f9032']) }); }
+    if (k === 1) { const [ax, az] = out(-0.6, 0), lx = ax + Math.sin(ry) * sg * 0.6, lz = az + Math.cos(ry) * sg * 0.6; /* 214 B: 0.6 further off the path (its near side 1.45 from the middle, the rim 1.12; was 0.57, on it) and 0.35 nearer the bush, clear of the board's rock */ logs.push({ x: lx, y: heightAt(lx, lz) + 0.17, z: lz, s: [1.3, 0.7, 0.7], ry: ry + 0.25 }); occupied.push({ x: lx, z: lz, r: 1.3 * 0.5 + 0.35 }); } // as the grove's logs: animals go round it (walkable)
+  });
+  if (logs.length) scene.add(instanced(barkLog(), LOGM ??= toyMat('#ffffff', { vertexColors: true, roughness: 0.7 }), logs)); // made once, like barkLog
+}
+let LOGM;
+// a fallen log's piece (front-left corner below; 202 B-15 by the path): bark round it, the cut ends pale. Made once (shared, like partGeos)
+let LOG;
+function barkLog() {
+  if (LOG) return LOG;
+  const g = new THREE.CylinderGeometry(0.3, 0.3, 1, 14, 3); g.rotateZ(Math.PI / 2);
+  { const p = g.attributes.position, n = g.attributes.normal, cols = [];
+    const bark = new THREE.Color('#8a5733'), cut = new THREE.Color('#e3b97f'), core = new THREE.Color('#c48c55'), c = new THREE.Color();
+    for (let i = 0; i < p.count; i++) {
+      const end = Math.abs(n.getX(i)) > 0.5, r = Math.hypot(p.getY(i), p.getZ(i));
+      if (!end) { const k = 1 + 0.05 * Math.sin(Math.atan2(p.getZ(i), p.getY(i)) * 7 + p.getX(i) * 5); p.setY(i, p.getY(i) * k); p.setZ(i, p.getZ(i) * k); c.copy(bark).multiplyScalar(0.85 + 0.15 * Math.sin(Math.atan2(p.getZ(i), p.getY(i)) * 7)); }
+      else c.copy(r > 0.01 ? cut : core); // cut end: pale rim, darker heartwood
+      cols.push(c.r, c.g, c.b);
+    }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); g.computeVertexNormals(); }
+  return LOG = g;
 }
 // seven flowers round cx, cz, a grass clump at each; ok(x, z, 0): where one may grow
 export function flowerCluster(L, cx, cz, [pc, cc], ok, rand, jitter, h = heightAt) {
@@ -440,7 +478,7 @@ const haloT = () => haloTex ??= (() => { const c = document.createElement('canva
 export function halo(g, color, size, x, y, z) {
   const m = decorMats['halo' + color] ??= Object.assign(new THREE.SpriteMaterial({ map: haloT(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
     { onBeforeCompile: sh => { NIGHT(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a *= 0.75 * uNight;\n#include <opaque_fragment>'); } });
-  const sp = new THREE.Sprite(m); sp.position.set(x, y, z); sp.scale.setScalar(size); sp.renderOrder = 3; g.add(sp); return sp;
+  const sp = new THREE.Sprite(m); sp.position.set(x, y, z); sp.scale.setScalar(size); sp.renderOrder = 3; sp.userData.glow = color; g.add(sp); return sp; // glow: 195 B-8 (habitat.js syncGlow)
 }
 export function part(g, geo, color, x = 0, y = 0, z = 0, o = {}) {
   const m = new THREE.Mesh(geo, o.m || (o.lit ? lit(color) : dm(color, o.mat))); m.position.set(x, y, z);
@@ -668,6 +706,24 @@ export function decorModel(id) {
   } else if (id === 'walk_pinecone') { // 13-1 산책 선물: a pinecone standing up: four rounded tiers, wide to narrow
     [[0.08, 0.16, 0.1], [0.19, 0.14, 0.09], [0.29, 0.11, 0.08], [0.37, 0.07, 0.06]].forEach(([y, r, h], i) =>
       part(g, new THREE.SphereGeometry(1, 16, 10), i % 2 ? '#8a5733' : '#a06a3e', 0, y, 0).scale.set(r, h, r));
+  } else if (id === 'walk_stump') { // 184 ④ 산책 선물 (?yard): a short round stump, its cut top paler, two roots at its foot
+    part(g, lathe([[0, 0], [0.3, 0], [0.32, 0.04], [0.26, 0.1], [0.25, 0.3], [0.24, 0.33], [0, 0.33]], 20), '#a06a3e', 0, 0, 0);
+    part(g, new THREE.CylinderGeometry(0.235, 0.235, 0.02, 20), '#e3bf8a', 0, 0.335, 0);
+    part(g, new THREE.CylinderGeometry(0.1, 0.1, 0.022, 16), '#d2a46d', 0, 0.338, 0);
+    const root = new THREE.SphereGeometry(1, 12, 8); for (const a of [0.6, 2.6]) part(g, root, '#8a5733', 0.27 * Math.cos(a), 0.04, 0.27 * Math.sin(a), { ry: -a }).scale.set(0.13, 0.05, 0.06);
+  } else if (id === 'walk_nest') { // 184 ④ 산책 선물 (?yard): an empty bird's nest, a thick round rim of twigs and two pale blue eggs left in it
+    part(g, new THREE.SphereGeometry(0.24, 18, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), '#8a5733', 0, 0.16, 0).scale.y = 0.6;
+    part(g, new THREE.CylinderGeometry(0.2, 0.2, 0.02, 20), '#6e4626', 0, 0.1, 0); // the dark hollow inside, so it reads as a nest, not a ring
+    part(g, new THREE.TorusGeometry(0.21, 0.06, 10, 22), '#a8703f', 0, 0.16, 0, { rx: Math.PI / 2 }).scale.z = 1.3;
+    const egg = new THREE.SphereGeometry(1, 14, 10); [[-0.06, 0.02, 0.4], [0.07, -0.03, -0.5]].forEach(([x, z, r]) => part(g, egg, '#cfe6ee', x, 0.13, z, { rz: r }).scale.set(0.06, 0.075, 0.06));
+  } else if (id === 'walk_leaf') { // 184 ④ 산책 선물 (?yard): a big maple leaf lying flat: five rounded lobes and a short stem, curled up a little at the tips
+    const lobe = new THREE.SphereGeometry(1, 14, 8), L = new THREE.Group(); L.position.y = 0.03; L.rotation.y = 0.4; g.add(L);
+    [[0, 0.16, 0.13], [1.15, 0.13, 0.1], [-1.15, 0.13, 0.1], [2.2, 0.1, 0.08], [-2.2, 0.1, 0.08]].forEach(([a, d, k]) => part(L, lobe, '#e8743a', d * Math.sin(a), 0.01 + d * 0.06, -d * Math.cos(a), { ry: -a }).scale.set(k * 0.75, 0.025, k));
+    part(L, lobe, '#e8743a', 0, 0.01, 0).scale.set(0.12, 0.028, 0.12);
+    part(L, new THREE.CylinderGeometry(0.014, 0.018, 0.16, 6), '#9a4f24', 0, 0.01, 0.17, { rx: Math.PI / 2 });
+  } else if (id === 'walk_clover') { // 184 ④ 산책 선물 (?yard): a four-leaf clover standing on a short stem, its four round leaves in a cross
+    part(g, new THREE.CylinderGeometry(0.018, 0.022, 0.26, 6), '#5fa04a', 0, 0.13, 0);
+    const leaf = new THREE.SphereGeometry(1, 14, 8); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; part(g, leaf, i % 2 ? '#5fae4a' : '#6fbb52', 0.08 * Math.cos(a), 0.27, 0.08 * Math.sin(a), { ry: -a, rz: 0.15 }).scale.set(0.085, 0.022, 0.07); }
   } else if (id.startsWith('find_') || id.startsWith('art_')) { artModel(g, id); // 17-2 주운 것, 동물 작품
   } else if (id === 'swing') { // 28-2: an A-frame swing a rabbit, a piglet or a fox can ride (play.js G.swing); the seat sways, more with someone on
     const { pivot: H, rope: R, half: X } = PLAY.swing, k = 0.24, leg = roundedBox(0.16, H / Math.cos(k) + 0.06, 0.16, 0.06);
@@ -1123,6 +1179,7 @@ export function decorModel(id) {
     const pts = new THREE.Points(gg, decorMats.bulbGlow ??= Object.assign(new THREE.PointsMaterial({ size: 1.1, map: haloT(), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
       { onBeforeCompile: sh => { NIGHT(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <opaque_fragment>', 'diffuseColor.a *= 0.7 * uNight;\n#include <opaque_fragment>'); } }));
     pts.renderOrder = 3; on.add(pts);
+    const gp = new THREE.Object3D(); gp.position.set(0, wy(0) - 0.2, 0); gp.userData.glow = '#ffd27a'; on.add(gp); // 195 B-8: its pool of light (habitat.js syncGlow), off with it
     g.userData.posts = [[-X, 0], [X, 0]];
     g.userData.tap = () => { on.visible = !on.visible; off.visible = !on.visible; return true; };
   } else if (id === 'fireworks') { // 작은 폭죽: a wooden crate with three striped paper tubes. By night a tap sends up three small shells one after
@@ -1320,7 +1377,94 @@ export function decorModel(id) {
         part(bit(x, z), st, c, 0, h * 0.5, 0, { mat: { roughness: 0.55 }, ry: i }).scale.set(w, h, w * 0.88));
     }
   }
+  if (id.startsWith('th_')) themeModel(g, id); // 194-7 (?th194)
   return bake(g);
+}
+
+// 194-7 (?th194) 숲속 오두막: the theme's three props, in its six colours (data.js THEMES; decor-redesign.md 7-3: 나무 갈색 · 이끼 초록 ·
+// 버섯 빨강). Round logs with pale sawn ends and a darker heart, layered roof rows, moss and small red mushrooms: the care is in those,
+// no lines drawn on. Sizes by the 2 bands (H 4.08): 걸이 등 C 2.75, 장작 헛간 D 5.3, 통나무 의자 B 2.05 (seat 0.99)
+const TP = THEMES[0].pal, tShade = (c, l, s = 0) => '#' + new THREE.Color(c).offsetHSL(0, s, l).getHexString(), UP = new THREE.Vector3(0, 1, 0);
+function themeModel(g, id) {
+  const V = a => new THREE.Vector3(...a);
+  const log = (a, b, r, ends = 2, c = TP.main, seg = 12) => { // a log from a to b, its sawn ends (2: both, 1: at b) pale with a darker heart
+    const A = V(a), B = V(b), d = B.clone().sub(A), q = new THREE.Quaternion().setFromUnitVectors(UP, d.clone().normalize());
+    part(g, new THREE.CylinderGeometry(r, r, d.length(), seg), c, ...A.clone().lerp(B, 0.5).toArray(), { mat: { roughness: 0.6 } }).quaternion.copy(q);
+    for (const [P, s] of ends === 2 ? [[A, -1], [B, 1]] : ends === 1 ? [[B, 1]] : []) {
+      const at = P.clone().addScaledVector(d.clone().normalize(), s * 0.004);
+      part(g, new THREE.CylinderGeometry(r * 0.9, r * 0.9, 0.03, seg), TP.wood, ...at.toArray()).quaternion.copy(q);
+      part(g, new THREE.CylinderGeometry(r * 0.38, r * 0.38, 0.036, Math.max(8, seg - 2)), tShade(TP.wood, -0.1, -0.1), ...at.toArray()).quaternion.copy(q);
+    } };
+  const post = (x, z, r, h, cap = true) => { part(g, lathe([[r * 1.2, 0], [r * 1.04, 0.07], [r, 0.4], [r, h], [0, h]], 12), TP.main, x, 0, z, { mat: { roughness: 0.6 } });
+    if (cap) { part(g, lathe([[r * 0.9, -0.03], [r * 0.9, 0.012], [r * 0.75, 0.03], [0, 0.036]], 12), TP.wood, x, h, z); part(g, lathe([[r * 0.42, 0.02], [r * 0.32, 0.038], [0, 0.044]], 10), tShade(TP.wood, -0.1, -0.1), x, h, z); } };
+  const ball = new THREE.SphereGeometry(1, 12, 8);
+  const moss = (x, y, z, sx, sy, sz, k = 0) => part(g, ball, k ? tShade(TP.sub, -0.06) : TP.sub, x, y, z, { mat: { roughness: 0.7 } }).scale.set(sx, sy, sz);
+  const shroom = (x, z, k) => { part(g, lathe([[0.5, 0], [0.42, 0.6], [0.36, 1], [0, 1]], 8), TP.wood, x, 0, z).scale.set(0.07 * k, 0.17 * k, 0.07 * k);
+    part(g, lathe([[0, 0], [0.85, 0.02], [1, 0.12], [0.92, 0.32], [0.65, 0.52], [0.3, 0.62], [0, 0.64]], 14), TP.point, x, 0.15 * k, z).scale.set(0.13 * k, 0.12 * k, 0.13 * k); };
+  const stone = (x, z, s, k) => part(g, ball, [TP.stone, tShade(TP.stone, 0.05), tShade(TP.stone, -0.05)][k % 3], x, s * 0.25, z, { ry: k, mat: { roughness: 0.6 } }).scale.set(s, s * 0.55, s * 0.85);
+  if (id === 'th_hanglamp') { // a log post, an arm out to the right with a brace, a lantern hung from it: red roof, warm glass, dark corner bars
+    for (const [x, z, s, k] of [[0.22, 0.12, 0.17, 0], [-0.18, 0.17, 0.14, 1], [0.02, -0.24, 0.15, 2]]) stone(x, z, s, k);
+    moss(-0.14, 0.04, -0.12, 0.17, 0.07, 0.13, 1);
+    post(0, 0, 0.13, 2.72);
+    log([-0.06, 2.55, 0], [0.9, 2.55, 0], 0.075, 1); // the arm, its sawn end out
+    log([0.1, 2.08, 0], [0.48, 2.52, 0], 0.045, 0); // the brace
+    moss(0.36, 2.62, 0.0, 0.12, 0.05, 0.09);
+    const lx = 0.7, dark = tShade(TP.main, -0.12);
+    part(g, new THREE.TorusGeometry(0.045, 0.014, 6, 12), dark, lx, 2.45, 0); // the hook
+    part(g, new THREE.TorusGeometry(0.05, 0.016, 6, 12), dark, lx, 2.38, 0, { ry: Math.PI / 2 }); // the lantern's loop through it
+    part(g, ball, TP.point, lx, 2.34, 0).scale.setScalar(0.04);
+    part(g, lathe([[0, 0], [0.25, 0], [0.26, 0.035], [0.15, 0.12], [0.05, 0.2], [0, 0.21]], 16), TP.point, lx, 2.12, 0); // the roof
+    part(g, new THREE.CylinderGeometry(0.175, 0.175, 0.045, 16), dark, lx, 2.1, 0);
+    part(g, lathe([[0, 0], [0.13, 0], [0.16, 0.05], [0.17, 0.17], [0.15, 0.3], [0, 0.31]], 16), TP.light, lx, 1.78, 0, { lit: true }); // the glass, warm
+    for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2; part(g, new THREE.CylinderGeometry(0.02, 0.02, 0.34, 6), dark, lx + Math.cos(a) * 0.165, 1.94, Math.sin(a) * 0.165); }
+    part(g, new THREE.CylinderGeometry(0.16, 0.14, 0.05, 16), dark, lx, 1.76, 0);
+    part(g, ball, dark, lx, 1.71, 0).scale.setScalar(0.035);
+    halo(g, TP.light, 1.9, lx, 1.93, 0);
+    g.userData.glowAt = new THREE.Vector3(lx, 0, 0); // habitat.js: the pool of light on the ground under it (glow.js)
+  } else if (id === 'th_logchair') { // a half log on two stumps, a pale seat plank, a log back on two posts; mushrooms at a foot
+    for (const x of [-0.5, 0.5]) post(x, 0.04, 0.2, 0.66, false);
+    const seat = new THREE.CylinderGeometry(0.3, 0.3, 1.6, 18, 1, false, 0, Math.PI).rotateZ(-Math.PI / 2); // the round below, the flat up
+    part(g, seat, TP.main, 0, 0.91, 0.04, { mat: { roughness: 0.6 } });
+    part(g, roundedBox(1.64, 0.08, 0.62, 0.035, 2), TP.wood, 0, 0.95, 0.04);
+    const half = r => new THREE.CircleGeometry(r, 16, Math.PI, Math.PI);
+    for (const s of [-1, 1]) { part(g, half(0.28), TP.wood, s * 0.803, 0.91, 0.04, { ry: s * Math.PI / 2 }); part(g, half(0.12), tShade(TP.wood, -0.1, -0.1), s * 0.807, 0.91, 0.04, { ry: s * Math.PI / 2 }); }
+    for (const x of [-0.62, 0.62]) post(x, -0.24, 0.1, 2.0);
+    log([-0.78, 1.62, -0.24], [0.78, 1.62, -0.24], 0.13); // the back
+    log([-0.62, 1.22, -0.22], [0.62, 1.22, -0.22], 0.075, 0);
+    moss(-0.42, 1.74, -0.24, 0.16, 0.06, 0.11); moss(0.62, 0.05, 0.25, 0.18, 0.07, 0.13, 1);
+    shroom(-0.74, 0.28, 1.1); shroom(-0.84, 0.1, 0.75);
+  } else if (id === 'th_woodshed') { // an open log shed, its back a wall of stacked logs, firewood stacked in it ends out, a red roof in layered rows,
+    // pale gables with a round vent; a chopping stump with a hatchet in front
+    part(g, roundedBox(4.6, 0.18, 3.1, 0.06, 1), tShade(TP.wood, -0.08), 0, 0.09, 0);
+    for (const x of [-2.15, 2.15]) for (const z of [-1.35, 1.35]) post(x, z, 0.17, 3.2, false);
+    for (let k = 0; k < 8; k++) log([-2.35, 0.38 + k * 0.38, -1.4], [2.35, 0.38 + k * 0.38, -1.4], 0.2, 2, tShade(TP.main, (k % 2 ? 0.02 : -0.02)));
+    for (const s of [-1, 1]) for (let k = 0; k < 3; k++) log([s * 2.2, 0.38 + k * 0.38, -1.2], [s * 2.2, 0.38 + k * 0.38, 1.45], 0.19, 1, tShade(TP.main, (k % 2 ? 0.03 : -0.01)));
+    for (const s of [-1, 1]) log([s * 2.15, 3.2, -1.6], [s * 2.15, 3.2, 1.6], 0.17, 1); // the eave beams
+    log([-2.3, 3.12, 1.4], [2.3, 3.12, 1.4], 0.16); // the front lintel
+    const fw = new THREE.CylinderGeometry(0.19, 0.19, 0.9, 14), fe = new THREE.CylinderGeometry(0.17, 0.17, 0.03, 14), fh = new THREE.CylinderGeometry(0.07, 0.07, 0.036, 10);
+    for (let row = 0; row < 4; row++) for (let c = 0; c < (row % 2 ? 6 : 7); c++) { // firewood ends to the front, every other row set between the ones below
+      const x = -1.75 + c * 0.4 + (row % 2) * 0.2, y = 0.37 + row * 0.33, z = -0.75, q = Math.sin(row * 7.1 + c * 3.3) * 0.5 + 0.5;
+      part(g, fw, tShade(TP.main, (q - 0.5) * 0.08), x, y, z, { rx: Math.PI / 2, mat: { roughness: 0.6 } });
+      part(g, fe, tShade(TP.wood, (q - 0.5) * 0.06), x, y, z + 0.454, { rx: Math.PI / 2 }); part(g, fh, tShade(TP.wood, -0.1, -0.1), x, y, z + 0.456, { rx: Math.PI / 2 });
+    }
+    const th = Math.atan2(1.9, 2.65); // the roof: from the eave (x 2.65, y 3.05) up to the ridge (0, 4.95)
+    for (const s of [-1, 1]) for (let k = 0; k < 4; k++) { // four rows each side, each over the top of the one below it (its edge shows)
+      const t = 0.5 + k * 0.78, nx = s * Math.sin(th), ny = Math.cos(th), o = 0.06 + k * 0.04;
+      part(g, roundedBox(1.0, 0.13, 3.9, 0.05, 1), tShade(TP.point, k % 2 ? -0.04 : 0.01), s * (2.65 - Math.cos(th) * t) + nx * o, 3.05 + Math.sin(th) * t + ny * o, 0, { rz: -s * th });
+    }
+    log([0, 5.12, -2.02], [0, 5.12, 2.02], 0.17); // the ridge log
+    const gable = new THREE.Shape([new THREE.Vector2(-2.25, 0), new THREE.Vector2(2.25, 0), new THREE.Vector2(0, 1.62)]);
+    const gg = new THREE.ExtrudeGeometry(gable, { depth: 0.1, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 2, curveSegments: 1 });
+    for (const z of [1.42, -1.52]) part(g, gg, TP.wood, 0, 3.28, z);
+    part(g, new THREE.CylinderGeometry(0.25, 0.25, 0.05, 18), tShade(TP.main, -0.1), 0, 4.0, 1.58, { rx: Math.PI / 2 }); // the round vent
+    part(g, new THREE.TorusGeometry(0.27, 0.045, 8, 22), TP.main, 0, 4.0, 1.58);
+    moss(-2.15, 0.16, 1.45, 0.3, 0.1, 0.22); moss(2.3, 0.12, -1.2, 0.26, 0.09, 0.2, 1); moss(0, 5.27, 0.9, 0.13, 0.06, 0.3); moss(1.95, 1.38, 0.9, 0.18, 0.06, 0.24, 1);
+    post(1.55, 2.0, 0.32, 0.55); // the chopping stump, a hatchet in it
+    part(g, new THREE.CylinderGeometry(0.035, 0.04, 0.7, 8), TP.wood, 1.5, 0.86, 2.0, { rz: 0.55 });
+    part(g, roundedBox(0.26, 0.16, 0.05, 0.03, 1), tShade(TP.stone, -0.12), 1.68, 0.6, 2.0, { rz: 0.55 });
+    log([0.75, 0.12, 2.3], [1.1, 0.12, 2.5], 0.12, 2, tShade(TP.main, 0.03), 9); // a split piece by it
+    shroom(-2.0, 1.75, 1.2); shroom(-1.82, 1.9, 0.8);
+  }
 }
 // 28-5 소품 색: the model's key colour (the most used vivid one, a plant's green only when nothing else is vivid; with nothing
 // vivid, the most used one) turned to hex, and the colours near it with it (the same hue offset, saturation scaled, lightness

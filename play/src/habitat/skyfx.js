@@ -60,7 +60,7 @@ export function skyLayer(scene, camera, renderer) {
   for (const o of [cTail, cHead]) { o.frustumCulled = false; o.renderOrder = -1; comet.add(o); }
   // falling stars: a pool, each { m, x, y, a (angle), v, life, age }
   const fall = Array.from({ length: 6 }, () => { const m = part(new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(-0.5, 0, 0), mat(streakFrag, { uA: { value: 0 } }))); m.visible = false; return { m, age: 9, life: 1 }; });
-  let next = 0, asp = 1, on = false, shower = false;
+  let next = 0, asp = 1, on = false, shower = false; const cssSize = new THREE.Vector2();
 
   return {
     // t: seconds; T: ui.skyNow() ({ ev: events allowed, meteor, aurora, comet, moon (age), star (id) } or null); L: the light (night 0..1); gray: overcast
@@ -69,7 +69,7 @@ export function skyLayer(scene, camera, renderer) {
       on = G.visible = night > 0.02; if (!on) return;
       const hh = 250 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), slow = calm(); asp = camera.aspect;
       G.position.copy(camera.position); G.quaternion.copy(camera.quaternion); G.translateZ(-250); G.scale.setScalar(hh);
-      const px = renderer.getPixelRatio() * renderer.domElement.clientHeight / 900; // star size: ~3 css px on a phone
+      const px = renderer.getPixelRatio() * renderer.getSize(cssSize).y / 900; // star size: ~3 css px on a phone. 212 C P5: the height as last set (resize), not clientHeight (a layout read a frame)
       starU.uTime.value = conU.uTime.value = slow ? 0 : t; starU.uA.value = 0.75 * night; starU.uPx.value = conU.uPx.value = 3 * px;
       for (const [id, g] of Object.entries(cons)) g.visible = id === T.star;
       conU.uA.value = 0.95 * night; lineM.opacity = 0.16 * night;

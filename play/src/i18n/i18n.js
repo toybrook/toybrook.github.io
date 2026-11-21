@@ -15,7 +15,10 @@ export const LANG = pick();
 export const LOC = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP' }[LANG]; // dates (toLocaleDateString, Intl)
 const D = LANG === 'en' ? (await import('./en.js')).default : LANG === 'ja' ? (await import('./ja.js')).default : {};
 // {이/가} {을/를} {이에요/예요} ... (Korean only): the josa that fits the argument just before it (other languages leave it out)
-const josa = (w, a, b) => { const c = String(w).charCodeAt(String(w).length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? a : b; };
+// 229 E ②: a number by how it is read (일 삼 육 칠 팔 영, 십 백 천 만: a final consonant; 이 사 오 구: none); {으로/로}: 로 after ㄹ too (일 칠 팔, 길)
+const josa = (w, a, b) => { const s = String(w), d = s.at(-1), c = s.charCodeAt(s.length - 1) - 0xac00, ro = a === '으로';
+  if (d >= '0' && d <= '9') return ro ? ('036'.includes(d) ? a : b) : '013678'.includes(d) ? a : b;
+  return c >= 0 && c < 11172 && c % 28 && !(ro && c % 28 === 8) ? a : b; };
 export const $t = (s, ...a) => {
   const r = D[s] || s; if (!a.length && !r.includes('/')) return r;
   let last = '';

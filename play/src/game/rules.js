@@ -38,14 +38,15 @@ import { blank as artBlank, tidyArt, artTick } from './art.js'; // 17-2
 import { blank as wildBlank, tidyWild, wildTick } from './wild.js'; // 17-3
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
 import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's name
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD, YARD, YARD_B, YARD_HAB } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD, YARD, YARD_B, YARD_HAB, S186 } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf, dayNo } from './clock.js';
 import { F170 } from './data.js'; // 170 B
 import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore, falls143fore } from '../habitat/zones.js';
-import { lotus143off } from '../habitat/zones.js'; // 143 B the lotus marsh
+import { lotus143off, SPOTS } from '../habitat/zones.js'; // 143 B the lotus marsh; 194 0-5 the 꾸미기 자리
 import { newlyDone } from './achieve.js';
+import { tidySc, fitSc } from './scatter.js'; // 195 B-8 1-2
 
 const byId = list => Object.assign(Object.create(null), Object.fromEntries(list.map(x => [x.id, x]))); // 195 B-10 B·F: no prototype names (toString, __proto__) as ids
 export const SP = byId(SPECIES), HAB = byId(HABITATS), EGG = byId(EGG_TYPES), RAR = byId(RARITIES), EARNED = byId(EARNED_TIERS), PROP = byId(PROPS), NAT = byId(NATURE);
@@ -65,8 +66,9 @@ export const habitatOf = a => (YARD && a.stay) || a.hab || SP[a.species]?.habita
 // (the lily pad, the duck house) go to the new habitat's storage once it is open (placed ones stay till then).
 const settle = S => {
   for (const a of S.animals) { const h0 = habitatOf(a), h = SP[a.species]?.habitat; if (h && !S.unlocked.includes(h)) a.hab = S.unlocked[0]; else delete a.hab; if (habitatOf(a) !== h0) delete a.home; } // inbox 53: another habitat, no pen
-  for (const p of S.props) { const h = PROP[p.prop]?.habitat; if (h && h !== p.hab && p.hab !== 'yard' && S.unlocked.includes(h)) { p.hab = h; p.placed = false; } }
+  settleProps(S);
 };
+const settleProps = S => { for (const p of S.props) { const h = PROP[p.prop]?.habitat; if (h && h !== p.hab && p.hab !== 'yard' && S.unlocked.includes(h)) { p.hab = h; p.placed = false; delete p.sp; } } }; // 194 0-5: off its 꾸미기 자리 too
 export const known = a => !!variantOf(a.species, a.variant);
 // codex cells of a habitat: every variant of every species living there, grouped by rarity in RARITIES order. A gone look (125-A)
 // only with S and only if S has it in the codex (the windows show it, the counts leave it out: c.variant.gone)
@@ -77,7 +79,7 @@ const allKeys = () => HABITATS.flatMap(h => codexCells(h.id).map(c => c.key));
 const noExpand = () => Object.fromEntries(HABITATS.map(h => [h.id, 0]));
 export function newGame(now) {
   const S = { schemaVersion: SCHEMA_VERSION, contentVersion: CONTENT_VERSION, hearts: 0, nextId: 1, nests: {}, slots: Array(B.slots).fill(null),
-    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: B.candy.free, unlocked: [HABITATS[0].id], flags: { s149spring: 1, z143hill: 1, z143fork: 1, z143grove: 1 }, myth: Object.fromEntries(MYTHIC.map(m => [m.id, {}])), visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank(), jAt: now }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
+    animals: [], accs: {}, codex: {}, seen: allKeys(), colors: {}, pity: {}, album: {}, display: {}, props: [], natives: {}, paint: {}, ghost: {}, lays: {}, pet: { day: '', n: 0 }, expand: noExpand(), xp: 0, lv: 1, xpDay: '', ach: {}, title: null, stats: { hatch: 0, grown: 0, pet: 0, feed: 0, plant: 0, days: 0, lights: 0, roof: 0 }, candy: S186 ? 0 : B.candy.free, unlocked: [HABITATS[0].id], flags: { s149spring: 1, z143hill: 1, z143fork: 1, z143grove: 1, ...S186 && { s186: 1, sp194: 1 } }, myth: Object.fromEntries(MYTHIC.map(m => [m.id, {}])), visit: blank(), sky: skyBlank(), seenProps: PROPS.map(p => p.id), since: now, mailGot: [], codes: [], giftEggs: 0, giftRow: [], attend: { day: '', at: 0, n: 0 }, first: {}, cards: [], strolls: 0, scenes: {}, looks: {}, events: {}, fossil: { at: 0 }, pals: palBlank(), art: artBlank(), wild: wildBlank(), jAt: now }; // seenProps: 꾸미기's red dot for props an update adds (an older save gets today's list from here)
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   S.guests = guestsBlank(S); // 66-1
@@ -100,14 +102,18 @@ export function fromSave(raw, now) {
   if (raw?.layoutUndo) try { const o = scrub(JSON.parse(snap)); if (!Array.isArray(o?.p)) throw 0; raw.layoutUndo.snap = JSON.stringify(o); } catch { delete raw.layoutUndo; }
   if (!raw || typeof raw !== 'object' || !(raw.schemaVersion >= 1) || raw.schemaVersion > SCHEMA_VERSION) return null;
   try {
-    const T = newGame(now), S = { ...T };
+    const T = newGame(now), S = { ...T }; delete T.flags.s186; delete T.flags.sp194; // 214: s186 only from the save (a new game's is born with it); 218-5f: sp194 too (a new game skips the 9-1 migration)
     for (const [k, v] of Object.entries(raw)) if (!(k in T) || T[k] === null || shape(v) === shape(T[k])) S[k] = v;
     S.animals = S.animals.filter(isObj); S.props = S.props.filter(isObj);
     for (const [h, n] of Object.entries(S.nests)) if (!isObj(n) || !Array.isArray(n.eggs)) delete S.nests[h]; else n.eggs = n.eggs.filter(isObj); // advance lays it again
     S.slots = Array.from({ length: Math.max(B.slots, Math.min(S.slots.length, B.nest.slotsByLevel.at(-1)[1])) }, (_, i) => isObj(S.slots[i]?.egg) ? S.slots[i] : null);
+    if (!Number.isFinite(raw.since)) S.since = Math.min(now, ...Object.values(S.codex).map(e => e?.at), ...S.animals.map(a => a.born)) || now; // 41: before 0.71, the first animal; 195 B-10 d: before the steps (mythTo16 reads it)
     for (let v = raw.schemaVersion + 1; v <= SCHEMA_VERSION; v++) MIGRATIONS[v]?.(S, now); // each step in order, oldest first
     { const known = k => { const [sp, v, x] = k.split(':'); return x === undefined && !!variantOf(sp, v); }; // 195 B-10 L: only real cells (the leaderboard and codex achievements count these keys)
       S.codex = Object.fromEntries(Object.entries(S.codex).filter(([k, e]) => known(k) && isObj(e))); S.colors = Object.fromEntries(Object.entries(S.colors).filter(([k, v]) => known(k) && Array.isArray(v))); S.seen = S.seen.filter(k => typeof k === 'string' && known(k)); }
+    { const m = S.flags.mv214; if (!(isObj(m) && Number.isInteger(m.n) && m.n >= 0 && m.n < 1e6)) delete S.flags.mv214; else S.flags.mv214 = { n: m.n }; } // 229 E ①: from a save, only { n } (a whole count)
+    if (S186) { const moved = !raw.flags?.s186; to186(S); to194(S); const n = to203(S); // 194 0-2, 0-5; 203 D4
+      if (moved) S.flags.mv214 = { n }; } // 214 (229 E ① saved): the first open with ?rc200 of a save from before it: main.js says what changed, once (it clears the flag as the card shows; the next open has s186)
     { const num = (v, lo, hi) => Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo; // 143 C (135 audit): outside numbers in range; a save the game wrote keeps its own
       S.hearts = num(S.hearts, 0, 1e9); S.xp = num(S.xp, 0, 1e9); S.lv = Math.floor(num(S.lv, 1, 1e6));
       let top = 0; const ids = v => { if (Array.isArray(v)) v.forEach(ids); else if (isObj(v)) for (const [k, x] of Object.entries(v)) if ((k === 'id' || k === 'uid') && Number.isInteger(x)) top = Math.max(top, x); else ids(x); };
@@ -116,7 +122,6 @@ export function fromSave(raw, now) {
     tidy(S); // 28-5
     tidyAff(S, now); // 170 B
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
-    if (!Number.isFinite(raw.since)) S.since = Math.min(now, ...Object.values(S.codex).map(e => e?.at), ...S.animals.map(a => a.born)) || now; // 41: before 0.71, the first animal
     S.mailGot = S.mailGot.filter(x => typeof x === 'string'); S.codes = S.codes.filter(x => typeof x === 'string'); S.giftEggs = Math.min(99, Math.max(0, Math.floor(S.giftEggs) || 0)); // 44
     S.giftRow = S.giftRow.filter(e => isObj(e) && Number.isInteger(e.id) && EGG[e.type] && B.hatch[e.rarity] != null).slice(0, B.nest.gifts); // 112
     { const A = S.attend; S.attend = { day: typeof A.day === 'string' ? A.day : '', at: Number.isFinite(A.at) ? A.at : 0, n: Number.isInteger(A.n) && A.n >= 0 ? A.n : 0 }; } // 41 C
@@ -139,6 +144,7 @@ export function fromSave(raw, now) {
     clear143(S); // 145 B; 150: public
     if (S129 === 4) clear149(S); // 149
     if (Z143) clear143reeds(S); // 143 B
+    tidyYard(S); // 184 ④ SCHEMA 15
     delete S.noAds; // 184 ⑤: 광고 제거 is never read from a save (a backup, a link): src/toss.js sets it each run (game.js setNoAds)
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
@@ -146,9 +152,22 @@ export function fromSave(raw, now) {
     return S;
   } catch { return null; }
 }
+// 184 ④ (SCHEMA 15) S.yard: the 나의 뜰 part (game/yard.js yardPart), read with the flag on by yardIn, entry by entry against this
+// save. Here, flag or not, its shape only: rebuilt from the known fields (rows that are not number rows dropped); a part that is
+// not one, or another game's (since), goes. Nothing in it is read with the flag off: a build without it keeps it as it came
+function tidyYard(S) {
+  const y = S.yard; delete S.yard;
+  if (!isObj(y) || y.v !== 1 || y.since !== S.since || !Number.isInteger(y.L) || y.L < 0 || y.L >= YARD_B.cells.length || !isObj(y.paint)
+    || ![y.props, y.nat, y.stay].every(Array.isArray)) return;
+  const num = v => v === null || Number.isFinite(v), row = n => e => Array.isArray(e) && e.length === n && e.every((v, i) => n === 7 && i === 0 ? Object.hasOwn(NAT, v) : num(v));
+  S.yard = { v: 1, since: y.since, L: y.L, kit: y.kit === 1 ? 1 : 0, last: y.last === 1 ? 1 : 0,
+    paint: Object.fromEntries(Object.entries(y.paint).filter(([k, b]) => /^-?\d{1,2},-?\d{1,2}$/.test(k) && Number.isInteger(b) && b >= 0 && b < 64).slice(0, 2088)),
+    props: y.props.filter(row(9)).slice(0, 400), nat: y.nat.filter(row(7)).slice(0, 120), stay: y.stay.filter(Number.isInteger).slice(0, 20),
+    ...(Array.isArray(y.sc) && { sc: tidySc(y.sc) }) }; // 195 B-8 1-2: 흩뿌리기 (game/scatter.js), whole pieces in range only
+}
 // Save migrations: MIGRATIONS[v] turns a v-1 save into a v save. A new save shape = SCHEMA_VERSION + 1 in data.js and a
 // step here (fields that only need a default don't need one: newGame fills them). 1 and 2 had no steps.
-const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10, 11: to11, 12: S => { for (const a of S.animals) if (a.acc) a.s = 1; }, 13: mythTo13, 14: affTo14 }; // 12 (95): a friend that hatched in a secret accessory keeps the x2 send-back (a.s), the one worn stays on it, none kept yet // 4: animals over the new room go to storage on the first advance
+const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10, 11: to11, 12: S => { for (const a of S.animals) if (a.acc) a.s = 1; }, 13: mythTo13, 14: affTo14, 16: mythTo16 }; // 12 (95): a friend that hatched in a secret accessory keeps the x2 send-back (a.s), the one worn stays on it, none kept yet // 4: animals over the new room go to storage on the first advance
 // 2 -> 3 (16-2): 대리석 left the launch list (-> 유리), 황금 too (-> the species' remaining legendary); every animal gets
 // its variant's first colour, which also counts as seen. Codex entries move with them (the earliest date wins).
 function to3(S) {
@@ -409,7 +428,7 @@ export function advance(S, now, rng = Math.random) {
   wholeTick(S, ev); // 66-3
   firstCheck(S, now, ev, rng); // 41 D
   evTick(S, now, rng); // 15-1
-  mythTick(S, now, ev); // 14-1
+  mythTick(S, now, ev, rng); // 14-1
   visitTick(S, now, ev); // 16-1
   palTick(S, now, ev); // 17-1
   artTick(S, now, ev); // 17-2
@@ -465,7 +484,7 @@ function enforceCap(S) {
 
 // Next habitat's lock: a fixed number of the previous one's codex cells (138-A) + hearts (a threshold, not spent). Once open, open for good.
 export function unlockInfo(S, habId) {
-  if (habId === 'yard') return { open: S.unlocked.includes('yard'), met: (S.lv || 1) >= YARD_B.level, level: YARD_B.level }; // 182 ④ free at its level
+  if (habId === 'yard') return { open: S.unlocked.includes('yard'), met: S186 ? !!S.flags.end170 || ['done', 'skip', 'again'].includes(S.flags.tut181) || (S.stats?.hatch || 0) >= 3 : (S.lv || 1) >= YARD_B.level, level: YARD_B.level }; // 182 ④ free at its level; 194 0-6 (5-1): the first day, once the tutorial is over
   const i = HABITATS.findIndex(h => h.id === habId), prev = HABITATS[i - 1];
   if (i <= 0) return { open: true, met: true };
   const cells = codexCells(prev.id).length, have = codexCells(prev.id).filter(c => S.codex[c.key]).length;
@@ -581,17 +600,41 @@ function strollBack(S, now, ev, rng) {
 // (they were tapped: page 1, the 옛 제단, the 불의 언덕 opens), its clues (MYTHIC clues; the firemane's hair / play / big: the altar's
 // 3 lit), called (부르기), arrive (that night), here (it came), shown (its coming seen: the cutscene or 돌아왔어요), bond, bondDay,
 // settled, read (pages read, bits). Timestamps but bond, read, bondDay. Not in S.animals: no seat, no 보관함, no walk, no
-// send-back, never from an egg. 152 D: one call at a time, in MYTHIC order (mythTurn); fire / trace and the altar's 3 are the
-// firemane's own; 158: the others' 발견 is one tap (seen and got), their clues MYTHIC152
+// send-back, never from an egg. 199 A (188): one story at a time, picked evenly from the open ones (mythPick) into come (its
+// prints' time); fire / trace and the altar's 3 are the firemane's own; 158: the others' 발견 is one tap (seen and got), their clues MYTHIC152
 const MY = MYTHIC[0], BIG_IDS = BIGS.split(' ');
-const MYTH_T = ['seen', 'fire', 'trace', 'got', 'hair', 'play', 'big', 'called', 'arrive', 'here', 'shown', 'bond', 'settled', 'read'];
+const MYTH_T = ['come', 'seen', 'fire', 'trace', 'got', 'hair', 'play', 'big', 'called', 'arrive', 'here', 'shown', 'bond', 'settled', 'read'];
 function mythTo13(S) { if (Object.keys(S.myth).some(k => k === 'bondDay' || MYTH_T.includes(k))) S.myth = { [MY.id]: S.myth }; } // 12 -> 13 (152 D); a nested one has none of those keys: twice = once
 const at6 = (t, d) => { const x = new Date(t); x.setHours(6, 0, 0, 0); x.setDate(x.getDate() + d); return +x; }; // 06:00, d days after t's day
-const myOf = id => MYTHIC.find(m => m.id === id), before = m => MYTHIC.slice(0, MYTHIC.indexOf(m));
-// its turn: every one before it settled, its habitat open (the meadow's first: always, as before 152 D)
-export const mythTurn = (S, m) => !HOLD.myth && !!S.myth[m.id] && (m === MY || S.unlocked.includes(m.habitat)) && before(m).every(p => S.myth[p.id]?.settled);
-// the faint fire prints (its 발견) show from then, no condition: the first from S.since, the next from the day the one before settled
-export const mythPrints = (S, id = MY.id) => { const p = before(myOf(id)).at(-1); return at6(p ? S.myth[p.id].settled : S.since ?? 0, B.myth.day); };
+const myOf = id => MYTHIC.find(m => m.id === id), open = (S, m) => m === MY || S.unlocked.includes(m.habitat); // the meadow's first: always
+// its turn: picked (come), its habitat open
+export const mythTurn = (S, m) => !HOLD.myth && S.myth[m.id]?.come != null && open(S, m);
+// 199 A: the next pick, 06:00 B.myth.day days after S.since (the first) or the day the last one settled
+export const mythNext = S => at6(Math.max(S.since ?? 0, ...MYTHIC.map(m => S.myth[m.id]?.settled ?? 0)), B.myth.day);
+// the faint fire prints (its 발견): from come; one not picked yet waits for the next pick (ui/myth.js waitLine)
+export const mythPrints = (S, id = MY.id) => S.myth[id]?.come ?? mythNext(S);
+function mythPick(S, now, rng) { // none going and its time: one of the open ones not come yet, each as likely; none open waits for the first tick one is
+  if (HOLD.myth || now < mythNext(S) || MYTHIC.some(m => S.myth[m.id]?.come != null && !S.myth[m.id].settled)) return;
+  const c = MYTHIC.filter(m => S.myth[m.id] && S.myth[m.id].come == null && !S.myth[m.id].settled && open(S, m));
+  if (c.length) S.myth[c[Math.floor(rng() * c.length)].id].come = mythNext(S);
+}
+// 190 A4 / 199 A Q5: one clue of id's filled from outside (k, or its first empty one); one not come yet keeps it till it comes
+export function mythStep(S, id, now, k) {
+  const m = myOf(id), M = S.myth[id]; if (HOLD.myth || !m?.step || !M || M.called || M.settled) return null;
+  k ??= m.clues.find(c => !M[c]); if (!m.clues.includes(k) || M[k]) return null;
+  M[k] = now; return k;
+}
+// 15 -> 16 (199 A): a save from the turns rule: the ones whose prints came then get come = that time (a story going keeps going); once.
+// Values only (HOLD's mythTurn still shows none); a broken one (a gap before it) keeps its seen as come
+function mythTo16(S, now) {
+  const due = m => { const prev = MYTHIC.slice(0, MYTHIC.indexOf(m)), b = prev.length ? S.myth[prev.at(-1).id]?.settled : S.since;
+    return { turn: open(S, m) && prev.every(p => S.myth[p.id]?.settled), t: Number.isFinite(b) ? at6(b, B.myth.day) : NaN }; };
+  for (const m of MYTHIC) S.myth[m.id] ??= {}; // a 12 save's empty flat field became none (fromSave adds it after): here first, so twice = once
+  const no = m => isObj(S.myth[m.id]) && S.myth[m.id].come == null;
+  for (const m of MYTHIC.filter(no)) { const M = S.myth[m.id]; if (M.seen) S.myth[m.id] = { come: Math.min(M.seen, due(m).t) || M.seen, ...M }; } // come before seen, as in a game that had come
+  if (MYTHIC.some(m => S.myth[m.id]?.come != null && !S.myth[m.id].settled)) return; // one going: the rest wait for mythPick
+  const m = MYTHIC.find(m => no(m) && !S.myth[m.id].settled && due(m).turn && now >= due(m).t); if (m) S.myth[m.id].come = due(m).t; // its turn came, not tapped yet
+}
 export const NIGHT = [20, 5]; // the night's hours: 부르기 (mythCall, the others only then), 167 「신수란?」 says them
 export const mythNight = t => { const h = new Date(t).getHours(); return h >= NIGHT[0] || h < NIGHT[1]; };
 // null (nothing yet, or not its turn) | 'prints' | 'fire' (a campfire's night to wait) | 'trace' | 'altar' (the 3) | 'ready' (부르기) | 'called' | 'guest' | 'home'
@@ -611,8 +654,9 @@ function bondUp(S, now, ev, id) { // one a day (a pet, or a play prop near the a
   const M = S.myth[id]; M.bondDay = dayOf(now); M.bond = (M.bond || 0) + 1; ev.push({ type: 'myth', what: 'bond', n: M.bond, id });
   if (M.bond >= guestOf(myOf(id))) { M.settled = now; ev.push({ type: 'myth', what: 'settle', id }); }
 }
-function mythTick(S, now, ev) {
-  for (const m of MYTHIC) { if (!mythTurn(S, m)) continue; // inbox 65; 152 D: the ones before it settled
+function mythTick(S, now, ev, rng) {
+  mythPick(S, now, rng); // 199 A
+  for (const m of MYTHIC) { if (!mythTurn(S, m)) continue; // inbox 65; 199 A: picked
     const M = S.myth[m.id], C = B.myth, e = what => ev.push({ type: 'myth', what, id: m.id });
     if (m === MY && M.seen && !M.trace) { // a campfire out through `nights` nights (offline too: nothing moves a prop then) -> the hoofprints at 06:00
       if (!S.props.some(p => p.placed && p.hab === MY.habitat && p.prop === 'campfire')) delete M.fire;
@@ -648,7 +692,9 @@ export function mythTrace(S, now, at = null) { // the burnt hoofprints tapped: p
 export function mythCall(S, now, id = MY.id) { // 부르기: it comes this night (20:00, or now if it is night already)
   const m = myOf(id), night = mythNight(now); if (mythStage(S, now, id) !== 'ready' || (m !== MY && !night)) return null; // 158: the others only at night
   const t = new Date(now); t.setHours(NIGHT[0], 0, 0, 0);
-  const M = S.myth[id]; M.called = now; M.arrive = m.dawn ? at6(now, new Date(now).getHours() < 6 ? 0 : 1) : night ? now : +t; return M.arrive; // 158 dawn: the unicorn at the next 06:00
+  const M = S.myth[id]; M.called = now; M.arrive = m.dawn ? at6(now, new Date(now).getHours() < 6 ? 0 : 1) : night ? now : +t; // 158 dawn: the unicorn at the next 06:00
+  if (!MYTHIC.some(p => S.myth[p.id]?.settled)) M.arrive = Math.max(M.arrive, at6(M.come, B.myth.nights)); // 199 A: the first story no sooner than the firemane's 3 nights
+  return M.arrive;
 }
 // 158 the unicorn's horn: a pet of one of its habitat's friends rolls once a day (pd), `luck`; the pity-th day it rolls (pn) it is sure
 function mythLuck(S, a, now, rng, ev) {
@@ -735,15 +781,22 @@ export const railsIn = (S, habId) => S.props.reduce((n, p) => n + (p.placed && p
 // one more of this kind (n more not placed yet before it) would go over: decorCap, or for a rail piece B.decor.rails
 export const natCap = S => YARD_B.nat[yL(S)], natIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && p.nat).length; // 182 ④
 export const bigIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && YARD_B.bigIds.includes(p.prop)).length;
-export const capped = (S, habId, prop, n = 0) => { if (habId === 'yard') { if (NAT[prop]) return natIn(S, habId) + n >= natCap(S); if (YARD_B.bigIds.includes(prop) && bigIn(S, habId) + n >= YARD_B.big) return true; } // 182 ④ the yard's nature and big ones
+export const capped = (S, habId, prop, n = 0) => { if (spotMode(habId) && onSpots({ prop })) return freeSpots(S, habId, PROP[prop]).length <= n; // 194 0-5: no free spot that takes it
+  if (habId === 'yard') { if (NAT[prop]) return natIn(S, habId) + n >= natCap(S); if (YARD_B.bigIds.includes(prop) && bigIn(S, habId) + n >= YARD_B.big) return true; } // 182 ④ the yard's nature and big ones
   const r = PROP[prop]?.rail; if (PROP[prop]?.art) return false; return r ? railsIn(S, habId) + r * (n + 1) > B.decor.rails : placedIn(S, habId).length + n >= decorCap(S, habId); };
 // 22-1: the habitat's own nature (NATURE) handed over by its build: list [{ prop, x, z, s, v, ring }] (first-board units), rings:
 // how many rings the build planted (the meadow: its first board + one per 땅 넓히기 step; the pond: 1). Only rings not done yet.
+// 194 0-7 (?d07): the list's d: 1 ones (zoneprops.js dense07, the opened zones' fill) a save opened before lacks: once (flags
+// d07<hab>: the rings done so), each only where it touches nothing placed (the player's own and moved things, the natives) nor a native put away
 export function addNatives(S, habId, list, rings) {
-  const done = S.natives?.[habId] || 0; if (rings <= done) return 0;
-  const add = list.filter(n => (n.ring || 0) >= done && (n.ring || 0) < rings && NAT[n.prop]);
+  const done = S.natives?.[habId] || 0, f = 'd07' + habId, d0 = list.some(n => n.d) ? Math.min(S.flags[f] || 0, done) : done; if (rings <= d0) return 0;
+  const R = p => NAT[p.prop] ? NAT[p.prop].r * (p.s || 1) : (PROP[p.prop]?.r ?? 1) * sizeF(PROP[p.prop], p.sz), on = S.props.filter(p => (p.placed || p.nat) && p.hab === habId); // a native put away: the ground the player cleared stays clear
+  const P = S.paint?.[habId] || {}, cells = n => { const q = Math.ceil(R(n) / UNIT), i0 = Math.floor(n.x), j0 = Math.floor(n.z); for (let i = i0 - q; i <= i0 + q; i++) for (let j = j0 - q; j <= j0 + q; j++) if (`${i},${j}` in P) return true; return false; }; // nor on ground the player painted (22-1)
+  const late = n => n.d && (n.ring || 0) >= d0 && !on.some(p => Math.hypot(p.x - n.x, p.z - n.z) * UNIT < R(p) + R(n)) && !cells(n);
+  const add = list.filter(n => (n.ring || 0) < rings && NAT[n.prop] && ((n.ring || 0) >= done || late(n)) && !underSpot(habId, n)); // 194 0-5: none on a 꾸미기 자리
   for (const n of add) S.props.push({ uid: S.nextId++, prop: n.prop, hab: habId, placed: true, x: +n.x.toFixed(2), z: +n.z.toFixed(2), rot: 0, nat: 1, s: +n.s.toFixed(2), v: n.v });
-  S.natives = { ...S.natives, [habId]: rings }; return add.length;
+  if (d0 < done || list.some(n => n.d)) S.flags[f] = Math.max(done, rings);
+  S.natives = { ...S.natives, [habId]: Math.max(done, rings) }; return add.length;
 }
 // 145 B (143's flower hill, once per save): the old natives (nat: 1, addNatives) standing on the new hill, its flower bands or its
 // lane go; a player's own things (not nat) and stored ones stay. 143 B the fork the same (zones.js fork143off: in its new water, a
@@ -779,7 +832,7 @@ export function paintCell(S, habId, i, j, b) {
 // goes into storage; one sold since stays gone. Hearts never move.
 // 24-2: the 미리보기 (S.ghost) go with it.
 // 28-5: an entry is [uid, placed, x, z, rot, c, sz, on, sl] (one of 5 leaves those as they are)
-export const layoutOf = (S, habId) => JSON.stringify({ p: S.props.filter(p => p.hab === habId).map(p => [p.uid, p.placed ? 1 : 0, p.x, p.z, p.rot, p.c || 0, p.sz || 0, p.on ?? null, p.sl ?? null]), paint: S.paint[habId] || {}, g: S.ghost?.[habId] || [] });
+export const layoutOf = (S, habId) => JSON.stringify({ p: S.props.filter(p => p.hab === habId).map(p => [p.uid, p.placed ? 1 : 0, p.x, p.z, p.rot, p.c || 0, p.sz || 0, p.on ?? null, p.sl ?? null]), paint: S.paint[habId] || {}, g: S.ghost?.[habId] || [], ...(habId === 'yard' && { sc: S.scatter || [] }) }); // 195 B-8 1-2 sc: the yard's 흩뿌리기 (?yard)
 export function setLayout(S, habId, snap) {
   const o = JSON.parse(snap), at = new Map(o.p.map(e => [e[0], e]));
   for (const p of S.props) if (p.hab === habId) {
@@ -787,7 +840,75 @@ export function setLayout(S, habId, snap) {
     Object.assign(p, { placed: !!e[1], x: e[2], z: e[3], rot: e[4] });
     if (e.length > 5) { Object.assign(p, { c: e[5], sz: e[6], on: e[7], sl: e[8] }); if (e[7] == null) { delete p.on; delete p.sl; } }
   }
-  S.paint = { ...S.paint, [habId]: { ...o.paint } }; S.ghost = { ...S.ghost, [habId]: o.g || [] }; tidy(S);
+  S.paint = { ...S.paint, [habId]: { ...o.paint } }; S.ghost = { ...S.ghost, [habId]: o.g || [] };
+  if (habId === 'yard' && Array.isArray(o.sc)) S.scatter = fitSc(S, o.sc).list; tidy(S); // 195 B-8 1-2: as yardIn (a made-up layoutUndo too)
+}
+// 194 0-2 9-2 (?s186 trial): the size table grew props and natives, so they may overlap now: each habitat with any placed is
+// refit on its next visit (habitat.js refit -> plan186). flags.s186: once (at release this is a MIGRATIONS step)
+export function to186(S) { if (S.flags.s186) return; S.flags.s186 = 1; const h = new Set([...(Array.isArray(S.refit) ? S.refit : []), ...S.props.filter(p => p.placed && p.hab).map(p => p.hab)].filter(x => typeof x === 'string')); if (h.size) S.refit = [...h]; } // review: a bad refit / hab from a save does not throw
+// 194 0-5 (?s186, decor-redesign.md 4-1·4-3·9-1): the habitats' 꾸미기 자리 (zones.js SPOTS: { id, L (the 넓히기 step it opens at), k
+// big | mid | small | water, r metres, x, z saved units, egg (「알이 놓일 점」) }). One prop a spot (p.sp its id; x, z from the spot, rot in
+// quarter turns, no size). Not on spots: rails, nature, 작품, the altar (14-1), the event snowman and what stands on another (p.on)
+export const spotMode = h => S186 && !!SPOTS[h];
+export const onSpots = p => { const P = PROP[p.prop]; return !!P && !p.nat && !P.rail && !P.art && P.band !== 'x' && p.on == null && p.prop !== 'myth_altar' && p.prop !== 'ev_snowman'; };
+// what a spot takes (4-1, 10-3): small A·C to 2.5 across, mid B·C·D to 6 (and an A one too wide for a small spot), big D·E·E* (and
+// anything wider than 6) to its size; water spots only the water ones, which go nowhere else
+export const spotTakes = (s, P) => { if (!P) return false; const d = 2 * P.r * sizeF(P, 0), b = P.band; if (d > 2 * s.r + 1e-6) return false;
+  if (s.k === 'water' || P.water) return s.k === 'water' && !!P.water;
+  return !b || (s.k === 'small' ? b === 'A' || b === 'C' : s.k === 'mid' ? b === 'B' || b === 'C' || b === 'D' || b === 'A' && d > 2.5 : b === 'D' || b === 'E' || b === 'E*' || d > 6); };
+export const freeSpots = (S, h, P, uid) => { const L = levelOf(S, h), on = new Set(S.props.filter(p => p.placed && p.hab === h && p.uid !== uid && p.sp && onSpots(p)).map(p => p.sp));
+  return (SPOTS[h] || []).filter(s => s.L <= L && !on.has(s.id) && (!P || spotTakes(s, P))); };
+export const spotsUsed = (S, h) => { const all = (SPOTS[h] || []).filter(s => s.L <= levelOf(S, h)).length; return [all - freeSpots(S, h).length, all]; };
+export const underSpot = (h, n) => S186 && (SPOTS[h] || []).some(s => Math.hypot(s.x - n.x, s.z - n.z) * UNIT < s.r + (NAT[n.prop]?.r ?? 1) * (n.s || 1) - 0.3);
+const quarter = r => (((Math.round((r || 0) / (Math.PI / 2)) % 4) + 4) % 4) * Math.PI / 2;
+const RANK186 = ['E', 'E*', 'D', 'B', 'A', 'C']; // the ones with fewest kinds of spot first (C goes on small or mid)
+// each placed prop of habitat h that goes on spots: the spot it stands on (or p.sp, if that is free), else (move: the 9-1 migration)
+// the smallest free kind that takes it, the nearest of those (bands E, E*, D, B, A, C, then uid), else into storage. Never lost; run again, nothing moves
+function fitSpots(S, h, move) {
+  const M = S.myth?.[MY.id], night = move && h === MY.habitat && M?.seen && !M.trace; // 218-5f: the firemane's campfire night going -> one campfire first (else it goes into storage and the nights start again)
+  const open = SPOTS[h].filter(s => s.L <= levelOf(S, h)), used = new Set(), rank = p => { if (night && p.prop === 'campfire') return -1; const i = RANK186.indexOf(PROP[p.prop].band); return i < 0 ? 9 : i; };
+  for (const p of S.props.filter(p => p.placed && p.hab === h && onSpots(p)).sort((a, b) => rank(a) - rank(b) || a.uid - b.uid)) {
+    const free = s => !used.has(s.id) && spotTakes(s, PROP[p.prop]), d = s => Math.hypot(s.x - p.x, s.z - p.z);
+    const s = open.find(s => free(s) && d(s) < 0.05) || open.find(s => s.id === p.sp && free(s)) || (move ? open.filter(free).sort((a, b) => a.r - b.r || d(a) - d(b))[0] : null);
+    if (!s) { p.placed = false; delete p.sp; continue; }
+    used.add(s.id); Object.assign(p, { sp: s.id, x: s.x, z: s.z, rot: quarter(p.rot) }); delete p.sz;
+  }
+}
+// the 9-1 migration, once (flags.sp194): the layout before kept (S.old194: { hab: [[uid, x, z, rot, sz?]] } the props that stood there, for
+// the yard's 「예전 배치 불러오기」), the natives on a spot into storage, the props onto spots or into storage (and what stood on
+// them); S.note194 { n on spots, m into storage } for the card shown once (ui). A save's old194 / note194 checked here (text from outside)
+export function to194(S) {
+  const num = v => Number.isFinite(v) && Math.abs(v) < 1e4;
+  if (S.old194 !== undefined) { const o = isObj(S.old194) ? Object.fromEntries(Object.entries(S.old194).filter(([h, l]) => SPOTS[h] && Array.isArray(l)).map(([h, l]) => [h, l.filter(e => Array.isArray(e) && (e.length === 4 || e.length === 5) && Number.isInteger(e[0]) && e.slice(0, 4).every(num)).map(e => e.length === 5 && !(Number.isInteger(e[4]) && e[4] > 0 && e[4] < SIZES.length) ? e.slice(0, 4) : e)])) : {}; if (Object.keys(o).length) S.old194 = o; else delete S.old194; }
+  if (S.note194 !== undefined && !(isObj(S.note194) && Number.isInteger(S.note194.n) && Number.isInteger(S.note194.m) && S.note194.n >= 0 && S.note194.m >= 0 && S.note194.n + S.note194.m <= S.props.length)) delete S.note194; // 194 review 낮음 7: no more than the props
+  if (S.flags.sp194) return null; S.flags.sp194 = 1; settleProps(S); // what settle (later in fromSave) would put away anyway is not counted or kept
+  const old = {}, was = {}, out = h => S.props.filter(p => p.placed && p.hab === h && !p.nat && !PROP[p.prop]?.rail && !PROP[p.prop]?.art).length; let n = 0, m = 0;
+  for (const h in SPOTS) {
+    const l = S.props.filter(p => p.placed && p.hab === h && onSpots(p)); if (l.length) old[h] = l.map(p => [p.uid, p.x, p.z, p.rot || 0, ...Number.isInteger(p.sz) && p.sz > 0 ? [p.sz] : []]); // 194 review 중간 1: its size too (a spot takes none; the yard gives it back)
+    for (const p of S.props) if (p.nat && p.placed && p.hab === h && NAT[p.prop] && underSpot(h, p)) p.placed = false;
+    if (S.layoutUndo?.hab === h) delete S.layoutUndo; // 「불러오기 전으로」 would bring back what stood before the spots
+    was[h] = out(h); fitSpots(S, h, true);
+  }
+  tidy(S);
+  for (const h in SPOTS) { m += was[h] - out(h); n += S.props.filter(p => p.placed && p.hab === h && p.sp && onSpots(p)).length; }
+  if (Object.keys(old).length) { S.old194 = old; S.note194 = { n, m }; } return { n, m };
+}
+// items { uid, x, z, r (grown), nat, open, auto (the board planted it), water } in metres; ok(x, z, r, water): on its land, clear
+// of the board's own things (not of these; rails already placed are in it). Natives first (clear of ok too, review: a rail), biggest first (then uid): one grown into a kept one goes into storage
+// (one the player planted is moved with the props); then the props (and those) biggest first: where they are if clear, else the
+// nearest clear spot within R (rings 0.8 apart, as habitat.js nearest), else storage. Never lost; run again, nothing moves.
+// moves: { uid, x, z } (metres) or { uid, off }
+export function plan186(items, ok, R = 9) {
+  const kept = items.filter(i => i.nat && i.open), out = [], by = (a, b) => b.r - a.r || a.uid - b.uid, move = [];
+  const clear = (x, z, r) => kept.every(d => d.nat && d.open || Math.hypot(d.x - x, d.z - z) > d.r + r + 0.1);
+  for (const n of items.filter(i => i.nat && !i.open).sort(by)) if (ok(n.x, n.z, n.r, false) && clear(n.x, n.z, n.r)) kept.push(n); else if (n.auto) out.push({ uid: n.uid, off: true }); else move.push(n);
+  for (const p of [...items.filter(i => !i.nat), ...move].sort(by)) {
+    const fit = (x, z) => ok(x, z, p.r, p.water) && clear(x, z, p.r); let at = fit(p.x, p.z) ? [p.x, p.z] : null;
+    for (let r = 0.8; !at && r < R; r += 0.8) for (let k = 0, n = r < 16 ? 12 : Math.ceil(r * 8); k < n && !at; k++) { const x = p.x + Math.cos(k / n * Math.PI * 2) * r, z = p.z + Math.sin(k / n * Math.PI * 2) * r; if (fit(x, z)) at = [x, z]; }
+    if (!at) { out.push({ uid: p.uid, off: true }); continue; }
+    if (at[0] !== p.x || at[1] !== p.z) out.push({ uid: p.uid, x: at[0], z: at[1] }); kept.push({ ...p, x: at[0], z: at[1] });
+  }
+  return out;
 }
 // inbox 42 A: the habitat's refit (habitat.js) after to11: moved ones to their new spot, the rest into storage (and what stood on them)
 export function refit(S, habId, moves) {
@@ -806,9 +927,11 @@ export const seatFree = (S, h, k, p) => !!PROP[h?.prop]?.top?.[k] && h.placed &&
 // what a save may hold (a backup code is text from outside): c and sz in range (else dropped: 0); a small prop whose prop under
 // it went (put away, sold, moved off) goes into storage; one on a prop moved (고르기, 되돌리기) stands on its spot again
 export function tidy(S) {
+  if (S186 && S.flags?.sp194) for (const h in SPOTS) fitSpots(S, h, false); // 194 0-5: each on its spot, or into storage. 218-5f: only once to194 ran (to11's tidy of a save from 10 or before would put the layout away before to194 moves it)
   const by = new Map(S.props.map(p => [p.uid, p]));
   for (const p of S.props) {
     const P = PROP[p.prop]; if (p.nat || !P) continue;
+    if (!p.placed) delete p.sp; // 194 0-5: put away, off its spot
     if (!(Number.isInteger(p.c) && p.c > 0 && p.c < (paletteOf(P)?.length ?? 0))) delete p.c;
     if (!(Number.isInteger(p.sz) && p.sz > 0 && p.sz < SIZES.length && sizable(P))) delete p.sz;
     if (p.on != null && p.sz === 3) p.sz = 2; // inbox 42 F-3: 아주 크게 is too big for a top spot (it hits the next one)
@@ -868,6 +991,10 @@ export const clearGhost = (S, habId) => { if (!S.ghost?.[habId]?.length) return 
 export function placeProp(S, uid, x, z, rot, ex = {}) {
   const p = S.props.find(p => p.uid === uid); if (!p) return null;
   if (!p.placed && (!p.nat || p.hab === 'yard') && capped(S, p.hab, p.prop)) return null; // 182 ④ the yard's nature has a cap
+  if (spotMode(p.hab) && onSpots(p) && ex.on == null) { // 194 0-5: on the spot asked for (ex.sp) or the nearest free one that takes it; quarter turns, no size
+    const f = freeSpots(S, p.hab, PROP[p.prop], p.uid), s = f.find(s => s.id === ex.sp) || f.sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z))[0];
+    if (!s) return null; x = s.x; z = s.z; rot = quarter(rot); p.sp = s.id; delete p.sz; ex = { ...ex, sz: undefined };
+  }
   const h = ex.on != null && S.props.find(o => o.uid === ex.on);
   if (ex.on != null && !(PROP[p.prop]?.small && h && h !== p && h.hab === p.hab && seatFree(S, h, ex.sl, p))) return null;
   if (!p.placed && p.nat && p.prop === 'tree') bump(S, 'plant'); // 23-2 나무 심기: one put away, planted again
@@ -986,14 +1113,22 @@ export function buyCandy(S) {
   if (S.hearts < B.candy.price) return false;
   S.hearts -= B.candy.price; S.candy = (S.candy || 0) + 1; return true;
 }
+// 203 D4 (?rc200): no candy; 크기 고정 (the same a.hold) takes B.candy.price hearts and 끄기 gives them back, as the candy came back
 export function holdBaby(S, id, now) {
   const a = S.animals.find(a => a.id === id);
-  if (!a || !growing(a) || !(S.candy > 0)) return false;
-  bank(a, now); a.hold = true; S.candy--; return true;
+  if (!a || !growing(a) || !(S186 ? S.hearts >= B.candy.price : S.candy > 0)) return false;
+  bank(a, now); a.hold = true; if (S186) S.hearts -= B.candy.price; else S.candy--; return true;
 }
 export function letGrow(S, id, now) {
   const a = S.animals.find(a => a.id === id && a.hold); if (!a) return false;
-  delete a.hold; a.gAt = now; S.candy = (S.candy || 0) + 1; return true;
+  delete a.hold; a.gAt = now; if (S186) S.hearts += B.candy.price; else S.candy = (S.candy || 0) + 1; return true;
+}
+// 203 D4 (?rc200, in fromSave with to186·to194, SCHEMA 16 as it is): the candy owned comes back as hearts at its price, the held
+// babies stay held (크기 고정 켜짐). Spent here, so a second open gives nothing; a candy got later in a build without the flag comes
+// back on the next open with it (no word then: 214's card is for the move only). Returns how many
+export function to203(S) {
+  const n = Math.min(999, Math.max(0, Math.floor(S.candy) || 0)); S.candy = 0; // 999: more than any game gives (an edited save gets no more)
+  S.hearts += n * B.candy.price; return n;
 }
 // the "다 자랐어요" cards were seen
 export function grownSeen(S, ids) { for (const a of S.animals) if (ids.includes(a.id)) delete a.card; }
@@ -1054,6 +1189,7 @@ export const mailOpen = (S, m, now) => typeof m?.id === 'string' && !!m.id && !S
 export function give(S, rw, now, rng = Math.random, at = null) { // at: the habitat on screen (a prop goes there if open)
   const n = k => Math.max(0, Math.min(/eggs|Now|Exp/i.test(k) ? 20 : 9999, Math.floor(+rw?.[k] || 0))); // a file from outside: whole numbers, capped
   const got = { hearts: n('hearts'), candy: n('candy'), eggs: 0, extra: 0, prop: null, legend: 0, wait: 0 };
+  got.hearts += got.candy * B.candy.price; got.candy = 0; // 203 D4: a candy in a gift comes as its hearts (asHearts shows it so); 227 A: in every build (a mail, code or stroll)
   S.hearts += got.hearts; S.candy = (S.candy || 0) + got.candy;
   const open = [...S.unlocked].reverse().map(id => HAB[id]).filter(h => h?.nest && h.ready);
   for (let i = n('eggs'); i > 0; i--) {
@@ -1066,7 +1202,9 @@ export function give(S, rw, now, rng = Math.random, at = null) { // at: the habi
   got.legend = layLegend(S, now, n('legendEggs')); got.wait = n('legendEggs') + n('legendNow') - got.legend - now1; got.legend += now1; S.giftEggs += got.wait;
   got.hero = layLegend(S, now, n('heroEggs'), {}, 'heroic', true); // 93-2
   if (n('freeExp')) { const h = HABITATS[0].id; S.freeExp = { ...S.freeExp, [h]: (S.freeExp?.[h] || 0) + n('freeExp') }; got.exp = n('freeExp'); }
-  const clue = !!rw?.clue && !S.props.some(p => p.prop === 'campfire'); if (rw?.clue) got.clue = 1; // 93-2 신수 단서: the campfire, free
+  // 93-2 신수 단서: the campfire, free, while the firemane has not settled (going or not come); 199 A Q3 (다): after, a step for the one going
+  const fm = !S.myth[MY.id]?.settled, clue = !!rw?.clue && fm && !S.props.some(p => p.prop === 'campfire'); if (rw?.clue) got.clue = 1;
+  if (rw?.clue && !fm) { const go = MYTHIC.find(m => S.myth[m.id]?.come != null && !S.myth[m.id].settled); [go, ...MYTHIC].some(m => m && mythStep(S, m.id, now)); }
   const P = PROP[clue ? 'campfire' : rw?.prop], hab = clue ? MY.habitat : P?.habitat ?? (open.find(h => h.id === at) ?? open[0])?.id;
   if (P && !P.paid && hab) { S.props.push({ uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0, ...(clue ? { cost: 0 } : {}) }); got.prop = P.id; }
   return got;
@@ -1201,14 +1339,14 @@ export function evSeen(S, key, k) { const R = S.events[key]; if (R && (k === 'se
 export const evMail = (S, now) => { const L = liveRun(S, now); if (!L) return [];
   return [{ id: 'ev-' + L.key, ...L.e.mail, end: new Date(L.R.end + 9 * 3600e3 - 1).toISOString().slice(0, 10) }]; };
 // inbox 41 D 첫날 할 일 (data.js FIRST): on while today (dayOf) is one of the game's first FIRST.days days and not all are done.
-// advance gives each task's hearts once (S.first[id] = when); all of them: FIRST.prop (into the habitat last entered) + FIRST.candy
+// advance gives each task's hearts once (S.first[id] = when); all of them: FIRST.prop (into the habitat last entered) + FIRST.hearts (227 A: was candy)
 export const FIRST_V = { hatch: S => S.stats?.hatch || 0, pet: S => S.stats?.pet || 0, prop: S => S.props.filter(p => p.placed && !p.nat && !PROP[p.prop]?.art).length, photo: S => S.stats?.photo || 0, codex: S => S.stats?.codex || 0 };
 export const firstGot = (S, t) => Math.min(t.n, FIRST_V[t.id](S));
 export const firstOn = (S, now) => !S.first?.all && Array.from({ length: FIRST.days }, (_, i) => dayOf(new Date(S.since).setHours(12, 0, 0, 0) + i * DAY_MS)).includes(dayOf(now));
 function firstCheck(S, now, ev, rng) {
   if (!firstOn(S, now)) return; S.first ??= {};
   for (const t of FIRST.tasks) if (!S.first[t.id] && firstGot(S, t) >= t.n) { S.first[t.id] = now; S.hearts += t.hearts; ev.push({ type: 'first', id: t.id, hearts: t.hearts }); }
-  if (FIRST.tasks.every(t => S.first[t.id])) { S.first.all = now; ev.push({ type: 'firstAll', got: S.first.gift ? null : give(S, { prop: FIRST.prop, candy: FIRST.candy }, now, rng, S.flags.lastHab) }); } // gift: 170 D gave it already
+  if (FIRST.tasks.every(t => S.first[t.id])) { S.first.all = now; ev.push({ type: 'firstAll', got: S.first.gift ? null : give(S, { prop: FIRST.prop, hearts: FIRST.hearts }, now, rng, S.flags.lastHab) }); } // gift: 170 D gave it already
 }
 // 170 C (?f170, ui/first170.js): the first two days' one line, the first task not done in this order (null: gone: day 3 on,
 // or the end card seen). flags.nm170: named or skipped; flags.end170: the end card seen. lv(a): 170 A·B's 정 level (absent: one pet)
@@ -1240,11 +1378,11 @@ export function tutGift(S, now, hab = 'meadow') {
   if (S.flags.tut181 === 'again' || S.first?.tutProp || S.props.some(p => !p.placed && !p.nat && p.hab === hab)) return null;
   const p = { uid: S.nextId++, prop: 'tulips', hab, placed: false, x: 0, z: 0, rot: 0 }; S.props.push(p); S.first = { ...S.first, tutProp: now }; return p;
 }
-// 170 D: the end card gives the 첫날 선물 (FIRST.prop + candy) now, once (first.gift; firstCheck still gives each task's hearts, then no
+// 170 D: the end card gives the 첫날 선물 (FIRST.prop + hearts) now, once (first.gift; firstCheck still gives each task's hearts, then no
 // second gift); type firstEnd: told on that card, not by first.js
 export function firstEnd(S, now, rng = Math.random) {
   S.flags.end170 = 1; if (S.first?.all || S.first?.gift) return { events: [] };
-  S.first = { ...S.first, gift: now }; return { got: give(S, { prop: FIRST.prop, candy: FIRST.candy }, now, rng, S.flags.lastHab), events: [{ type: 'firstEnd' }] };
+  S.first = { ...S.first, gift: now }; return { got: give(S, { prop: FIRST.prop, hearts: FIRST.hearts }, now, rng, S.flags.lastHab), events: [{ type: 'firstEnd' }] };
 }
 // 174 앱인토스 보상형 광고: one waiting slot `ms` sooner (start moves with it, so the progress ring stays true); null when nothing waits
 export function hurry(S, i, ms, now) {

@@ -7,8 +7,9 @@ import * as P from './pals.js'; // 113
 import * as GU from './guests.js'; import { guestWear } from './guests-data.js'; // 66-1, 86-3마
 import * as A from './art.js'; // 17-2
 import * as W from './wild.js'; // 17-3
-import { PROPS, YARD, SCHEMA_VERSION } from './data.js';
-import * as Y from './yard.js'; // 182 ④ (?yard): the yard's part of the save, under its own key
+import { PROPS, YARD, S186, SCHEMA_VERSION } from './data.js';
+import * as SC from './scatter.js'; // 195 B-8 1-2
+import * as Y from './yard.js'; // 182 ④ (?yard): the yard's part of the save (184 ④: S.yard, SCHEMA 15)
 import { EDITION } from '../config.js';
 import { now as clock } from './clock.js';
 export { now, dayOf } from './clock.js'; // the UI reads game time as G.now()
@@ -16,23 +17,38 @@ export { now, dayOf } from './clock.js'; // the UI reads game time as G.now()
 const KEY = 'toyhabitat.save';
 export let S = null;
 export let refused = null; // inbox 22: the edition of a save this build would not open (release: a beta save), else null
-export let frozen = false; // 202 (195 B-10 S1): 'new' a save from a newer build, 'full' an unreadable save with no room to keep it aside: this run never writes KEY, so nothing is lost
+export let frozen = false; // 202 (195 B-10 S1): 'new' a save from a newer build, 'full' an unreadable save with no room to keep it aside, 'copy' (226) a save to migrate with no room for its .v<n> copy: this run never writes KEY, so nothing is lost
 export let bad = false; // 27-1: there was a save but it could not be read or is another edition's (kept under KEY.bad / KEY.<edition>): told on the start card
 const listeners = [];
 export const on = f => listeners.push(f); // f(events) after every tick and action
 
 // Before a save is migrated, or replaced because it can't be read (or comes from a newer build), the old text is kept
 // once under KEY.v<n> / KEY.bad, so an update never silently loses a collection.
+// 226 관문 4: those copies (KEY.v<n> before a migration, KEY.s186) go 30 days after they were first seen (KEY.<copy>.at; one kept
+// by an older build gets its 30 days from now). When the save itself no longer fits, the copies go first (dropCopies)
+const COPY = /^toyhabitat\.save\.(v\d+|s186)$/, KEEP_MS = 30 * 864e5;
+const keys = () => { const ks = []; for (let i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); return ks; };
+function sweep(now) {
+  try { for (const k of keys().filter(k => COPY.test(k))) { const at = +localStorage.getItem(k + '.at');
+    if (!(at > 0)) localStorage.setItem(k + '.at', String(now)); else if (now - at > KEEP_MS) { localStorage.removeItem(k); localStorage.removeItem(k + '.at'); } } } catch { /* blocked or full: next start */ }
+}
+const full = e => e?.name === 'QuotaExceededError' || e?.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e?.code === 22 || e?.code === 1014; // 226 review 2: only a full storage drops copies
+let fresh = null; // 226 review 1: this run's copy (the save in KEY before its migration), never dropped by this run's saves
+function dropCopies(but) { let n = 0; try { for (const k of keys().filter(k => COPY.test(k) && k !== but && k !== fresh)) { localStorage.removeItem(k); localStorage.removeItem(k + '.at'); n++; } } catch { /* blocked */ } return n; }
 function load(now) {
   let raw = null;
   if (held) return null;
   try { raw = localStorage.getItem(KEY); if (!raw) return null; } catch { return null; }
   let v = 0, S = null, ed = EDITION;
-  try { const o = JSON.parse(raw); v = o?.schemaVersion; ed = o?.edition || 'beta'; if (ed === EDITION) S = R.fromSave(o, now); } catch { /* unreadable */ }
+  let old = null; try { old = localStorage.getItem(Y.YKEY); } catch { /* none */ } // 184 ④: the yard's old key (182 ④ trial), into the save once
+  try { const o = JSON.parse(raw); v = o?.schemaVersion; ed = o?.edition || 'beta'; if (ed === EDITION) S = R.fromSave(Y.withOldKey(o, old), now); } catch { /* unreadable */ }
+  dropOld = !!(S && old != null); // gone after the first save that holds it
   if (ed !== EDITION) refused = ed; // inbox 22: beta saves stay out of the release build (kept once under KEY.beta)
   const keep = S ? (v < S.schemaVersion ? KEY + '.v' + v : null) : KEY + (refused ? '.' + refused : '.bad');
   bad = !S && refused !== 'beta'; // a beta save in the release build has its own notice
-  if (S) { try { if (keep && !localStorage.getItem(keep)) localStorage.setItem(keep, raw); } catch { /* full: the migrated save still holds it all */ } return S; }
+  if (S) { try { if (keep && !localStorage.getItem(keep)) try { localStorage.setItem(keep, raw); } catch (e) { if (!full(e)) throw e; dropCopies(keep); localStorage.setItem(keep, raw); } fresh = keep; } catch { frozen = 'copy'; } // still full (226: room made from older copies first): 218-5 고칠 것 3: no copy, so the old text is not overwritten this run (told: backup.js)
+    try { if (S186 && !(keep && localStorage.getItem(keep) === raw) && !/"s186":1/.test(raw) && !localStorage.getItem(KEY + '.s186')) localStorage.setItem(KEY + '.s186', raw); } catch { /* full */ } // 194 review: the save before the ?s186 migration, kept once (to go back); 194 0-5: not when keep (.v<n>) holds this same text (review 낮음 2: an older .v<n> does not count)
+    return S; }
   // 202 S1: the original is not overwritten unless a copy of it is kept (a second accident gets its own slot; ponytail: one slot per accident, no cap)
   let kept = false;
   try { const at = localStorage.getItem(keep), k = at == null || at === raw ? keep : keep + '.' + now; if (localStorage.getItem(k) !== raw) localStorage.setItem(k, raw); kept = true; } catch { /* full */ }
@@ -41,14 +57,15 @@ function load(now) {
 }
 // 26-7: off: another tab has the game (Web Locks), so this one saves nothing; failed: the last save threw (full storage etc.), told
 // once till one goes through again. hooks (main.js): busy() this tab opened second, lost() another tab took over, fail()
-let off = !!navigator.locks, failed = false, hooks = {};
+let off = !!navigator.locks, failed = false, hooks = {}, dropOld = false;
 // 174 held (src/toss.js, before start): this phone's keys may still be another Toss user's, so this run neither reads nor writes the save
 export let held = false;
 export const hold = () => { held = true; };
 export function save() {
   if (off || frozen) return;
   if (held) return;
-  try { localStorage.setItem(KEY, JSON.stringify(YARD ? Y.yardOut(S) : S)); if (YARD) { const y = Y.yardPart(S); if (y) localStorage.setItem(Y.YKEY, JSON.stringify(y)); } failed = false; } catch (e) { if (!failed) { failed = true; hooks.fail?.(e); } } // keep playing (195 B-10 S2: the error tells blocked storage from full)
+  const put = () => { localStorage.setItem(KEY, JSON.stringify(YARD ? Y.saveOf(S) : S)); if (dropOld) { localStorage.removeItem(Y.YKEY); dropOld = false; } failed = false; };
+  try { put(); } catch (e) { try { if (!full(e) || !dropCopies()) throw e; put(); } catch (e) { if (!failed) { failed = true; hooks.fail?.(e); } } } // keep playing (195 B-10 S2: the error tells blocked storage from full); 226: the older copies go before the save fails, never this run's (review 1: the migrated save not fitting with it is told by fail, the old text stays)
 }
 // 26-7 한 번에 한 탭: the tab that holds the lock saves. A reload or a tab just let go may still hold it a moment: asked twice.
 // ponytail: no Web Locks (Safari < 15.4) = no guard, two tabs both save as before
@@ -69,8 +86,8 @@ export async function takeOver() { await navigator.locks.request(LOCK, { steal: 
 let view = false;
 export function start(h = {}) {
   if (h.view) { view = true; off = true; S = h.view; return []; }
-  hooks = h; const now = clock(); S = load(now) || R.weekStart(R.newGame(now), now); S.edition = EDITION;
-  if (YARD && !held) { let y = null; try { y = localStorage.getItem(Y.YKEY); } catch { /* none */ } Y.yardIn(S, y); } // 182 ④
+  hooks = h; const now = clock(); S = load(now) || R.weekStart(R.newGame(now), now); S.edition = EDITION; if (!held) sweep(now); // 226
+  if (YARD) { Y.yardIn(S, S.yard); delete S.yard; } // 182 ④; 184 ④: S.yard on the game (saveOf writes it again); without the flag it stays as it came
   const ev = R.advance(S, now); if (YARD) Y.giveKit(S); save(); claim(false); // saved as soon as this tab holds the lock
   setInterval(() => { const ev = tick(clock()); if (ev.length) save(); emit(ev); }, 1000);
   addEventListener('visibilitychange', save); addEventListener('pagehide', save);
@@ -139,12 +156,14 @@ export const addNatives = (hab, list, rings) => act(() => R.addNatives(S, hab, l
 export const paintCell = (hab, i, j, b) => act(() => R.paintCell(S, hab, i, j, b));
 export const paintCells = (hab, cells, b) => act(() => cells.reduce((n, [i, j]) => n + R.paintCell(S, hab, i, j, b), 0)); // a stroke: one save
 export const setLayout = (hab, snap) => act(() => R.setLayout(S, hab, snap));
+export const scatter = (hab, cells, b) => act(() => hab === 'yard' ? SC.scatterOn(S, cells, b) : 0); // 195 B-8 1-2 흩뿌리기 붓 (?yard): a stroke, one save
 export const importLayout = (hab, d, fit, cell) => act(() => R.importLayout(S, hab, d, fit, cell));
 export const undoImport = () => act(() => R.undoImport(S));
 export const clearGhost = hab => act(() => R.clearGhost(S, hab));
 export const refundProp = uid => act(() => R.refundProp(S, uid));
 // 182 ④ 나의 뜰 (?yard): call a friend, send it home, a prop from another habitat's storage and back, the yard's own nature
 export const callToYard = id => act(() => Y.callToYard(S, id)), sendHome = id => act(() => Y.sendHome(S, id));
+export const seen194 = () => act(() => { delete S.note194; }); // 194 0-5: the 꾸미기 자리 card shown (main.js)
 export const importProp = uid => act(() => Y.importProp(S, uid)), returnProp = uid => act(() => Y.returnProp(S, uid)), takeNat = id => act(() => Y.takeNat(S, id));
 // inbox 41 B: mail.json's mail (ids: only those) and a gift code. Codes used on this device are also kept apart from the save
 // (toyhabitat.codes), so a new game here can't use one again
@@ -152,7 +171,7 @@ const CODES = 'toyhabitat.codes', usedHere = () => { try { const u = JSON.parse(
 export const claimMail = (list, ids) => act(now => R.claimMail(S, list, now, ids));
 export const claimLegend = () => act(now => R.claimLegend(S, now)); // 44
 export const useCode = (codes, input) => act(now => { const out = R.useCode(S, codes, input, now, usedHere());
-  if (out.got && !held) try { localStorage.setItem(CODES, JSON.stringify([...usedHere(), out.got[0].id])); } catch { /* full: the save still has it */ } return out; });
+  if (out.got && !held && !frozen) try { localStorage.setItem(CODES, JSON.stringify([...usedHere(), out.got[0].id])); } catch { /* full: the save still has it */ } return out; });
 // inbox 41 C 출석부: at = the habitat on screen (a gift prop goes there)
 // 15-1 계절 이벤트: the calendar (play/events.json, ui/event.js), the run now, its shop, album, cards and mail
 export const setCal = c => { R.setCal(c); if (S) act(() => {}); }; // 15-1: before start (the kept copy) only the calendar

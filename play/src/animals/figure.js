@@ -190,6 +190,11 @@ FX.silversparks = { ...FX.sparks, n: 24, size: 0.22, frag: FX.sparks.frag.replac
   'vS < 0.5 ? vec3(0.78, 0.84, 0.95) : vec3(0.95, 0.97, 1.0)').replace('vec3(1.0, 0.95, 0.85), core * 0.6', 'vec3(1.0), core * 0.6') };
 // 163 D ③ (?m89): roseglints: the twinkle in rose quartz pinks, a deeper and a paler one (the rose quartz fox)
 FX.roseglints = { ...FX.twinkle, frag: FX.clearglints.frag.replace('vS < 0.5 ? vec3(0.8, 0.92, 1.0) : vec3(1.0)', 'vS < 0.5 ? vec3(1.0, 0.56, 0.72) : vec3(1.0, 0.86, 0.91)') };
+// 198 C (?m89): round soft motes, not twinkle's four-point stars (on snow, added light turned them into white stars), drawn over
+// (soft: normal blending) so their colour holds on the snow. skyglints: the white night's low sun, apricot, pink, lavender (백야 순록);
+// lilacglints: charoite's violet and lilac (차로아이트 순록)
+FX.skyglints = { ...FX.moondust, n: 20, soft: true, frag: FX.moondust.frag.replace('mix(vec3(0.72, 0.82, 1.0), vec3(1.0), core)', 'mix(vS < 0.34 ? vec3(1.0, 0.62, 0.4) : vS < 0.67 ? vec3(1.0, 0.5, 0.68) : vec3(0.7, 0.55, 1.0), vec3(1.0, 0.9, 0.9), core * 0.5)') };
+FX.lilacglints = { ...FX.moondust, n: 20, soft: true, frag: FX.moondust.frag.replace('mix(vec3(0.72, 0.82, 1.0), vec3(1.0), core)', 'mix(vec3(0.6, 0.38, 0.95), vec3(0.84, 0.7, 1.0), core)') };
 const fxMats = {};
 const fxMat = kind => fxMats[kind] ??= new THREE.ShaderMaterial({
   uniforms: { uTime: windTime, uPx: { value: 800 } }, transparent: true, depthWrite: FX[kind].solid || false, blending: FX[kind].solid || FX[kind].soft ? THREE.NormalBlending : THREE.AdditiveBlending,

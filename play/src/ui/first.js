@@ -1,4 +1,4 @@
-// inbox 41 D 첫날 할 일 (74: no list on screen). rules.js advance gives each task's hearts as it is done, all five the 첫날 기념 prop + candy; told here by
+// inbox 41 D 첫날 할 일 (74: no list on screen). rules.js advance gives each task's hearts as it is done, all five the 첫날 기념 prop + ♥ (227 A); told here by
 // one toast when the screen is free (like 도전 과제, level.js).
 import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
@@ -37,15 +37,16 @@ function locks() {
   now.forEach(id => G.flag('ui:' + id)); // after the loop: G.flag calls this again through G.on, and an inner toast would be overwritten
   if (got.length) toast($t('새로 생겼어요 · {0}', got.length > 3 ? $t('{0} 외 {1}개', got.slice(0, 2).join('·'), got.length - 2) : got.join('·')), 2600, true);
 }
+const RC201 = !!document.documentElement.dataset.ui187;
 locks();
 G.on(ev => { said.push(...ev.filter(e => e.type === 'first' || e.type === 'firstAll')); locks(); });
 setInterval(() => {
   locks();
-  if (!said.length || topWindow() || overlayOpen() || document.body.classList.contains('photo')) return;
+  if (!said.length || topWindow() || overlayOpen() || document.body.classList.contains('photo') || RC201 && document.getElementById('habitat')?.classList.contains('decorating')) return; // 202 B-13 (?rc200): not while decorating (after it)
   const one = said.filter(e => e.type === 'first'), all = said.find(e => e.type === 'firstAll')?.got; said = [];
   const h = one.reduce((n, e) => n + e.hearts, 0), hab = all?.prop && HAB[G.S.props.findLast(p => p.prop === all.prop)?.hab];
   const nx = one.some(e => e.id === 'prop') ? bigFrom() : null, head = one.length === 1 ? `${T.find(t => t.id === one[0].id).text} · ♥${h}${nx != null ? $t(' · 다음은 큰 소품 ♥{0}부터', nx) : ''}` : one.length ? `♥${h}` : '';
-  toast([head, all && $t('첫날 선물 · 「{0}」 + 성장 사탕 {1}개{2}', PROP[all.prop]?.name ?? '', all.candy, hab ? $t(' · {0} 꾸미기 › 선물', hab.name) : '')].filter(Boolean).join(' · '), all ? 4200 : 3000);
+  toast([head, all && $t('첫날 선물 · 「{0}」 + ♥{1}{2}', PROP[all.prop]?.name ?? '', all.hearts, hab ? $t(' · {0} 꾸미기 › 선물', hab.name) : '')].filter(Boolean).join(' · '), all ? 4200 : 3000); // 227 A: ♥ in every build (FIRST.hearts)
   if (all) sfx('grown');
 }, 800);
 

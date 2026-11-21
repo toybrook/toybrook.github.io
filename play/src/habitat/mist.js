@@ -6,7 +6,7 @@ import { skyLit } from './toyKit.js';
 
 const vert = `attribute float aL; varying vec3 vW; varying float vL;
 void main(){ vL = aL; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
-const frag = `uniform vec4 uOpen, uBuilt; uniform float uTime; uniform vec3 uLit; varying vec3 vW; varying float vL;
+const frag = `uniform vec4 uOpen, uBuilt; uniform float uTime, uPad; uniform vec3 uLit; varying vec3 vW; varying float vL;
 float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); }
@@ -16,13 +16,14 @@ void main(){
   float d = max(max(uOpen.x - vW.x, vW.x - uOpen.y), max(uOpen.z - vW.z, vW.z - uOpen.w)); // past the open ground
   float e = max(max(uBuilt.x - vW.x, vW.x - uBuilt.y), max(uBuilt.z - vW.z, vW.z - uBuilt.w)); // past the board
   float a = smoothstep(-0.8, 0.9, d + w) * (1.0 - smoothstep(0.3, 2.6, e + w)) * (0.4 + 0.6 * c);
+  if (uPad > 0.0) a *= smoothstep(uPad, uPad + 0.9, d); // 184 ④ the yard's board: clear over its frame
   gl_FragColor = vec4(vec3(1.0, 0.98, 0.95) * (0.3 + 0.7 * uLit), a * (0.62 - 0.1 * vL)); // at night it greys with the sky
 }`;
 const LAYERS = [0.5, 1.4, 2.3], CELL = 1, PAST = 3; // sheet heights over the ground; grid step; how far past the board it goes
 
 // from / open: the open ground at the start / now; built: the board as built (28-1: rects [x0, x1, z0, z1], zones.js); floor(x, z): the ground
 const grow = (r, m) => [r[0] - m, r[1] + m, r[2] - m, r[3] + m];
-export function mist(scene, floor, open, built, from = open, T = 2.6) { // T: the reveal's length (s)
+export function mist(scene, floor, open, built, from = open, T = 2.6, pad = 0) { // T: the reveal's length (s); pad: a clear band past the open ground (184 ④ the yard's frame)
   const inner = grow(from, -1), outer = grow(built, PAST), C = THREE.MathUtils.clamp;
   const nx = Math.ceil((outer[1] - outer[0]) / CELL), nz = Math.ceil((outer[3] - outer[2]) / CELL), X = i => outer[0] + i * (outer[1] - outer[0]) / nx, Z = j => outer[2] + j * (outer[3] - outer[2]) / nz;
   const y = []; // the ground under each grid point; past the board, the rim's (the board's edge rounds down under it)
@@ -37,7 +38,7 @@ export function mist(scene, floor, open, built, from = open, T = 2.6) { // T: th
   });
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('aL', new THREE.Float32BufferAttribute(aL, 1)); g.setIndex(idx);
-  const U = { uOpen: { value: new THREE.Vector4(...from) }, uBuilt: { value: new THREE.Vector4(...built) }, uTime: { value: 0 }, uLit: skyLit };
+  const U = { uOpen: { value: new THREE.Vector4(...from) }, uBuilt: { value: new THREE.Vector4(...built) }, uTime: { value: 0 }, uPad: { value: pad || 0 }, uLit: skyLit };
   const m = new THREE.Mesh(g, new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, uniforms: U, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
   m.frustumCulled = false; m.renderOrder = 2; scene.add(m);
   const last = open.every((v, i) => v === built[i]), to = last ? grow(open, PAST + 2) : open; // the last step: nothing left under mist once it has drawn back

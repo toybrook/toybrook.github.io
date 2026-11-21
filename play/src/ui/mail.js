@@ -6,7 +6,7 @@
 import { $t, LANG, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { mailOpen, legendRoom, PROP, kindName } from '../game/rules.js';
-import { GIFT, BALANCE } from '../game/data.js';
+import { GIFT, BALANCE, asHearts } from '../game/data.js';
 import { gardenName, PICS, LINES } from '../game/visit.js';
 import { dayOf } from '../game/clock.js';
 import { sfx } from './sound.js';
@@ -22,8 +22,8 @@ const waiting = () => all().filter(m => mailOpen(G.S, m, G.now()));
 const cards = () => G.S.visit.cards.filter(c => !c.got); // 16-1: postcards from where a friend went
 const dot = () => { const on = waiting().length > 0 || cards().length > 0 || (G.S.giftEggs > 0 && legendRoom(G.S)); btn.classList.toggle('new', on); if (box.hidden) btn.hidden = !on; }; // 74: shown only with mail
 const day = s => { const m = /^\d{4}-(\d\d)-(\d\d)/.exec(String(s ?? '')); return m ? $t('{0}월 {1}일까지', +m[1], +m[2]) : ''; };
-const gifts = r => [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`, r?.candy > 0 && $t('성장 사탕 {0}개', Math.floor(r.candy)),
-  r?.eggs > 0 && $t('둥지 알 {0}개', Math.floor(r.eggs)), PROP[r?.prop] && $t('소품 「{0}」', PROP[r.prop].name), r?.legendEggs > 0 && $t('전설 알 {0}개', Math.floor(r.legendEggs))].filter(Boolean).join(' · ');
+const gifts = r0 => { const r = asHearts(r0); return [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`,
+  r?.eggs > 0 && $t('둥지 알 {0}개', Math.floor(r.eggs)), PROP[r?.prop] && $t('소품 「{0}」', PROP[r.prop].name), r?.legendEggs > 0 && $t('전설 알 {0}개', Math.floor(r.legendEggs))].filter(Boolean).join(' · '); }; // 203 D4·227 A: candy as hearts
 
 function draw() {
   const L = waiting(), k = G.S.giftEggs, room = legendRoom(G.S), C = cards(), V = G.S.visit, n = V.cardDay === dayOf(G.now()) ? V.cardN : 0; // 44: legend eggs that found the nest full wait here
@@ -35,7 +35,7 @@ function draw() {
 // what came (a mail, all of them, or a code); eggs that found every nest full are told as hearts
 function show(got) {
   const row = got.reduce((n, g) => n + (g.row || 0), 0), extra = got.reduce((n, g) => n + g.extra, 0), wait = got.reduce((n, g) => n + (g.wait || 0), 0);
-  box.innerHTML = $t('<div><h2>받았어요</h2><ul>{0}</ul>{1}{2}{3}\n<div class="nbtns"><button class="go" data-close>좋아요</button></div></div>', got.map(g => `<li><i aria-hidden="true">🎁</i><span>${esc(g.title)}<small class="gift">${esc([gifts({ ...g, legendEggs: (g.legend || 0) + (g.wait || 0) }), g.row && $t('선물 알 {0}개', g.row)].filter(Boolean).join(' · ') || (g.extra ? $t('알 대신 ♥{0}', g.extra * GIFT.eggHearts) : ''))}</small></span></li>`).join(''), wait ? $t('<p class="note">둥지가 가득 차서 전설 알 {0}개는 우편함에 맡겨 뒀어요. 둥지에 자리가 생기면 우편함(✉)에서 받으세요</p>', wait) : '', row ? $t('<p class="note">둥지가 가득 차서 알 {0}개는 둥지 위 「선물 알」 줄에서 기다려요</p>', row) : '', extra ? $t('<p class="note">둥지가 가득 차서 알 {0}개는 ♥{1}로 바꿨어요 (알 1개 = ♥{2})</p>', extra, extra * GIFT.eggHearts, GIFT.eggHearts) : '');
+  box.innerHTML = $t('<div><h2>받았어요</h2><ul>{0}</ul>{1}{2}{3}\n<div class="nbtns"><button class="go" data-close>좋아요</button></div></div>', got.map(g => `<li><i aria-hidden="true">🎁</i><span>${esc(g.title)}<small class="gift">${esc([gifts({ ...g, legendEggs: (g.legend || 0) + (g.wait || 0) }), g.row && $t('선물 알 {0}개', g.row)].filter(Boolean).join(' · ') || (g.extra ? $t('알 대신 ♥{0}', g.extra * GIFT.eggHearts) : ''))}</small></span></li>`).join(''), wait ? $t('<p class="note">둥지가 가득 차서 전설 알 {0}개는 우편함에 맡겨 뒀어요. 둥지에 자리가 생기면 우편함(✉)에서 받으세요</p>', wait) : '', row ? $t('<p class="note">둥지가 가득 차서 알 {0}개는 둥지 위 「선물 알」 줄에서 기다려요</p>', row) : '', extra ? $t('<p class="note">둥지가 가득 차서 알 {0}개는 ♥{1}{으로/로} 바꿨어요 (알 1개 = ♥{2})</p>', extra, extra * GIFT.eggHearts, GIFT.eggHearts) : '');
   box.hidden = false; sfx('grown'); dot();
 }
 const ERR = { none: $t('맞는 선물 코드가 없어요'), used: $t('이 기기에서 이미 쓴 코드예요'), end: $t('기간이 끝난 코드예요') };

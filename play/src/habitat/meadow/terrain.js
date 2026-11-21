@@ -2,7 +2,7 @@ import { $t } from '../../i18n/i18n.js';
 import * as THREE from 'three';
 import { R, S, Z, SW, sPts, pPts, pond, paddock, dist2D, heightAt, occupied, CLIFF_Z, stream, rand as meadowRand } from './layout.js';
 import { toyMat, roundedBox, worldColor, glslColor, instanced, rainNow, snowNow, SNOW_RGB } from '../toyKit.js';
-import { BRUSHES } from '../../game/data.js';
+import { BRUSHES, S186 } from '../../game/data.js';
 
 // distance from the board edge where the turf ends (edge rounding is 1.2 wide: ~0.6 of turf height stays green)
 const TURF = 0.5;
@@ -80,8 +80,9 @@ export function buildTerrain(scene) {
     const pdx = Math.abs(x - paddock.x) - paddock.w / 2 + 0.6, pdz = Math.abs(z - paddock.z) - paddock.d / 2 + 0.6;
     col.lerp(dirt, sm(-(Math.max(pdx, pdz) + n2(x * 2, z * 2) * 0.35) / 0.5) * 0.9);
     // path: sandy centre, darker rim
-    const dpath = dist2D(pPts, x, z) + n2(x * 3, z * 3) * 0.06;
-    if (ds > SW + 0.2) { col.lerp(pathEdge, sm((1.0 - dpath) / 0.2)); col.lerp(path, sm((0.8 - dpath) / 0.25)); }
+    const dpath = dist2D(pPts, x, z) + n2(x * 3, z * 3) * (S186 ? 0.03 : 0.06);
+    if (ds > SW + 0.2) S186 ? (col.lerp(pathEdge, sm((1.12 - dpath) / 0.45)), col.lerp(path, sm((0.86 - dpath) / 0.4))) // 202 B-15: the rim over more than a vertex step (no stair edge), as wide as before
+      : (col.lerp(pathEdge, sm((1.0 - dpath) / 0.2)), col.lerp(path, sm((0.8 - dpath) / 0.25)));
     // water edges: wet sand at the waterline, sandy then greenish bed underwater
     const wd = Math.min(ds - (SW - 0.4), dp - (pond.r - 0.4), Z.wd(x, z, true)); // 0 at the waterline
     col.lerp(wetSand, sm((0.5 - wd) / 0.4) * 0.85);
@@ -94,6 +95,8 @@ export function buildTerrain(scene) {
 // (땅 칠하기: one texel per cell of U, cell i, j = floor(x / U), floor(z / U); brushes as data.js BRUSHES) and the 격자 lines.
 // 25-1: B.g snow, B.b ice
 const BRUSH_RGB = BRUSHES.map(b => new THREE.Color(b.c));
+// 195 B-8 (?yard): 나무다리 over water: its cell's ground is the yard's water too where water lies on both sides of it, across x or z
+const BRIDGE = BRUSHES.findIndex(b => b.id === 'bridge'), wetUnder = (cells, i, j) => { const w = (a, c) => cells[`${i + a},${j + c}`] === 11; return w(1, 0) && w(-1, 0) || w(0, 1) && w(0, -1); };
 const v3 = c => `vec3(${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)})`, CC = h => v3(new THREE.Color(h));
 const PAINT = $t('\n    { vec2 pq = vWp.xz / uU + (vec2(vnoise(vWp.xz * 1.3), vnoise(vWp.xz * 1.3 + 9.0)) - 0.5) * 0.5;\n      vec2 pt = (pq - uPO) / uPN; vec4 pa = texture2D(uPA, pt), pb = texture2D(uPB, pt); float pg = pb.r;\n      if (pa.r + pa.g + pa.b + pa.a + pb.r + pb.g + pb.b > 0.01) {\n        float sh = clamp(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)) / LUM, 0.62, 1.12); // keeps the slopes and contact shadows\n        vec4 k = smoothstep(0.18, 0.72, pa); float kg = smoothstep(0.18, 0.72, pg); // inbox 67-3: a wide soft edge, no disc\n        vec3 grass = {0} * (0.92 + 0.16 * vnoise(vWp.xz * 0.9));\n        vec3 sand = {1} * (0.96 + 0.08 * vnoise(vWp.xz * 4.0));\n        vec3 dirt = {2} * (0.94 + 0.12 * vnoise(vWp.xz * 3.0)); // 17-3: a worn trail, soft (the 흙길 brush itself is drawn as a path, uPC)\n        float gv = vnoise(vWp.xz * 9.0); vec3 gravel = {3} * (0.82 + 0.3 * step(0.55, gv) - 0.12 * step(gv, 0.2));\n        vec2 fc = floor(vWp.xz * 4.0), ff = fract(vWp.xz * 4.0) - 0.5; float fh = hash12(fc), fd = length(ff - (vec2(hash12(fc + 3.1), hash12(fc + 7.7)) - 0.5) * 0.4);\n        vec3 fcol = fh > 0.93 ? {4} : fh > 0.86 ? {5} : fh > 0.79 ? {6} : {7};\n        vec3 bloom = mix({8}, fcol, (fh > 0.9 ? 0.6 : 0.0) * (1.0 - smoothstep(0.06, 0.14, fd))); // inbox 67-3: a few soft specks, not a painted carpet\n        vec3 c = diffuseColor.rgb;\n        c = mix(c, grass * sh, kg); c = mix(c, dirt * sh, k.r); c = mix(c, sand * sh, k.g); c = mix(c, gravel * sh, k.b); c = mix(c, bloom * sh, k.a);\n        // 25-1 the snow\'s: fresh snow with a few glints, smooth pale ice (paler streaks, a crack line here and there)\n        vec2 kb = smoothstep(0.18, 0.72, pb.gb); float sg = step(0.985, hash12(floor(vWp.xz * 14.0)));\n        vec3 snow = {9} * (0.97 + 0.05 * vnoise(vWp.xz * 1.5)) + sg * 0.12;\n        float ck = 1.0 - smoothstep(0.0, 0.04, abs(vnoise(vWp.xz * 1.1 + 3.0) - 0.5)); vec3 ice = mix({10}, {11}, 0.35 * vnoise(vWp.xz * 0.7) + 0.4 * ck);\n        c = mix(c, snow * sh, kb.x); c = mix(c, ice * sh, kb.y);\n        diffuseColor.rgb = c; } }', v3(BRUSH_RGB[0]), v3(BRUSH_RGB[2]), v3(BRUSH_RGB[1]), v3(BRUSH_RGB[3]), CC('#fff7ee'), CC('#ffd54a'), CC('#ff9cc4'), CC('#b9a0f2'), v3(BRUSH_RGB[4]), v3(BRUSH_RGB[5]), v3(BRUSH_RGB[6]), CC('#eef8fc'));
 // 28-6 길 잇기: 흙길, 돌길, 나무판길 (uPC r, g, b; a texel per cell, not blended) drawn as a band through each cell that joins the
@@ -132,13 +135,15 @@ const PATH = `
         diffuseColor.rgb = mix(diffuseColor.rgb, c * sh, k); } }`;
 const GRID = `
     { vec2 gq = vWp.xz / uU, gd = abs(fract(gq - 0.5) - 0.5) / fwidth(gq);
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0), (1.0 - min(min(gd.x, gd.y), 1.0)) * 0.4 * uGrid * (1.0 - smoothstep(18.0, 40.0, distance(cameraPosition, vWp)))); }`;
+      float gf = 1.0 - smoothstep(18.0, 40.0, distance(cameraPosition, vWp));
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0), (1.0 - min(min(gd.x, gd.y), 1.0)) * 0.4 * min(uGrid, 1.0) * gf);
+      if (uGrid > 1.5) { vec2 hq = gq * 2.0, hd = abs(fract(hq - 0.5) - 0.5) / fwidth(hq); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0), (1.0 - min(min(hd.x, hd.y), 1.0)) * 0.16 * gf); } }`; // 195 B-8 1-2: 2, the half cells (the yard) faint
 // 28-6 (PATH): a box's signed distance; a path cell beside this one (o: its offset in cells, ct and tx as there)
 const SDF = `float sdBox(vec2 p, vec2 c, vec2 h) { vec2 d = abs(p - c) - h; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
 #define PN(a, b) step(0.5, dot(texture2D(uPC, ct + vec2(a, b) * tx).rgb, vec3(1.0)))
 `;
 // lum: the board's own ground brightness, which a painted cell's shade (slopes, contact shadows) is measured against (25-1: the snow's)
-export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lum = 0.3, extra = '', k = 1 } = {}) { // 182 ④ extra: more shader after the paths (the yard's water); k: mesh density
+export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lum = 0.3, pre = '', extra = '', k = 1 } = {}) { // 182 ④ extra: more shader after the paths (the yard's water); k: mesh density; 209 A pre: before the paint (the yard's grain, under any paint)
   const bw = r[1] - r[0], bd = r[3] - r[2];
   const tg = new THREE.PlaneGeometry(bw, bd, Math.round(120 * k * bw / 36), Math.round(192 * k * bd / 58)); tg.rotateX(-Math.PI / 2); tg.translate((r[0] + r[1]) / 2, 0, (r[2] + r[3]) / 2);
   const pos = tg.attributes.position;
@@ -159,7 +164,7 @@ export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lu
   }
   tg.setAttribute('color', new THREE.BufferAttribute(cols, 3));
   // close up, the vertex colours alone look smooth: add fine mottling and specks, faded out with distance
-  const ground = worldColor(toyMat('#ffffff', { vertexColors: true, roughness: 0.82, envMapIntensity: 0.85 }), (PAINT + PATH + extra).replaceAll('LUM', lum.toFixed(2)) + $t('\n    float near = 1.0 - smoothstep(14.0, 34.0, distance(cameraPosition, vWp));\n    float d = vnoise(vWp.xz * 2.3) * 0.55 + vnoise(vWp.xz * 7.5) * 0.45;\n    float speck = step(0.9, vnoise(vWp.xz * 15.0 + 7.0));\n    diffuseColor.rgb *= 1.0 + near * ((d - 0.5) * 0.2 - speck * 0.08);\n    // the lower part of the rounded edge is the cut: soil, shaded just under the wavy turf line\n    float e = min(min(vWp.x - {0}, {1} - vWp.x), min(vWp.z - {2}, {3} - vWp.z));\n    float turf = e - (TURF + 0.06 * sin((vWp.x + vWp.z) * 2.3) + 0.08 * (vnoise(vec2((vWp.x + vWp.z) * 3.0, 0.0)) - 0.5));\n    if (turf < 0.0) { {4}\n      diffuseColor.rgb = c * (1.0 - 0.35 * smoothstep(-0.2, 0.0, turf)); }\n    diffuseColor.rgb *= 1.0 - 0.2 * uWet; // 21-2: wet in the rain\n    // 15-2 첫눈: lying snow in soft drifts (bare patches between), never on the cut\n    float sn = uSnow * smoothstep(0.32, 0.58, vnoise(vWp.xz * 0.33) * 0.75 + d * 0.25 + 0.12) * step(0.0, turf);\n    diffuseColor.rgb = mix(diffuseColor.rgb, {5} * (0.94 + 0.06 * d), sn * 0.92);', r[0].toFixed(2), r[1].toFixed(2), r[2].toFixed(2), r[3].toFixed(2), SOIL, SNOW_RGB).replace('TURF', TURF.toFixed(2)) + GRID);
+  const ground = worldColor(toyMat('#ffffff', { vertexColors: true, roughness: 0.82, envMapIntensity: 0.85 }), (pre + PAINT + PATH + extra).replaceAll('LUM', lum.toFixed(2)) + $t('\n    float near = 1.0 - smoothstep(14.0, 34.0, distance(cameraPosition, vWp));\n    float d = vnoise(vWp.xz * 2.3) * 0.55 + vnoise(vWp.xz * 7.5) * 0.45;\n    float speck = step(0.9, vnoise(vWp.xz * 15.0 + 7.0));\n    diffuseColor.rgb *= 1.0 + near * ((d - 0.5) * 0.2 - speck * 0.08);\n    // the lower part of the rounded edge is the cut: soil, shaded just under the wavy turf line\n    float e = min(min(vWp.x - {0}, {1} - vWp.x), min(vWp.z - {2}, {3} - vWp.z));\n    float turf = e - (TURF + 0.06 * sin((vWp.x + vWp.z) * 2.3) + 0.08 * (vnoise(vec2((vWp.x + vWp.z) * 3.0, 0.0)) - 0.5));\n    if (turf < 0.0) { {4}\n      diffuseColor.rgb = c * (1.0 - 0.35 * smoothstep(-0.2, 0.0, turf)); }\n    diffuseColor.rgb *= 1.0 - 0.2 * uWet; // 21-2: wet in the rain\n    // 15-2 첫눈: lying snow in soft drifts (bare patches between), never on the cut\n    float sn = uSnow * smoothstep(0.32, 0.58, vnoise(vWp.xz * 0.33) * 0.75 + d * 0.25 + 0.12) * step(0.0, turf);\n    diffuseColor.rgb = mix(diffuseColor.rgb, {5} * (0.94 + 0.06 * d), sn * 0.92);', r[0].toFixed(2), r[1].toFixed(2), r[2].toFixed(2), r[3].toFixed(2), SOIL, SNOW_RGB).replace('TURF', TURF.toFixed(2)) + GRID);
   // the paint: two RGBA textures, a texel per cell (A: dirt, sand, gravel, bloom; B.r: grass), linear so a cell is a soft blob
   const i0 = Math.floor(r[0] / U), j0 = Math.floor(r[2] / U), nI = Math.ceil(r[1] / U) - i0, nJ = Math.ceil(r[3] / U) - j0;
   const tex = (f = THREE.LinearFilter) => { const t = new THREE.DataTexture(new Uint8Array(nI * nJ * 4), nI, nJ); t.magFilter = t.minFilter = f; t.needsUpdate = true; return t; };
@@ -189,10 +194,10 @@ export function terrainMesh(scene, heightAt, occupied, color, r = R, U = 1, { lu
       for (const k in cells) { const [i, j] = k.split(',').map(Number), b = cells[k], t = (j - j0) * nI + (i - i0);
         if (i < i0 || j < j0 || i - i0 >= nI || j - j0 >= nJ) continue;
         if (b === 0) B.image.data[t * 4] = 255; else if (b > 1 && b < 5) A.image.data[t * 4 + b - 1] = 255; else if (b === 5 || b === 6) B.image.data[t * 4 + b - 4] = 255;
-        else if (b === 1 || b === 7 || b === 8) C.image.data[t * 4 + (b === 1 ? 0 : b - 6)] = 255; else if (b === 11) C.image.data[t * 4 + 3] = 255; } // 182 ④ 물 (the yard): uPC.a // 28-6: the paths
+        else if (b === 1 || b === 7 || b === 8) C.image.data[t * 4 + (b === 1 ? 0 : b - 6)] = 255; else if (b === 11 || b === BRIDGE && wetUnder(cells, i, j)) C.image.data[t * 4 + 3] = 255; } // 182 ④ 물 (the yard): uPC.a // 28-6: the paths
       A.needsUpdate = B.needsUpdate = C.needsUpdate = true;
     },
-    grid(on) { U8.uGrid.value = on ? 1 : 0; },
+    grid(on) { U8.uGrid.value = on === 2 ? 2 : on ? 1 : 0; },
     dispose() { tg.dispose(); ground.dispose(); U8.uPA.value.dispose(); U8.uPB.value.dispose(); U8.uPC.value.dispose(); }, // 135 rule 5 (182 ④ the yard rebuilds its board)
     bare(x, z) { color(col, x, z, heightAt(x, z), 1); return col.r > col.g; }, // 17-3: the board's own dirt or sand here (the paddock, its path, a wet bank): no grass to wear
     // 28-6 지형 도장: the ground in the box [x0, z0, x1, z1] (world units) again from heightAt: heights, normals (as

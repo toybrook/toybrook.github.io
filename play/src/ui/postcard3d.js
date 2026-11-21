@@ -98,7 +98,7 @@ function frameOf(P, S, swim) {
 // by design: it lights, it is not looked at), three bands up from the horizon, the sun's glow round it and its disc
 const SKY = { 1: [0xeaf2ec, 0xbfdcef, 0x86bce8, 0xfff2d8], 2: [0xffb47c, 0xf29ba4, 0x7f7abd, 0xffe3a8] }; // horizon, a quarter up, top, glow
 const raw = h => new THREE.Color().setHex(h, THREE.LinearSRGBColorSpace); // (drawn as given: no tone mapping on the dome)
-const mat = (c, o) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, ...o });
+const mat = (c, o) => Object.assign(new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, ...o }), { userData: { own: 1 } }); // 212 C M6: made here for this one (a shot's little things' own go after it)
 
 function buildPlace(R, id) {
   const P = PL[id], scene = new THREE.Scene(), L = emptyL(), occupied = [], heightAt = P.h, wd = P.wd || (() => 9);
@@ -326,7 +326,8 @@ async function shootNow(c) {
       cur.scene.overrideMaterial = cocMat; const k = render(cam, big()); cur.scene.overrideMaterial = null; return k.getContext('2d').getImageData(M, M, W, H).data; });
     // 5 put together: in focus the photo, behind the focus the friendless pass blurred more and more, in front the photo blurred
     return await compose(sharp, bg, coc);
-  } finally { cur.scene.remove(...extra); for (const t of made) t.traverse(o => o.isInstancedMesh ? o.dispose() : o.isMesh && o.geometry.dispose()); } // (the little things' own shapes; the shared ones stay)
+  } finally { cur.scene.remove(...extra); for (const t of made) t.traverse(o => { if (o.isInstancedMesh) o.dispose(); else if (o.isMesh) o.geometry.dispose(); if (o.material?.userData?.own) o.material.dispose(); }); // (the little things' own shapes and materials; the shared ones stay)
+    for (const t of extra) if (!made.includes(t)) t.traverse(o => { o.skeleton?.dispose(); if (o.isPoints) o.geometry.dispose(); }); } // 212 C M6: the friend's and the duck boat's bone textures (and a legendary's sparkles), as codex.js
 }
 async function compose(sharp, bg, coc) {
   const d = [];

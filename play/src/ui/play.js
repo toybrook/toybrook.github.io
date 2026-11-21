@@ -1,10 +1,10 @@
 // Habitat HUD and what taps do: hearts, codex, nest and tool buttons (보관함 / 진열장 / 꾸미기), the bubble over an animal,
 // game toasts. Eggs, hatching and the reveal card live in the nest menu (nest.js).
-import { $t, ko } from '../i18n/i18n.js';
+import { $t, ko, LOC } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
 import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage, PROP, affLevel, affBar, step181 } from '../game/rules.js';
-import { PROPS, HABITATS, PART_NAME, GROW_ACTS, F170, AFF_ACTS, TUT181, ACCESSORIES } from '../game/data.js';
+import { PROPS, HABITATS, PART_NAME, GROW_ACTS, F170, AFF_ACTS, TUT181, ACCESSORIES, S186 } from '../game/data.js';
 import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
 import { weatherAt } from '../habitat/weather.js';
@@ -32,7 +32,7 @@ const $ = id => document.getElementById(id);
 const nameOf = callName; // 26-4: its name if it has one
 // a baby's growing, in words: "자라는 중 62% · 12분 남음" / "성장 멈춤 · 62%" (a 꼬마 사탕 holds it)
 const pct = (r, now) => Math.floor(gauge(r, now) * 100);
-const growText = (r, now) => r.hold ? $t('성장 멈춤 · {0}%', pct(r, now)) : $t('자라는 중 {0}% · {1} 남음', pct(r, now), span(Math.max(60000, growLeft(r, now) ?? 0)));
+const growText = (r, now) => r.hold ? (S186 ? $t('크기 고정 · {0}%', pct(r, now)) : $t('성장 멈춤 · {0}%', pct(r, now))) : $t('자라는 중 {0}% · {1} 남음', pct(r, now), span(Math.max(60000, growLeft(r, now) ?? 0)));
 // 170 B 정 레벨 (?f170), on the friend card only: its name (Lv5 a small star, Lv10 단짝 the star twinkles) and one bar: a growing
 // baby's growth gauge, then the way to the next level. Numbers and our own words only (the name: callName, cleaned in rules.js)
 const affMark = L => L >= 5 ? `<i class="jstar${L >= 10 ? ' dj' : ''}" aria-hidden="true">★</i>` : '';
@@ -71,11 +71,11 @@ export function initPlay(nav) {
     const nm = nameOf(r), act = b.dataset.act;
     if (r.guest) { bubble.hidden = true; bubbleFor = null; if (act === 'book') import('./visit.js').then(m => m.openBook()); return; } // 16-1: a guest has only 방명록
     if (act === 'feed') { if (G.feed(r.id)) return showBubble(r, $t('냠냠!')); }
-    if (act === 'candy') {
-      if (!(G.S.candy > 0) && !G.buyCandy()) return toast($t('하트가 모자라요 (성장 사탕 ♥{0})', B.candy.price), 2200, true);
+    if (act === 'candy') { // 203 D4 (?rc200): 크기 고정, the hearts at once (no candy)
+      if (S186 ? G.S.hearts < B.candy.price : !(G.S.candy > 0) && !G.buyCandy()) return toast(S186 ? $t('하트가 모자라요 (크기 고정 ♥{0})', B.candy.price) : $t('하트가 모자라요 (성장 사탕 ♥{0})', B.candy.price), 2200, true);
       if (G.holdBaby(r.id)) { toast($t('{0}{은/는} 지금 모습 그대로 있어요', nm), 2400, true); return showBubble(r); }
     }
-    if (act === 'grow' && G.letGrow(r.id)) { toast($t('다시 자라요 · 성장 사탕을 돌려받았어요'), 2400, true); return showBubble(r); }
+    if (act === 'grow' && G.letGrow(r.id)) { toast(S186 ? $t('다시 자라요 · ♥{0} 돌려받았어요', B.candy.price) : $t('다시 자라요 · 성장 사탕을 돌려받았어요'), 2400, true); return showBubble(r); }
     if (act === 'accoff') { const k = G.accOff(r.id); if (k) { track('acc_off', { v: ko(ACCESSORIES[k].name) }, 'acc_off:' + k); toast($t('「{0}」{을/를} 떼어 보관함 › 치장에 넣었어요', ACCESSORIES[k].name), 2600); } return showBubble(r); } // 189
     if (act === 'accon') { bubble.hidden = true; bubbleFor = null; return dressUp(r); } // 189: the friends menu's 치장 끼우기 list
     if (act === 'store' && G.store(r.id)) toast($t('{0}{을/를} 보관함에 넣었어요', nm));
@@ -98,7 +98,7 @@ export function initPlay(nav) {
     const soon = run.length && Math.min(...run.map(s => s.end - now)), fill = eggs > 0 && G.S.slots.includes(null);
     const done = G.S.slots.filter(s => s && now >= s.end).length; // C11: a finished egg said in words, not only the button's glow
     const n = G.S.nests[habId], next = !soon && !done && n && !eggs && n.t + eggGap(G.S) - now; // 27-7a: nothing to do -> when the next egg comes
-    pillT.hidden = !soon && !done && !(next > 0); pillT.textContent = done ? $t('부화할 알 {0}개 · 둥지를 눌러요', done) : soon ? $t('부화까지 {0}', clock(soon)) : next > 0 ? $t('다음 알까지 {0}', clock(next)) : '';
+    pillT.hidden = !soon && !done && !(next > 0); pillT.textContent = done ? (document.documentElement.dataset.ui187 ? $t('부화 칸에 알 {0}개 · 둥지를 눌러요', done) : $t('부화할 알 {0}개 · 둥지를 눌러요', done)) /* 202 B-10 (?rc200): says what it counts (the nest badge counts the nest's eggs) */ : soon ? $t('부화까지 {0}', clock(soon)) : next > 0 ? $t('다음 알까지 {0}', clock(next)) : '';
     pillB.hidden = !fill; pill.hidden = pillT.hidden && !fill; redodge();
   }
 
@@ -112,8 +112,17 @@ export function initPlay(nav) {
     tagEl.innerHTML = `<span>${tagText}</span><b class="gg${r.hold ? ' hold' : ''}"><i style="width:${pct(r, now)}%"></i></b><small>${growText(r, now)}</small>`;
   }
 
+  // 214 A ② (?rc200): the habitat's name is never cut (「< 초」). Short of room, the bar's padding goes first, then ♥ is shown short (9.7만 · 97K · 9.7万)
+  const nameB = $('habName').querySelector('b'), cut = () => nameB.scrollWidth > nameB.clientWidth, bar = hearts.parentElement;
+  const SHORT = [1, 0].map(d => new Intl.NumberFormat(LOC, { notation: 'compact', maximumFractionDigits: d, roundingMode: 'floor' })); // 123.4만, then 123만 · floor: 99,999 is 9.9만, not 10만 (older browsers ignore it)
+  function fitBar() {
+    if (!document.documentElement.dataset.ui187) return;
+    bar.classList.remove('tight', 'tight2'); if (!cut()) return;
+    bar.classList.add('tight'); for (const f of SHORT) if (cut()) hearts.lastChild.textContent = f.format(G.S.hearts - flying); // under 1,000 it reads the same
+    if (cut()) bar.classList.add('tight2'); // last: the BETA tag's word goes (a long level, Lv 1000+ · ui187.css)
+  }
   function draw() {
-    hearts.lastChild.textContent = G.S.hearts - flying; if (tagFor) drawTag(); // 66-1: the hearts still flying in are added as they land (202: drawTag was inside this comment since 66-1)
+    hearts.lastChild.textContent = G.S.hearts - flying; fitBar(); if (tagFor) drawTag(); // 66-1: the hearts still flying in are added as they land (202: drawTag was inside this comment since 66-1)
     codexBtn.classList.toggle('new', hasNew()); $('storeBtn').classList.toggle('new', G.S.cards.some(c => c.new)); // 13-1 a postcard not seen
     if (habId) {
       const out = outIn(G.S, habId); friendsBtn.lastChild.textContent = `${out.length}/${capOf(G.S, habId)}`;
@@ -123,7 +132,7 @@ export function initPlay(nav) {
       if (out.length && !homeT && home.hidden && homeHintDue(DEV, G.S.flags)) { quiet = Date.now(); homeT = setTimeout(homeCard, 800); }
       if (out.length && !appT && appHintDue(DEV, G.S.flags)) { appQuiet = Date.now(); appT = setTimeout(appBand, 800); }
     }
-    hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], growStage(G.S.lv)); hab?.sync(G.withGuests()); // 16-1: and the guests; inbox 42 B: the props first, so no one comes out inside one
+    hab?.syncProps(G.S.props, G.S.paint?.[habId], G.S.ghost?.[habId], growStage(G.S.lv), G.S.scatter); hab?.sync(G.withGuests()); // 16-1: and the guests; inbox 42 B: the props first, so no one comes out inside one
     hab?.syncWild?.(G.S.flags.wildOff ? null : G.S.wild.h[habId] ?? null, G.S.wild.d); // 17-3 정원이 숨 쉬어요
     hab?.setPals(G.S.flags.palOff ? null : new Map(G.S.pals.list.flatMap(p => [[p.a, p.b], [p.b, p.a]])), new Map(G.S.pals.list.flatMap(p => [[p.a, p.prop], [p.b, p.prop]]))); // 17-1 성격·단짝 (walk.js); 113 the prop each pair likes
   }
@@ -148,8 +157,8 @@ export function initPlay(nav) {
     if (r.wg) bubble.innerHTML = guestHtml(r, say); else // 66-1
     if (r.guest) bubble.innerHTML = $t('{0}{1}<small>손님 · {2}시간 더 머물러요</small><div class="row">{3}</div>', say ? say + ' ' : '', guestName(r), Math.max(1, Math.ceil((r.until - now) / 3600e3)), btn('book', $t('방명록'), true)); else // 16-1
     bubble.innerHTML = `${say ? say + ' ' : ''}${nameOf(r)}${F170 ? affMark(affLevel(r, now)) + affLine(r, now) : baby ? `<small>${growText(r, now)}</small>` : ''}<div class="row">${
-      baby && growing(r) ? btn('feed', n ? $t('먹이 주기 {0}/{1}', n, B.grow.feeds) : $t('오늘 먹이 다 줬어요')) + btn('candy', $t('성장 사탕 주기 {0}', c ? $t('({0}개)', c) : `♥${B.candy.price}`), true) : ''}${
-      r.hold ? btn('grow', $t('다시 자라기')) : ''}${r.acc && ACCESSORIES[r.acc] ? btn('accoff', $t('치장 떼기 · {0}', ACCESSORIES[r.acc].name), true) : Object.keys(G.S.accs || {}).length ? btn('accon', $t('치장 끼우기'), true) : ''}${btn('walk', $t('산책 보내기'), true)}${btn('store', $t('보관함에 넣기'), true)}</div>`;
+      baby && growing(r) ? btn('feed', n ? $t('먹이 주기 {0}/{1}', n, B.grow.feeds) : $t('오늘 먹이 다 줬어요')) + btn('candy', S186 ? $t('크기 고정 ♥{0}', B.candy.price) : $t('성장 사탕 주기 {0}', c ? $t('({0}개)', c) : `♥${B.candy.price}`), true) : ''}${
+      r.hold ? btn('grow', S186 ? $t('크기 고정 끄기') : $t('다시 자라기')) : ''}${r.acc && ACCESSORIES[r.acc] ? btn('accoff', $t('치장 떼기 · {0}', ACCESSORIES[r.acc].name), true) : Object.keys(G.S.accs || {}).length ? btn('accon', $t('치장 끼우기'), true) : ''}${btn('walk', $t('산책 보내기'), true)}${btn('store', $t('보관함에 넣기'), true)}</div>`;
     bubble.querySelector('[data-act=feed]')?.toggleAttribute('disabled', !n); bubble.hidden = false;
     const go = !bubbleFor; bubbleFor = r; bubbleUntil = Date.now() + 10000; if (press) press.re = true;
     if (go) requestAnimationFrame(place);

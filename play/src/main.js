@@ -2,8 +2,8 @@
 import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // first: it listens for errors before the rest runs
 import { $t, LANG, LANGS, localize, ko, SEP, esc } from './i18n/i18n.js';
 import * as G from './game/game.js';
-import { HAB, outIn, habitatOf, unlockInfo, firstEgg } from './game/rules.js';
-import { BALANCE, HABITATS, ZONES, PROPS, F170, TUT181 } from './game/data.js';
+import { HAB, outIn, habitatOf, unlockInfo, firstEgg, spotMode } from './game/rules.js';
+import { BALANCE, HABITATS, ZONES, PROPS, F170, TUT181, S186 } from './game/data.js';
 import { initWorldMap } from './worldmap/worldmap.js';
 import { z143on } from './habitat/zones.js'; // 145 B: the new zone cards under ?z143
 import { zzz, heart, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
@@ -12,7 +12,7 @@ import { initLevel } from './ui/level.js';
 import * as BK from './ui/backup.js';
 import { iosSafariTab } from './game/backup.js';
 import { initPhoto } from './ui/photo.js';
-import { ASSETS, DEBUG, TOSS, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, savePrefs, OFFLINE, calm, applyLook } from './config.js';
+import { ASSETS, DEBUG, TOSS, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, savePrefs, OFFLINE, calm, applyLook, VIEW } from './config.js';
 import { applySound, sfx } from './ui/sound.js';
 import { watch, track, loaded } from './ui/stats.js';
 import { openCode } from './ui/mail.js'; // inbox 41 B 우편함
@@ -26,7 +26,14 @@ import { initArt, place as artPlace, retRow as artRow, open as artOpen, tapped a
 import { newsOf as wildNews } from './game/wild.js'; // 17-3 정원이 숨 쉬어요
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
+if (S186) for (const e of document.querySelectorAll('[data-t]')) if (e.innerHTML.includes('성장 사탕을 주면')) e.innerHTML = e.innerHTML.replace('성장 사탕을 주면 새끼 모습 그대로 있어요.', '동물 카드에서 「크기 고정」을 켜면 새끼 모습 그대로 있어요.'); // 203 D4 (?rc200): the help's last line, before localize (en/ja have the new line too)
 localize(document); // 119: index.html's own text in the chosen language (the code's text goes through $t)
+if (document.documentElement.dataset.ui187) { // 199 D (?ui187): no picture emoji in the words on screen (♥ the coin and ©®™ kept; ✓✕★☆✦ are not emoji): every text node, as it is written
+  const EMO = /[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}️‍⃣]/gu, KEEP = new Set('♥©®™');
+  const clean = n => { const v = n.nodeValue; let w = v.replace(EMO, c => KEEP.has(c) ? c : ''); if (w === v) return;
+    w = w.replace(/ {2,}/g, ' '); if (!/^\s/.test(v)) w = w.trimStart(); if (!/\s$/.test(v)) w = w.trimEnd(); n.nodeValue = w; };
+  const walk = r => { if (r.nodeType === 3) return clean(r); const t = document.createTreeWalker(r, NodeFilter.SHOW_TEXT); for (let n; (n = t.nextNode());) clean(n); };
+  walk(document.body); new MutationObserver(ms => { for (const m of ms) if (m.type === 'characterData') clean(m.target); else for (const n of m.addedNodes) walk(n); }).observe(document.body, { subtree: true, childList: true, characterData: true }); }
 // 26-7 한 번에 한 탭: a tab opened second, or one another tab took over, is covered (nothing saved there) till 「여기서 하기」
 function tabOff(first) {
   if ($('tabOff')) $('tabOff').remove(); const el = document.createElement('section'); el.className = 'intro'; el.id = 'tabOff';
@@ -39,6 +46,8 @@ const saveFail = e => ask(e?.name === 'SecurityError' ? $t('저장하지 못했�
 // stay as they were): every storage write is a no-op till 「내 정원으로」 opens the page again without the link
 const SEE = seeHash();
 if (SEE) { for (const k of ['setItem', 'removeItem', 'clear']) Storage.prototype[k] = () => {}; document.body.classList.add('see'); track('see_open', undefined, 'see_open#'); }
+const RC201 = !!document.documentElement.dataset.ui187 && !SEE; // 202 B-2 (?rc200): 「전체 보기」 is an icon in the top bar (구경 링크 hides the bar, so it stays under it there)
+if (RC201) { $('mailBtn').before($('overview')); $('overview').hidden = true; }
 const offline = G.start(SEE ? { view: SEE.S } : { busy: () => tabOff(true), lost: () => tabOff(false), fail: saveFail }); // eggs laid / babies grown while the game was closed
 if (!SEE) watch(G); // inbox 41 A 이용 통계: start, first_hatch, return_d1
 
@@ -93,7 +102,7 @@ const bootOff = () => { const boot = $('boot'); if (!boot || boot.classList.cont
   if (!SEE) loaded(); // 169
   idle(() => code().then(h => { // then the models of the habitat opened last (a new player: none, above)
     if (!fresh && !backTo) idle(() => h.prefetch(G.S.flags.lastHab || HABITATS[0].id, G.withGuests()).catch(() => {}));
-    if (OFFLINE && !SEE) import('./ui/offline.js').then(m => m.initOffline(() => touched));
+    if (OFFLINE && !SEE && !self.swAt) import('./ui/offline.js').then(m => m.initOffline(() => touched)); // 227 B: served by a worker: at once (below)
   }).catch(() => {}));
 });
 const ui = {
@@ -110,13 +119,13 @@ const ui = {
   onWalk: (h, t, n) => G.wildWalk(h, t, n), onWild: (h, c) => G.wildGround(h, c), // 17-3: the animals' steps; where things may grow (game/wild.js)
   say: t => toast(t, 1800, true), // 28-3: a short note from the habitat (the music box's tune, the fireworks by day)
   zzz(xy) { if (!hab.classList.contains('hidden') && !overlayOpen() && !document.querySelector('body > section.pop:not([hidden])')) zzz(xy); }, // not over a sheet (28-5: nor 설정·꾸미기 코드·도움말, outside #habitat)
-  onCam(s) { camBtns.hidden = !s; frontBtn.hidden = s !== 'f'; $('overview').textContent = s === 'w' ? $t('친구들 보기') : $t('전체 보기'); }, // following: 정면 + 전체 보기; away from the start view: 전체 보기; at the whole board (inbox 63): 친구들 보기
+  onCam(s) { camBtns.hidden = RC201 ? s !== 'f' : !s; frontBtn.hidden = s !== 'f'; const o = $('overview'); o.textContent = s === 'w' ? $t('친구들 보기') : $t('전체 보기'); if (RC201) { o.hidden = !s; o.dataset.s = s; o.title = o.textContent; } }, // following: 정면 + 전체 보기; away from the start view: 전체 보기; at the whole board (inbox 63): 친구들 보기
   tag: (text, rec) => { play.tag(text, rec); snap.followed(); }, // ui/play.js: a baby's tag shows its growth; 26-4 사진 모드's 따라가기 shows who
   onTap: (...a) => { if (!snap.on()) play.onTap(...a); }, // 24-1 사진 모드: no hearts or bubbles (a tap still follows the animal)
-  scene: e => play?.scene(e, snap.on()), // 13-2 놀이 장면 (ui/play.js)
+  scene: e => VIEW.pv && e.night || play?.scene(e, snap.on()), // 13-2 놀이 장면 (ui/play.js); 195 B-8: no night scene from the 꾸미기 밤 미리보기
   duo: (a, b, kind) => play?.duo(a, b, kind), // 113 단짝 놀이
   onPropTap: uid => play.onPropTap(uid), onEdit: ok => play.onEdit(ok), onPaint: (c, b) => play.onPaint(c, b), onSweep: u => play.onSweep(u), // decorate mode (ui/decor.js)
-  note: (k, n) => { if (!snap.on()) G.note(k, n); }, // 23-2 도전 과제 (not while 사진 모드 can hold the night or the rain)
+  note: (k, n) => { if (!snap.on() && !VIEW.pv) G.note(k, n); }, // 23-2 도전 과제 (not while 사진 모드 can hold the night or the rain; 195 B-8 nor the 낮·밤 미리보기)
   onHome: (id, home) => G.setHome(id, home), // inbox 53 울타리 안 자리
   onCarry: rec => { G.flag('tip_carry'); if (!G.S.flags.carried) G.flag('carried'); play.onCarry(rec); }, // inbox 42 E: found it alone: no tip for it; 66-1 first_drag; 69-1 출생 기록
   onLetGo: rec => play.onLetGo(rec),
@@ -146,6 +155,17 @@ const firstHere = id => code().then(() => new Promise(done => {
 let eggTap = F170 && !!window.__eggTap; // tapped on the start cover (index.html) before this code was here
 if (F170) $('loading').addEventListener('click', e => { if (!e.target.closest('.lbar')) return; const L = $('loading'), b = L.querySelector('.lfirst');
   if (b && !b.hidden) return b.onclick?.(); if (!firstEgg(G.S) || eggTap) return; eggTap = true; L.firstChild.textContent = $t('알이 꿈틀거려요… 곧 부화해요'); });
+// 214 (?rc200, docs/release-bundles.md): once, what changed for a save from before the flag (rules.js fromSave flags.mv214 { n }, saved
+// till the card shows (229 E ①: closed before a habitat opened, it comes the next time); the next open has flags.s186; a new game is born with it). 203 D4's toast is its third line: the candy's ♥ (none, no line). Then 194's card
+function moved(then) {
+  const n = G.S.flags.mv214.n * BALANCE.candy.price, el = document.createElement('section'); G.flag('mv214', 0); // 0: rules.js fromSave drops it
+  el.id = 'zoneCard'; el.className = 'intro pop lvup m214'; el.innerHTML = '<div><h2></h2><button data-close></button></div>';
+  const box = el.firstChild, ok = box.lastChild; box.firstChild.textContent = $t('새 버전으로 바뀌었어요'); el.setAttribute('aria-label', box.firstChild.textContent);
+  for (const t of [$t('동물·소품·♥는 모두 그대로 옮겼어요.'), $t('들꽃 도감은 없어졌어요. 이미 받은 보상은 그대로예요.'), n > 0 && $t('가지고 있던 사탕은 「크기 고정」으로 바뀌었어요. 사탕 값 ♥{0}{을/를} 돌려드렸어요.', n), $t('사탕으로 멈춰 둔 아기는 크기 고정이 켜진 채 그대로예요.')]) {
+    if (!t) continue; const p = document.createElement('p'); p.className = 'sub'; p.textContent = t; box.insertBefore(p, ok); }
+  ok.textContent = $t('알겠어요'); ok.onclick = () => { el.remove(); then(); firstDone(); }; // 돌아왔어요 waited for it (away; and for 194's card, if then() put it up)
+  $('habitat').append(el); sfx('level');
+}
 async function enter(id) {
   cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + $t(' 서식지 3D'));
   $('habName').querySelector('b').textContent = HAB[id].short ?? HAB[id].name; // 14-3: the chip's room (375 wide) fits two letters
@@ -154,13 +174,13 @@ async function enter(id) {
   if (firstEgg(G.S) && !built[id]) await firstHere(id); // inbox 61 A·B
   try { api = await (built[id] ??= build(id)); }
   catch (e) { console.warn('enter', id, e); // 26-1: offline, and this habitat's files were never fetched (or the network dropped): back to the map, try again later
-    delete built[id]; loadBar(false); if (cur === id) $('back').click(); toast($t('인터넷에 연결되면 열 수 있어요'), 2600); return false;
+    delete built[id]; loadBar(false); if (cur === id) $('back').click(); firstDone(); toast($t('인터넷에 연결되면 열 수 있어요'), 2600); return false;
   }
   // 27-2: the animals and props come out in attach; their shaders are made behind the curtain (the first frame after it froze 2.6 s in Chrome, 3.3 s in WebKit)
   api.setActive(true); play.attach(api, id);
   if (G.S.refit?.includes(id)) G.refit(id, api.decor.refit(G.S.props)); // inbox 42 A: the board grew (rules.js to11): what no longer fits moves
   if (!SEE) artPlace(id); // 17-2: the 작품 made while away, on this board's empty ground
-  await api.warm().catch(() => {}); loadBar(false); idle(mapUp); return true; // 168: shaders made ahead or not, the curtain lifts (style.css hides the buttons while it shows); 202: these two were inside the comment since 168
+  await api.warm().catch(() => {}); loadBar(false); const n194 = () => { if (G.S.note194 && spotMode(id) && !SEE && cur === id) note194(); }; if (S186 && G.S.flags.mv214 && !SEE && cur === id) moved(n194); else { n194(); firstDone(); } idle(mapUp); return true; // 194 0-5 // 168: shaders made ahead or not, the curtain lifts (style.css hides the buttons while it shows); 202: these two were inside the comment since 168
 }
 const mapUi = initWorldMap(world, { enter });
 G.on(ev => { if (ev.some(e => e.type === 'unlock' || e.type === 'reset')) mapUi.refresh(); });
@@ -180,6 +200,17 @@ const rebuild = (id, ex) => { // ex: the 땅 넓히기 that asks for it (the mis
     return next;
   })();
 };
+// 194 0-5 (?s186, decor-redesign.md 9-1): once, after the move to 꾸미기 자리 (rules.js to194, S.note194 { n on spots, m into storage }):
+// where the props went, and the ways to the spots (꾸미기) and to 나의 뜰 (its 「예전 배치 불러오기」)
+function note194() {
+  const n = G.S.note194, yd = unlockInfo(G.S, 'yard').open, el = document.createElement('section'); G.seen194(); el.id = 'zoneCard'; el.className = 'intro pop lvup n194'; el.setAttribute('aria-label', $t('꾸미기 자리'));
+  el.innerHTML = $t('<div><h2>놓을 자리가 정해졌어요</h2><p class="sub"></p><div class="nbtns"><button class="sb" data-close>닫기</button><button class="sb" data-yard>나의 뜰로</button><button class="go" data-spots>꾸미기 자리</button></div></div>');
+  el.querySelector('.sub').textContent = $t('남은 소품은 보관함에 있어요 · 자리에 {0}개, 보관함에 {1}개', n.n, n.m) + (yd ? $t(' · 나의 뜰의 「예전 배치 불러오기」로 그 모양대로 놓을 수 있어요') : '');
+  if (!yd) el.querySelector('[data-yard]').remove();
+  el.onclick = e => { const b = e.target.closest('button'); if (!b) return; el.remove(); firstDone(); // 214: 돌아왔어요 waited for it
+    if (b.dataset.spots != null) $('decorBtn').click(); else if (b.dataset.yard != null) { $('back').click(); enter('yard'); } };
+  $('habitat').append(el); sfx('level');
+}
 // 28-1: 「새 구역: 과수원」 and what one can see there, in a line (ZONES)
 function zoneCard(id, L, free) {
   const z = ZONES[id]?.[L - 1], el = document.createElement('section'); el.id = 'zoneCard'; el.className = 'intro pop lvup'; el.setAttribute('aria-label', $t('새 구역'));
@@ -231,7 +262,8 @@ if (intro.hidden && !G.S.flags.betaIntro) { G.flag('betaIntro'); G.flag('news', 
 // 76: a player back gets it as one line of 돌아왔어요 (the whole card on a tap), not a card of its own
 const news = $('news'); news.querySelector('[data-ver]').textContent = VERSION;
 let newsDue = intro.hidden && G.S.flags.news !== VERSION;
-const firstDone = () => { if (retWait && intro.hidden && news.hidden) { retWait = false; showRet(); } }; // 자리 비운 사이 waits for these
+const calm214 = () => intro.hidden && news.hidden && !(S186 && G.S.flags.mv214 && cur) && !document.querySelector('#zoneCard:is(.m214,.n194)'); // 214: 돌아왔어요 also waits for the move's card (it came up over it) while a habitat is open to show it or it is up, then for 194's (enter calls firstDone when neither came)
+const firstDone = () => { if (retWait && calm214()) { retWait = false; showRet(); } }; // 자리 비운 사이 waits for these
 fb.hidden = FEEDBACK_URL === 'TODO';
 const fbUrl = () => { const n = cur ? outIn(G.S, cur).length : G.S.animals.length; // out in this habitat (not stored), or all
   return `${FEEDBACK_URL}?usp=pp_url&${FEEDBACK_FIELD}=${encodeURIComponent(`ver=${VERSION} habitat=${cur || 'map'} animals=${n}`)}`; };
@@ -252,7 +284,7 @@ const retHome = () => cur || G.S.flags.lastHab || HABITATS[0].id;
 function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
   retEggs = eggs;
   if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !mythNightDue() && !retSky() && !newsDue && !artDue(retHome()).length && !wildNews(G.S)) return; // nothing new: no card
-  if (intro.hidden && news.hidden) showRet(); else retWait = true;
+  if (calm214()) showRet(); else retWait = true;
 }
 function showRet() {
   const eggs = retEggs, now = G.now(), ready = G.S.slots.filter(s => s && now >= s.end).length, grown = G.S.animals.filter(a => a.card), att = retAttend() && todayRow();
@@ -321,7 +353,11 @@ if (F170 && !SEE) import('./ui/first170.js'); // 170 C·D: the first day's one l
 let tut = null; if (TUT181 && !SEE) import('./ui/tut181.js').then(m => { tut = m; m.initTut(() => cur, () => api); }); // 182 ②: the 181 tutorial on the 170 flow (F170 is on with it)
 if (!SEE) { initAttend(() => cur); initEvent(() => cur, () => api); initMyth(() => cur, () => api, nav); initVisit(nav); initArt({ api: () => api, cur: () => cur, back: () => { if (ret.hidden) away({}); } }); }
 if (backTo) nav.go(backTo);
-if (!SEE) { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1; away(eggs); }
+if (!SEE) { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs[e.habitat] = (eggs[e.habitat] || 0) + 1;
+  // 227 B: a page a worker served (a player back) may be an older build with a newer one on its way: offline.js first, and
+  // 돌아왔어요 only once this page stays on this build (else it reloads into the newer one, which shows it, once, in its own words)
+  let told = false; const st = () => { if (!told) { told = true; away(eggs); } }; // once (227 B review: a throw after stay is no second card)
+  if (OFFLINE && self.swAt) import('./ui/offline.js').then(m => m.initOffline(() => touched, st)).catch(st); else st(); }
 
 // 21-1 설정: choices kept in this browser apart from the save (config.js PREFS); the habitat reads them every frame
 const PREF_ROWS = [['lang', $t('언어'), Object.entries(LANGS)], // 119: each language in its own name; a change reloads
@@ -330,7 +366,7 @@ const PREF_ROWS = [['lang', $t('언어'), Object.entries(LANGS)], // 119: each l
 const VOLS = [['vAll', $t('전체')], ['vAmb', $t('배경 소리')], ['vFx', $t('효과음')], ['vAnimal', $t('동물 소리')]];
 // 26-3: after the sound. 움직임 줄이기 shows the device's choice until one is picked; 진동 only where the browser can (Android)
 const PC = matchMedia('(pointer:fine)').matches; // 74: 책상 모드 is for a desk
-const LOOK_ROWS = [['gfx', $t('그래픽 품질'), [['low', $t('낮음')], ['mid', $t('보통')], ['high', $t('높음')]]], ['saver', $t('배터리 절약'), [[false, $t('끄기')], [true, $t('켜기')]]],
+const LOOK_ROWS = [['gfx', $t('그래픽 품질'), [['low', $t('낮음')], ['mid', $t('보통')], ['high', $t('높음')]]], ['saver', $t('배터리 절약'), [[false, $t('끄기')], [true, $t('켜기')]]], ['smooth', $t('부드럽게(120)'), [[false, $t('끄기')], [true, $t('켜기')]]], // 212 C P2
   ...PC ? [['deskSound', $t('책상 모드 소리'), [[false, $t('끄기')], [true, $t('배경 소리만')]]], ...navigator.wakeLock ? [['deskWake', $t('책상 모드 화면 켜 두기'), [[true, $t('켜기')], [false, $t('끄기')]]]] : []] : [], // 16-3; 74: PC only
   ['font', $t('글자 크기'), [['s', $t('작게')], ['m', $t('보통')], ['l', $t('크게')]]], ['calm', $t('움직임 줄이기'), [[false, $t('끄기')], [true, $t('켜기')]]], ['signs', $t('구역 팻말 보이기'), [[true, $t('켜기')], [false, $t('끄기')]]],
   // 74: 성격·단짝 and 단짝 하트 끈 rows hidden (they stay on; flags.palOff and PREFS.palLine as saved)

@@ -78,12 +78,14 @@ export function initPhoto(getApi, getHab) {
   const $ = id => document.getElementById(id), el = $('snap'), ov = $('snapOv'), btn = $('snapBtn');
   const o = { hour: null, sky: null, fx: 'none', frame: true, logo: true, code: !TOSS, fold: false }; // 174: no link QR in the Toss build
   let on = false, busy = false, code = null, text = '', msg = '';
+  const yd = () => getHab() === 'yard'; // 184 ④ 나의 뜰 (?yard only: never in a build)
   const ratio = () => Math.min(3, (window.devicePixelRatio || 1) * (window.__stageScale || 1));
   const seg = (k, opts) => opts.map(([t, v]) => `<button data-k="${k}" data-v="${v}"${o[k] === v ? ' class="on"' : ''}>${t}</button>`).join('');
   function draw() {
     el.classList.toggle('fold', o.fold);
     el.innerHTML = $t('<div class="sbody"><div class="row"><b>시간</b><div class="seg">{0}</div></div><div class="row"><b>날씨</b><div class="seg">{1}</div></div>\n<div class="row"><b>필터</b><div class="seg">{2}</div></div>\n<div class="row"><b>넣기</b><div class="seg">{3}</div></div>\n<div class="row"><b class="w">따라가기</b><select data-follow aria-label="따라갈 동물"><option value="">안 함</option>{4}{5}</select></div></div>\n<p class="smsg" role="status">{6}</p>\n<div class="sbar"><button data-act="fold">{7}</button><button data-act="home">전체 보기</button><button class="go" data-act="save">저장</button><button data-act="card">구경 그림</button><button data-close>나가기</button></div>', seg('hour', HOURS), seg('sky', getHab() === 'snow' ? SKIES.map(k => k[1] === 'rain' ? [$t('눈'), 'rain'] : k) : SKIES), seg('fx', Object.entries(FILTERS).map(([k, [t]]) => [t, k])), ADDS.map(([k, t]) => `<button data-add="${k}"${o[k] ? ' class="on"' : ''} aria-pressed="${o[k]}">${t}</button>`).join(''), getApi()?.hasTrain?.() ? $t('<option value="train">🚂 장난감 기차</option>') : '', outIn(G.S, getHab()).map(a => `<option value="${a.id}">${a.fav ? '★ ' : ''}${esc(callName(a))}</option>`).join(''), msg || $t('끌어서 돌리고, 두 손가락을 벌려 가까이 봐요 · 시간과 날씨는 보기만 바뀌어요'), o.fold ? $t('펼치기') : $t('접기'));
-    if (TOSS) el.querySelectorAll('[data-act="card"], [data-add="code"]').forEach(b => b.remove()); // 174: 구경 그림 and the link QR are links out
+    if (TOSS || yd()) el.querySelectorAll('[data-act="card"], [data-add="code"]').forEach(b => b.remove()); // 174: 구경 그림 and the link QR are links out; 184 ④ the yard has no 구경 link
+    if (yd()) { const b = document.createElement('button'); b.dataset.act = 'top'; b.textContent = $t('위에서 한 장'); el.querySelector('[data-act="save"]').after(b); } // 184 ④: the board from straight above
     paint();
   }
   function paint() { // the preview: the filter on the 3D canvas, deco over it at the screen's pixels
@@ -105,10 +107,10 @@ export function initPhoto(getApi, getHab) {
   function enter() {
     const api = getApi(); if (!api || on) return;
     if (qrcode === null) return void import('../../vendor/qrcode.js').then(m => m.default, () => false).then(q => { qrcode = q; enter(); qrcode ||= null; }); // offline and never fetched: no tile (asked again next time)
-    on = true; msg = ''; text = seeLink(getHab());
-    try { const q = qrcode(0, 'L'); q.addData(text); q.make(); code = q; } catch { code = null; } // too long for a QR: no tile
+    on = true; msg = ''; text = yd() ? '' : seeLink(getHab()); code = null;
+    if (text) try { const q = qrcode(0, 'L'); q.addData(text); q.make(); code = q; } catch { code = null; } // too long for a QR: no tile
     document.body.classList.add('photo'); api.snap(true); el.hidden = ov.hidden = false; draw();
-    if (!code) { msg = $t('배치가 많아 구경 QR은 사진에 넣지 못해요'); draw(); }
+    if (!code && text) { msg = $t('배치가 많아 구경 QR은 사진에 넣지 못해요'); draw(); }
   }
   function leave() {
     if (!on) return; on = false; VIEW.hour = VIEW.weather = null;
@@ -116,20 +118,20 @@ export function initPhoto(getApi, getHab) {
     if (!/[?&]photo/.test(location.search)) document.body.classList.remove('photo');
     el.hidden = ov.hidden = true;
   }
-  async function save() {
+  async function save(top = false) { // top: 184 ④ 위에서 한 장 (the yard's board from straight above, its frame too, no mist)
     const api = getApi(); if (!api || busy) return; busy = true; msg = $t('저장하는 중…'); draw(); sfx('photo');
     try {
       await new Promise(r => requestAnimationFrame(() => r()));
-      const c = api.shot(Math.max(2, ratio())), x = c.getContext('2d', { willReadFrequently: true });
+      const c = top ? api.topView(1440, 1.2).now : api.shot(Math.max(2, ratio())), x = c.getContext('2d', { willReadFrequently: true });
       if (FILTERS[o.fx][1]) { const d = x.getImageData(0, 0, c.width, c.height); tint(d.data, FILTERS[o.fx][1]); x.putImageData(d, 0, 0); }
       deco(x, c.width, c.height, o, code);
       const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92)), t = new Date(), p = v => String(v).padStart(2, '0');
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `toybrook-${getHab()}-${t.getFullYear()}${p(t.getMonth() + 1)}${p(t.getDate())}-${p(t.getHours())}${p(t.getMinutes())}${p(t.getSeconds())}.jpg`;
+      a.download = `toybrook-${getHab()}${top ? '-top' : ''}-${t.getFullYear()}${p(t.getMonth() + 1)}${p(t.getDate())}-${p(t.getHours())}${p(t.getMinutes())}${p(t.getSeconds())}.jpg`;
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
       msg = $t('저장했어요 · {0}×{1} · 내려받은 파일이나 사진 앱에서 볼 수 있어요', c.width, c.height); G.note('photo', 1); // 41 D 첫날 할 일
-      const sk = api.sky?.(), got = sk && G.event() && G.evShot({ hab: getHab(), night: sk.hour >= 20 || sk.hour < 5, sky: sk.kind, ball: api.ball?.() }); // 15-1 이벤트 앨범 (15-2: a snowball fight on screen)
-      const sp = skyPhoto(c); if (sp) msg += $t(' · 하늘 기록에 사진을 넣었어요'); // 16-2
+      const sk = !top && api.sky?.(), got = sk && G.event() && G.evShot({ hab: getHab(), night: sk.hour >= 20 || sk.hour < 5, sky: sk.kind, ball: api.ball?.() }); // 15-1 이벤트 앨범 (15-2: a snowball fight on screen)
+      const sp = !top && skyPhoto(c); if (sp) msg += $t(' · 하늘 기록에 사진을 넣었어요'); // 16-2
       if (got) msg += $t(' · 이벤트 앨범 한 칸: 「{0}」{1}', G.event()?.e.album.slots.find(s => s.id === got.slot)?.name ?? '', got.cover ? $t(' · 앨범을 다 채워 소품을 받았어요') : '');
     } catch { msg = $t('저장하지 못했어요 · 다시 해 주세요'); }
     busy = false; draw();
@@ -149,6 +151,7 @@ export function initPhoto(getApi, getHab) {
     if (d.act === 'fold') return set('fold', !o.fold);
     if (d.act === 'home') return getApi()?.overview();
     if (d.act === 'save') return save();
+    if (d.act === 'top') return save(true);
     if (d.act === 'card') return card();
     if (d.add) return set(d.add, !o[d.add]);
     if (d.k === 'fx') return set('fx', d.v);

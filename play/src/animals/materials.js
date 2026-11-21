@@ -2922,7 +2922,7 @@ const RIME192H = `float tip_ = max(vT183, 0.0), oc_ = max(-vT183, 0.0), aa_ = le
 // slowly in swirls along the branch, brighter toward the tips (_thickness > 0), dimmer in the forks (< 0), a few small dark inclusions,
 // breathing gently; by night much brighter (NIGHT_LOOK). The body a deep cocoa satin, the legs darker, and the antler's light on the
 // head, neck and back near its base (uB: the base in pattern space, the calf's own; uR how far): a warm glow there, more by night. Not
-// the 겨울 등불 reindeer's (all of it an orange lantern, a gold antler): only the antler is lit. The nose its own colour (#5a4034)
+// the 겨울 등불 reindeer's (all of it an orange lantern, a gold antler): only the antler is lit. The nose its own colour (#4a4034 since 201 B; HOLD192, so it ships only if HOLD192 is lifted)
 const AMB192B = `vec3 q_ = vec3(p.x, p.y, abs(p.z)) - vec3(uBx, uBy, uBz), o_ = vec3(on.x, on.y, on.z * sign(p.z + 1e-5)); float d_ = length(q_);
   diffuseColor.rgb = mix(vec3(0.11, 0.064, 0.042), vec3(0.18, 0.108, 0.07), fbm3(p * 6.0)) * mix(0.62, 1.0, smoothstep(0.04, 0.3, p.y)); roughnessFactor = 0.42;
   float bo_ = exp(-d_ * d_ / (2.2 * uR * uR)) * (0.3 + 0.7 * clamp(dot(o_, -q_ / max(d_, 1e-4)), 0.0, 1.0));
@@ -2952,13 +2952,92 @@ Object.assign(LOOKS, {
       parts: (body, G, S) => { cub192(b, cub)(body, G, S); const legs = body.children.filter(o => o.userData.front !== undefined); if (legs.length) body.parent.add(snowMesh192(body.parent, legs, S));
         for (const o of body.children) if (o.material === eyeMat) o.material = eye; } }; },
   rime192: () => { const b = hab89(look(phys('#ffffff', { roughness: 0.6 }), 'rime192', RIME192B)), h = vt183(hab89(look(phys('#ffffff', { roughness: 0.6 }), 'rime192horn', RIME192H, {}, { studio: 0 })));
-    return { body: b, accent: b, hoof: toyMat('#2a2426'), beak: toyMat('#5a4034'), r183body: b, r183calfbody: b, r192horn: h, r192calfhorn: h, parts: parts183 }; },
+    return { body: b, accent: b, hoof: toyMat('#2a2426'), beak: toyMat('#4a4034'), r183body: b, r183calfbody: b, r192horn: h, r192calfhorn: h, parts: parts183 }; },
   amberlamp192: () => { const mk = (x, y, z, r) => look(phys('#ffffff', { roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.25 }), 'amberlamp192', AMB192B, { uBx: x, uBy: y, uBz: z, uR: r });
     const b = mk(0.299, 0.957, 0.063, 0.24), calf = mk(0.186, 0.944, 0.09, 0.26), h = vt183(look(phys('#ffffff', { roughness: 0.16, specularIntensity: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.05 }), 'amberlamp192horn', AMB192H, {}, { studio: 0.2 }));
-    return { body: b, accent: b, calf, hoof: toyMat('#3a2a22'), beak: toyMat('#5a4034'), r183body: b, r183calfbody: calf, r183horn: h, r183calfhorn: h,
+    return { body: b, accent: b, calf, hoof: toyMat('#3a2a22'), beak: toyMat('#4a4034'), r183body: b, r183calfbody: calf, r183horn: h, r183calfhorn: h,
       parts: (body, G, S) => { parts183(body, G, S); cub192(b, calf)(body, G, S); } }; }, // uB: 183 B's antler base (0.88, 1.98, 0.13), the calf's (0.5, 1.68, 0.16), less cx over H
 });
 // the sets are made once and kept (as every look's); dispose192 frees them and the snow crystals' shared geometry and material (no caller
 // yet, as dispose163: nothing tears the looks down; the 183 leg copies are dispose163's L183)
 export const dispose192 = () => { for (const [k, s] of cache) if (/^(iceberg|polarnight|rime|amberlamp)192\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
   snow192?.g.dispose(); snow192?.m.dispose(); snow192 = null; };
+// ---- 198 C 순록 둘 다 다시 (?m89 시범; data.js LEGEND198; 192 A's two kept, HOLD192): 183 B's body, legs and antler as they are, only
+// their look. 백야 순록: the white night's sky in the antler: milky, half see-through (HORN155C's way: a pale diffuse, lit from inside
+// most where we look straight in, the drifts seen again deeper), bright apricot at the root, pink, then lavender toward the tips
+// (uHy, uHl: the antler's height in pattern space, the calf's own), a soft light on the tips (_thickness > 0) seen by day. The body a
+// warm light cream, snow-lit satin: the back warmed by the low sun, the underside's shade lavender (snow under that sky), the outline
+// lit pink low to lavender high (the sky at the edge, strong: what carries it at game distance) with a pink satin sheen, a faint light
+// of its own (never grey in the shade); the legs running down a long soft ramp into a pale sunset (peach, then rose at the feet; uLeg:
+// the legs' top in pattern space, adult 0.4 / calf 0.21), pale rose-gold metal hooves. The nose a
+// darker brown (#4a4034) than the species' #5a4034: beside the cream that one rendered reddish (198c.md)
+// 201 B 다듬기 (판정 B 1~4): the antler's outer third lit by day too (tip colour + emissive, halo201 a faint haze round it, no bloom),
+// the cream warmer (no white plastic), a faint apricot down the spine, the sunset at the feet a step deeper; hooves and nose as they were
+const WN198B = `float lg_ = smoothstep(0.0, 1.0, 1.0 - p.y / uLeg), n_ = fbm3(p * 5.0); // (sRGB about: cream #f1d0aa (198: #f5dfbf), peach #ffa273, rose #ed7995)
+  vec3 cr_ = mix(vec3(0.84, 0.58, 0.34), vec3(0.92, 0.68, 0.46), n_), ss_ = mix(vec3(1.0, 0.36, 0.17), vec3(0.85, 0.19, 0.3), smoothstep(0.5, 1.0, lg_)); // 201 B: warmer (was 0.88 0.69 0.46 / 0.94 0.78 0.58), the sunset a step deeper (was 1.0 0.46 0.26 / 0.9 0.3 0.42)
+  cr_ = mix(cr_, vec3(0.58, 0.48, 0.95), 0.38 * (1.0 - smoothstep(-0.6, 0.5, on.y))); // snow-light: the flanks' and underside's shade lavender, as snow's under that sky
+  cr_ = mix(cr_, vec3(1.0, 0.66, 0.5), 0.3 * smoothstep(0.55, 1.0, on.y)); // and the back warmed by the low sun
+  cr_ = mix(cr_, vec3(1.0, 0.45, 0.2), 0.55 * smoothstep(0.45, 0.9, on.y) * (1.0 - smoothstep(0.03, 0.14, abs(p.z))) * (1.0 - smoothstep(uSx - 0.1, uSx, p.x))); // 201 B: a faint apricot down the spine (not on the head: uSx)
+  diffuseColor.rgb = mix(cr_, ss_, smoothstep(0.05, 0.85, lg_)); roughnessFactor = 0.42; // a long soft ramp down the legs
+  vec3 sk_ = mix(vec3(1.0, 0.5, 0.6), vec3(0.6, 0.45, 1.0), smoothstep(0.45, 1.1, p.y)); // the white night's sky in the satin's edge: pink low, lavender high
+  totalEmissiveRadiance += diffuseColor.rgb * 0.05 + sk_ * 1.0 * pow(1.0 - nv, 1.6);`;
+const WN198H = `float tip_ = max(vT183, 0.0), oc_ = max(-vT183, 0.0), aa_ = length(fwidth(p)), h_ = clamp((p.y - uHy) / uHl + 0.25 * tip_, 0.0, 1.0);
+  float bw_ = max(1.75 * fwidth(h_), 0.026); // 202 C: three bands, a step more saturated; 205 A: edges 3.5 px soft (202: 2 px, fwidth and 0.015) (201: apricot 1 0.45 0.1, pink 1 0.24 0.46, lavender 0.42 0.28 1 in long ramps)
+  vec3 g_ = mix(mix(vec3(1.0, 0.5, 0.02), vec3(1.0, 0.1, 0.38), smoothstep(0.33 - bw_, 0.33 + bw_, h_)), vec3(0.34, 0.14, 1.0), smoothstep(0.62 - bw_, 0.62 + bw_, h_)); // gold (the low sun), pink, lavender
+  float m_ = mix(fbm3(p * 16.0 - 2.0 + vec3(0.0, uTime * 0.02, 0.0)), 0.47, smoothstep(0.004, 0.012, aa_)); // far off: to the mean (no shimmer)
+  vec3 col_ = mix(g_, vec3(1.0, 0.9, 0.95), smoothstep(0.62, 0.85, m_) * 0.12);
+  diffuseColor.rgb = col_ * 0.55; roughnessFactor = 0.12;
+  totalEmissiveRadiance += col_ * (0.45 + 0.35 * pow(nv, 1.5)) * (1.0 - 0.35 * smoothstep(0.1, 0.6, oc_)) * (0.7 + 0.3 * uNight); // 202 C: by day 0.7 so the bands keep their colour, by night as 201
+  vec3 vo_ = normalize(vdir * normalMatrix); float n2_ = mix(fbm3((p + vo_ * 0.05) * 14.0 + 7.0), 0.47, smoothstep(0.004, 0.012, aa_));
+  totalEmissiveRadiance += g_ * smoothstep(0.45, 0.75, n2_) * 0.25 * nv + g_ * pow(1.0 - nv, 2.5) * 0.3;
+  float tg_ = smoothstep(0.4, 0.8, tip_); vec3 tc_ = mix(vec3(1.0, 0.36, 0.72), vec3(0.62, 0.42, 1.0), smoothstep(0.6, 1.0, h_)); // 201 B: the outer third only, rose to lavender, its core near white: a light by day too
+  diffuseColor.rgb = mix(diffuseColor.rgb, tc_, tg_); totalEmissiveRadiance += mix(tc_, vec3(1.0), 0.3 * tg_ * uNight) * tg_ * 2.0 * (0.4 + 0.6 * uNight) * (1.0 + 0.1 * sin(uTime * 1.1 + p.y * 9.0));`; // 205 A: by day the tip light 0.4 and no white in it (the lavender shows), by night as 202
+// 차로아이트 순록 (2안): charoite, the violet stone of Sakha (the reindeer herders' land), polished: deep violet to a brighter violet in
+// big slow swirls (a warped fbm), fine pale lilac fibres along them (lines ~2 px wide on screen wherever the swirl is flat or steep:
+// a band of sin() would spread into pale blots where the fbm flattens), and the stone's silk sheen (chatoyancy): a soft light on the
+// fibres that slides as it turns (their phase moves with nv); far off the fibres fade to their mean (no shimmer). The antler the same
+// stone with light in it, violet to lilac toward the tips. Black polished hooves (the stone's black needles). Not a night sky: no
+// points, no blue; not ice
+const CH198 = `vec3 q_ = p * uSc + 1.2 * vec3(fbm3(p * 2.0), fbm3(p * 2.0 + 5.2), fbm3(p * 2.0 + 9.1));
+  float sw_ = fbm3(q_), u_ = sw_ * 40.0 + p.y * 25.0, fa_ = smoothstep(0.35, 1.0, fwidth(u_)), fb_ = mix(1.0 - smoothstep(0.0, max(2.0 * fwidth(u_), 1e-4), abs(sin(u_))), 0.06, fa_), ch_ = mix(smoothstep(0.55, 1.0, sin(u_ * 0.5 + 7.0 * nv)), 0.2, fa_);`;
+const CH198B = `${CH198}
+  vec3 col_ = mix(vec3(0.075, 0.012, 0.21), vec3(0.27, 0.075, 0.6), smoothstep(0.3, 0.72, sw_)); // (linear: sRGB #4d1a7e to #8f4dc9)
+  col_ = mix(col_, vec3(0.62, 0.45, 0.9), fb_ * 0.35);
+  diffuseColor.rgb = col_; roughnessFactor = 0.2;
+  totalEmissiveRadiance += vec3(0.5, 0.3, 1.0) * ch_ * 0.16 * (0.4 + 0.6 * nv) + col_ * 0.05;`;
+const CH198H = `${CH198}
+  float tip_ = max(vT183, 0.0), oc_ = max(-vT183, 0.0), h_ = clamp((p.y - uHy) / uHl + 0.3 * tip_, 0.0, 1.0);
+  vec3 col_ = mix(vec3(0.2, 0.05, 0.48), vec3(0.62, 0.42, 1.0), h_);
+  diffuseColor.rgb = col_ * (0.45 + 0.25 * fb_); roughnessFactor = 0.12;
+  totalEmissiveRadiance += col_ * (0.12 + 0.34 * pow(nv, 1.5)) * (0.8 + 0.4 * sw_) * (1.0 - 0.4 * smoothstep(0.1, 0.6, oc_)) + vec3(0.5, 0.3, 1.0) * ch_ * 0.14
+    + vec3(0.75, 0.6, 1.0) * pow(smoothstep(0.3, 0.9, tip_), 2.0) * 0.4;`;
+Object.assign(NIGHT_LOOK, {
+  whitenight198: 'totalEmissiveRadiance += uNight * diffuseColor.rgb * 0.16;', // the white night: by night it stays softly light
+  whitenight198horn: 1.5, charoite198: 1.0, charoite198horn: 1.6,
+});
+// 201 B: a very faint light round the antler's outer third (_thickness: the tips 1, 0.5 about a third down the tine), by day too: as
+// figure.js haloMat (the mesh blown up along its normals, back faces) but laid over as a pale rose tint (premultiplied: on white snow
+// a light only added would not show), by night added on. No bloom. One for the page, made when first worn; dispose198 frees it
+let halo201 = null;
+const haloOf201 = () => halo201 ??= new THREE.ShaderMaterial({ uniforms: { uNight: nightGlow }, side: THREE.BackSide, transparent: true, depthWrite: false,
+  blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.ZeroFactor, blendDstAlpha: THREE.OneFactor,
+  vertexShader: `attribute float _thickness; varying vec2 vF; void main() { float t = smoothstep(0.4, 0.8, _thickness); vec4 mv = modelViewMatrix * vec4(position + normal * 0.07 * t, 1.0);
+    vF = vec2(abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz))), t); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform float uNight; varying vec2 vF; void main() { if (vF.y < 0.01) discard; float a = pow(vF.x, 2.5) * vF.y;
+    gl_FragColor = vec4(vec3(1.0, 0.5, 0.85) * a * (0.45 + 0.9 * uNight), a * 0.5 * (1.0 - 0.6 * uNight)); }` });
+const halo201On = (...hs) => body => { const o = body.children.find(c => hs.includes(c.material)); if (!o) return; const x = new THREE.Mesh(o.geometry, haloOf201()); x.renderOrder = 5; o.add(x); };
+const hornAt198 = (key, B, o, u, a, c) => [a, c].map(([y, l]) => vt183(look(phys('#ffffff', o), key, B, { ...u, uHy: y, uHl: l }, { studio: 0.2 }))); // the adult's and the calf's (uHy, uHl)
+Object.assign(LOOKS, {
+  whitenight198: () => { const mk = (l, x) => { const m = phys('#ffffff', { roughness: 0.42, sheen: 1, sheenRoughness: 0.3, sheenColor: new THREE.Color('#f6c6ec') }); m.userData.pale = true; return look(m, 'whitenight198', WN198B, { uLeg: l, uSx: x }); };
+    const b = mk(0.4, 0.2), calf = mk(0.21, 0.12), [h, ch] = hornAt198('whitenight198horn', WN198H, { roughness: 0.12, clearcoat: 0.6, clearcoatRoughness: 0.06 }, {}, [0.92, 0.62], [0.9, 0.34]);
+    return { body: b, accent: b, calf, hoof: shine('#ffd6bc', 0.3), beak: toyMat('#4a4034'), r183body: b, r183calfbody: calf, r202horn: h, r202calfhorn: ch, // 202 C: its own antler (reindeer202_*), 183 B's left off
+      parts: (body, G, S) => { parts183(body, G, S); cub192(b, calf)(body, G, S); halo201On(h, ch)(body); } }; },
+  charoite198: () => { const b = look(phys('#ffffff', { roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.06 }), 'charoite198', CH198B, { uSc: 2.8 }, { studio: 0.15 });
+    const [h, ch] = hornAt198('charoite198horn', CH198H, { roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.04 }, { uSc: 4.0 }, [0.92, 0.62], [0.9, 0.34]);
+    return { body: b, accent: b, hoof: phys('#16121c', { roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.04 }), beak: toyMat('#4a4034'), r183body: b, r183calfbody: b, r183horn: h, r183calfhorn: ch, parts: parts183 }; },
+});
+// 201 B: 겨울 등불 under ?m89 with the reindeer's nose #4a4034 (data.js MODELS.reindeer.m89; the public 'lantern' as it is)
+LOOKS.lantern201 = c => ({ ...LOOKS.lantern(c), beak: phys('#4a4034', { roughness: 0.2, clearcoat: 0.6 }) }); // (its own beak never drawn: nothing to free)
+// as dispose192: no caller yet (nothing tears the looks down); the 183 leg copies are dispose163's L183
+export const dispose198 = () => { for (const [k, s] of cache) if (/^((whitenight|charoite)198|lantern201)\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
+  halo201?.dispose(); halo201 = null; };

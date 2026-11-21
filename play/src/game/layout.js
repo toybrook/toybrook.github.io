@@ -6,6 +6,7 @@
 //   28-5 (ver 2): more 1 when it has any of: a turn off the 45 deg steps, c its colour (PALETTES index), sz its size (SIZES index),
 //   sl k + 1 on the k-th top spot of the prop under it (found again by where it stands); else as ver 1. ver 1 (no more bit) still reads
 //   28-6 (ver 3): brush 4 bits, when a brush past 7 is painted (울타리, 돌담, ...); else as ver 2, so older games still read it
+//   195 B-8 (ver 4): brush 6 bits, when a brush past 15 is painted (?yard 테마 붓); else as before
 import { $t } from '../i18n/i18n.js';
 import { HABITATS, BRUSHES } from './data.js';
 
@@ -36,7 +37,7 @@ const q = v => Math.max(0, Math.min(511, Math.round(v * 4) + 256));
 // S: the save; habId; step: its 땅 넓히기 step
 export function encode(S, habId, step = S.expand?.[habId] || 0) {
   const bits = [], put = (v, n) => { for (let k = n - 1; k >= 0; k--) bits.push((v >> k) & 1); };
-  const ver = Object.values(S.paint?.[habId] || {}).some(b => b > 7) ? 3 : 2;
+  const bs = Object.values(S.paint?.[habId] || {}), ver = bs.some(b => b > 15) ? 4 : bs.some(b => b > 7) ? 3 : 2, bw = [3, 3, 3, 4, 6][ver];
   put(ver, 4); put(Math.max(0, HABITATS.findIndex(h => h.id === habId)), 4); put(Math.min(7, step), 3);
   const by = new Map();
   for (const p of S.props) if (p.placed && p.hab === habId && KINDS.includes(p.prop)) (by.get(p.prop) ?? by.set(p.prop, []).get(p.prop)).push(p);
@@ -57,7 +58,7 @@ export function encode(S, habId, step = S.expand?.[habId] || 0) {
     for (const [i, b] of cs) { const r = runs.at(-1); if (r && r[0] === j && r[3] === b && r[1] + r[2] === i && r[2] < 64) r[2]++; else runs.push([j, i, 1, b]); }
   }
   put(Math.min(4095, runs.length), 12);
-  for (const [j, i, n, b] of runs.slice(0, 4095)) { put(j + 64, 7); put(i + 64, 7); put(n - 1, 6); put(b, ver === 3 ? 4 : 3); }
+  for (const [j, i, n, b] of runs.slice(0, 4095)) { put(j + 64, 7); put(i + 64, 7); put(n - 1, 6); put(b, bw); }
   const bytes = new Uint8Array(Math.ceil(bits.length / 8));
   bits.forEach((v, k) => { bytes[k >> 3] |= v << (7 - (k & 7)); });
   return TAG + b64(bytes);
@@ -74,7 +75,7 @@ export function decode(text) {
   let at = 0; const len = bytes.length * 8;
   const get = n => { if (at + n > len) throw 0; let v = 0; for (let k = 0; k < n; k++, at++) v = (v << 1) | ((bytes[at >> 3] >> (7 - (at & 7))) & 1); return v; };
   try {
-    const ver = get(4); if (ver < 1 || ver > 3) return { error: $t('더 새 판의 코드예요 · 게임을 새로 고친 뒤 다시 해 주세요') };
+    const ver = get(4); if (ver < 1 || ver > 4) return { error: $t('더 새 판의 코드예요 · 게임을 새로 고친 뒤 다시 해 주세요') };
     const hab = HABITATS[get(4)]?.id, step = get(3), items = [], paint = {}, unknown = new Set();
     if (!hab) return { error: $t('모르는 서식지의 코드예요') };
     for (let n = get(7); n > 0; n--) {
@@ -84,7 +85,7 @@ export function decode(text) {
         if (prop) items.push({ prop, x, z, rot, c, sz, sl }); else unknown.add(k);
       }
     }
-    for (let n = get(12); n > 0; n--) { const j = get(7) - 64, i = get(7) - 64, m = get(6) + 1, b = get(ver === 3 ? 4 : 3); if (BRUSHES[b]) for (let d = 0; d < m; d++) paint[`${i + d},${j}`] = b; }
+    for (let n = get(12); n > 0; n--) { const j = get(7) - 64, i = get(7) - 64, m = get(6) + 1, b = get([3, 3, 3, 4, 6][ver]); if (BRUSHES[b]) for (let d = 0; d < m; d++) paint[`${i + d},${j}`] = b; }
     if (len - at >= 8) return { error: $t('코드가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요') }; // more than the padding left over
     return { hab, step, items, paint, unknown: unknown.size };
   } catch { return { error: $t('코드가 깨졌어요 · 처음부터 끝까지 다시 복사해 주세요') }; }

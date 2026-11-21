@@ -19,6 +19,7 @@ import { openOdds } from './odds.js';
 const $ = id => document.getElementById(id);
 const nameOf = kindName;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const RC201 = !!document.documentElement.dataset.ui187; // 202 B (?rc200 다듬기): the nest's 20 places and the gauges' bars
 const gaugesOf = type => Object.keys(pityOf(type)).sort((a, b) => RANK[a] - RANK[b]); // 75: each egg kind its own
 // the habitat an egg type comes from (the hatch slots are shared, so a pond egg can hatch in the meadow)
 const eggHome = type => HABITATS.find(h => h.nest === type);
@@ -72,8 +73,9 @@ export function initNest(nav) {
     const mine = n.eggs.filter(e => e.type === tab).sort((a, b) => !!b.now - !!a.now), d2 = G.S.flags.week1 && G.S.attend.n === 1 && habId === HABITATS[0].id; // 93-1: tomorrow's legendary egg, locked
     if (sel && !n.eggs.some(canLetGo)) sel = null;
     tidyBtn.hidden = !n.eggs.some(canLetGo); tidyBtn.classList.toggle('on', !!sel); eggsEl.classList.toggle('tidy', !!sel);
-    once('eggs', mine.map(e => e.id).join() + tab + d2 + !!sel, () => {
-      eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => $t('<button class="negg{0}" data-id="{1}" aria-label="{2} 알{3}"><img alt=""></button>', canLetGo(e) ? '' : ' keep', e.id, RAR[e.rarity].name, canLetGo(e) ? '' : $t(' · 선물'))).join('')}${d2 ? $t('<span class="negg lock" aria-label="전설 알 · 내일 열려요"><img alt=""><small>내일 열려요</small></span>') : ''}</div><p class="nnote"></p>${
+    const ph = RC201 ? Math.max(0, B.nest.max - n.eggs.length - (d2 ? 1 : 0)) : 0; // 202 B-6 (?rc200): the nest's free room as dashed empty places
+    once('eggs', mine.map(e => e.id).join() + tab + d2 + !!sel + ph, () => {
+      eggsEl.innerHTML = `<div class="ngrid">${mine.map(e => $t('<button class="negg{0}" data-id="{1}" aria-label="{2} 알{3}"><img alt=""></button>', canLetGo(e) ? '' : ' keep', e.id, RAR[e.rarity].name, canLetGo(e) ? '' : $t(' · 선물'))).join('')}${d2 ? $t('<span class="negg lock" aria-label="전설 알 · 내일 열려요"><img alt=""><small>내일 열려요</small></span>') : ''}${'<span class="negg ph" aria-hidden="true"></span>'.repeat(ph)}</div><p class="nnote"></p>${
         sel ? $t('<div class="nbtns ntidy"><button class="sb" data-untidy>취소</button><button class="go" data-letgo>판매</button></div>') : ''}`;
       eggsEl.querySelectorAll('img').forEach((img, i) => eggThumb(mine[i]?.rarity ?? 'legendary').then(u => { img.src = u; }, () => {}));
     });
@@ -113,6 +115,8 @@ export function initNest(nav) {
         const have = P[k], target = pityOf(tab)[k], full = have >= target, nm = RAR[k].name;
         return $t('<div class="gauge{0}" data-k="{1}">{2}<div><b>{3} 조각</b><span>{4}/{5}</span>\n<small>{6}</small></div></div>', full ? ' full' : '', k, gaugeSvg(k, have, target), nm, have, target, full ? $t('다음 알 {0} 확정!', nm) : $t('{0}까지 <span style="white-space:nowrap">{1}알</span>', nm, target - have));
       }).join('');
+      if (RC201) gEl.querySelectorAll('.gauge').forEach(g => { const k = g.dataset.k, bar = document.createElement('i'), s = document.createElement('s'); // 202 B-7: a thin bar under the count
+        bar.className = 'gbar'; s.style.width = Math.min(100, P[k] / pityOf(tab)[k] * 100) + '%'; bar.append(s); g.lastElementChild.append(bar); });
     });
   }
 
@@ -129,7 +133,7 @@ export function initNest(nav) {
     }
     eggsEl.hidden = true; stageEl.hidden = false;
     const w = stageEl.clientWidth, h = stageEl.clientHeight;
-    st.R.setPixelRatio(Math.min(devicePixelRatio, 3)); st.R.setSize(w, h); st.cam.aspect = w / h; st.cam.updateProjectionMatrix();
+    st.R.setPixelRatio(Math.min(devicePixelRatio, 2)); st.R.setSize(w, h); st.cam.aspect = w / h; st.cam.updateProjectionMatrix(); // 212 C: 2 as the other stages (was 3)
     if (!live) { live = true; last = performance.now(); requestAnimationFrame(frame); }
   }
   function stageOff() {

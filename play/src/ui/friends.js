@@ -5,7 +5,7 @@
 // 보관함으로 / 다른 서식지로.
 import { $t, ko, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
-import { BALANCE as B, RARITIES, ACCESSORIES } from '../game/data.js';
+import { BALANCE as B, RARITIES, ACCESSORIES, S186 } from '../game/data.js';
 import { track } from './stats.js';
 import { SP, HAB, RAR, variantOf, outIn, capOf, gauge, growing, habitatOf, callName, kindName, tierOf } from '../game/rules.js'; // 66-2 tierOf: a settled guest is 떠돌이
 import { figureThumb } from './thumbs.js';
@@ -17,7 +17,7 @@ import { PE, mateOf } from '../game/pals.js';
 
 const el = document.getElementById('friends');
 const rarOf = a => variantOf(a.species, a.variant).rarity;
-const stageText = a => a.stage !== 'baby' ? $t('성체') : $t('새끼 · {0} {1}%', a.hold ? $t('성장 멈춤') : growing(a) ? $t('자라는 중') : '', Math.floor(gauge(a, G.now()) * 100));
+const stageText = a => a.stage !== 'baby' ? $t('성체') : $t('새끼 · {0} {1}%', a.hold ? (S186 ? $t('크기 고정') : $t('성장 멈춤')) : growing(a) ? $t('자라는 중') : '', Math.floor(gauge(a, G.now()) * 100));
 const subText = a => (a.nm ? kindName(a) + ' · ' : '') + stageText(a);
 const star = a => a.fav ? $t('<i class="fav" aria-label="잠금">★</i>') : '';
 let habId = null, hab = null, sort = 'new', stage = 'all', rar = '', fsp = '', shown = '';

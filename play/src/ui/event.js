@@ -6,7 +6,7 @@
 import { $t, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { PROP, HAB, SP, habitatOf } from '../game/rules.js';
-import { BALANCE, EVENTS, EV_ACC } from '../game/data.js';
+import { BALANCE, EVENTS, EV_ACC, asHearts } from '../game/data.js';
 import { WEATHER, calm } from '../config.js';
 import { topWindow, overlayOpen, resting, toast } from './hud.js';
 import { sfx } from './sound.js';
@@ -17,7 +17,7 @@ try { const c = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(c)) G.s
 const load = () => navigator.onLine && fetch('events.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(d => {
   if (!Array.isArray(d?.events)) return; try { localStorage.setItem(KEY, JSON.stringify(d.events)); } catch { /* full */ } G.setCal(d.events); }).catch(() => {});
 
-const rew = s => [s.hearts && `♥${s.hearts}`, s.candy && $t('성장 사탕 {0}개', s.candy), PROP[s.prop] && $t('소품 「{0}」', PROP[s.prop].name)].filter(Boolean).join(' · ');
+const rew = s0 => { const s = asHearts(s0); return [s.hearts && `♥${s.hearts}`, PROP[s.prop] && $t('소품 「{0}」', PROP[s.prop].name)].filter(Boolean).join(' · '); }; // 203 D4·227 A: candy as hearts
 const soon = R => R.end - G.now() < BALANCE.event.soon * DAY;
 const left = R => { const ms = R.end - G.now(); return ms >= DAY ? $t('{0}일 남음', Math.floor(ms / DAY)) : $t('{0}시간 남음', Math.max(1, Math.ceil(ms / 3600e3))); };
 const md = t => { const d = new Date(t + 9 * 3600e3); return $t('{0}월 {1}일', d.getUTCMonth() + 1, d.getUTCDate()); };

@@ -7,12 +7,12 @@
 // spray, the sandbar's shells and driftwood, the lotus pond, the isle's long bridge, the swamp's fog and stumps, the snow's
 // blue pillars and sparkling ice), and a small wooden sign with the zone's name at its entrance (설정 「구역 팻말 보이기」).
 import * as THREE from 'three';
-import { strip, inRect, polyD, poolAt, ORCHARD_ROWS, S129, Z143, z143on, SOAK, REVEAL, fore143, otherWater } from './zones.js';
+import { strip, inRect, polyD, poolAt, ORCHARD_ROWS, S129, Z143, D07, z143on, SOAK, REVEAL, fore143, otherWater } from './zones.js';
 import { sfx } from '../ui/sound.js';
 import { ZONES, UNIT, NAT_K } from '../game/data.js';
 
 const S = UNIT; // inbox 42 A: the old board's metres -> the world's
-import { PREFS } from '../config.js';
+import { PREFS, DEBUG } from '../config.js';
 import { kit, emptyL, flowerPal, flowerCluster, addPads, addReeds, decorModel, part, halo, partGeos } from './meadow/props.js';
 import { toyMat, instanced, lathe, roundedBox, skyLit, nightGlow } from './toyKit.js';
 import { fireflies } from './daylight.js';
@@ -55,6 +55,7 @@ const HEAP = [[0.95, 0.15, 0.42], [-0.85, -0.1, 0.32], [0.55, -0.6, 0.2], [1.5, 
 let soft = null; // a soft round spot (fog, steam, mist; 14-3: the volcano's smoke, dino/props.js)
 export const softTex = () => { if (soft) return soft; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
   gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return soft = new THREE.CanvasTexture(c); };
+export const D07STAT = {}; // 194 0-7: each open zone's density as built (DEBUG / ?d07; hab + k)
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _e = new THREE.Euler();
 
 // hab: 'meadow' | 'pond' | 'snow' | 'dino'; o: { L, N (natives), heightAt, occupied, free (the open ground now), O (the open rect),
@@ -65,8 +66,107 @@ export function zoneProps(scene, hab, o) {
   const nearSpot = (x, z, m) => Z.spots.some(s => Math.hypot(x - s.x, z - s.z) < s.r + m);
   const popK = S129 || Z143 ? REVEAL.k : 0, pop = { t0: null, quiet: false, rocks: [], slabs: [], caps: [] }, sm = u => (u = Math.min(1, Math.max(0, u))) * u * (3 - 2 * u); // 129: the zone just opened (its fixtures pop up)
   const popIn = t => pop.t0 == null ? 0 : sm((t - pop.t0 - 0.9) / 1.6); // its steam comes up with them
+  // 194 0-7 (?d07): a zone filled to 4-5's density. Its land (off the water, a side strip's back shelf left out) on a 0.5 m grid:
+  // the midground (natives: trees, bushes, rocks; the snow's board rocks) to 22% of it, in clumps of a tree or two, bushes and a
+  // rock (2-3, at most 5); a ground cover (walked over: grass tufts, a bed of one colour of flowers, pebbles; the snow's low drifts
+  // and grey pebbles, part of the board, not saved) to 12% in 3-4 patches. None on a path or a mown lane, near a spot, on the
+  // water's edge, nor where the landmarks are seen (fore4). Its own random: without the flag the board comes out as before (DEBUG
+  // only measures it: D07STAT). The midground goes in the natives list with d: 1 (rules.js addNatives: an opened save gets the
+  // ones it lacks once, round what stands there)
+  // 209 A (inbox 209 Q2-Q4): the sandbar's sand and the iceplate's ice take that ground's own midground (low dunes; ice lumps; small
+  // rocks off the ice), board only (caps, in occupied); the swamp and the reeds go to 22% with bushes and grass clumps (big tufts,
+  // L.grass) in up to 11 clumps, their ground cover grass and pebbles (no flower bed); the four in up to 7 smaller patches
+  const GAP = { tree: 1.5, bush: 0.9, rock: 0.9, snowpine: 1.2, treefern: 1.3, lump: 1.0, tuft: 0.7 }; // the room a native keeps from the rest (as the first board's)
+  const NR = { tree: 1.7 * NAT_K.tree, bush: 0.9 * NAT_K.bush, rock: 1.05 * NAT_K.rock, snowpine: 1.3 * NAT_K.pine, treefern: 1.3 * NAT_K.tree, wildflowers: 0.9, tuft: 0.75 };
+  const PLAN = snow ? ['snowpine', 'rock', 'snowpine', 'rock', 'snowpine', 'rock'] : dino ? ['treefern', 'bush', 'rock', 'bush', 'treefern', 'bush'] : ['tree', 'bush', 'bush', 'rock', 'tree', 'bush'];
+  function dense07(k, s, rk0, { fore4 }) {
+    const r = s.r, z0 = s.side === '+z' ? r[2] : Math.max(r[2], back), G = 0.5, nx = Math.ceil((r[1] - r[0]) / G), nz = Math.ceil((r[3] - z0) / G);
+    const land = new Uint8Array(nx * nz), mid = new Uint8Array(nx * nz), gcv = new Uint8Array(nx * nz); let nl = 0;
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) if (Z.wd(r[0] + (i + 0.5) * G, z0 + (j + 0.5) * G) > 0) { land[i * nz + j] = 1; nl++; }
+    const disk = (g, x, z, rr) => { let n = 0; for (let i = Math.max(0, Math.floor((x - rr - r[0]) / G)); i < Math.min(nx, Math.ceil((x + rr - r[0]) / G)); i++) for (let j = Math.max(0, Math.floor((z - rr - z0) / G)); j < Math.min(nz, Math.ceil((z + rr - z0) / G)); j++) {
+      const c = i * nz + j; if (land[c] && !g[c] && Math.hypot(r[0] + (i + 0.5) * G - x, z0 + (j + 0.5) * G - z) < rr) { g[c] = 1; n++; } } return n; };
+    let nm = 0, ng = 0; const own = n => n.ring === k && inRect(r, n.x, n.z);
+    for (const n of N.list) if (own(n)) { if (n.prop === 'wildflowers') ng += disk(gcv, n.x, n.z, NR.wildflowers); else nm += disk(mid, n.x, n.z, (NR[n.prop] || 1) * n.s); }
+    for (const q of L.rock.slice(rk0)) if (inRect(r, q.x, q.z)) nm += disk(mid, q.x, q.z, q.s[0] * 0.92);
+    for (const o of occupied) if (o.fade && !o.nat && inRect(r, o.x, o.z)) nm += disk(mid, o.x, o.z, o.r); // the board's own trees (the orchard's rows)
+    const st = D07STAT[hab + k] = { id: s.id, land: nl, mid0: nm / nl, gc0: ng / nl, cl: 0, pa: 0, add: 0 };
+    if (D07) {
+      let s7 = 19407 * k + (snow ? 57 : hab === 'pond' ? 31 : dino ? 71 : 3); const r7 = () => { s7 = (s7 * 16807) % 2147483647; return (s7 - 1) / 2147483646; };
+      const K7 = kit(L, { rand: r7, heightAt, occupied }), n7 = kit(N.Ls, { rand: r7, heightAt, occupied }), j7 = K7.jitter;
+      const lanes = Z.F.filter(f => f.t === 'tint' && f.pts), clear = (x, z, m) => Z.wd(x, z) > m + 0.8 && !Z.paths.some(f => polyD(x, z, f.pts) < f.w + m) && !lanes.some(f => polyD(x, z, f.pts) < f.rw + m);
+      const fit = (m, x, z) => inRect(r, x, z, m * 0.5) && z > back + 2.4 && free(x, z, m) && !nearSpot(x, z, m + 0.3) && !fore4(x, z) && clear(x, z, m);
+      // the ground under it (review): a tree only on grass (or the snow itself), a bush also on earth (the reeds' and the swamp's mud),
+      // a rock anywhere but ice and steep rock; so none on the sandbar's sand, the iceplate's ice, the sled runs, the pillars' ice
+      const T7 = Z.F.filter(f => f.t === 'tint' && !f.pts && f.k === k && /^#[0-9a-f]{6}$/i.test(f.c)).map(f => { const [R, G, B] = [1, 3, 5].map(i => parseInt(f.c.slice(i, i + 2), 16));
+        return { f, grass: G >= R + 8 && G >= B, earth: R > B + 20 && R < 170, ice: B > R || !!f.steep }; });
+      const under = (f, x, z, m) => f.r ? x > f.r[0] - m && x < f.r[1] + m && z > f.r[2] - m && z < f.r[3] + m : ((x - f.x) / (f.rx + m)) ** 2 + ((z - f.z) / (f.rz + m)) ** 2 < 1;
+      const ground = (p, x, z, m) => p === 'lump' || !T7.some(t => under(t.f, x, z, m) && (p === 'rock' ? t.ice : p === 'bush' || p === 'tuft' ? !t.grass && !t.earth : !t.grass));
+      // a strip on the camera's side (+z): nothing tall (it would wall off the zone and the board behind it): bushes for trees, young pines
+      const front = s.side === '+z', bare = s.id === 'sandbar' || s.id === 'iceplate', wet = s.id === 'swamp' || s.id === 'reeds', sw = s.id === 'swamp';
+      // 221 C ⑤: the swamp's bushes no longer one round native over and over: 30% fewer (3 a clump, not 4; a grass clump in each one's
+      // place), each its own (board only, as the dunes: size, squash, lean and 2-6 lumps mixed) with a grass clump at its foot most times
+      const SW_BUSH = 13; // 209 A built 20 here (24 in the swamp with its own 4): 0.7 x 24 = 17, less the 4
+      const mound = (x, z, sc) => { const R = 0.75 * NAT_K.bush * sc, sq = rnd2(0.55, 1), lean = rnd2(-0.3, 0.3), ry = r7() * 6.283, y = heightAt(x, z) + 0.3 * R * sq, c0 = L.canopy.length, base = K7.pickOf(['#7cbc40', '#6daf3b', '#8bc64a', '#7aa845']);
+        const w = rnd2(0.95, 1.35), dx = Math.cos(ry) * lean * R, dz = Math.sin(ry) * lean * R; // stretched one way, leaning along it
+        L.canopy.push({ x, y, z, s: [R * w, R * 0.8 * sq, R * rnd2(0.75, 1)], ry, rz: lean * 0.6, c: j7(base, 0.04) });
+        for (let i = 0, n = 2 + Math.floor(r7() * 5); i < n; i++) { const a = r7() * 6.283, d = R * rnd2(0.35, 0.75) * (Math.abs(Math.cos(a - ry)) * (w - 1) + 1), u = rnd2(0, 1);
+          L.canopy.push({ x: x + Math.cos(a) * d + dx * u, y: y + R * sq * rnd2(-0.05, 0.55) * u, z: z + Math.sin(a) * d + dz * u, s: R * rnd2(0.32, 0.58) * (0.85 + 0.15 * sq), c: j7(base, 0.07) }); }
+        occupied.push({ x, z, r: R * w * 1.2, h: 1.6 * R * sq, fade: [['canopy', c0, L.canopy.length - c0]] }); st.bush = (st.bush || 0) + 1; return R * w * 1.2; };
+      const plan = sw ? ['bush', 'tuft', 'tuft', 'bush', 'tuft', 'rock', 'tuft', 'bush', 'tuft'] : bare ? ['lump', 'rock', 'lump', 'lump', 'rock', 'lump', 'lump', 'rock'] : wet ? ['bush', 'tuft', 'bush', 'tuft', 'rock', 'tuft', 'bush', 'tuft', 'bush'] : front && !snow ? PLAN.map(p => p === 'tree' || p === 'treefern' ? 'bush' : p) : PLAN;
+      const C = [], far = (x, z, d) => C.every(c => Math.hypot(x - c[0], z - c[1]) > d), rnd2 = (a, b) => a + r7() * (b - a), NC = wet || bare ? 11 : 5;
+      for (let c = 0; c < NC && nm / nl < 0.22 && (c < 3 || st.cl === c); c++) { // a clump (past 3 only while each placed some)
+        let at = null; for (let t = 0; t < 120 && !at; t++) { const x = rnd2(r[0], r[1]), z = rnd2(z0, r[3]); if (fit(wet ? 1.8 : 2.6, x, z) && ground(bare ? 'lump' : snow ? plan[0] : 'bush', x, z, 1) && far(x, z, wet ? 6 : 9)) at = [x, z]; }
+        if (!at) break; C.push(at); let put = 0;
+        for (let i = 0; i < plan.length * 8 && put < plan.length && nm / nl < 0.22; i++) {
+          let p = plan[put]; const a = r7() * 6.283, d = put ? rnd2(2.4, 4.8) : rnd2(0, 0.6), x = at[0] + Math.cos(a) * d, z = at[1] + Math.sin(a) * d;
+          if (!snow && (p === 'tree' || p === 'treefern') && !ground(p, x, z, 0.3)) p = 'bush'; // a tree's spot on the mud: a bush there
+          if (bare && p === 'rock' && !ground(p, x, z, 0.3)) p = 'lump'; // on the ice: an ice lump
+          if (sw && p === 'bush' && (st.bush || 0) >= SW_BUSH) p = 'tuft'; // 221 C ⑤: past its bushes, grass clumps make up the 22%
+          const sc = p === 'rock' ? (snow ? rnd2(0.4, 0.85) : rnd2(0.55, 1.05)) : p === 'bush' || p === 'lump' || p === 'tuft' ? rnd2(0.9, 1.3) : front ? rnd2(0.5, 0.7) : rnd2(snow ? 0.85 : 0.95, 1.25);
+          const sand = p === 'lump' && !snow, m = p === 'lump' ? (sand ? 1.5 : 1.0) * sc : NR[p] * sc;
+          if (!fit(GAP[p] * Math.min(sc, 1.1), x, z) || !ground(p, x, z, 0.3)) continue;
+          if (snow && p === 'rock') { K7.rock(x, z, sc); const q = L.rock.at(-1); caps.push({ x: q.x, y: q.y + q.s[1] * 0.78, z: q.z, s: [q.s[0] * 0.7, q.s[1] * 0.32, q.s[2] * 0.7], ry: q.ry, c: '#f6f9fc' }); }
+          else if (p === 'lump') { const y = heightAt(x, z), sx = rnd2(sand ? 1.4 : 0.9, sand ? 2.0 : 1.3) * sc; // a low dune of the sand's colour; a pale ice lump
+            caps.push(sand ? { x, y: y - 0.12 * sc, z, s: [sx, rnd2(0.32, 0.44) * sc, sx * rnd2(0.6, 0.8)], ry: r7() * 6, c: j7(T7.find(t => under(t.f, x, z, 0) && !t.grass && !t.earth && !t.ice)?.f.c || '#e8d4a4', 0.025) }
+              : { x, y: y - 0.1 * sc, z, s: [sx, rnd2(0.42, 0.6) * sc, sx * rnd2(0.75, 0.95)], ry: r7() * 6, c: j7('#d9edf6', 0.03) });
+            occupied.push({ x, z, r: sand ? sx * 0.8 : sx, h: 0.5 }); st.lump = (st.lump || 0) + 1; }
+          else if (p === 'tuft') { for (let i = 0; i < 6; i++) { const a = r7() * 6.283, d = r7() * 0.5 * sc, tx = x + Math.cos(a) * d, tz = z + Math.sin(a) * d; // a grass clump
+              L.grass.push({ x: tx, y: heightAt(tx, tz) - 0.03, z: tz, s: rnd2(1.3, 1.8) * sc, big: 1, ry: r7() * 6, c: j7(['#4f8a30', '#5e9a36', '#6a8f38'][Math.floor(r7() * 3)], 0.05) }); }
+            occupied.push({ x, z, r: 0.6 * sc, h: 0.6 }); st.tuft = (st.tuft || 0) + 1; }
+          else if (sw && p === 'bush') { const rr = mound(x, z, sc * rnd2(0.75, 1.2)); nm += disk(mid, x, z, rr); put++;
+            if (r7() < 0.65) { const a = r7() * 6.283, tx = x + Math.cos(a) * rr * 0.85, tz = z + Math.sin(a) * rr * 0.85; // the grass clump at its foot
+              const g = { x: tx, y: heightAt(tx, tz) - 0.03, z: tz, s: rnd2(1.1, 1.6), big: 1, ry: r7() * 6, c: j7(['#4f8a30', '#5e9a36', '#6a8f38'][Math.floor(r7() * 3)], 0.05) }; // drawn first: the seed's order the same
+              if (clear(tx, tz, 0.3) && !nearSpot(tx, tz, 0.3)) { L.grass.push(g); st.foot = (st.foot || 0) + 1; } } // review: not in the water, on a path or a decor spot
+            continue; }
+          else { N.add(p, n7[p], x, z, sc); N.list.at(-1).d = 1; st.add++; }
+          nm += disk(mid, x, z, m); put++;
+        }
+        if (put) st.cl++;
+      }
+      // the ground cover: 3-4 patches, each R to make up 12% between them (thick in the middle, thinning out)
+      const need = Math.max(0, 0.12 * nl - ng) * G * G;
+      for (let c = 0, R = Math.min(3.2, Math.max(wet || bare ? 1.2 : 1.6, Math.sqrt(need / (wet || bare ? 5.5 : 3.5) / Math.PI))); c < (wet || bare ? 7 : 4) && (c < 3 || ng / nl < 0.12); c++) {
+        let at = null; for (let t = 0; t < 120 && !at; t++) { const x = rnd2(r[0] + R, r[1] - R), z = rnd2(Math.max(z0, back + 1) + R, r[3] - R); if (clear(x, z, R * 0.6) && !nearSpot(x, z, R * 0.6) && far(x, z, (wet || bare ? 1 : 2) * R + 1.5)) at = [x, z]; }
+        if (!at) break; C.push(at); st.pa++; ng += disk(gcv, at[0], at[1], R);
+        const A2 = Math.PI * R * R, pal = flowerPal[Math.floor(r7() * flowerPal.length)], ok2 = (x, z) => Z.wd(x, z) > 0.4 && free(x, z, 0) && clear(x, z, 0) && !nearSpot(x, z, 0) && r7() < 1 - 0.65 * ((x - at[0]) ** 2 + (z - at[1]) ** 2) / (R * R);
+        const each = (n, fn) => { for (let i = 0; i < n; i++) { const a = r7() * 6.283, d = R * Math.sqrt(r7()), x = at[0] + Math.cos(a) * d, z = at[1] + Math.sin(a) * d; if (ok2(x, z)) fn(x, z, heightAt(x, z)); } };
+        if (snow) { // low drifts and grey pebbles
+          each(Math.round(A2 * 0.3), (x, z, y) => caps.push({ x, y: y - 0.04, z, s: [rnd2(0.6, 1.3), rnd2(0.12, 0.24), rnd2(0.5, 1.0)], ry: r7() * 6, c: j7('#f3f7fb', 0.03) }));
+          each(Math.round(A2 * 0.25), (x, z, y) => L.pebble.push({ x, y: y + 0.02, z, s: [rnd2(0.14, 0.3), 0.09, rnd2(0.12, 0.24)], ry: r7() * 6, c: j7(['#9a958e', '#a8a39a', '#8a8f96'][Math.floor(r7() * 3)], 0.06) }));
+        } else { // grass tufts, a bed of one colour of flowers (not in the wet ones), a few pebbles
+          each(Math.round(A2 * (wet ? 1.5 : 1.1)), (x, z, y) => L.grass.push({ x, y: y - 0.03, z, s: rnd2(0.75, 1.15), ry: r7() * 6, c: j7(GREENS[Math.floor(r7() * 3)], 0.06) }));
+          if (!wet) each(Math.round(A2 * 0.5), (x, z, y) => { const yy = y + 0.3 + r7() * 0.08, sc = rnd2(0.85, 1.25); L.petal.push({ x, y: yy, z, s: sc, ry: r7() * 6, rx: (r7() - 0.5) * 0.4, rz: (r7() - 0.5) * 0.4, c: pal[0] }); L.centre.push({ x, y: yy + 0.03 * sc, z, s: sc, c: pal[1] }); });
+          each(Math.round(A2 * 0.12), (x, z, y) => L.pebble.push({ x, y: y + 0.02, z, s: [rnd2(0.16, 0.3), 0.08, rnd2(0.13, 0.25)], ry: r7() * 6, c: j7(['#c9b991', '#a8a39a', '#b7c2bc'][Math.floor(r7() * 3)], 0.08) }));
+        }
+      }
+    }
+    // the walking ground left: land under no footprint (occupied: the natives, the fixtures), no patch, no midground
+    const any = new Uint8Array(nx * nz); for (const o of occupied) if (o.x > r[0] - 4 && o.x < r[1] + 4 && o.z > z0 - 4 && o.z < r[3] + 4) disk(any, o.x, o.z, o.r);
+    let nw = 0; for (let c = 0; c < land.length; c++) nw += land[c] && !any[c] && !gcv[c] && !mid[c] ? 1 : 0;
+    Object.assign(st, { mid: nm / nl, gc: ng / nl, walk: nw / nl });
+  }
   for (let k = 1; k <= ZONES[hab].length; k++) {
-    const s = strip(hab, k); if (!inRect(O, s.cx, s.cz)) continue;
+    const s = strip(hab, k); if (!inRect(O, s.cx, s.cz)) continue; const rk0 = L.rock.length; // 194 0-7: the strip's own board rocks (its density)
     let sd = 7919 * k + (hab === 'pond' ? 31 : snow ? 57 : dino ? 71 : 3); const rnd = () => { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; };
     const K = kit(L, { rand: rnd, heightAt, occupied }), nk = kit(N.Ls, { rand: rnd, heightAt, occupied }), R = kit(Lr, { rand: rnd, heightAt, occupied });
     const { pickOf, jitter } = K, r = s.r, A = (r[1] - r[0]) * (r[3] - r[2]), mix = Z143 && MIX143[s.id] || MIX[s.id], at = (u, v) => s.pos(u, v);
@@ -1080,6 +1180,7 @@ void main() { ${V4 ? 'vec2 p = vUv * 2.0 - 1.0; float r2 = dot(p, p); if (r2 > 1
       if ((!bank && !free(x, z, 0)) || (bank && rnd() < 0.6)) return;
       L.grass.push({ x, y: heightAt(x, z) - 0.03, z, s: bank ? 1.6 + rnd() * 0.6 : 0.8 + rnd() * 0.6, big: bank, ry: rnd() * 6, c: jitter(bank ? '#4f9032' : pickOf(GREENS), 0.06) });
     }));
+    if (D07 || DEBUG) dense07(k, s, rk0, { low, fore4 });
   }
   if (Lr.stem.length) addReeds(scene, Lr);
   if (pads.length) addPads(scene, pads);

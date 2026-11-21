@@ -7,7 +7,7 @@
 import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import * as G from '../game/game.js';
-import { HABITATS } from '../game/data.js';
+import { HABITATS, S186 } from '../game/data.js';
 import { codexCells, colorsOf, displayColor, variantsOf, key, lookName } from '../game/rules.js';
 import { studio, nightLights } from './thumbs.js';
 import { makeFigure, loadModel } from '../animals/figure.js';
@@ -157,7 +157,7 @@ function pick(f) {
   if (!got) { bar.innerHTML = $t('<p>아직 못 찾은 변종이에요</p>'); return; }
   const all = colorsOf(c.species.id, c.variant.id), seen = G.S.colors[c.key] || [], cur = displayColor(G.S, c.key);
   const held = G.S.animals.filter(a => a.hold && key(a.species, a.variant) === c.key).length, kid = G.S.codex[c.key].adult == null;
-  bar.innerHTML = $t('<p><b>{0}</b> · 본 색 {1}/{2}{3}{4}</p><div>{5}</div>', lookName(c.species.id, c.variant.id, cur), seen.length, all.length, kid ? $t(' · 아직 새끼 모습만 봤어요') : '', held ? $t(' · 성장 멈춤 {0}마리', held) : '', all.filter(x => seen.includes(x.id))
+  bar.innerHTML = $t('<p><b>{0}</b> · 본 색 {1}/{2}{3}{4}</p><div>{5}</div>', lookName(c.species.id, c.variant.id, cur), seen.length, all.length, kid ? $t(' · 아직 새끼 모습만 봤어요') : '', held ? (S186 ? $t(' · 크기 고정 {0}마리', held) : $t(' · 성장 멈춤 {0}마리', held)) : '', all.filter(x => seen.includes(x.id))
     .map(x => `<button data-c="${x.id}"${x.id === cur ? ' class="on"' : ''}><u style="background:${swatch(x)}"></u>${x.name}</button>`).join('') || $t('<small>색이 하나뿐인 변종이에요</small>'));
 }
 

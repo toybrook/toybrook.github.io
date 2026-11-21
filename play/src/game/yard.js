@@ -1,10 +1,12 @@
-// 182 ④ 나의 뜰 (?yard, docs/concepts/custom-zone.md 6, 9; a trial). The yard's part of the save lives under its own key
-// (YKEY), not in the main save: the main save stays schema 14 and exactly as a build without the flag reads it (yardOut).
-// The yard part only says where things the main save already owns stand (by uid), plus the yard's own paint, step, free
-// nature and who is visiting; it can never make a prop, hearts or an animal (yardIn checks each entry after scrub).
+// 182 ④ 나의 뜰 (?yard, docs/concepts/custom-zone.md 6, 9; a trial). 184 ④ (SCHEMA 15): the yard's part of the save is S.yard in the
+// main save (backup and continue carry it); before, its own key YKEY (merged once by withOldKey, then removed: game.js). With the
+// flag on, the rest of the save is still kept as a build without the flag reads it (saveOf = yardOut + yard), and at the start
+// yardIn puts S.yard back on the game. The yard part only says where things the main save already owns stand (by uid), plus the
+// yard's own paint, step, free nature and who is visiting; it can never make a prop, hearts or an animal (yardIn checks each entry).
 import { YARD_B, NATURE, HABITATS, MODELS, BRUSHES, brushIn, UNIT, SIZES, paletteOf, sizable } from './data.js';
 import { scrub, SP, PROP, known, fits, capOf, natIn, natCap, levelOf, tidy, seatFree, unlockInfo } from './rules.js';
 import { rectAt, inRect } from '../habitat/zones.js';
+import { fitSc } from './scatter.js';
 
 export const YKEY = 'toyhabitat.yard';
 const NATS = new Set(NATURE.map(n => n.id)), HABS = new Set(HABITATS.map(h => h.id));
@@ -14,6 +16,15 @@ const homeOf = p => HABS.has(p.from) ? p.from : PROP[p.prop]?.habitat ?? HABITAT
 export const walker = a => MODELS[SP[a.species]?.model]?.move === 'walk'; // 1단계: no swimmers (the duck, the swan)
 export const visitors = S => S.animals.filter(a => a.stay === 'yard');
 
+// the save as the game keeps it with the flag on: the main save as a build without the flag reads it, the yard part beside it
+export const saveOf = S => { const o = yardOut(S), y = yardPart(S); if (y) o.yard = y; return o; };
+// 184 ④: a save from before 15 and the text under the old key (or null): the key's part in the save, if the save has none; rules.js
+// fromSave checks its shape (tidyYard) like any save's
+export function withOldKey(o, txt) {
+  if (o && typeof o === 'object' && o.schemaVersion < 15 && o.yard === undefined && txt) try { o.yard = JSON.parse(txt); } catch { /* unreadable: no yard */ }
+  return o;
+}
+
 // the yard part to keep: what yardIn reads back
 export function yardPart(S) {
   if (!S.unlocked.includes('yard')) return null;
@@ -21,7 +32,7 @@ export function yardPart(S) {
   return { v: 1, since: S.since, L: levelOf(S, 'yard'), kit: S.flags?.yardKit ? 1 : 0, last: S.flags?.lastHab === 'yard' ? 1 : 0, paint: S.paint?.yard || {},
     props: mine.filter(p => !p.nat).map(p => [p.uid, p.placed ? 1 : 0, p.x, p.z, p.rot || 0, p.c || 0, p.sz || 0, p.on ?? null, p.sl ?? null]),
     nat: mine.filter(p => p.nat).map(p => [p.prop, p.placed ? 1 : 0, p.x, p.z, p.rot || 0, p.s || 1, p.v || 0]),
-    stay: visitors(S).map(a => a.id) };
+    stay: visitors(S).map(a => a.id), ...(S.scatter?.length && { sc: S.scatter }) }; // 195 B-8 1-2 흩뿌리기 (game/scatter.js)
 }
 
 // the main save as a build without the flag keeps it: no 'yard' anywhere; a yard prop back in its own habitat's storage, the
@@ -31,6 +42,7 @@ export function yardOut(S) {
   for (const k of ['expand', 'paint', 'ghost', 'lays', 'natives', 'freeExp', 'whole']) drop(k);
   if (o.flags?.yardKit !== undefined || o.flags?.lastHab === 'yard') { o.flags = { ...o.flags }; delete o.flags.yardKit; if (o.flags.lastHab === 'yard') delete o.flags.lastHab; }
   if (o.layoutUndo?.hab === 'yard') delete o.layoutUndo;
+  delete o.scatter; // 195 B-8 1-2: the yard part's sc
   o.props = S.props.filter(p => !(p.hab === 'yard' && p.nat)).map(p => { if (p.hab !== 'yard' && p.from === undefined) return p;
     const q = { ...p, hab: p.hab === 'yard' ? homeOf(p) : p.hab }; if (p.hab === 'yard') q.placed = false; delete q.from; delete q.on; delete q.sl; return q; });
   // what stood on a yard prop (28-5 top spots) went into storage with it
@@ -40,10 +52,11 @@ export function yardOut(S) {
   return o;
 }
 
-// raw: the text under YKEY (or null). Called on S just loaded (after fromSave), before advance. Each entry checked; one that
-// does not fit is left out (a prop: stays in its habitat's storage, as the main save has it). Returns how many were left out
+// raw: S.yard (shape checked by fromSave) or null. Called on S just loaded (after fromSave), before advance. Each entry checked;
+// one that does not fit is left out (a prop: stays in its habitat's storage, as the main save has it). Returns how many were left out
 export function yardIn(S, raw) {
-  let d = null; try { d = raw ? scrub(JSON.parse(raw)) : null; } catch { d = null; }
+  delete S.scatter; // 195 B-8 1-2: only from the yard part (sc, below), never a stray main-save key
+  const d = raw && typeof raw === 'object' ? scrub(raw) : null;
   if (!d || typeof d !== 'object' || d.v !== 1) return 0;
   if (d.since !== S.since || !unlockInfo(S, 'yard').met) return 0; // a key left by another save (reset, another backup) or under the yard's level: not this game's
   let off = 0;
@@ -84,6 +97,8 @@ export function yardIn(S, raw) {
     if (place) nat++;
   }
   tidy(S);
+  // 195 B-8 1-2 흩뿌리기: whole pieces in range, two a cell (tidySc), each on the yard's open land at its step and not on water or a line, under its cap
+  const sc = fitSc(S, d.sc); off += sc.off; if (sc.list.length) S.scatter = sc.list; else delete S.scatter;
   for (const id of Array.isArray(d.stay) ? d.stay.slice(0, 20) : []) {
     const a = S.animals.find(a => a.id === id);
     if (!a || !callable(a)) { off++; continue; }

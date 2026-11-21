@@ -13,11 +13,14 @@ import { CARS } from '../habitat/train.js';
 
 const smooth = k => k * k * (3 - 2 * k), lerp = (a, b, k) => a + (b - a) * k, turn = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 // a point (or a heading) in the prop's own frame -> the world (habitat.js turns a prop by rot about y)
-const W = (st, lx, lz) => { const c = Math.cos(st.rot), s = Math.sin(st.rot); return [st.x + lx * c + lz * s, st.z - lx * s + lz * c]; };
+// 194 0-2 (?s186): f, the prop's growth (its model x f; habitat.js st.f, 1 without the flag: x1 and /1 change nothing). The
+// frame is the model's, so its points go x f into the world and an animal's own lengths (reach, back, w ...) / f into the frame
+const F = st => st.f || 1;
+const W = (st, lx, lz) => { const c = Math.cos(st.rot), s = Math.sin(st.rot), f = F(st); return [st.x + lx * f * c + lz * f * s, st.z - lx * f * s + lz * f * c]; };
 const yawOf = (st, dx, dz) => { const c = Math.cos(st.rot), s = Math.sin(st.rot); return Math.atan2(dx * s - dz * c, dx * c + dz * s); };
-const local = (st, x, z) => { const c = Math.cos(st.rot), s = Math.sin(st.rot), dx = x - st.x, dz = z - st.z; return [dx * c - dz * s, dx * s + dz * c]; };
+const local = (st, x, z) => { const c = Math.cos(st.rot), s = Math.sin(st.rot), dx = x - st.x, dz = z - st.z, f = F(st); return [(dx * c - dz * s) / f, (dx * s + dz * c) / f]; };
 const still = { rot: 0, sq: 1, gait: 'still', ph: 0 };
-const at = (st, lx, ly, lz, yaw, o) => { const [x, z] = W(st, lx, lz); return { ...still, x, z, y: st.y + ly, yaw, ...o }; };
+const at = (st, lx, ly, lz, yaw, o) => { const [x, z] = W(st, lx, lz); return { ...still, x, z, y: st.y + ly * F(st), yaw, ...o }; };
 
 // the models' numbers (meadow/props.js builds them from these): heights over the ground, along the prop's own x / z
 export const G = {
@@ -39,7 +42,7 @@ export const G = {
 const FIT = { swing: { w: 1.05, h: 2.4 }, slide: { w: 1.7, h: 2.6 }, seesaw: { L: 2.4 }, hammock: { L: 4.2, w: 1.9 }, ball: { L: 3.6 }, fountain: { L: 3.0 }, train: { L: 2.6, w: 1.5 },
   tunnel: { h: 3.5, w: 2.5 }, // inbox 63: the hole 2.4 -> 2.6 wide (a baby polar bear 2.36; a grown one 2.52 still too big)
   tower: { w: 1.4, L: 2.8 }, gym: { w: 1.4, h: 2.6, L: 2.8 }, carousel: { L: 2.8, h: 2.9 }, balloon: { L: 2.1, w: 1.2, h: 2.2 }, snowslide: { w: 1.7, L: 3.2 } };
-const fits = (kind, me) => { const f = FIT[kind] ?? {}; return !(me.w > f.w || me.h > f.h || me.L > f.L); };
+const fits = (st, me) => { const f = FIT[st.kind] ?? {}, s = F(st); return !(me.w > f.w * s || me.h > f.h * s || me.L > f.L * s); };
 const USE = Object.fromEntries(Object.entries(USES).map(([sp, s]) => [sp, s.split(' ')]));
 
 // 0.5 s hop from where it came (q.A) onto s (the seat now: it moves with the prop), on it until end, then a hop off to E
@@ -50,19 +53,19 @@ function onOff(q, t, s, E, end) {
   q.st.on[q.i] = false; q.off ??= { ...s, t };
   const k = (t - q.off.t) / 0.55; return k >= 1 ? { ...still, ...E, end: true } : jump(q.off, E, k, 0.7);
 }
-const out = (st, me, d = 0.15) => st.r + Math.max(me.reach, me.back) + d; // a spot clear of its footprint
+const out = (st, me, d = 0.15) => st.r + Math.max(me.reach, me.back) / F(st) + d / F(st); // a spot clear of its footprint
 // 113: where the swing's pusher (me) stands, its nose just at the rider's back with the swing back by A (the rider: seat 0's me)
-const back = (st, me, A) => -(G.swing.rope * Math.sin(A) + (st.q[0]?.me.back ?? 0.5) + me.reach + 0.05);
-const ring = (n, st, i, me, d) => { const a = i / n * Math.PI * 2, R = st.r + me.reach + d; return W(st, Math.cos(a) * R, Math.sin(a) * R); };
+const back = (st, me, A) => -(G.swing.rope * Math.sin(A) + (st.q[0]?.me.back ?? 0.5) / F(st) + me.reach / F(st) + 0.05 / F(st));
+const ring = (n, st, i, me, d) => { const a = i / n * Math.PI * 2, R = st.r + me.reach / F(st) + d / F(st); return W(st, Math.cos(a) * R, Math.sin(a) * R); };
 
 // 42 F-2: along a path in the prop's own frame (pts [x, y, z, o], y over its foot: o.hop a hop up to it, o.slide down to it fast,
 // o.stay s there turned to o.face [dx, dz] (none: the way it went); else it walks there, nose up the slope) from where it got to
 // (q.A), then a happy jump. path(q): how long it all takes (dur)
 function legs(q, pts) {
-  const { st } = q, L = q.legs = [], [x, z] = local(st, q.A.x, q.A.z); let a = [x, 0, z], y0 = q.A.yaw, t = 0;
+  const { st } = q, L = q.legs = [], [x, z] = local(st, q.A.x, q.A.z), f = F(st); let a = [x, 0, z], y0 = q.A.yaw, t = 0;
   for (const [bx, by, bz, o = {}] of pts) {
     const b = [bx, by, bz], d = Math.hypot(bx - a[0], bz - a[2]), D = Math.hypot(d, by - a[1]), yaw = d > 0.01 ? yawOf(st, bx - a[0], bz - a[2]) : y0;
-    L.push({ a, b, t0: t, t1: t += o.hop ? 0.45 : o.slide ? Math.max(0.2, D / 3.4) : Math.max(0.15, D / 1.3), y0, yaw, o, sl: Math.atan2(by - a[1], d) }); a = b; y0 = yaw;
+    L.push({ a, b, t0: t, t1: t += o.hop ? 0.45 : o.slide ? Math.max(0.2, D * f / 3.4) : Math.max(0.15, D * f / 1.3), y0, yaw, o, sl: Math.atan2(by - a[1], d) }); a = b; y0 = yaw;
     if (o.stay) { const f = o.face ? yawOf(st, ...o.face) : yaw; L.push({ a, b, t0: t, t1: t += o.stay, y0, yaw: f, o: { look: true }, sl: 0 }); y0 = f; }
   }
   L.push({ a, b: a, t0: t, t1: t + 0.55, y0, yaw: y0, o: { joy: true }, sl: 0 });
@@ -77,11 +80,11 @@ function along(q, t) {
   if (o.joy) return at(st, p[0], p[1] + Math.sin(u * Math.PI) * 0.7, p[2], yaw, { gait: 'jump', ph: u * 0.999, end: t >= l.t1 });
   if (o.look) return at(st, ...p, yaw + 0.25 * Math.sin((t - l.t0) * 1.3) * Math.max(0, Math.min(1, (t - l.t0) / 0.6, (l.t1 - t) / 0.6))); // looks about
   if (o.slide) { const e = Math.min(l.in ? smooth(Math.min(1, u * 3)) : 1, l.out ? smooth(Math.min(1, (1 - u) * 3)) : 1); // the penguin on its belly (as down the slide)
-    return me.W?.slide ? at(st, p[0], p[1] + me.s * 0.46 * e, p[2], yaw, { rot: -1.3 * e, gait: 'slide' }) : at(st, ...p, yaw, { rot: l.sl * e }); }
+    return me.W?.slide ? at(st, p[0], p[1] + me.s * 0.46 * e / F(st), p[2], yaw, { rot: -1.3 * e, gait: 'slide' }) : at(st, ...p, yaw, { rot: l.sl * e }); }
   return at(st, ...p, yaw, { rot: l.sl * 0.7, gait: 'walk', ph: t * 1.4 });
 }
 // the side of a round one it comes from (as the fountain's)
-const side = (st, me, x, z) => { const a = Math.atan2(z - st.z, x - st.x), R = out(st, me); return [st.x + Math.cos(a) * R, st.z + Math.sin(a) * R]; };
+const side = (st, me, x, z) => { const a = Math.atan2(z - st.z, x - st.x), R = out(st, me) * F(st); return [st.x + Math.cos(a) * R, st.z + Math.sin(a) * R]; };
 const onLand = (me, p) => !me.can || me.can(p[0], p[1]);
 
 // each kind: n seats; spot(st, i, me, x, z): where it walks to (world); dur(q); pose(q, t, T): t since it got there, T the clock
@@ -100,7 +103,7 @@ const K = {
     pose(q, t) { const { st, me } = q, g = G.slide, f = yawOf(st, 0, 1), P = (z, y, o) => at(st, 0, y, z, f, o);
       st.on[q.i] = t > 0.9 && t < 2.75; // on the deck or the chute
       const top = P(g.deck, g.top), mid = P(g.back + 0.1, g.top * 0.55), sl = Math.atan2(g.top - g.y1, g.z1 - g.z0), pen = me.W?.slide; // the penguin goes down on its belly
-      const lean = e => pen ? { rot: -1.3 * e, gait: 'slide', y: me.s * 0.46 * e } : { rot: -sl * e };
+      const lean = e => pen ? { rot: -1.3 * e, gait: 'slide', y: me.s * 0.46 * e / F(st) } : { rot: -sl * e };
       const L = (z, y, e) => { const o = lean(e); return P(z, y + (o.y || 0), { ...o, y: undefined }); };
       if (t < 0.45) return jump(q.A, mid, t / 0.45, 0.5); // up the ladder: two hops
       if (t < 0.9) return jump(mid, top, (t - 0.45) / 0.45, 0.5);
@@ -120,10 +123,10 @@ const K = {
   feeder: { n: 5, ring: true, dur: () => 5 + Math.random() * 3,
     spot: (st, i, me) => ring(5, st, i, me, 0.05), pose: (q, t, T) => sit(q, t, T) },
   fountain: { n: 2, dur: () => 4 + Math.random() * 2.5,
-    spot: (st, i, me, x, z) => { const a = Math.atan2(z - st.z, x - st.x), R = out(st, me); return [st.x + Math.cos(a) * R, st.z + Math.sin(a) * R]; }, // the side it comes from
-    pose(q, t, T) { const { st, i, me } = q, g = G.fountain, a = (st.ph || 0) + i * Math.PI, R = out(st, me), b = (T + q.ph) % 1.4;
-      const s = { ...still, x: st.x + Math.cos(a) * g.ring, z: st.z + Math.sin(a) * g.ring, yaw: Math.atan2(-Math.cos(a), -Math.sin(a)), rot: 0.05 * Math.sin(T * 6 + q.ph), ...!me.swim && { gait: 'walk', ph: T * 0.7 }, // paddles (wades) round the column
-        y: st.y + (me.swim ? g.water : 0.12) + Math.sin(T * 5 + i * 2) * 0.03 + (b < 0.35 ? Math.sin(b / 0.35 * Math.PI) * 0.25 : 0) }; // and now and then a splash
+    spot: (st, i, me, x, z) => { const a = Math.atan2(z - st.z, x - st.x), R = out(st, me) * F(st); return [st.x + Math.cos(a) * R, st.z + Math.sin(a) * R]; }, // the side it comes from
+    pose(q, t, T) { const { st, i, me } = q, g = G.fountain, a = (st.ph || 0) + i * Math.PI, R = out(st, me) * F(st), b = (T + q.ph) % 1.4;
+      const s = { ...still, x: st.x + Math.cos(a) * g.ring * F(st), z: st.z + Math.sin(a) * g.ring * F(st), yaw: Math.atan2(-Math.cos(a), -Math.sin(a)), rot: 0.05 * Math.sin(T * 6 + q.ph), ...!me.swim && { gait: 'walk', ph: T * 0.7 }, // paddles (wades) round the column
+        y: st.y + (me.swim ? g.water * F(st) : 0.12) + Math.sin(T * 5 + i * 2) * 0.03 + (b < 0.35 ? Math.sin(b / 0.35 * Math.PI) * 0.25 : 0) }; // and now and then a splash
       return onOff(q, t, s, { x: st.x + Math.cos(a) * R, z: st.z + Math.sin(a) * R, y: st.y, yaw: Math.atan2(-Math.sin(a), Math.cos(a)) }, q.D); } },
   hammock: { n: 1, dur: () => 8 + Math.random() * 5,
     spot: (st, i, me, x, z) => W(st, 0, (local(st, x, z)[1] < 0 ? -1 : 1) * out(st, me)), // the side it comes from
@@ -131,8 +134,8 @@ const K = {
       // inbox 36: its body's middle on the cloth's low middle, its belly a little down in the cloth (the cloth gives under it:
       // propTick), the bigger it is the deeper; st.lay is how it lies there (give). Too long for the posts (seal): its head kept
       // 0.3 inside them, its low tail out past the other end
-      const { me } = q, Y = -g.sag - Math.min(0.35, Math.max(0, (me.L - 2.6) * 0.2) + Math.max(0, (me.w - 1.2) * 0.3)), c = (me.reach - me.back) / 2 + Math.max(0, me.L / 2 - g.half + 0.3);
-      const L = st.lay ??= {}; Object.assign(L, { k, under: me.fig?.under(), lx: -q.dir * c, dir: q.dir, y: Y, wide: Math.max(1, (me.w / 2 + 0.05) / (g.hz * 1.25)) });
+      const { me } = q, f = F(st), Y = -g.sag - Math.min(0.35, Math.max(0, (me.L - 2.6) * 0.2) + Math.max(0, (me.w - 1.2) * 0.3)) / f, c = (me.reach - me.back) / 2 / f + Math.max(0, me.L / 2 - g.half * f + 0.3) / f;
+      const L = st.lay ??= {}; Object.assign(L, { k, under: me.fig?.under(), lx: -q.dir * c, dir: q.dir, y: Y, f, wide: Math.max(1, (me.w / 2 + 0.05) / (g.hz * 1.25 * f)) });
       const s = at(st, -q.dir * c, g.pivot + Y * Math.cos(a), Y * Math.sin(a), yawOf(st, q.dir, 0), { sq: 0.95 - Math.sin(T * 1.4 + q.ph) * 0.015, lie: k, shut: t > 1.5 && t < q.D - 0.6, zz: t > 1.5 }); // lies along it, naps
       return onOff(q, t, s, { ...q.A, yaw: q.A.yaw + Math.PI }, q.D); } },
   ball: { n: 1, dur: q => 2 * q.T1 + 0.55,
@@ -184,12 +187,12 @@ const K = {
   gym: { n: 4, dur: path, pose: along,
     spot: (st, i, me) => me.swim ? null : W(st, -out(st, me), 0),
     start(q) { const { st, me } = q, g = G.gym, [dx, dz] = [[-1, -1], [1, 1], [-1, 1], [1, -1]][q.i].map(v => v * 0.7), up = [[g.foot, 0, 0], [-g.half, g.deck, 0]];
-      legs(q, [...up, [dx, g.deck, dz, { stay: 1 + Math.random() * 1.5, face: [dx, dz] }], ...onLand(me, W(st, g.lip + me.back, 0))
-        ? [[g.half, g.deck, 0], [g.x1, g.y1, 0, { slide: true }], [g.lip, g.y1, 0, { slide: true }], [g.lip + me.back, 0, 0, { slide: true }]] : [up[1], up[0], [-out(st, me), 0, 0]]]); } },
+      legs(q, [...up, [dx, g.deck, dz, { stay: 1 + Math.random() * 1.5, face: [dx, dz] }], ...onLand(me, W(st, g.lip + me.back / F(st), 0))
+        ? [[g.half, g.deck, 0], [g.x1, g.y1, 0, { slide: true }], [g.lip, g.y1, 0, { slide: true }], [g.lip + me.back / F(st), 0, 0, { slide: true }]] : [up[1], up[0], [-out(st, me), 0, 0]]]); } },
   // hops up the snow steps, down the ice chute (the penguin on its belly)
   snowslide: { n: 2, dur: path, pose: along, // the chute's end off its land: back down the steps
     spot: (st, i, me) => me.swim ? null : W(st, 0, -out(st, me)),
-    start(q) { const { st, me } = q, g = G.snowslide, pts = [[0, 0, g.z0 - 0.5]], end = g.chute.at(-1)[0] + 0.3 + me.back;
+    start(q) { const { st, me } = q, g = G.snowslide, pts = [[0, 0, g.z0 - 0.5]], end = g.chute.at(-1)[0] + 0.3 + me.back / F(st);
       for (let k = 0; k < g.steps; k++) pts.push([0, g.top * (k + 1) / g.steps, g.z0 + k * g.dz, { hop: true }]);
       legs(q, [...pts, [0, g.top, 0.4, { stay: 0.6 }], ...onLand(me, W(st, 0, end)) ? [...g.chute.map(([z, y]) => [0, y, z, { slide: true }]), [0, 0, end, { slide: true }]]
         : [...pts.slice(1).reverse().map(([x, y, z]) => [x, y, z, { hop: true }]), [0, 0, g.z0 - 0.5], [0, 0, -out(st, me)]]]); } },
@@ -203,7 +206,7 @@ const K = {
         q.step = 'on'; q.t1 = t; }
       if (q.step === 'on') { const k = (t - q.t1) / 0.5; if (k < 1) return jump({ ...q.A, yaw: mid }, seat(), k, 0.8); q.step = 'ride'; q.t1 = t; }
       if (q.step === 'ride') { if (t - q.t1 < q.D) { st.on[i] = true; return seat(); }
-        st.on[i] = false; q.step = 'off'; q.off = { ...seat(), t }; const R = g.r + me.reach + 0.35, E = W(st, Math.cos(f) * R, Math.sin(f) * R);
+        st.on[i] = false; q.step = 'off'; q.off = { ...seat(), t }; const R = g.r + me.reach / F(st) + 0.35 / F(st), E = W(st, Math.cos(f) * R, Math.sin(f) * R);
         q.E = onLand(me, E) ? { x: E[0], z: E[1], y: st.y, yaw: yawOf(st, Math.cos(f), Math.sin(f)) } : { ...q.A, yaw: q.A.yaw + Math.PI }; }
       const k = (t - q.off.t) / 0.55; return k >= 1 ? { ...still, ...q.E, end: true } : jump(q.off, q.E, k, 0.7); } },
   // the tethered balloon: waits for it to be down, hops into the basket; with someone in it goes up, stays a while, comes down
@@ -245,7 +248,7 @@ export function choose(ctx, who, me, x, z, far = 22) {
   const kinds = USE[me.sp] ?? [], n = ctx.night || 0, list = [], T = me.T ?? 0;
   for (const st of ctx.play ?? []) {
     const idle = T - (st.last ??= T), late = idle > LATE;
-    if (st.gone || !kinds.includes(st.kind) || !fits(st.kind, me) || Math.hypot(st.x - x, st.z - z) > (late ? (me.swim ? 2 * far : Infinity) : far) || !st.seats.some((s, i) => !s && okSeat(st, i, me))) continue;
+    if (st.gone || !kinds.includes(st.kind) || !fits(st, me) || Math.hypot(st.x - x, st.z - z) > (late ? (me.swim ? 2 * far : Infinity) : far) || !st.seats.some((s, i) => !s && okSeat(st, i, me))) continue;
     if (me.can && !st.seats.some((s, i) => { const p = !s && okSeat(st, i, me) && K[st.kind].spot(st, i, me, x, z); return p && me.can(p[0], p[1]); })) continue; // inbox 42 B: a seat on its own land (not past a closed fence; round a ring, any one)
     const used = st.seats.filter(Boolean).length;
     list.push([st, (1 + Math.max(0, idle - 30) / 6) * (st.kind === 'campfire' ? (n > 0.3 ? 4 : 0.3) * (1 + used) : st.kind === 'feeder' ? (1 + 2 * used) * (me.pe === 'glutton' ? 3 : 1) : st.kind === 'seesaw' ? (used ? 8 : 1) : st.kind === 'hammock' && n > 0.3 ? 0.4 : st.kind === 'train' ? 0.6 : 1), late]);
@@ -277,7 +280,7 @@ export function duo(ctx, q) {
 }
 // inbox 42 C: a play prop of its kind nobody has used for LATE s (walk.js, swim.js: then it goes to play far more often)
 const LATE = 30;
-export const due = (ctx, T, me, at) => (ctx.play ?? []).some(st => !st.gone && T - (st.last ?? T) > LATE && USE[me.sp]?.includes(st.kind) && fits(st.kind, me) && (!at || at(st))); // at(st): only those (walk.js: on its land, or over the bridge)
+export const due = (ctx, T, me, at) => (ctx.play ?? []).some(st => !st.gone && T - (st.last ?? T) > LATE && USE[me.sp]?.includes(st.kind) && fits(st, me) && (!at || at(st))); // at(st): only those (walk.js: on its land, or over the bridge)
 // got to (ax, az): x, z, yaw where it stands now, T the clock
 export function start(q, x, z, yaw, T) {
   const k = K[q.st.kind]; q.st.last = T; q.st.q[q.i] = q; Object.assign(q, { A: { x, z, y: q.st.y, yaw }, T0: T, ph: Math.random() * 6, dir: Math.random() < 0.5 ? 1 : -1, doze: q.night > 0.6 && Math.random() < 0.5, off: null });
@@ -303,7 +306,7 @@ function give(st) {
   if (Math.abs(k - C.k) < 0.002 && (k === 0) === (C.k === 0)) return;
   C.k = k; const p = C.a.array, R = C.rest, X = C.hx + 0.01, D = k ? Math.max(0, -L.y - G.hammock.sag) * k : 0; // the whole cloth a little deeper under a big one
   for (let i = 0; i < p.length; i += 3) { const x = R[i], end = Math.abs(x) >= C.hx, f = 1 - (x / X) ** 4, z = R[i + 2] * (end || !k ? 1 : 1 + (L.wide - 1) * k * f), y = R[i + 1] - D * f;
-    const u = end || !k || !L.under ? Infinity : L.y + L.under((x - L.lx) * L.dir, z * L.dir) - 0.02; p[i + 1] = y + Math.min(0, u - y) * k; p[i + 2] = z; }
+    const u = end || !k || !L.under ? Infinity : L.y + L.under((x - L.lx) * L.dir * L.f, z * L.dir * L.f) / L.f - 0.02 / L.f; p[i + 1] = y + Math.min(0, u - y) * k; p[i + 2] = z; }
   C.a.needsUpdate = true; C.m.geometry.computeVertexNormals(); C.m.geometry.computeBoundingSphere();
 }
 export function propTick(st, t) {

@@ -17,6 +17,7 @@
 import { $t } from '../i18n/i18n.js';
 import { SP, HAB } from './rules.js';
 import { dayNo } from './clock.js';
+import { S186 } from './data.js'; // 203 D2
 
 export const WILD = { days: 40, cap: { f: 48, m: 30, u: 14, r: 24, l: 16, t: 90 }, keep: { f: 300, s: 60, e: 80, w: 50, src: 80, t: 600, p: 300 },
   decay: 0.85, trail: 2.5, stay: 1.5, min: 300, q: 2, every: 3, bud: 2, news: 12 };
@@ -173,7 +174,8 @@ export const seen = S => { S.wild.news = []; };
 export function newsOf(S) {
   const N = S.wild.news; if (!N.length || S.flags.wildOff) return null;
   const b = [...N].sort((x, y) => RANK.indexOf(x.k) - RANK.indexOf(y.k))[0];
-  const text = { bloom: () => $t('{0} 들꽃이 처음 피었어요', BLOOMS[b.c]?.name ?? ''), path: () => $t('{0}들이 다니는 길이 생겼어요', SP[b.sp]?.name ?? $t('동물')),
+  // 203 D2 (?rc200): no 들꽃 도감, so a first bloom is told as any new one (not 「처음」)
+  const text = { bloom: () => S186 ? $t('새 들꽃이 {0}곳에 피었어요', 1) : $t('{0} 들꽃이 처음 피었어요', BLOOMS[b.c]?.name ?? ''), path: () => $t('{0}들이 다니는 길이 생겼어요', SP[b.sp]?.name ?? $t('동물')),
     moss: () => $t('그늘에 이끼가 돋았어요'), mush: () => $t('이끼 사이에 작은 버섯이 났어요'), reed: () => $t('물가에 갈대가 자라기 시작했어요'),
     lily: () => $t('연못에 수련이 떴어요'), grow: () => $t('새 들꽃이 {0}곳에 피었어요', b.n) }[b.k]();
   return { text, sub: N.length > 1 ? $t('정원 변화 {0}가지 · 보러 가요', N.length) : $t('정원 변화 · 보러 가요'), hab: b.hab, at: b.at };

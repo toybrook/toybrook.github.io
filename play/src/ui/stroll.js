@@ -2,7 +2,7 @@
 // A postcard: the place's picture (SCENES, drawn here), the friend's figure on it, its line (data.js PLACES), what it brought.
 import { $t, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
-import { BALANCE as B, PLACES, PROPS, MYTHIC } from '../game/data.js';
+import { BALANCE as B, PLACES, PROPS, MYTHIC, asHearts } from '../game/data.js';
 import { strollCap, strolling, callName, mythHill } from '../game/rules.js';
 import { figureThumb } from './thumbs.js';
 import { PHOTO_PLACES, cardPhoto, photoCard, prunePhotos } from './postcard3d.js'; // 78: the places whose cards are a photo
@@ -18,7 +18,7 @@ let menu = null;
 export function pickStroll(a) {
   const nm = callName(a), n = strolling(G.S).length, cap = strollCap(G.S), R = B.stroll, full = n >= cap;
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
-  menu.innerHTML = $t('<div><h2>산책 보내기</h2><p class="sub">{0} · {1}</p><div class="col">{2}{3}<button data-visit>친구네 놀러 가기</button><button class="sb" data-shut>닫기</button></div></div>', esc(nm), full ? $t('지금 {0}마리가 산책 중이라 더 못 가요', n) : $t('산책 중 {0}/{1} · 돌아오면 엽서와 하트를 줘요', n, cap), R.hours.map(h => $t('<button data-h="{0}"{1}>{2}시간 · ♥{3}{4}</button>', h, full ? ' disabled' : '', h, R.hearts[h], R.candy[h] ? $t(' · 사탕 {0}', R.candy[h]) : '')).join(''), mythHill(G.S) ? $t('<button data-h="{0}" data-pl="{1}"{2}>🔥 {3} · {4}시간 · {5}</button>', R.hours[0], FH.id, full ? ' disabled' : '', FH.name, R.hours[0], MYTHIC[0].hair) : '');
+  menu.innerHTML = $t('<div><h2>산책 보내기</h2><p class="sub">{0} · {1}</p><div class="col">{2}{3}<button data-visit>친구네 놀러 가기</button><button class="sb" data-shut>닫기</button></div></div>', esc(nm), full ? $t('지금 {0}마리가 산책 중이라 더 못 가요', n) : $t('산책 중 {0}/{1} · 돌아오면 엽서와 하트를 줘요', n, cap), R.hours.map(h => asHearts({ hearts: R.hearts[h], candy: R.candy[h] })).map((g, i) => $t('<button data-h="{0}"{1}>{2}시간 · ♥{3}{4}</button>', R.hours[i], full ? ' disabled' : '', R.hours[i], g.hearts, g.candy ? $t(' · 사탕 {0}', g.candy) : '')).join(''), mythHill(G.S) ? $t('<button data-h="{0}" data-pl="{1}"{2}>🔥 {3} · {4}시간 · {5}</button>', R.hours[0], FH.id, full ? ' disabled' : '', FH.name, R.hours[0], MYTHIC[0].hair) : '');
   if (TOSS) menu.querySelector('[data-visit]')?.remove(); // 174: 친구네 놀러 가기 is a link to send (none out of Toss)
   menu.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;

@@ -4,15 +4,15 @@
 import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { PROP, HAB, firstEgg } from '../game/rules.js';
-import { ATTEND, ATTEND_PROPS, GIFT, WEEK1 } from '../game/data.js';
+import { ATTEND, ATTEND_PROPS, GIFT, WEEK1, asHearts } from '../game/data.js';
 import { topWindow, overlayOpen, resting, toast } from './hud.js';
 import { sfx } from './sound.js';
 import { track } from './stats.js';
 
 const $ = id => document.getElementById(id), L = ATTEND.length;
 let at = () => null, quiet = 0;
-export const cell = r => [r.hearts && `♥${r.hearts}`, r.candy && $t('사탕 {0}', r.candy), r.eggs && $t('알 {0}', r.eggs), r.legendNow && $t('전설 알'), r.heroEggs && $t('영웅 알'), r.freeExp && $t('땅 넓히기'), r.clue && $t('신수 단서'), r.prop && PROP[r.prop]?.name].filter(Boolean).join(' ');
-const gotText = got => { const P = PROP[got.prop]; return [got.hearts && `♥${got.hearts}`, got.candy && $t('성장 사탕 {0}개', got.candy), got.eggs && $t('둥지 알 {0}개', got.eggs), got.row && $t('선물 알 {0}개 · 둥지에서 기다려요', got.row), got.legend && $t('전설 알 {0}개 · 바로 부화해요', got.legend), got.hero && $t('영웅 알 {0}개', got.hero), got.exp && $t('땅 넓히기 {0}칸 무료', got.exp), got.clue && $t('신수 단서'), P && $t('소품 「{0}」', P.name)].filter(Boolean).join(' · '); }; // 102: no 「♥0」 (a full nest's egg is told below)
+export const cell = r0 => { const r = asHearts(r0); return [r.hearts && `♥${r.hearts}`, r.eggs && $t('알 {0}', r.eggs), r.legendNow && $t('전설 알'), r.heroEggs && $t('영웅 알'), r.freeExp && $t('땅 넓히기'), r.clue && $t('신수 단서'), r.prop && PROP[r.prop]?.name].filter(Boolean).join(' '); }; // 203 D4·227 A: candy as hearts
+const gotText = got => { const P = PROP[got.prop]; return [got.hearts && `♥${got.hearts}`, got.eggs && $t('둥지 알 {0}개', got.eggs), got.row && $t('선물 알 {0}개 · 둥지에서 기다려요', got.row), got.legend && $t('전설 알 {0}개 · 바로 부화해요', got.legend), got.hero && $t('영웅 알 {0}개', got.hero), got.exp && $t('땅 넓히기 {0}칸 무료', got.exp), got.clue && $t('신수 단서'), P && $t('소품 「{0}」', P.name)].filter(Boolean).join(' · '); }; // 102: no 「♥0」 (a full nest's egg is told below)
 const busy = () => firstEgg(G.S) || G.S.guests?.tut >= 0 || G.now() - G.S.since < 300e3 || topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden || !at() || resting(); // inbox 61 B: after the first egg; 66-1: after the guest tutorial; inbox 43: only inside a habitat, never on the map; one card at a time
 setInterval(() => {
   if (!G.attendDue() || busy()) { quiet = 0; return; }
@@ -32,5 +32,5 @@ export function takeToday(where) {
   const { got } = out, P = PROP[got.prop], hab = P && G.S.props.findLast(p => p.prop === P.id)?.hab;
   // 102: every nest full: 「둥지가 가득 차서 알 대신 ♥15를 받았어요」 as the whole line when that is all (no zero part, no second half-sentence)
   const h = got.extra * GIFT.eggHearts, full = got.extra && $t('둥지가 가득 차서 {0}알 대신 ♥{1}', got.eggs ? $t('나머지 ') : '', h), rest = gotText(got);
-  return [rest, full && (rest ? full : ('2459'.includes(String(h).at(-1)) ? $t('{0}를 받았어요', full) : $t('{0}을 받았어요', full))), P && HAB[hab] && $t('{0} 꾸미기 › 선물에', HAB[hab].name)].filter(Boolean).join(' · ');
+  return [rest, full && (rest ? full : $t('{0}{을/를} 받았어요', full)), P && HAB[hab] && $t('{0} 꾸미기 › 선물에', HAB[hab].name)].filter(Boolean).join(' · ');
 }

@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { kit, emptyL, flowerPal, flowerCluster, partGeos, makeGrassClump, grassMat } from './meadow/props.js';
 import { instanced } from './toyKit.js';
 import { QUALITY, thin } from '../config.js';
-import { Z143 } from './zones.js';
+import { Z143, D07, ringIn } from './zones.js';
+import { ZONES } from '../game/data.js';
 
 const KINDS = ['canopy', 'trunk', 'pine', 'snow', 'rock', 'petal', 'centre', 'grass'], FLAT = ['petal', 'centre', 'grass'];
 const seeded = v => { let s = v % 2147483646 + 1; return () => { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; }; };
@@ -31,19 +32,42 @@ export function natureLayer(scene, H, U) {
   return {
     set(recs) {
       for (const m of meshes) { scene.remove(m); m.dispose(); } meshes = []; fades = new Map();
-      const all = emptyL();
-      for (const r of recs) {
+      const all = emptyL(), hab = D07 && recs.find(r => r.hab)?.hab, Z = hab && ZONES[hab] ? zoned(recs, U, hab) : null; // the grown flowers (habitat.js syncGrow) have no hab: the board's own
+      for (const r of Z ? Z.recs : recs) {
         const L = grow(r, r.x * U, r.z * U, r.rot || 0, H), f = [];
         for (const k of KINDS) if (L[k].length) { f.push([k, all[k].length, L[k].length]); all[k].push(...L[k]); }
-        fades.set(r.uid, f);
+        fades.set(r.uid, f); Z?.grew(r, all, L);
       }
       const M = meshesOf(all, m => { scene.add(m); meshes.push(m); });
+      if (Z) for (const k of KINDS) if (M[k]) Z.cull(M[k], k);
       for (const f of fades.values()) for (const p of f) p[0] = M[p[0]];
       return fades;
     },
     model(rec) { const g = new THREE.Group(); meshesOf(grow(rec), m => g.add(m)); return g; },
     get meshes() { return meshes; },
     pick(hit) { for (const [uid, f] of fades) if (f.some(([m, i0, n]) => m === hit.object && hit.instanceId >= i0 && hit.instanceId < i0 + n)) return uid; return null; },
+  };
+}
+
+// 194 0-7 (?d07): a board's natives drawn zone by zone. Each kind stays one InstancedMesh (no more draw calls), its instances in
+// the order of the 땅 넓히기 step (zone) they stand in; each frame (and each shadow pass) it draws only up to the farthest step
+// seen by the camera (its box, grown by M7 for crowns and shadows), so the zones off the screen past it cost nothing. A zone not
+// opened has no natives (the board is built again when one opens)
+const M7 = 5, _fr = new THREE.Frustum(), _pm = new THREE.Matrix4(), _v = new THREE.Vector3();
+function zoned(recs, U, hab) {
+  const ring = r => ringIn(hab, r.x * U, r.z * U), R = recs.map(r => [ring(r), r]).sort((a, b) => a[0] - b[0]);
+  const steps = [], at = new Map(); // step -> { box, end: kind -> count up to its last }
+  return {
+    recs: R.map(e => e[1]),
+    grew(r, all, L) { const q = ring(r); let z = at.get(q); if (!z) { at.set(q, z = { box: new THREE.Box3(), end: {} }); steps.push(z); }
+      for (const k of KINDS) { for (const it of L[k]) z.box.expandByPoint(_v.set(it.x, it.y ?? 0, it.z)); z.end[k] = all[k].length; } },
+    cull(m, k) {
+      for (const z of steps) if (!z.grown) { z.grown = z.box.clone().expandByScalar(M7); z.grown.max.y += 6; } // the tall pines (~9 up): their tops
+      const ends = steps.map(z => z.end[k]); m.computeBoundingSphere(); // with every step (review 2): a tap's raycast tests this sphere, which three makes once from m.count
+      const set = cam => { _fr.setFromProjectionMatrix(_pm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse)); let n = 0;
+        for (let i = 0; i < steps.length; i++) if (_fr.intersectsBox(steps[i].grown)) n = ends[i]; m.count = n; };
+      m.frustumCulled = false; m.onBeforeRender = (rd, sc, cam) => set(cam); m.onBeforeShadow = () => { m.count = m.instanceMatrix.count; }; // the shadow pass draws every step: shadowMap.autoUpdate is off (habitat.js), so a map baked with a culled count would keep the hole
+    },
   };
 }
 

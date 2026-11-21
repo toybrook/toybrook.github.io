@@ -12,7 +12,7 @@
 import { $t } from '../i18n/i18n.js';
 
 import { GUEST_PROPS } from './guests-data.js'; // 66-1
-export const SCHEMA_VERSION = 14; // shape of the save; bump with a migration in rules.js (14: 170 B 정 레벨 a.j, S.jAt; 13: 152 D S.myth by MYTHIC id; 2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups; 12: 95 kept accessories S.accs, animal s = hatched secret)
+export const SCHEMA_VERSION = 16; // shape of the save; bump with a migration in rules.js (16: 199 A (188) S.myth[id].come, the mythics' order gone (rules.js mythTo16); 15: 184 ④ S.yard, the 나의 뜰 part (game/yard.js yardPart; before, its own key toyhabitat.yard), shape checked in rules.js tidyYard; 14: 170 B 정 레벨 a.j, S.jAt; 13: 152 D S.myth by MYTHIC id; 2: pity, album, animal acc/pending; 3: animal color, colors seen; 4: display, props; 5: growth gauge, 꼬마 사탕, codex baby/adult; 6: habitat expansion; 7: natives as props, ground paint; 8: 정원사 레벨 xp; 9: 도전 과제 ach, title, stats; 10: 28-1 zones, props past the open ground put away; 11: inbox 42 the board 1.5x, props moved together in groups; 12: 95 kept accessories S.accs, animal s = hatched secret)
 export const CONTENT_VERSION = 9; // bump when the lists below change (3: launch materials, one legendary each; marble and gold left the lists; 4: colour ids glitter gold -> violet, amber yellow -> honey; 5: meadow rabbit, pig, chicken; 6: meadow sheep, cow; 7: pond (turtle, otter, swan, flamingo, capybara; the duck moved from the meadow); 8: snow (penguin, polar bear, seal, arctic fox, reindeer, snowy owl); 9: dino (triceratops, brachiosaurus, stegosaurus, ankylosaurus, T. rex, pteranodon))
 
 const MIN = 60 * 1000;
@@ -41,7 +41,7 @@ export const HOLD = { myth: false, dino: true }; // release build: the jungle he
 //   expand: 땅 넓히기 prices;   xp: 정원사 레벨 XP (BALANCE.level.xp)
 //   play:   28-2 놀이 소품: their prices (PROPS) and the level each opens at (merged into BALANCE.level.unlock). Set again with the
 //           release balance (11차): release has the beta numbers for now. 28-6: the 땅 tab's stamps too, and the line brushes' levels
-// 13-1 산책 (PACE stroll, both editions): h hours out; hearts and candy when it comes back, and with `prop` chance the next
+// 13-1 산책 (PACE stroll, both editions): h hours out; hearts and candy (227 A: paid as its ♥, rules give) when it comes back, and with `prop` chance the next
 // STROLL_PROPS gift. slots: [level, at once] (the last one reached). Hearts set by the check-eggs sim: a player who never pets
 // gets one small prop a day from one visit (3 x 8 h), two from two visits
 const STROLL = { hours: [1, 4, 8], hearts: { 1: 3, 4: 6, 8: 8 }, candy: { 1: 0, 4: 1, 8: 1 }, prop: { 1: 0.05, 4: 0.15, 8: 0.25 }, slots: [[1, 3], [6, 4], [12, 5]], cards: 200 };
@@ -75,7 +75,7 @@ const AD = { cut: 60 * MIN, day: 3, minLeft: 5 * MIN, after: 12,
   // days: none on a new game's calendar days 0~2, day: a day (Q2: 2), gap / afterRw: after the last interstitial / rewarded, session: a
   // visit's first minutes, left: a leave this soon after it counts as 이탈, holdout: the control group's share (Q3: 20 %, 2 weeks)
   i: { at: ['nest'], days: 3, day: 2, gap: 30 * MIN, afterRw: 30 * MIN, session: 5 * MIN, left: 60e3, holdout: 0.2 },
-  perk: { hatchX: 0.8 } }; // 184 ⑤ 광고 제거 (S.noAds; not sold yet, Q6): a hatch slot's time x0.8
+  perk: { hatchX: 0.9 } }; // 184 ⑤ 광고 제거 (S.noAds; not sold yet, Q6): a hatch slot's time x0.9 (206 A user decision 11/21, was 0.8)
 export const PACE = {
   release: {
     // 182 ① (177 A 2판, docs/balance-release.md 9절): the Toss build is this edition (build-web toss() sets EDITION)
@@ -286,6 +286,13 @@ export const LEGEND_ITEMS = {
 // duck 0.40 -> 0.30 (a long low body read as big as the pig), rabbit 0.40 -> 0.48 (ears count in its height), chicken 0.44.
 // inbox 42 C2: unit 4.5 -> 3.375 (the animals x0.75 against the world; the trees, rocks and big props grew instead: NAT_K, PROPS k)
 // inbox 63: 3.375 -> 4.05 (x0.9 of 0.71: too small to see on the wide board); NAT_K and the board stay, small props keep their size
+// 194 0-2~0-4 trial flag (?s186, docs/decor-redesign.md 2장·3장 크기 기준표): the size table (props x K186, natives x NAT186, band, the
+// 아주 크게 clip), the animals' order (SIZE186), the home camera x1.15 (CAM186, ?s186&cam=110|115|120). Photos only until the user OKs
+// it; off in every build (build-web.mjs S186). Without it nothing here changes. 199 E: ?rc200 (the release candidate) turns it on too
+export const S186 = true; // release build: 199 E RC200, the size table on for everyone
+// 203 D4 (?rc200): no 꼬마 사탕; a reward's candy shown (and given, rules.js give) as its hearts. 227 A: in every build (a mail or code
+// from outside, or one kept in a save, may still say candy); without the flag a 성장 사탕 is only bought (rules buyCandy)
+export const asHearts = r => { const c = Math.max(0, Math.floor(+r?.candy) || 0); return c ? { ...r, hearts: Math.max(0, Math.floor(+r.hearts) || 0) + c * BALANCE.candy.price, candy: 0 } : r; };
 export const SIZE = {
   unit: 4.05, baby: 0.75,
   horse: 1.00, cow: 0.95, polarBear: 1.05, reindeer: 0.95, flamingo: 0.85, sheep: 0.70, pig: 0.60, swan: 0.60, capybara: 0.55, // the polar bear is also the longest
@@ -293,6 +300,11 @@ export const SIZE = {
   brachiosaurus: 1.60, triceratops: 0.85, stegosaurus: 0.85, tRex: 1.05, ankylosaurus: 0.60, pteranodon: 0.45, // 14-3 dino: to the neck's top, the frill's, the plates', the crest's
   firemane: 1.40, // 14-1 신수 (MYTHIC)
 };
+// 194 0-3 (2-2): chicken < duck < sheep < horse < cow (duck 0.30 was below the chicken, the cow as tall as the horse)
+export const SIZE186 = { chicken: 0.40, duck: 0.42, cow: 1.03 };
+if (S186) Object.assign(SIZE, SIZE186);
+// 194 0-4: the home camera's distance x this (habitat.js atShare); x1.15 the design's, 1.10 / 1.20 to judge by
+export const CAM186 = 1.15; // release build: 199 E RC200
 // a stage in model units -> scale s, and sink / r / seg in world units (legs and attach stay in model units)
 export const sized = (id, stage, m) => {
   const s = SIZE.unit * SIZE[id] * (stage === 'baby' ? SIZE.baby : 1) / (m.h - (m.sink || 0));
@@ -781,19 +793,29 @@ export const SPECIES = [
 // Legends8: glass, lacquer, moon sheep, jade rabbit, 구미호 A·B) were dropped in 114 (user 2026-11-17); they are in git 598fc3a
 export const M89 = false; // release build: the 89-4·90 trial looks stay off (89-2)
 // 170 trial flag (photos only until the user OKs it): first 10 seconds, 애정 레벨, 「다음 할 일」 줄, day-2 legend egg·night notice·install prompt·attendance preview
-export const F170 = false; // release build: the 170 trial stays off
+export const F170 = true; // release build: 218-5f, 170 on the web too with RC200 (bundle 1)
 // 182 ② trial flag (181 A tutorial, docs/tutorial.md): it runs on the 170 flow, so F170 above is on with it too; off in the release build
 export const TUT181 = true; // the 181 tutorial on in both builds: Toss with 170 (182 ② Q6), the web for new saves only with F170 off (184 ③)
-// 182 ④ trial flag (docs/concepts/custom-zone.md 13-1, 「나의 뜰」): the yard habitat, photos only; off in the release build (build-web.mjs)
-export const YARD = false; // release build: the 182 ④ yard trial stays off
+// 182 ④ trial flag (docs/concepts/custom-zone.md 13-1, 「나의 뜰」): the yard habitat, photos only; off in the release build (build-web.mjs).
+// 194 0-6: on with ?s186 (?rc200) too, from the first day
+export const YARD = S186; // release build: 194 0-6, the yard from the first day with RC200
 // 184 ⑤ flag (?adi184, docs/ad-interstitial.md): the interstitial ad (src/toss.js, so Toss only). Off in every build (build-web.mjs ADI)
 // until it opens with the 광고 제거 sale (Q6)
 export const ADI184 = false; // release build: the 184 ⑤ interstitial stays off
+// 194-7 trial flag (?th194, docs/decor-redesign.md 5-3 ②⑤⑥, 7-2): the first theme's six pieces (숲속 오두막) in the yard; off in the
+// release build (build-web.mjs TH)
+export const TH194 = false; // release build: the 194-7 theme trial stays off
 // bigIds: measured 2026-11-20 (decorModel triangles over 8,000; the median prop 2,258; rails aside)
-// the yard's steps 0..3 (5-1): open land cells a side, props / natives / animals at once; price: ♥ for steps 1..3; big: the props over
+// the yard's steps 0..6 (5-1; 4..6 since 184 ④): open land cells [across x, along z], props / natives / animals at once; price: ♥
+// for steps 1..6; step 6 is the whole first board (BOARD0, 36×58: the paint cap in rules.js tidyYard); big: the props over
 // 8,000 triangles (measured in the browser, report 182y) at most this many together; level: the garden level it opens at, free
-export const YARD_B = { price: [30, 60, 120], cells: [16, 20, 24, 28], props: [40, 55, 70, 90], nat: [20, 26, 32, 40], animals: [4, 5, 6, 7], big: 10,
+export const YARD_B = { price: [30, 60, 120, 200, 350, 500], cells: [[16, 16], [20, 20], [24, 24], [28, 28], [32, 36], [36, 46], [36, 58]],
+  props: [40, 55, 70, 90, 110, 130, 150], nat: [20, 26, 32, 40, 48, 54, 60], animals: [4, 5, 6, 7, 8, 9, 10], big: 10,
   bigIds: ['waterwheel', 'snowslide', 'ev_slide', 'gym', 'picnic', 'slide', 'tower', 'ev_flakelamp'], level: 10, kit: [['bench', 1], ['tulips', 3], ['lantern', 1], ['fence', 1]], kitNat: [['tree', 2], ['bush', 3], ['rock', 1], ['wildflowers', 2]] };
+// 194 0-6 (?s186, decor-redesign.md 5-1): opens the first day after the tutorial (rules.js unlockInfo), small (12 cells), the land's
+// ladder to 36 cells and 80 props; the start kit the same
+if (S186) Object.assign(YARD_B, { price: [15, 30, 60, 120, 200, 350], cells: [[12, 12], [16, 16], [20, 20], [24, 24], [28, 28], [32, 32], [36, 36]],
+  props: [16, 28, 40, 52, 62, 72, 80], nat: [8, 12, 16, 20, 24, 28, 32], animals: [3, 4, 5, 6, 7, 7, 7], level: 0 });
 // 120 (public since 123): new slots for the rabbit and the sheep, looks made from code (materials.js 115); the old variants stay
 // as they are. tier 'often' (inbox 120: 「흔함」 쪽 가중치). mono: one colour only (the shader paints it), so no colour list (check-eggs). 솜사탕 (candy115) and 뜨개 니트 (knit115) dropped: their looks are kept, no slot
 // 125-A: 박하사탕·반딧불·뭉게구름 gone (user 11/17: only 밤하늘 stays): no egg hatches them, the codex shows one only to a player who has
@@ -906,7 +928,10 @@ for (const [sp, L] of Object.entries(LEGEND163)) if (!HOLD163.includes(sp)) SPEC
 MODELS.reindeer.legend = { adult: 'assets/models/baengnok152_adult.glb', baby: 'assets/models/baengnok152_baby.glb' }; // 160 A: public (the pilot89 files renamed) // 156 C: the calf's own file too
 // 183 B (?m89): the bronze reindeer's own bodies (tools/bake-reindeer183.mjs: slim knee-jointed legs, a big sweeping antler, no ruff
 // or collar; hollows and worn ends baked in), a second file for each stage (figure.js loads a list); materials.js bronze183b puts them on
-if (M89) for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st] = [MODELS.reindeer.legend[st], `assets/models/pilot89_reindeer183_${st}.glb`];
+// 218-5f: 백야 순록 in bundle 1 (RC200): its own flag, not all of ?m89 (?wn198 or ?rc200; build-web sets it to RC200). The 183 B and
+// 202 C files renamed out of pilot89_ (bytes as they were; build-web leaves them out unless RC200; written out whole: build-web finds the files it copies by their literal paths)
+export const WN198 = true; // release build: 218-5f, 백야 순록 with RC200 (bundle 1)
+if (M89 || WN198) for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st] = [MODELS.reindeer.legend[st], { adult: 'assets/models/reindeer183_adult.glb', baby: 'assets/models/reindeer183_baby.glb' }[st]];
 // 192 A 「전설」 기준으로 다시 (?m89 시범; ?m89&leg192=a|b shows one pair): the polar bear and the reindeer, each two concepts on their
 // own bodies (the bear's public body, 183 B's reindeer body and legs), nothing added: materials.js 192 A. The 상고대 antler is its own
 // file (tools/bake-reindeer192.mjs: a winter branch); the 등불 one is 183 B's antler. Appended last (late), old link numbers stay
@@ -915,11 +940,26 @@ export const LEGEND192 = {
   polarBear: [{ id: 'iceberg', name: $t('빙산 곰'), mat: 'iceberg192', effect: 'clearglints', late: 192 }, { id: 'polarnight', name: $t('극야 곰'), mat: 'polarnight192', effect: 'silversparks', late: 192 }],
   reindeer: [{ id: 'rime', name: $t('상고대 순록'), mat: 'rime192', effect: 'clearglints', late: 192 }, { id: 'amberlamp', name: $t('등불 순록'), mat: 'amberlamp192', effect: 'goldglints', late: 192 }],
 };
-if (M89) { for (const [sp, L] of Object.entries(LEGEND192)) L.forEach((v, i) => (!LEG192 || 'ab'[i] === LEG192) && SPECIES.find(s => s.id === sp).legendary.push(v));
-  for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st].push(`assets/models/pilot89_reindeer192_${st}.glb`); }
+// 198 C: the two reindeer kept (materials.js rime192, amberlamp192; the 192 antler file and its bake) but not shown, ?m89 too (as HOLD163)
+export const HOLD192 = ['reindeer'];
+if (M89) for (const [sp, L] of Object.entries(LEGEND192)) if (!HOLD192.includes(sp)) L.forEach((v, i) => (!LEG192 || 'ab'[i] === LEG192) && SPECIES.find(s => s.id === sp).legendary.push(v));
+if (M89 && !HOLD192.includes('reindeer')) for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st].push(`assets/models/pilot89_reindeer192_${st}.glb`); // 상고대's winter branch: back with it
 // 202 A 공개 (user OK 11/21, was 201 A's trial flag): the 극야 곰 alone (materials.js polarnight192), for everyone; the other three
 // 192 A looks stay under ?m89. late 192: appended last, old link numbers stay
 { const L = SPECIES.find(s => s.id === 'polarBear').legendary; if (!L.includes(LEGEND192.polarBear[1])) L.push(LEGEND192.polarBear[1]); }
+// 198 C 순록 둘 다 다시 (?m89 시범): 백야 순록 and 2안 차로아이트 순록 on 183 B's body, legs and antler as they are (its file above),
+// only their look (materials.js 198 C). Appended last (late), old link numbers stay
+export const LEGEND198 = {
+  reindeer: [{ id: 'whitenight', name: $t('백야 순록'), mat: 'whitenight198', effect: 'skyglints', late: 198 }, { id: 'charoite', name: $t('차로아이트 순록'), mat: 'charoite198', effect: 'lilacglints', late: 198 }],
+};
+// 201 B: 차로아이트 is 「재질 + 무늬」 (tiers.md: 영웅), not a legendary: kept as a hero candidate (its look stays in materials.js)
+// but not shown, ?m89 too (as HOLD192). The reindeer's nose #4a4034 on every brown-nosed variant (the species' #5a4034 read reddish
+// beside a pale body, 198c.md): the commons and 겨울 등불 (its look's finish, materials.js lantern201) under ?m89 only, public as it is
+export const HOLD198 = ['charoite'];
+if (M89 || WN198) for (const [sp, L] of Object.entries(LEGEND198)) SPECIES.find(s => s.id === sp).legendary.push(...L.filter(v => !HOLD198.includes(v.id)));
+if (M89) { SPECIES.find(s => s.id === 'reindeer').colors.beak = '#4a4034'; MODELS.reindeer.m89 = { lantern: 'lantern201' }; }
+// 202 C: 백야's own antler (tools/bake-reindeer202.mjs: thicker, longer tines, one more forward; only whitenight198 wears r202horn)
+if (M89 || WN198) for (const st of ['adult', 'baby']) MODELS.reindeer.legend[st].push({ adult: 'assets/models/reindeer202_adult.glb', baby: 'assets/models/reindeer202_baby.glb' }[st]);
 // 163 A 공룡 방향 다시 (?m89 시범; tools/bake-dino163.mjs, from 161 A's crisp horns, plates, spikes, toes and claws): the
 // triceratops and stegosaurus as toys: the head 1.35x / 1.38x on a shorter neck, the body 0.85x as long and rounder (shoulders and
 // hips up a little, the waist in), short thick legs thinning to the ankle on wide three-toed feet, the beak one shape with the face
@@ -1203,6 +1243,12 @@ export const PROPS = [
   { id: 'walk_cairn', name: $t('조약돌 탑'), price: 0, r: 0.3, small: true, gift: $t('산책 선물') }, // 13-1: STROLL_PROPS, in turn
   { id: 'walk_acorn', name: $t('큰 도토리'), price: 0, r: 0.3, small: true, gift: $t('산책 선물') },
   { id: 'walk_pinecone', name: $t('솔방울'), price: 0, r: 0.3, small: true, gift: $t('산책 선물') },
+  // 184 ④ 산책 선물 더 (?yard only, 12종 target: balance-release.md 13-3): small finds that suit the yard's board. Not in
+  // layout.js KINDS yet (7 bits, 125 of 128 used: a code skips them; making them public needs a wider kind first)
+  ...(YARD ? [{ id: 'walk_stump', name: $t('작은 그루터기'), price: 0, r: 0.35, small: true, gift: $t('산책 선물') },
+    { id: 'walk_nest', name: $t('빈 새 둥지'), price: 0, r: 0.3, small: true, gift: $t('산책 선물') },
+    { id: 'walk_leaf', name: $t('단풍잎'), price: 0, r: 0.35, small: true, gift: $t('산책 선물') },
+    { id: 'walk_clover', name: $t('네잎클로버'), price: 0, r: 0.25, small: true, gift: $t('산책 선물') }] : []),
   { id: 'sky_scope', name: $t('하늘 망원경'), price: 0, r: 0.6, k: 1.2, gift: $t('특별한 하늘') }, // 16-2: given once (ui/sky.js); tapped: 하늘 보기, by day last night again
   { id: 'myth_altar', name: $t('옛 제단'), price: 0, r: 1.1, k: 1.4, habitat: 'meadow', gift: $t('신수의 부름') }, // 14-1: the burnt hoofprints give it (MYTHIC)
   // 15-1 이벤트 소품: bought with an event's coins in its window (EVENTS shop), never with hearts; nothing back when put away
@@ -1251,6 +1297,11 @@ PROPS.push(
 // the next of these (rules.js dig) with odds a dig, gap ms at least after the last find; each one once, a gift prop in the dino
 // habitat. Not part of BALANCE (no eggs, no hearts: decorations only)
 export const FOSSIL = { props: ['fos_ammonite', 'fos_bone', 'fos_egg', 'fos_skull'], gap: 2 * 3600e3, odds: 0.25 };
+// 194-7: before the price line below, so list/price go as any prop's; meadow: sold in the yard (and the meadow), not the other habitats' shops
+if (YARD && TH194) PROPS.push({ id: 'th_hanglamp', name: $t('걸이 등'), habitat: 'meadow', price: 50, r: 0.75, light: true, band: 'C', h: 2.75, th: 'forest', glow: { r: 3.2, col: '#ff7a36' } },
+  { id: 'th_woodshed', name: $t('장작 헛간'), habitat: 'meadow', price: 200, r: 2.8, band: 'D', h: 5.3, th: 'forest' },
+  { id: 'th_logchair', name: $t('통나무 의자'), habitat: 'meadow', price: 40, r: 1.0, band: 'B', h: 2.05, th: 'forest' });
+if (YARD && TH194) YARD_B.bigIds.push('th_woodshed'); // measured 10,748 triangles (over YARD_B's 8,000): one of the yard's big props
 // 42 F-1: list = the price as listed (release); price = what this edition charges (PACE priceX; big: list ♥100 and up). Gifts stay 0
 for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5, Math.round(p.price * P.priceX[p.price >= 100 ? 'big' : 'small'] / 5) * 5); }
 // 15-1 계절 이벤트 (docs/event.md; rules.js evTick; ui/event.js). start: 'MM-DD' every year (KST) unless play/events.json
@@ -1275,8 +1326,8 @@ export const EVENTS = [
     shop: [{ prop: 'ev_igloo', price: 180, kind: 'big' }, { prop: 'ev_slide', price: 160, kind: 'big' }, { prop: 'ev_flakelamp', price: 120, kind: 'big' },
       { prop: 'ev_sled', price: 60, kind: 'small' }, { prop: 'ev_snowfam', price: 70, kind: 'small' }, { prop: 'ev_mitten', price: 60, kind: 'small' },
       { wear: 'ev_beanie', price: 40, kind: 'wear' }, { wear: 'ev_scarf', price: 40, kind: 'wear' }],
-    track: [{ at: 15, hearts: 20 }, { at: 35, candy: 1 }, { at: 60, hearts: 30 }, { at: 90, prop: 'ev_icelamp' }, { at: 125, hearts: 40 },
-      { at: 165, candy: 2 }, { at: 205, hearts: 50 }, { at: 245, prop: 'ev_sled' }, { at: 290, hearts: 60 }, { at: 330, prop: 'ev_bigsnowman' }],
+    track: [{ at: 15, hearts: 20 }, { at: 35, hearts: 15 }, { at: 60, hearts: 30 }, { at: 90, prop: 'ev_icelamp' }, { at: 125, hearts: 40 }, // 227 A: the candy steps as their ♥ (사탕 1 = ♥15)
+      { at: 165, hearts: 30 }, { at: 205, hearts: 50 }, { at: 245, prop: 'ev_sled' }, { at: 290, hearts: 60 }, { at: 330, prop: 'ev_bigsnowman' }],
     // need: hab, night, sky, prop (one of a list) placed in that habitat, ball (a snowball fight on screen, photo.js)
     album: { name: $t('눈 속의 친구'), prop: 'ev_album', slots: [
       { id: 'snowman', name: $t('눈사람 옆에서'), need: { prop: ['ev_snowman', 'ev_snowfam', 'ev_bigsnowman'] } },
@@ -1286,7 +1337,7 @@ export const EVENTS = [
       { id: 'aurora', name: $t('오로라 밤'), need: { hab: 'snow', night: true } },
       { id: 'igloo', name: $t('이글루 옆에서'), need: { prop: 'ev_igloo' } }] },
     news: $t('첫눈 이벤트: 눈더미를 눌러 눈송이를 모으고, 눈사람을 만들고, 동물에게 털모자를 씌워요'),
-    mail: { title: $t('첫눈이 왔어요'), body: $t('첫눈 이벤트가 시작됐어요. 따뜻하게 지내라고 작은 선물을 보내요!'), rewards: { hearts: 30, candy: 1 } } },
+    mail: { title: $t('첫눈이 왔어요'), body: $t('첫눈 이벤트가 시작됐어요. 따뜻하게 지내라고 작은 선물을 보내요!'), rewards: { hearts: 45 } } }, // 227 A: ♥30 + 사탕 1 (♥15)
 ];
 // inbox 41 C 출석부: one slot a day (dayOf), the next one even after days away (no penalty), back to 1 after 7. eggs: plain nest
 // eggs (rules give: the habitat's odds, its pity). The 7th adds the next of ATTEND_PROPS, the 7 in turn
@@ -1300,16 +1351,17 @@ export const EV_ACC = {
   g_hat: { name: $t('손님 모자'), base: 'strawhat', colors: { body: '#e8553d', accent: '#fbf7f0' }, min: 0.9 },
   g_band: { name: $t('손님 반다나'), base: 'bandana', colors: { body: '#e8553d' } }, // 86-3마: the blue bandana on the grey penguin was ΔE 39.6
 };
-export const ATTEND = [{ hearts: 20 }, { candy: 2 }, { eggs: 1 }, { hearts: 30 }, { candy: 3 }, { eggs: 1 }, { hearts: 50 }];
+export const ATTEND = [{ hearts: 20 }, { hearts: 30 }, { eggs: 1 }, { hearts: 30 }, { hearts: 45 }, { eggs: 1 }, { hearts: 50 }]; // 227 A: 사탕 2·3 as ♥30·♥45 (사탕 1 = ♥15)
 // 93-2 첫 주 선물: a new save's first 7 출석 slots instead of ATTEND (then ATTEND as before); slot 1 is given when the game
 // begins (rules weekStart), so the next day's first visit is slot 2, the legendary egg (93-1). Days away wait (no reset).
 // legendNow: gift legendary eggs (no pity) that hatch at once; heroEggs: gift heroic eggs; freeExp: a free 땅 넓히기 step in the
-// first habitat; clue: 신수 단서 (the campfire, free, if the save has none: the story's first page is the fire prints beside it)
+// first habitat; clue: 신수 단서 (the campfire, free, if the save has none, while the firemane has not settled: the story's first page
+// is the fire prints beside it; 199 A: after, one clue for the mythic going, rules.js mythStep)
 export const WEEK1 = [{ hearts: 30 }, { legendNow: 1 }, { prop: 'att_rainbow' }, { eggs: 2 }, { freeExp: 1 }, { heroEggs: 1 }, { hearts: 50, clue: 1 }];
 export const ATTEND_PROPS = ['att_sunflower', 'att_birdhouse', 'att_balloons', 'att_wcan', 'att_signpost', 'att_cart', 'att_rainbow'];
 // 13-1 산책: where a walk goes (picked when it leaves) and the postcard's line ({n} the friend's name, {이/가} its josa).
 // The picture of each is ui/stroll.js SCENES
-export const STROLL_PROPS = ['walk_cairn', 'walk_acorn', 'walk_pinecone'];
+export const STROLL_PROPS = ['walk_cairn', 'walk_acorn', 'walk_pinecone', ...(YARD ? ['walk_stump', 'walk_nest', 'walk_leaf', 'walk_clover'] : [])]; // 184 ④: more under ?yard
 export const PLACES = [
   { id: 'brook', name: $t('시냇가'), lines: [$t('{n}{이/가} 시냇물에 발을 살짝 담갔어요'), $t('{n}{은/는} 징검다리를 하나씩 건넜어요'), $t('{n}{이/가} 물소리를 들으며 낮잠을 잤어요')] },
   { id: 'flowers', name: $t('꽃밭'), lines: [$t('{n}{이/가} 노란 꽃 냄새를 맡았어요'), $t('{n}{은/는} 나비를 따라 한참 걸었어요'), $t('{n}{이/가} 꽃잎 하나를 등에 얹고 왔어요')] },
@@ -1319,12 +1371,13 @@ export const PLACES = [
   { id: 'path', name: $t('들판 오솔길'), lines: [$t('{n}{은/는} 오솔길 끝까지 가 봤어요'), $t('{n}{이/가} 울타리 너머를 기웃거렸어요'), $t('{n}{은/는} 풀밭에서 네잎클로버를 찾았어요')] },
 ];
 // 14-1 신수 (神獸): its own rank, apart from RARITIES and SPECIES (so no nest egg, no 보관함, no seat, no walk: rules.js S.myth).
-// 152 D: a habitat may have several; each its own call in S.myth[id], one call at a time in this order (rules.js mythTurn).
+// 152 D: a habitat may have several; each its own call in S.myth[id]. 199 A (188): one at a time, picked evenly from the open
+// ones (rules.js mythPick), no order. step: a clue may be given from outside (rules.js mythStep, 190 A4)
 // clues: its 단서 3 (the stage 'altar' till all are done). The meadow's first. 신수의 부름 (rules.js mythTick, ui/myth.js): fire prints -> a campfire's night -> burnt
 // hoofprints (page 1 + the 옛 제단) -> the altar's 3 (`hair` from a walk to `place`, `scenes` 놀이 장면, a 큰 소품 placed) -> 부르기
 // -> that night it comes -> a guest PACE myth.guest days -> it settles. pages: the story, page i shown when step i is done
 export const MYTHIC = [{
-  id: 'firemane', name: $t('불갈기 천리마'), habitat: 'meadow', clues: ['hair', 'play', 'big'], hair: $t('붉은 갈기 털'), scenes: 3,
+  id: 'firemane', name: $t('불갈기 천리마'), habitat: 'meadow', clues: ['hair', 'play', 'big'], step: 1, hair: $t('붉은 갈기 털'), scenes: 3,
   model: { file: 'assets/models/myth_firemane157.glb', h: 2.517, r: 0.389, seg: [-0.43, 0.934], legs: { hip: 0.8432, foot: 0.165, x: [0.4, -0.42], z: 0.19 } }, // tools/bake-mythic.mjs prints these
   place: { id: 'firehill', name: $t('불의 언덕'), lines: [$t('{n}{은/는} 따뜻한 언덕에서 붉은 털 한 가닥을 물고 왔어요'), $t('{n}{이/가} 언덕의 그을린 풀밭을 한참 냄새 맡았어요'), $t('{n}{은/는} 언덕 꼭대기에서 불씨 같은 털을 찾았어요')] },
   tales: { at: $t('옛 제단'), // 14-2 이야기 카드 (game/story.js): its coming, its settling
@@ -1347,7 +1400,7 @@ export const MYTHIC = [{
 // fig: the game figure it is (materials.js 152 B / 152 C looks; not a SPECIES variant, so no egg, no VL). cl: each clue's name,
 // hint and where its 「가 보기」 goes. say: its own lines. tales: one card, its settling
 export const MYTHIC152 = [
-  { id: 'unicorn', name: $t('유니콘'), habitat: 'meadow', clues: ['feather', 'horn', 'ring'], guest: 6, dawn: true, luck: 0.25, pity: 3,
+  { id: 'unicorn', name: $t('유니콘'), habitat: 'meadow', clues: ['feather', 'horn', 'ring'], step: 1, guest: 6, dawn: true, luck: 0.25, pity: 3,
     ring: ['flowers', 'tulips', 'flowermound', 'pinwheel', 'gazebo', 'carousel'], need: 3,
     fig: { sp: 'horse', v: { id: 'unicorn', rarity: 'legendary', mat: 'unicorn152', effect: 'goldglints' } },
     cl: [[$t('금빛 깃털'), $t('초원 동물을 산책 보내면 물어 와요'), 'walk'], [$t('진주 뿔 조각'), $t('초원 동물을 쓰다듬다 보면 반짝이며 떨어져요 (하루 한 번)'), ''],
@@ -1362,7 +1415,7 @@ export const MYTHIC152 = [
       [$t('초원에 예쁜 것들이 동그랗게 모였어요.'), $t('꽃 고리를 좋아하는 손님이래요. 세 번째 단서예요.')],
       [$t('유니콘이 초원에 머물기로 했어요.'), $t('날개를 접고 꽃밭 사이를 천천히 걸어요.')],
     ] },
-  { id: 'baengnok', name: $t('백록'), habitat: 'snow', clues: ['bell', 'frost', 'jade'], guest: 6, scenes: 3,
+  { id: 'baengnok', name: $t('백록'), habitat: 'snow', clues: ['bell', 'frost', 'jade'], step: 1, guest: 6, scenes: 3,
     fig: { sp: 'reindeer', v: { id: 'baengnok', rarity: 'legendary', mat: 'baengnok152' } },
     cl: [[$t('은방울'), $t('설원 동물을 산책 보내면 주워 와요'), 'walk'], [$t('상고대 꽃'), $t('설원 동물이 나오는 놀이 장면을 3개 모아요 (본 것도 세요)'), 'scenes'],
       [$t('옥빛 뿔 조각'), $t('눈 더미 곁에서 옥빛이 반짝이는 곳을 눌러 봐요'), '']],
@@ -1379,10 +1432,10 @@ export const MYTHIC152 = [
 ];
 MYTHIC.push(...MYTHIC152); // 160 A: public (user OK 11/19), the call 158
 // inbox 41 D 첫날 할 일: shown on the first `days` days of a game (dayOf, from S.since) as a small list under the top bar. Each
-// task done once gives its hearts; all of them the `prop` (a 선물 prop) and `candy`. What counts: rules.js FIRST_V
+// task done once gives its hearts; all of them the `prop` (a 선물 prop) and `hearts` (227 A: was 사탕 2, as ♥30). What counts: rules.js FIRST_V
 // 꾸미기 › 큰 소품 탭 (ui/decor.js TABS; first.js 「다음은 큰 소품」)
 export const BIGS = 'gazebo duckhouse barn windmill greenhouse treehouse well arch picnic falls lighthouse waterpav igloo mushroom tunnel snowslide carousel gym balloon tower waterwheel';
-export const FIRST = { days: 3, prop: 'firstday', candy: 2, tasks: [
+export const FIRST = { days: 3, prop: 'firstday', hearts: 30, tasks: [
   { id: 'hatch', text: $t('알 3번 부화하기'), n: 3, hearts: 15 },
   { id: 'pet', text: $t('동물 5번 쓰다듬기'), n: 5, hearts: 10 },
   { id: 'prop', text: $t('소품 하나 놓기'), n: 1, hearts: 15 },
@@ -1402,8 +1455,10 @@ export const SIZES = [$t('보통'), $t('작게'), $t('크게'), $t('아주 크�
 // (a small one, for the top spots, x1.6 at most: bigger hits the next spot); one a cell across stays 1 cell at 작게 (x0.75), a thin
 // one (r under about .45) at 크게 too. inbox 42 F-3 아주 크게: x2 (a small one then stands on the ground only, not on a top spot)
 // inbox 42 C2: k, a big prop's own growth (its model and r as built x k, then x its size)
-export const sizeF = (P, sz) => { if (!P) return 1; const k = P.k || 1; if (!sz) return k; if (sz === 3) return 2 * k; const n = Math.max(1, Math.round(2 * P.r * k));
+const sizeF0 = (P, sz) => { if (!P) return 1; const k = P.k || 1; if (!sz) return k; if (sz === 3) return 2 * k; const n = Math.max(1, Math.round(2 * P.r * k));
   return k * (sz === 1 ? (n > 1 ? Math.min(0.75, (n - 0.52) / (2 * P.r * k)) : 0.75) : Math.min(P.small ? 1.6 : 1.7, Math.max(1.3, (n + 0.52) / (2 * P.r * k)))); };
+// 194 0-2 (9-3, ?s186 only: band and h are set by apply186): 크게 / 아주 크게 stop at the top of its band (the save's sz stays)
+export const sizeF = (P, sz) => { const f = sizeF0(P, sz); return sz >= 2 && P?.band && P.band !== 'x' && P.h ? Math.min(f, Math.max(P.k || 1, (BANDS[P.band]?.[1] ?? 9) * H186() / P.h)) : f; }; // an unknown band: no clip
 export const sizable = P => !!P && !P.rail && !P.use && !P.stamp && !(P.open && P.shelter); // play props (their seats), rails, the gazebo (who fits under it) keep their size
 // 28-2 「소품 쓰기」: the play props each species uses now and then (src/animals/play.js; one too big for a prop passes it by)
 export const USES = { // 42 F-2: + the big props (tunnel ... snowslide) at the end of each
@@ -1497,7 +1552,25 @@ export const BRUSHES = [{ id: 'grass', name: $t('풀'), c: '#86bf45', hab: ['mea
   { id: 'fenceline', name: $t('울타리'), c: '#c88a4b', stand: 1 }, { id: 'wall', name: $t('돌담'), c: '#a8a39a', stand: 1 }]; // c: the ground colour (terrain.js)
 // 25-1 hab: the habitats a brush paints in (none: all). 자갈 everywhere; 풀·흙길·모래·꽃밭 not on the snow (14-3: on the dino jungle too); 눈·얼음 only there
 if (YARD) BRUSHES.push({ id: 'water', name: $t('물'), c: '#8ccbe0', hab: ['yard'] }); // 182 ④: 11, shallow water to look at (terrain.js uPC.a)
-export const brushIn = (b, habId) => !!BRUSHES[b] && (habId === 'yard' || !BRUSHES[b].hab || BRUSHES[b].hab.includes(habId));
+// 195 B-8 1-1 (?yard) 이어지는 소품 (decor-redesign.md 5-3 ②): 12 생울타리 (stands, 0.45 H), 13 다리 (open: walked over, props keep
+// off; water under it where it crosses water, terrain.js), 14 문 (open: in a fence, wall or hedge line, dressed as that line; two
+// side by side a 2-cell gate). Drawn in lines.js. A brush is saved by its index (layout.js ver 4): the theme's 15..18, the tufts' 19, 20
+if (YARD) BRUSHES.push({ id: 'hedge', name: $t('생울타리'), c: '#6fa04a', hab: ['yard'], stand: 1 }, { id: 'bridge', name: $t('나무다리'), c: '#c99a63', hab: ['yard'] },
+  { id: 'gate', name: $t('문'), c: '#e2b27a', hab: ['yard'] });
+// 194-7 (?th194) 테마 색 체계 (5-3 ⑥): six colours a theme's pieces wear (주 · 보조 · 포인트 · 나무 · 돌 · 빛). One theme for the trial;
+// its pieces read these (lines.js, props.js); a record's own th (1-4) comes later
+export const THEMES = [{ id: 'forest', name: $t('숲속 오두막'), pal: { main: '#8b5a36', sub: '#7aa545', point: '#d6503c', wood: '#e9c38c', stone: '#bdb4a4', light: '#ffc66e' },
+  pieces: ['logfence', 'loggate', 'stepstone', 'th_hanglamp', 'th_woodshed', 'leaves', 'th_logchair'] }];
+// the theme's pieces, behind the flag: brushes 15..18 after the yard's (195 B-8: were 12..15; trial saves only), props as any (band, h: decor-redesign.md 2, H 4.08).
+// Without ?th194 the four places are kept (off: no habitat paints them, brushIn) so the brushes after them keep their numbers
+if (YARD && TH194) BRUSHES.push({ id: 'logfence', name: $t('통나무 울타리'), c: '#8b5a36', hab: ['yard'], stand: 1, th: 'forest' }, { id: 'loggate', name: $t('통나무 울타리 문'), c: '#d6503c', hab: ['yard'], stand: 1, th: 'forest' },
+  { id: 'stepstone', name: $t('디딤돌 길'), c: '#bdb4a4', hab: ['yard'], th: 'forest' }, { id: 'leaves', name: $t('낙엽'), c: '#d98a3e', hab: ['yard'], th: 'forest' });
+else if (YARD) for (let k = 0; k < 4; k++) BRUSHES.push({ id: 'th194_' + k, name: '', c: '#000000', hab: [], off: 1 });
+// 195 B-8 1-2 붓 포기 (?yard, 5-3 ④): 19 풀숲, 20 물가 paint the ground and stand low tufts on each cell (grass, reeds; drawn by
+// habitat/yard/scatter.js from the cell, not saved apart). Nothing stands in the way: animals and props as on 풀·모래
+if (YARD) BRUSHES.push({ id: 'thicket', name: $t('풀숲'), c: '#6a9e3c', hab: ['yard'], tuft: { kind: 'grass', per: 3, h: 1 } },
+  { id: 'shore', name: $t('물가'), c: '#cbbf8e', hab: ['yard'], tuft: { kind: 'reed', per: 2, h: 0.8 } });
+export const brushIn = (b, habId) => !!BRUSHES[b] && !BRUSHES[b].off && (habId === 'yard' || !BRUSHES[b].hab || BRUSHES[b].hab.includes(habId));
 
 // Egg kinds. species: who can hatch from it, picked evenly. odds: rarity weights (%). pity: its shard gauges (75: each egg its own;
 // a new egg tier comes only with a new egg kind and its own odds + pity, never by changing these). hatchScale: x BALANCE.hatch.
@@ -1509,3 +1582,31 @@ export const EGG_TYPES = [
   { id: 'snow_nest', name: $t('설원 둥지 알'), species: speciesOf('snow'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, pity: BALANCE.pity, hatchScale: 1, sale: null },
   { id: 'dino_nest', name: $t('공룡 정글 둥지 알'), species: speciesOf('dino'), odds: { common: 70, rare: 22, heroic: 7, legendary: 1 }, pity: BALANCE.pity, hatchScale: 1, sale: null }, // 14-3
 ];
+
+// 194 0-2 (?s186, docs/decor-redesign.md 2장·부록 A): every prop's band (the horse's height H the unit: A floor 0~.33, B low furniture
+// .35~.60, C posts and lamps .50~1, D in-between 1~1.6, E houses 1.8~3, E* the duck house 1.8~2.2 ducks, x the animals' art, out of it)
+// and its model's height at k 1 (measured in the browser, 185a), then the 71 props' growth and the 4 natives'. apply186 runs them
+// only under the flag (nothing here is read without it)
+export const B186 = {
+  "A": "lily 0.28 flowers 0.65 fence 1.34 path 0.08 tulips 0.91 tallgrass 1.33 stones 0.47 mushrooms 0.56 log 0.64 jar 1.03 boat 0.17 stepping 0.11 picnic 0.45 sled 0.54 cycad 1.04 dinonest 0.61 seesaw 0.81 ball 0.76 feeder 0.51 bubbles 1 fireworks 0.81 rail 0.13 railcurve 0.14 railfork 0.59 railbridge 1.15 platform 0.454 doll 0.73 hillock 0.75 puddle 0.03 flowermound 0.45 rockmound 0.57 att_wcan 0.52 att_cart 0.79 att_rainbow 0.95 walk_cairn 0.41 walk_acorn 0.43 walk_pinecone 0.43 ev_sled 0.54 ev_snowfam 1.05 fos_ammonite 0.61 fos_bone 0.32 fos_egg 0.39 fos_skull 0.97 gst_basket 0.91 gst_bottle 1.03 gst_reedpipe 1.33 gst_parasol 0.28 gst_beachdoll 0.73 find_pebble 0.18 find_twig 0.08 find_shell 0.11 find_ice 0.21 find_flower 0.42",
+  "B": "hay 0.962 trough 0.636 bench 0.946 hammock 2.04 musicbox 1.25 table 0.738 shelf 0.923 myth_altar 1.55 ev_mitten 1.51 gst_milkcan 0.636 gst_picnicbox 1.25",
+  "C": "lantern 2.05 mushlamp 1.3 starlamp 2.15 pinwheel 1.3 vane 1.66 mailbox 1.18 falls 1.76 snowslide 2.46 snowman 1.8 icelamp 1.2 lavalamp 1.229 ribs 1.44 campfire 2.95 slide 1.87 pinhill 1.99 bell 2.2 att_sunflower 1.6 att_birdhouse 1.64 att_balloons 1.97 att_signpost 1.4 firstday 1.3 sky_scope 1.6 ev_snowman 1.8 ev_icelamp 1.2 ev_bigsnowman 1.8 ev_album 1.2 ev_slide 2.46 ev_flakelamp 2.95 gst_kite 1.3 gst_teapot 1.2 gst_sleighbell 2.2 gst_scarfpost 1.66 gst_tealamp 2.05",
+  "D": "swing 3.45 gazebo 4.038 greenhouse 2.4 well 1.886 arch 2.91 waterpav 3.25 mushroom 5.4 tunnel 4.96 carousel 5.16 gym 5.81 waterwheel 3.65 igloo 1.5 fountain 2.55 lights 3.04 ev_igloo 1.5",
+  "E": "barn 3.288 windmill 3.738 treehouse 4.947 lighthouse 2.66 balloon 7.05 tower 5.2",
+  "E*": "duckhouse 1.21",
+  "x": "art_ring 0.44 art_bunch 0.44 art_row 0.44 art_tower 0.8 art_hut 0.56 art_heart 0.44 art_shellrow 0.44 art_icering 0.44 art_icerow 0.44 art_icetower 0.63",
+};
+export const K186 = "hay 1.3 trough 1.6 duckhouse 2.7 bench 1.7 stones 1.3 mushrooms 1.3 log 1.5 lantern 1.3 mushlamp 1.2 starlamp 1.3 swing 1.3 pinwheel 1.6 vane 1.5 mailbox 1.75 barn 1.1 windmill 1.3 greenhouse 1.15 treehouse 1.15 well 1.6 arch 1.75 falls 1.4 lighthouse 1.6 waterpav 1.4 snowslide 1.4 carousel 1.15 gym 1.12 balloon 1.3 tower 1.6 waterwheel 1.4 snowman 1.2 igloo 1.9 sled 1.5 icelamp 1.2 lavalamp 1.2 ribs 1.75 seesaw 1.4 hammock 1.2 feeder 1.35 slide 1.5 fountain 1.6 musicbox 1.3 lights 1.4 pinhill 1.3 bell 1.3 table 1.6 shelf 1.5 platform 1.3 att_sunflower 1.4 att_birdhouse 1.5 att_balloons 1.3 att_signpost 1.6 firstday 1.6 walk_cairn 1.5 walk_acorn 1.5 walk_pinecone 1.5 sky_scope 1.3 ev_igloo 1.9 ev_sled 1.5 ev_snowman 1.2 ev_icelamp 1.2 ev_slide 1.4 ev_flakelamp 1.3 ev_mitten 1.3 gst_kite 1.6 gst_milkcan 1.6 gst_teapot 1.2 gst_sleighbell 1.3 gst_scarfpost 1.5 gst_picnicbox 1.3 gst_tealamp 1.3 find_flower 1.5";
+export const NAT186 = { tree: 1.25, pine: 1.45, bush: 1.25, rock: 1.1 }; // the rock x1.1, not x1.25 (2-4: wide, it blocked the shore)
+export const BANDS = { A: [0, 0.33], B: [0.35, 0.6], C: [0.5, 1], D: [1, 1.6], E: [1.8, 3], 'E*': [1.8 * 4.05 * 0.42 * 1.21 / 1.215 / 4.08, 2.2 * 4.05 * 0.42 * 1.21 / 1.215 / 4.08] }; // E*: the duck's house, 1.8~2.2 x the duck (2-2)
+export const H186 = () => SIZE.unit * SIZE.horse * 4.08 / 4.05; // the adult horse's height (Box3), the bands' unit
+let did186 = false;
+export function apply186() { if (did186) return; did186 = true; // once: the tables are multiplied in place
+  const k = Object.fromEntries(K186.match(/\S+ \S+/g).map(w => w.split(' ')));
+  for (const [band, s] of Object.entries(B186)) { const l = s.split(' '); for (let i = 0; i < l.length; i += 2) { const P = PROPS.find(p => p.id === l[i]); if (!P) continue;
+    P.band = band; P.h = +l[i + 1]; if (k[P.id]) P.k = (P.k || 1) * +k[P.id]; } }
+  const of = { tree: 'tree', treefern: 'tree', snowpine: 'pine', bush: 'bush', rock: 'rock' };
+  for (const N of NATURE) { const f = NAT186[of[N.id]]; if (f) { N.r *= f; N.h *= f; } }
+  for (const n in NAT186) NAT_K[n] *= NAT186[n]; // meadow/props.js kit and zoneprops.js read it when they build
+}
+if (S186) apply186();

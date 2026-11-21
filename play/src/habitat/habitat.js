@@ -7,7 +7,7 @@ import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { buildMeadow } from './meadow/index.js';
-import { rectAt, strip, zoneSet, BOARD0, S129T, Z143, REVEAL } from './zones.js';
+import { rectAt, strip, zoneSet, BOARD0, S129T, Z143, REVEAL, SPOTS, ART_SPOTS } from './zones.js';
 import { mist } from './mist.js';
 import { windTime, toyMat, snowNow } from './toyKit.js';
 import { daylight, fireflies, hourNow } from './daylight.js';
@@ -18,10 +18,11 @@ import { natureLayer, grassMask } from './nature.js';
 import { free, gapTo, partAt } from '../animals/crowd.js';
 import { stamps, bump } from './stamps.js';
 import { linesLayer } from './lines.js';
+import { glowLayer } from './glow.js';
 import { loadModel, loadAcc } from '../animals/figure.js';
 import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
-import { SPECIES, MODELS, MYTHIC, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable, YARD } from '../game/data.js';
-import { SP, habitatOf, known, topAt, kindName } from '../game/rules.js';
+import { SPECIES, MODELS, MYTHIC, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable, YARD, S186, CAM186, TH194 } from '../game/data.js';
+import { SP, habitatOf, known, topAt, kindName, plan186, spotMode, onSpots, spotTakes } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
 import { ambience, sfx, music, playing, hear, pet, lilies } from '../ui/sound.js';
 import { tracksOf, network, railEnds, joinTurn, newTrain, moveTo, stepTrain, boardAt, TILE, CARS } from './train.js';
@@ -32,6 +33,7 @@ import { landOf } from './land.js';
 import { mythLayer, guestLayer } from './myth.js';
 import { skyLayer } from './skyfx.js';
 import { wildLayer } from './wildLayer.js';
+import { strokeOn, scBlock } from '../game/scatter.js'; // 195 B-8 1-2 (?yard; the rest: the yard's build, habitat.fine = yard/fine.js)
 import { colOf, trailsOf, WILD } from '../game/wild.js';
 const RV = S129T || Z143; // 129's 넓히는 순간 (the mist, the glide, the pop, the run in): its trial's and 143's
 
@@ -74,7 +76,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const W = () => container.clientWidth, H = () => container.clientHeight;
   // 28-1: the open ground and the board as built, [x0, x1, z0, z1] (zones.js: each step adds a zone along one side)
   const top = Math.min(level + 1, BALANCE.expand.price.length), open = rectAt(habId, level), built = rectAt(habId, top);
-  const panX = [open[0] + 6, open[1] - 6], panZ = [open[2] + 9, open[3] - 7]; // where the free camera may look (the first board: x +-12, z -20..22)
+  const yp = YARD && habId === 'yard', panX = yp ? [open[0], open[1]] : [open[0] + 6, open[1] - 6], panZ = yp ? [open[2], open[3]] : [open[2] + 9, open[3] - 7]; // where the free camera may look (the first board: x +-12, z -20..22); 229 D ①: the yard's whole open land (its props go anywhere in it)
   const mid0 = new THREE.Vector3((open[0] + open[1]) / 2, 0, (open[2] + open[3]) / 2 + 3); // the home view's middle (the first board's: 0, 3)
   const ac = new AbortController(), sig = { signal: ac.signal }; let dead = false; // dispose(): every listener off, the loop stopped
   // Pixel ratio capped at 2 (a 3x phone renders 2.25x fewer pixels; the difference is hard to see on toys); 26-3: 보통 1.5, 낮음 1.25.
@@ -184,7 +186,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const buildIt = await builder; REVEAL.k = RV && reveal ? level : 0; REVEAL.skip = null; // 129 (?s129): the zone just bought, its fixtures pop up (zoneprops.js)
   const habitat = buildIt(scene, { zzz: obj => ui.zzz(project(obj)) }, sunDir, level, top), popSkip = REVEAL.skip; REVEAL.k = 0; REVEAL.skip = null;
   renderer.shadowMap.needsUpdate = true;
-  const mistTick = mist(scene, habitat.floor, open, built, reveal && level > 0 ? rectAt(habId, level - 1) : open, RV ? 3.4 : 2.6), U = habitat.unit; // U: saved decor x, z -> here
+  const mistTick = mist(scene, habitat.floor, open, built, reveal && level > 0 ? rectAt(habId, level - 1) : open, RV ? 3.4 : 2.6, habitat.mistPad), U = habitat.unit; // U: saved decor x, z -> here
   if (RV && reveal) container.addEventListener('pointerdown', () => { mistTick.skip(); popSkip?.(); }, { ...sig, once: true }); // 129: a tap skips the reveal
   const flies = habId === 'meadow' ? fireflies(scene, habitat.ctx) : null; // 21-1: fireflies over the meadow at night (the pond: sparkles on its water)
   habitat.ctx.crowd = new Set(); // every animal's body capsule, so they keep apart (crowd.js)
@@ -286,6 +288,37 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   let snapOn = false; // 24-1 사진 모드: a wider camera band (band)
   let propList = [], decorOn = false, ed = null, drag = null, pinch = null, back = null, carry = null; // carry: inbox 42 E, the animal held up { a, id, x, z, dx, dz }
   // ed: the prop being moved { uid, P, obj, x, z, rot, ok }; back: the camera before it was picked up
+  // 194 0-5 (?s186, decor-redesign.md 4-2 7·4-4): this step's 꾸미기 자리 (zones.js SPOTS). 209 A: shown only in 꾸미기, an empty one
+  // as a faint dashed ring on the ground (a filled one nothing) and a small dot at its 「알이 놓일 점」; with a prop held only the free
+  // ones that take it (green; the rest grey). One mesh of a few rings, built again at each paint (vertex colours, each point on the
+  // ground under it); none without spots (the flag off); disposed with the habitat
+  const spots = spotMode(habId) ? SPOTS[habId].filter(s => s.L <= level) : [];
+  const spotHeld = () => !!spots.length && !!ed && !ed.nat && !ed.P.ring && onSpots({ prop: ed.P.id });
+  const freeFor = P => spots.filter(s => spotTakes(s, P) && !propList.some(p => p.placed && p.hab === habId && p.uid !== ed?.uid && p.sp === s.id && onSpots(p)));
+  const nearSpot = (x, z) => freeFor(ed.P).sort((a, b) => Math.hypot(a.x * U - x, a.z * U - z) - Math.hypot(b.x * U - x, b.z * U - z))[0] ?? null;
+  const spotMat = spots.length ? new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }) : null;
+  const spotMesh = spotMat && new THREE.Mesh(new THREE.BufferGeometry(), spotMat); if (spotMesh) { spotMesh.renderOrder = 1; spotMesh.frustumCulled = false; scene.add(spotMesh); }
+  let spotSig = '', spotK = 0; // the rings only change with these, not with the held prop's position: skip the rebuild while it is dragged
+  // 221 C ③: the ring as wide on screen far off as near: 0.16 m out to RING_NEAR, past it wider with the camera's distance, in steps of
+  // x1.15 (spotK, in the sign: a zoom rebuilds it only at a step, tick); the egg dot with it
+  const RING_NEAR = 16, ringR = () => Math.max(0, Math.log(camera.position.distanceTo(controls.target) / RING_NEAR) / Math.log(1.15)), ringK = () => Math.round(ringR());
+  function spotPaint() {
+    if (!spots.length) return; const held = spotHeld() ? new Set(freeFor(ed.P).map(s => s.id)) : null, used = new Set(propList.filter(p => p.placed && p.hab === habId && p.uid !== ed?.uid && p.sp && onSpots(p)).map(p => p.sp));
+    spotK = decorOn || held ? ringK() : 0; const sig = [decorOn, held ? [...held].join() + '/' + ed.sp : '-', [...used].join(), spotK].join('|'); if (sig === spotSig) return; spotSig = sig;
+    const P = [], C = [], c = new THREE.Color(), TAU = Math.PI * 2, hw = 0.08 * 1.15 ** spotK;
+    const pt = (x, z, w) => { P.push(x, D.y(x, z, w) + 0.06, z); C.push(c.r, c.g, c.b); };
+    const quad = (x, z, r0, r1, a0, a1, w) => { const p = (r, a) => [x + Math.cos(a) * r, z + Math.sin(a) * r]; for (const [r, a] of [[r0, a0], [r1, a1], [r1, a0], [r0, a0], [r0, a1], [r1, a1]]) pt(...p(r, a), w); }; // wound to face up (front side)
+    const ring = (x, z, r, w, col) => { c.set(col); const h = Math.min(hw, r * 0.15), n = Math.max(10, Math.round(TAU * r / (0.9 * h / 0.08))); // a dash ~0.55 m, a gap ~0.35 m, 0.16 m wide (near; 2 hw, never past 0.3 r: still a ring far off), the dashes as long with it
+      const da = Math.min(h / r, 0.25 / n * TAU), L = 0.6 / n * TAU - 2 * da; // 229 D ③: round ends, a half disc each end (the dash as long as before with them)
+      const cap = (a, b0) => { const ex = x + Math.cos(a) * r, ez = z + Math.sin(a) * r; for (let k = 0; k < 6; k++) { const b1 = b0 + k / 6 * Math.PI, b2 = b0 + (k + 1) / 6 * Math.PI; pt(ex, ez, w); pt(ex + Math.cos(b2) * h, ez + Math.sin(b2) * h, w); pt(ex + Math.cos(b1) * h, ez + Math.sin(b1) * h, w); } }; // wound as quad
+      for (let i = 0; i < n; i++) { const a0 = i / n * TAU + da; for (let j = 0; j < 3; j++) quad(x, z, r - h, r + h, a0 + j * L / 3, a0 + (j + 1) * L / 3, w); cap(a0, a0 + Math.PI); cap(a0 + L, a0 + L); } };
+    for (const s of spots) { const x = s.x * U, z = s.z * U, w = s.k === 'water';
+      if (held) { if (held.has(s.id) || s.id === ed.sp) ring(x, z, s.r, w, '#4fcf5a'); else if (!used.has(s.id)) ring(x, z, s.r, w, '#9a9a9a'); }
+      else if (decorOn && !used.has(s.id)) ring(x, z, s.r, w, '#fff6dc'); }
+    if (decorOn) { c.set('#fff6dc'); for (const s of spots) if (s.egg) for (let i = 0; i < 10; i++) quad(s.egg[0] * U, s.egg[1] * U, 0, 0.22 * hw / 0.08, i / 10 * TAU, (i + 1) / 10 * TAU, false); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+    spotMesh.geometry.dispose(); spotMesh.geometry = g;
+  }
   // 22-1: the board's own trees, bushes, rocks and flowers (S.props nat: 1) drawn by nature.js, a spot each in D.list (props keep
   // off, animals go round the big ones, the camera guard and the fade see them) and a rain roof under each tree; the paint
   // (S.paint) on the ground; the grass clumps under both hidden (a native's footprint, a path, sand or gravel)
@@ -298,12 +331,16 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     for (const o of natSpots) if (!o.open && Math.abs(o.x - x) < o.r && Math.abs(o.z - z) < o.r && Math.hypot(o.x - x, o.z - z) < o.r) return true;
     const y = bump(x, z); return y < -0.1 ? true : Math.abs(y) > 0.005 ? y : false; }; // 28-6: on a stamp, raised (or lowered) with it; in a puddle, gone
   // 28-6 울타리·돌담: the standing brushes' cells (lines.js), a spot each in the decor list: animals go round, props keep off
-  const lines = linesLayer(scene, (x, z) => D.y(x, z), U); let lineSpots = [];
+  const lines = linesLayer(scene, (x, z) => D.y(x, z), U, YARD && habId === 'yard'); let lineSpots = []; // 195 B-8: the yard's own (std)
+  const glows = TH194 || YARD && habId === 'yard' ? glowLayer(scene) : null, _gv = new THREE.Vector3(); // 194-7: syncGlow (195 B-8 1-3: the yard's every light)
+  // 195 B-8 1-2 세밀 배치 (the yard, ?yard): 흩뿌리기 and 붓 포기 drawn (scatter.js; scNow: S.scatter, scCap: its cap, decor.js), a 돌담 cell's top (t) a small prop may stand on
+  const yd = YARD && habId === 'yard', F = yd ? habitat.fine : null, scat = yd ? F.scatterLayer(scene, (x, z) => D.y(x, z), U) : null; let scNow = [], scCap = Infinity, magnet = null, tops = new Map(); // tops: the 돌담 cells' (F.topsOf)
   function syncLines(p = paintNow) {
     for (const o of lineSpots) { const i = D.list.indexOf(o); if (i >= 0) D.list.splice(i, 1); }
-    lineSpots = lines.set(p).map(([x, z]) => ({ x, z, r: 0.5 * U, h: 0.85, line: 1, fade: null })); D.list.push(...lineSpots); renderer.shadowMap.needsUpdate = true;
+    lineSpots = lines.set(p).map(([x, z, o, t]) => ({ x, z, r: 0.5 * U, h: 0.85, line: 1, fade: null, ...o && { open: 1 }, ...t && { top: t } })); D.list.push(...lineSpots); if (yd) tops = F.topsOf(lineSpots, U); renderer.shadowMap.needsUpdate = true; // 195 B-8 o: a 문 or 다리 (walked through, props keep off)
   }
-  const showPaint = p => { habitat.ground.setPaint({ ...growPaint, ...p }, trailPaint); syncLines(p); }; // a stroke as it goes (or dropped)
+  const showPaint = p => { habitat.ground.setPaint({ ...growPaint, ...p }, trailPaint); syncLines(p); scat?.set(scNow, p); };
+  const wallTop = (x, z) => yd ? F.topAt(tops, x, z, U)?.top ?? null : null; // 195 B-8 1-2: a 돌담 cell's top at x, z // a stroke as it goes (or dropped)
   // 66-2 명성 (68-3): each 땅 넓히기 Lv (rules.js growStage, 0..5) grows the board a step the 67-3 way: one more 들꽃 무더기 (a
   // drift of patches in the sun, a colour each with a few of the next; on snow the purple ones) on 꽃밭 ground, and a worn 오솔길
   // to it (모래 cells: soft-edged, so it winds as a worn trail does, not the grid of 흙길; on snow 자갈). A drift is in the first
@@ -422,6 +459,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     for (const s of [...stamps.filter(s => !now.has(key(s))), ...st.filter(s => !was.has(key(s)))]) { box[0] = Math.min(box[0], s.x - s.r); box[1] = Math.min(box[1], s.z - s.r); box[2] = Math.max(box[2], s.x + s.r); box[3] = Math.max(box[3], s.z + s.r); }
     stamps.splice(0, stamps.length, ...st); habitat.ground?.reshape(box); grassDirty = true; renderer.shadowMap.needsUpdate = true;
     if (natSpots.some(o => o.x > box[0] - o.r && o.x < box[2] + o.r && o.z > box[1] - o.r && o.z < box[3] + o.r)) natSig = null; // syncNat: their heights again
+    if (glows) { syncGlow(); if (YARD) syncLines(); } // 195 B-8: the pools of light and the lines on the new ground (194-7 review)
   }
   function syncNat(list) {
     // inbox 42 C2: a wildflower patch under a placed prop (on land) is not drawn while the prop stands there (placeable lets props over them)
@@ -485,7 +523,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // into storage. Checked one by one as fitAll, the board's own trees and fences staying. -> [{ uid, x, z } (saved) | { uid, off }]
   function refit(list) {
     const mine = list.filter(p => p.placed && p.hab === habId && !p.nat && PR[p.prop] && p.on == null), out = [];
-    const keep = D.list.splice(0); D.list.push(...keep.filter(o => o.nat || o.uid == null));
+    const keep = D.list.splice(0); D.list.push(...keep.filter(o => S186 ? o.uid == null && !o.nat : o.nat || o.uid == null)); // 194 0-2: the natives too are planned (plan186)
     const spots = (P, p, x, z) => P.rail ? railSpots(P, x, z, p.rot ?? 0) : [{ x, z, r: P.r * SZ(p), water: !!P.water, open: !!P.open }];
     const fit = (p, x, z) => { const P = PR[p.prop]; return P.rail ? railFits(P, x, z, p.rot ?? 0, true) : D.placeable(x, z, P.r * SZ(p), !!P.water); };
     try {
@@ -499,7 +537,13 @@ export async function startHabitat(container, ui, habId, records = [], { level =
           else D.list.length = n0; }
         if (!done) for (const p of g) out.push({ uid: p.uid, off: true });
       }
-      for (const p of mine) { if (PR[p.prop].rail) continue;
+      if (S186) { // 194 0-2 9-2: grown props and natives (auto: where the board planted it; else the player's, moved not put away), within 6 cells
+        const auto = p => habitat.natives?.list.some(n => n.prop === p.prop && Math.abs(n.x / U - p.x) < 0.006 && Math.abs(n.z / U - p.z) < 0.006);
+        const sp = p => spots.length && onSpots(p); D.list.push(...mine.filter(sp).map(p => ({ x: p.x * U, z: p.z * U, r: PR[p.prop].r * SZ(p), water: !!PR[p.prop].water }))); // 194 0-5: one on its 꾸미기 자리 stays there
+        const items = [...mine.filter(p => !PR[p.prop].rail && !sp(p)).map(p => ({ uid: p.uid, x: p.x * U, z: p.z * U, r: PR[p.prop].r * SZ(p), water: !!PR[p.prop].water })),
+          ...list.filter(p => p.placed && p.hab === habId && p.nat && NAT[p.prop]).map(p => ({ uid: p.uid, x: p.x * U, z: p.z * U, r: NAT[p.prop].r * (p.s || 1), nat: 1, open: !!NAT[p.prop].open, auto: auto(p) }))];
+        for (const m of plan186(items, (x, z, r, w) => D.placeable(x, z, r, w), 6 * 1.5)) out.push(m.off ? m : { uid: m.uid, x: +(m.x / U).toFixed(4), z: +(m.z / U).toFixed(4) });
+      } else for (const p of mine) { if (PR[p.prop].rail) continue;
         let x = p.x * U, z = p.z * U;
         if (!fit(p, x, z)) { [x, z] = nearest((x, z) => fit(p, x, z), [x, z], 150); if (!fit(p, x, z)) { out.push({ uid: p.uid, off: true }); continue; } out.push({ uid: p.uid, x: +(x / U).toFixed(4), z: +(z / U).toFixed(4) }); }
         D.list.push(...spots(PR[p.prop], p, x, z));
@@ -515,35 +559,53 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const ok = (x, z) => D.placeable(x, z, r + 0.5) && free(habitat.ctx.crowd, { x, z, yaw: 0, r: r + 0.3, seg: [0, 0] }, x, z) && !painted(x, z, r + 0.6)
       && natSpots.every(o => Math.hypot(o.x - x, o.z - z) > o.r + r + 0.3) && also.every(([ax, az, ar]) => Math.hypot(ax * U - x, az * U - z) > ar + r + 1)
       && [...Array(12).keys()].every(k => habitat.ctx.walkable(x + Math.cos(k * Math.PI / 6) * (r + 1.1), z + Math.sin(k * Math.PI / 6) * (r + 1.1)));
+    for (const [ax, az] of spots.length ? ART_SPOTS[habId] || [] : []) if (ok(ax * U, az * U)) return [ax, az]; // 194 0-5: a free 작품 자리 first
     const [x, z] = nearest(ok, [controls.target.x, controls.target.z], 30);
     return ok(x, z) ? [+(x / U).toFixed(4), +(z / U).toFixed(4)] : null;
   }
-  function syncProps(list = propList, paint = paintNow, ghost = ghostNow, grow = growNow) {
+  function syncProps(list = propList, paint = paintNow, ghost = ghostNow, grow = growNow, sc = scNow) { // 195 B-8 1-2 sc: S.scatter (the yard)
     // 28-7: a board put aside (the map, or 땅 넓히기 building the next board on the same shared layout lists) does not sync;
     // play.attach -> draw syncs it again when it is back. Before, the old board pushed its nature spots into the new board's list (unseen blockers)
     if (!active) return;
-    propList = list; syncStamps(); syncNat(list); syncGhosts(ghost || []); growNow = grow; syncGrow(grow, list); // 66-2
+    propList = list; spotPaint(); syncStamps(); syncNat(list); syncGhosts(ghost || []); growNow = grow; syncGrow(grow, list); // 66-2
     const ps = JSON.stringify(paint || {}); if (ps !== paintSig) { paintSig = ps; paintNow = paint || {}; habitat.ground?.setPaint({ ...growPaint, ...paintNow }, trailPaint); syncLines(); grassDirty = true; }
+    scat?.set(scNow = sc || [], paintNow);
     const want = new Map(list.filter(p => p.placed && p.hab === habId && !p.nat && PR[p.prop] && p.uid !== ed?.uid && (p.on == null || p.on !== ed?.uid)).map(p => [p.uid, p])); // 28-5: what stands on the held one goes with it
-    const sigOf = r => `${r.x},${r.z},${r.rot},${r.c || 0},${r.sz || 0},${r.on ?? ''},${r.sl ?? ''}`;
+    const sigOf = r => `${r.x},${r.z},${r.rot},${r.c || 0},${r.sz || 0},${r.on ?? ''},${r.sl ?? ''}${yd && r.on == null ? ',' + wallTop(r.x * U, r.z * U) : ''}`;
     let changed = false;
     for (const [uid, e] of placed) { const r = want.get(uid); if (!r || sigOf(r) !== e.sig) { unplace(e); placed.delete(uid); changed = true; } }
     for (const [uid, r] of want) if (!placed.has(uid)) {
       const P = PR[r.prop], obj = build(P, r), x = r.x * U, z = r.z * U, f = SZ(r), h = r.on != null && list.find(o => o.uid === r.on);
-      putProp(obj, x, z, r.rot, P); if (P.rail) drape(obj, P, x, z, r.rot); if (h) obj.position.y = seatY(h, r.sl); scene.add(obj);
-      const bodies = h ? [] : bodiesOf(P, obj, x, z, r.rot, f), un = P.open && obj.userData.under; // 28-5: one on top of another: no body, no spot of its own on the ground
+      const wt = !h && P.small && wallTop(x, z); // 195 B-8 1-2: a small one on a 돌담 cell stands on its top (no body, no spot: the wall's spot keeps others off)
+      putProp(obj, x, z, r.rot, P); if (P.rail) drape(obj, P, x, z, r.rot); if (h) obj.position.y = seatY(h, r.sl); else if (wt) obj.position.y = wt; scene.add(obj);
+      const bodies = h || wt ? [] : bodiesOf(P, obj, x, z, r.rot, f), un = P.open && obj.userData.under; // 28-5: one on top of another: no body, no spot of its own on the ground
       const tall = new THREE.Box3().setFromObject(obj).max.y - obj.position.y, cv = P.cover === 'side' ? { y: tall, core: P.r * f, r: Infinity, side: true } : P.cover ? { y: P.cover[0] * f, core: P.cover[1] * f, r: P.cover[2] * f } : null; // inbox 42 D (walk.js shelter)
-      const e = { prop: P.id, light: !!P.light, obj, bodies, spot: { uid, x, z, r: P.r * f, water: !!P.water, open: !!P.open, h: tall, fade: [[obj]] }, sig: sigOf(r), top: !!h,
+      const e = { prop: P.id, light: !!P.light, obj, bodies, spot: { uid, x, z, r: P.r * f, water: !!P.water, open: !!P.open, h: tall, fade: [[obj]] }, sig: sigOf(r), top: !!(h || wt),
         roof: P.shelter && !h ? { x, z, r: P.r * f, under: un || null, mouths: un ? mouths(bodies, x, z, un.r + 0.9) : null, cover: cv, placed: true } : null }; // roof: a rain shelter for walk.js (under: who fits goes beneath it, by a mouth)
       if (P.rail) { for (const b of bodies) b.rail = true; [e.spot, ...e.more] = railSpots(P, x, z, r.rot).map(o => ({ ...o, uid, h: e.spot.h })); e.rail = { uid, prop: P.id, x, z, rot: r.rot }; } // 28-4
-      const st = obj.userData.play; if (st) { Object.assign(st, { x, z, rot: r.rot, y: obj.position.y, r: P.r }); habitat.ctx.play.push(st); e.spot.play = st; } // 28-2 소품 쓰기 (play.js)
+      const st = obj.userData.play; if (st) { Object.assign(st, { x, z, rot: r.rot, y: obj.position.y, r: P.r, ...S186 && { f } }); habitat.ctx.play.push(st); e.spot.play = st; } // 28-2 소품 쓰기 (play.js)
+      if (yd) { const ov = F.OVER.has(P.id); for (const b of e.bodies) Object.assign(b, { pb: 1 }, ov && { over: 1 }); if (ov) e.spot.over = 1; } // 195 B-8 1-2 겹쳐 놓기 (fits)
       for (const b of e.bodies) habitat.ctx.crowd.add(b); if (!e.top) D.list.push(e.spot, ...e.more ?? []); if (e.roof) habitat.ctx.shelter.push(e.roof); placed.set(uid, e); changed = true;
       if (propsIn) habitat.ctx.fresh.push({ uid, x, z, r: P.r * f, until: performance.now() + 60e3 }); // 17-1 호기심쟁이 (walk.js peek): put down just now, for a minute
     }
     propsIn = true;
-    if (changed) { renderer.shadowMap.needsUpdate = true; syncSets(); syncTrain(); } // the shadow map is drawn once; props change it
+    if (changed) { renderer.shadowMap.needsUpdate = true; syncSets(); syncTrain(); syncGlow(); } // the shadow map is drawn once; props change it
     if (changed && playing() && ![...placed.values()].some(e => e.prop === 'musicbox')) music(true); // 28-3: the music box put away: its tune stops
     wildGround(); // 17-3
+  }
+  // 194-7 (?th194, glow.js): a pool of light on the ground under each lit theme prop (P.glow: its radius, colour; the model's userData.glowAt:
+  // where, under the lamp), by night. Not under one that stands on another. 195 B-8 1-3 (the yard, ?yard): every light prop's too, one
+  // under each lit part shown (props.js userData.glow: a halo, the bulbs of 꼬마전구 줄; one turned off or unlit has none), its colour,
+  // radius 1.5 x its height over the ground (decor-redesign.md 5-3 ⑤), 1.6..4.5
+  function syncGlow() {
+    if (!glows) return; const out = [], all = YARD && habId === 'yard';
+    for (const e of placed.values()) {
+      const P = PR[e.prop]; if (e.top || !(P.glow && e.obj.userData.glowAt || all && P.light)) continue; e.obj.updateMatrixWorld(true);
+      if (P.glow && e.obj.userData.glowAt) { e.obj.localToWorld(_gv.copy(e.obj.userData.glowAt)); out.push({ x: _gv.x, y: D.y(_gv.x, _gv.z) + 0.015, z: _gv.z, s: P.glow.r * e.obj.scale.x, c: P.glow.col }); continue; }
+      e.obj.traverseVisible(o => { if (!o.userData.glow) return; o.getWorldPosition(_gv); const gy = D.y(_gv.x, _gv.z);
+        out.push({ x: _gv.x, y: gy + 0.015, z: _gv.z, s: Math.min(4.5, Math.max(1.6, 1.5 * (_gv.y - gy))), c: o.userData.glow }); });
+    }
+    glows.set(out);
   }
   // 23-2: the sets whole here (the first placed one of each of its props)
   function syncSets() {
@@ -641,7 +703,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       g.position.set(x, D.y(x, z, !N && P.water) + 0.06, z); g.scale.setScalar(rr); pickG.add(g);
     }
   }
-  const fits = (P, x, z, f = 1) => P.rail ? railFits(P, x, z, ed?.rot ?? 0) : D.placeable(x, z, P.r * f, P.water) && free(habitat.ctx.crowd, { x, z, yaw: 0, r: P.r * f, seg: [0, 0] }, x, z);
+  // 195 B-8 1-2 겹쳐 놓기 (the yard): an A띠 low one (fine.js OVER) may stand in another prop's spot, and others in its (not on a line, the water, an animal)
+  const fits = (P, x, z, f = 1) => { if (P.rail) return railFits(P, x, z, ed?.rot ?? 0); const ov = yd && F.OVER.has(P.id);
+    return D.placeable(x, z, P.r * f, P.water, ov) && free(yd ? F.crowdFor(habitat.ctx.crowd, ov) : habitat.ctx.crowd, { x, z, yaw: 0, r: P.r * f, seg: [0, 0] }, x, z); };
   // 28-5 쌓기: the free top spot of a placed prop here nearest x, z (within reach), for a small prop held: { h (its record), k, x, z } or null
   function seatNear(x, z) {
     let best = null, bd = 1e9;
@@ -653,7 +717,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     }
     return best;
   }
-  const snap = v => gridOn ? (Math.floor(v / U) + 0.5) * U : v; // 격자 on: the middle of a cell
+  const snap = v => gridOn ? yd ? F.halfSnap(v, U) : (Math.floor(v / U) + 0.5) * U : v; // 격자 on: the middle of a cell (195 B-8 1-2 the yard: the nearest half cell, 0.75)
+  // 195 B-8 1-2 (the yard): 자석, a held one near another's spot edge (gap -0.5..0.6) goes to touch it (0.12 apart) if it fits there; 위에 올리기, a small one near a free 돌담 cell onto its top
+  const magnetAt = (x, z, r) => F.magnetPick(D.list, x, z, r);
+  const wallNear = (x, z) => lineSpots.find(o => o.top && Math.hypot(o.x - x, o.z - z) < 0.5 * U && !propList.some(p => p.placed && p.uid !== ed.uid && p.hab === habId && p.on == null && Math.abs(p.x * U - o.x) < 0.05 && Math.abs(p.z * U - o.z) < 0.05));
   // inbox 52: a rail piece held (not the ring) turns to join an open end of the placed rails its tile meets (train.js joinTurn);
   // away from open ends it is as turned (ed.base); ⟳90° on a tile keeps the hand's turn there (ed.hand) till it goes to another tile
   function railTurn(x, z) {
@@ -663,21 +730,25 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   }
   function moveEdit(x, z) {
     if (ed.P.rail && !ed.P.ring) railTurn(x, z);
-    const A = ed.P.rail && railAt(ed.P, x, z, ed.rot), st = ed.P.small && ed.sz !== 3 && seatNear(x, z); // 28-5: a small prop near a free top spot goes onto it (42 F-3: not at 아주 크게)
-    if (A) ({ x, z } = A); else if (st) ({ x, z } = st); else { x = snap(x); z = snap(z); } // 28-4: a rail snaps to its tiles (it goes under the animals)
-    Object.assign(ed, { x, z, ok: st ? true : fits(ed.P, x, z, SZ(ed)), on: st ? st.h.uid : null, sl: st ? st.k : null });
+    const sh = spotHeld(), sp = sh && nearSpot(x, z); if (sp) { x = sp.x * U; z = sp.z * U; } // 194 0-5: on the nearest free 꾸미기 자리 that takes it (none: red where it is)
+    const A = ed.P.rail && railAt(ed.P, x, z, ed.rot), st = !sh && ed.P.small && ed.sz !== 3 && seatNear(x, z); // 28-5: a small prop near a free top spot goes onto it (42 F-3: not at 아주 크게)
+    const wt = !sh && yd && !A && !st && !ed.nat && ed.P.small && ed.sz !== 3 && wallNear(x, z); let mg = null; // 195 B-8 1-2 (the yard has no 꾸미기 자리: sh is false there)
+    if (A) ({ x, z } = A); else if (st) ({ x, z } = st); else if (wt) ({ x, z } = wt); else if (!sh) { x = snap(x); z = snap(z); } // 28-4: a rail snaps to its tiles (it goes under the animals)
+    if (!sh && yd && !A && !st && !wt && !(!ed.nat && F.OVER.has(ed.P.id))) { const m = magnetAt(x, z, ed.P.r * SZ(ed)); if (m && fits(ed.P, m.x, m.z, SZ(ed))) { ({ x, z } = m); mg = m.d; } }
+    if (mg && mg !== magnet) navigator.vibrate?.(8); magnet = mg; // 살짝 떨림, once as it snaps on
+    Object.assign(ed, { x, z, ok: sh ? !!sp : st || wt ? true : fits(ed.P, x, z, SZ(ed)), on: st ? st.h.uid : null, sl: st ? st.k : null, sp: sp ? sp.id : undefined });
     if (ed.P.stamp) { syncStamps(); syncNat(propList); ed.obj.traverse(m => { if (m.userData.dome) m.visible = !ed.ok; }); } // 28-6
-    putProp(ed.obj, x, z, ed.rot, ed.P); const y0 = st ? seatY(st.h, st.k) : ed.obj.position.y; ed.obj.position.y = y0 + 0.25; // lifted while held
-    mark.position.set(x, y0 + 0.05, z); if (A?.ring) mark.scale.set(4.4, 1, 4.4); else if (A) mark.scale.set(A.tiles.length > 1 && A.ax ? 4 : 2, 1, A.tiles.length > 1 && !A.ax ? 4 : 2); else mark.scale.setScalar(st ? 0.35 * U : ed.P.r * SZ(ed));
+    putProp(ed.obj, x, z, ed.rot, ed.P); const y0 = st ? seatY(st.h, st.k) : wt ? wt.top : ed.obj.position.y; ed.obj.position.y = y0 + 0.25; // lifted while held
+    mark.position.set(x, y0 + 0.05, z); if (A?.ring) mark.scale.set(4.4, 1, 4.4); else if (A) mark.scale.set(A.tiles.length > 1 && A.ax ? 4 : 2, 1, A.tiles.length > 1 && !A.ax ? 4 : 2); else mark.scale.setScalar(st || wt ? 0.35 * U : ed.P.r * SZ(ed));
     const c = ed.ok ? '#4fcf5a' : '#ff4545'; markMat.color.set(c); edgeMat.color.set(c);
-    if (A) railDots(); ui.onEdit?.(ed.ok);
+    if (A) railDots(); spotPaint(); ui.onEdit?.(ed.ok);
   }
   // pick up a prop: a placed one from its spot, one put away onto the open spot nearest the middle of the screen
   function editProp(rec, at, near) { // at: a 미리보기 ({ x, z, rot } as saved) a prop just taken out starts on; near: the same, but the open spot nearest it
     endEdit(); if (rec.placed) at = null;
     const N = rec.nat && NAT[rec.prop], P = N ? { id: rec.prop, name: N.name, r: N.r * (rec.s || 1), open: !!N.open } : rec.ring ? RING_P : PR[rec.prop], e = placed.get(rec.uid); if (!P) return;
     if (e) { unplace(e); placed.delete(rec.uid); renderer.shadowMap.needsUpdate = true; }
-    ed = { uid: rec.uid, P, nat: !!N, rot: (at ?? near)?.rot ?? rec.rot ?? 0, c: N ? 0 : (at?.c ?? rec.c) || 0, sz: N ? 0 : (at?.sz ?? rec.sz) || 0 }; ed.base = ed.rot; ed.auto = !rec.placed && !at && !near; heldModel(rec); scene.add(mark); // 28-5 a 미리보기's look first
+    ed = { uid: rec.uid, P, nat: !!N, rot: (at ?? near)?.rot ?? rec.rot ?? 0, c: N ? 0 : (at?.c ?? rec.c) || 0, sz: N ? 0 : (at?.sz ?? rec.sz) || 0 }; if (spotHeld()) { ed.sz = 0; ed.rot = Math.round(ed.rot / (Math.PI / 2)) % 4 * Math.PI / 2; } ed.base = ed.rot; ed.auto = !rec.placed && !at && !near; heldModel(rec); scene.add(mark); // 194 0-5: on a 꾸미기 자리 quarter turns, no size // 28-5 a 미리보기's look first
     if (N) syncNat(propList); else if (P.top) syncProps(); // its spot on the board goes while it is held; 28-5: what stands on it goes with it
     moveEdit(...(rec.placed ? [rec.x * U, rec.z * U] : at ? [at.x * U, at.z * U] : nearest((x, z) => fits(P, x, z, SZ(ed)), near && [near.x * U, near.z * U])));
     back ??= { at: controls.target.clone(), radius: camera.position.distanceTo(controls.target), phi: sph.setFromVector3(off.copy(camera.position).sub(controls.target)).phi };
@@ -687,6 +758,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // after it; a curve onto the corner of it its turn belongs to (so four make the ring). false: none on this board
   function room() {
     if (!ed) return false;
+    if (spotHeld()) { moveEdit(ed.x, ed.z); return ed.ok; } // 194 0-5: the nearest free 꾸미기 자리
     if (!ed.P.rail) { // 27-7b: any prop held on a red spot goes to the open spot nearest it (snapped as moveEdit snaps)
       const ok = (x, z) => fits(ed.P, snap(x), snap(z), SZ(ed)), c = nearest(ok, [ed.x, ed.z]); if (!ok(...c)) return false;
       moveEdit(...c); aim = { at: new THREE.Vector3(ed.x, 0, ed.z), radius: camera.position.distanceTo(controls.target) }; goingHome = false; return true;
@@ -841,6 +913,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       stroke.cells.set(key, [i, j]); add = true; }
     }
     if (!add) return;
+    if (typeof brush === 'string') { scat?.set(strokeOn(scNow, [...stroke.cells.values()], brush, scCap, (i, j) => !scBlock(paintNow[i + ',' + j])).list, paintNow); return; } // 195 B-8 1-2 흩뿌리기 붓 as it goes
     const shown = { ...paintNow }; for (const k of stroke.cells.keys()) { if (brush === null) delete shown[k]; else shown[k] = brush; }
     showPaint(shown);
   }
@@ -860,24 +933,26 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     picked(ins.map(o => ({ nat: 1, prop: o.prop, s: o.r / NAT[o.prop].r, x: o.x / U, z: o.z / U }))); picking = false;
     return w < 12 || h < 12 || !ins.length ? null : ins.map(o => o.uid);
   }
+  const gridLook = () => habitat.ground?.grid(gridOn && yd ? 2 : gridOn || brush !== undefined); // 195 B-8 1-2: 2, the half cells' lines too
   const decor = {
-    mode(on) { decorOn = ghosts.visible = on; if (topOn || panOn || size3) { topOn = panOn = size3 = false; controls.enableRotate = true; } mapping(); endEdit(); picked(null); aim = back = null; overview(); brush = undefined; sweepOn = false; box = null; sweepBox(); gridOn = false; habitat.ground?.grid(false); railView = false; railDots(); }, // the camera tips toward top-down (steerCamera)
+    mode(on) { decorOn = ghosts.visible = on; spotPaint(); if (stroke) { stroke = null; showPaint(paintNow); } /* 195 B-8 1-2: closed mid-stroke, its preview goes */ if (topOn || panOn || size3) { topOn = panOn = size3 = false; controls.enableRotate = true; } mapping(); endEdit(); picked(null); aim = back = null; overview(); brush = undefined; sweepOn = false; box = null; sweepBox(); gridOn = false; habitat.ground?.grid(false); railView = false; railDots(); }, // the camera tips toward top-down (steerCamera)
     edit: editProp, model: id => id === RING_P.id ? build(RING_P) : D.model(id), natModel: rec => nature.model(rec), room, clears: () => ed?.P.ring ? ringNats(ed.x, ed.z).length : 0,
-    rotate(step = Math.PI / 12) { if (ed && !ed.P.ring) { if (ed.P.rail) step = Math.sign(step) * Math.PI / 2; /* 28-4: a quarter turn */ ed.rot = ((ed.rot + step) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    rotate(step = Math.PI / 12) { if (ed && !ed.P.ring) { if (ed.P.rail || spotHeld()) step = Math.sign(step) * Math.PI / 2; /* 28-4: a quarter turn (194 0-5: on a 꾸미기 자리 too) */ ed.rot = ((ed.rot + step) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
       if (ed.P.rail) { ed.base = ed.rot; ed.hand = (A => A.x + ',' + A.z)(railAt(ed.P, ed.x, ed.z, ed.rot)); } moveEdit(ed.x, ed.z); } }, // inbox 52: the hand's turn // 28-5: 15 deg, or a little at a time (held down)
     // 28-5: the held one's colour (PALETTES index) and size (SIZES index): shown at once, saved with 놓기
     look({ c = ed?.c, sz = ed?.sz } = {}) { if (!ed || ed.nat) return null; const pal = paletteOf(ed.P); c = pal && c > 0 && c < pal.length ? c : 0; sz = sizable(ed.P) && sz > 0 && sz < SIZES.length ? sz : 0; // 28-5 the held one's look: set (rebuilt), or read (no args)
       if (c !== ed.c || sz !== ed.sz) { Object.assign(ed, { c, sz }); heldModel(); moveEdit(ed.x, ed.z); } return { c, sz }; },
     // 22-1: 격자 (snaps what is held to a cell's middle; the lines show), 땅 칠하기 (b: BRUSHES index, null: the eraser, undefined: off)
-    grid(on) { gridOn = !!on; habitat.ground?.grid(gridOn || brush !== undefined); if (ed) moveEdit(ed.x, ed.z); },
+    grid(on) { gridOn = !!on; gridLook(); if (ed) moveEdit(ed.x, ed.z); },
     size(three) { size3 = !!three; }, pan(on) { panOn = !!on; }, // 182 ④ the yard: 붓 크기, 화면 옮기기
     top(on) { topOn = !!on; controls.enableRotate = !topOn; }, // 182 ④ 위에서 (꾸미기 only: mode(false) turns it off)
     dist(k) { off.copy(camera.position).sub(controls.target); camera.position.copy(controls.target).add(off.setLength(THREE.MathUtils.clamp([0.45, 0.7, 1][k] * HOME.wide, 9, controls.maxDistance))); aim = null; goingHome = false; }, // 182 ④ 거리: near, middle, far
-    paint(b) { brush = b; if (b !== undefined) endEdit(); habitat.ground?.grid(gridOn || brush !== undefined); },
+    fine: F, // 195 B-8 1-2: the yard's (yard/fine.js: the 흩뿌리기 names for decor.js), else null
+    paint(b, cap) { if (stroke) { stroke = null; showPaint(paintNow); } brush = b; scCap = cap ?? Infinity; if (b !== undefined) endEdit(); gridLook(); }, // 195 B-8 1-2 b 's0'..'s4', 'sx': 흩뿌리기 붓 (the yard), cap: S.scatter's
     sweep(on) { sweepOn = !!on; if (on) endEdit(); box = null; sweepBox(); }, // inbox 42 F-6 자연 정리 (a finger draws a box, not the camera)
     // where the held prop may go now: { uid, x, z, rot } or null (red). It is let go either way.
     confirm() { if (ed?.P.ring) { const r = ed.ok && { ring: true, x: +(ed.x / U).toFixed(4), z: +(ed.z / U).toFixed(4), cells: RING.map(([a, b, q]) => [+((ed.x + a) / U).toFixed(4), +((ed.z + b) / U).toFixed(4), q * Math.PI / 2]), clear: ringNats(ed.x, ed.z).map(o => o.uid) }; if (r) { endEdit(); back = null; } return r || null; } // inbox 37: its four curves
-      const r = ed?.ok ? { uid: ed.uid, x: +(ed.x / U).toFixed(4), z: +(ed.z / U).toFixed(4), rot: ed.rot, ...!ed.nat && { c: ed.c, sz: ed.sz, on: ed.on ?? undefined, sl: ed.sl ?? undefined } } : null; if (r) { endEdit(); back = null; } return r; }, // x, z saved in the first board's units (28-5 with its look, on: on top of)
+      const r = ed?.ok ? { uid: ed.uid, x: +(ed.x / U).toFixed(4), z: +(ed.z / U).toFixed(4), rot: ed.rot, ...!ed.nat && { c: ed.c, sz: ed.sz, on: ed.on ?? undefined, sl: ed.sl ?? undefined, sp: ed.sp } } : null; if (r) { endEdit(); back = null; } return r; }, // x, z saved in the first board's units (28-5 with its look, on: on top of)
     cancel() { endEdit(); if (back) { aim = back; goingHome = false; } back = null; }, // the camera glides back to where it was before the pick-up
     // just put down at x, z: if the panel (its top at screen y = top) covers it, slide the view so it shows above the panel
     cheer() { habitat.ctx.cheer = performance.now() + 60e3; }, // 92-3: the player's first prop: for a minute every friend goes to look at it (walk.js peek)
@@ -981,6 +1056,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const { a, hit, shown } = actorAt(e);
     if (decorOn) { // decorate mode: a tap picks up a placed prop (22-1: or a tree, bush, rock, flowers of the board's own), animals are left alone
       if (brush !== undefined || sweepOn) return;
+      if (spotHeld()) { const g = groundHit(e), s = g && freeFor(ed.P).find(s => Math.hypot(s.x * U - g.x, s.z * U - g.z) < s.r + 0.6); if (s) { moveEdit(s.x * U, s.z * U); return; } } // 194 0-5: a tap on a lit 꾸미기 자리
       const uid = propUnder(e); if (uid != null) ui.onPropTap?.(uid);
       return;
     }
@@ -1017,7 +1093,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (PR[p.prop].art) { sfx('place'); ui.onArt?.(p.spot.uid); return; } // 17-2: who made it, or its choice (ui/art.js)
     if (p.prop === 'sky_scope') { p.obj.userData.tap(); sfx('place'); return; } // 16-2 하늘 망원경 (74: a prop that nods; ui/sky.js no longer opens it)
     if (p.obj.userData.tap() === false) { sfx('undo'); ui.say?.($t('작은 폭죽은 밤에만 쏠 수 있어요')); return; }
-    sfx(p.prop);
+    sfx(p.prop); if (p.prop === 'lights') syncGlow(); // 195 B-8: its pools go out with it
     if (p.prop === 'musicbox') { const n = music(); ui.say?.(n ? $t('오르골: {0}{1}', n, PREFS.mute || !PREFS.vAll || !PREFS.vAmb ? $t(' · 소리를 켜면 들려요') : '') : $t('오르골을 멈췄어요')); if (n) for (const a of shown) if (near(a, 14)) a.poke(); } // 27-7e: the sound off, it says why there is no tune
     if (p.prop === 'bell') gather(x, z, 6, 'rest', 2.4); // up to 6 run over (pathClear: not over the stream, out of the paddock or through a tree) and stay a while
   }
@@ -1033,6 +1109,24 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // d = 2.643 H / share: measured (horse 71 px of 812 at 102 m, H 3.375; this tilt and fov)
   const homeCam = new THREE.PerspectiveCamera(), fv = new THREE.Vector3(), atShare = (s, h = SIZE.unit) => Math.min(HOME.wide, 2.643 * h / s);
   const hOf = a => SIZE.unit * (SIZE[a.rec.species] ?? 0.5) * (a.rec.stage === 'baby' ? SIZE.baby : 1); // its height (data.js sized)
+  // 202 B-12 (?rc200/?s186): no bare ground past the board on screen. fitIn moves a view's middle t (seen from phi, theta, r) till what
+  // the screen shows of the ground (its sides from the bottom row lo up to the middle-high row, its near edge at lo) is on the open board;
+  // a view wider than the board is centred on it. Off the flag nothing calls it
+  const fitC = new THREE.PerspectiveCamera(), fp = new THREE.Vector3(), fpd = new THREE.Vector3(), FIT_NEAR = [-1, 1, 0], FIT_ROWS = [0, 0.5];
+  function fitIn(t, phi, theta, r, lo) {
+    fitC.copy(camera); fitC.position.copy(t).add(fpd.setFromSphericalCoords(r, phi, theta)); fitC.lookAt(t); fitC.updateMatrixWorld();
+    let x0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+    for (const nx of FIT_NEAR) for (const ny of [lo, ...FIT_ROWS]) {
+      if (nx === 0 && ny !== lo) continue; // the near edge's middle only
+      fp.set(nx, ny, 0.5).unproject(fitC).sub(fitC.position); if (fp.y > -1e-3) continue;
+      const k = (t.y - fitC.position.y) / fp.y, x = fitC.position.x + fp.x * k, z = fitC.position.z + fp.z * k;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); if (ny === lo) z1 = Math.max(z1, z);
+    }
+    if (x1 - x0 >= open[1] - open[0]) t.x += (open[0] + open[1]) / 2 - (x0 + x1) / 2; else t.x += Math.max(0, open[0] - x0) - Math.max(0, x1 - open[1]);
+    if (z1 > open[3]) t.z = Math.max(Math.min(panZ[0], t.z), t.z - (z1 - open[3]));
+    return t;
+  }
+  const FIT_HOME = -0.75, FIT_DECOR = -0.2, YARD_NEAR = 0.83; // the screen's lowest row of ground that shows: above the bottom buttons / above the 꾸미기 sheet
   // inbox 64-A homeOn: still on the start view with 1-3 friends out: it is worked out again every second (they wander off a near view);
   // a touch on the view, a follow or a double tap ends it (overview / the first home view start it)
   let wide = false, homeOn = false, homeT = 0;
@@ -1043,12 +1137,21 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const as = [...actors.values()], n = as.length, dd = (a, b) => Math.hypot(b.position.x - a.position.x, b.position.z - a.position.z);
     const near = a => as.filter(b => dd(a, b) < 12).sort((x, y) => dd(a, x) - dd(a, y)).slice(0, 4), spread = g => dd(g[0], g.at(-1));
     const tg = as.find(a => a.rec.tut), g = !n ? [] : tg ? near(tg) : as.map(near).reduce((x, y) => y.length > x.length || y.length === x.length && spread(y) < spread(x) ? y : x); // 66-1: the tutorial's guest stays in the home view
-    HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(0.12, Math.min(...g.map(hOf))); if (wide || !n) return;
+    HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(0.12, Math.min(...g.map(hOf)));
+    if (YARD && habId === 'yard' && !wide && !n) { HOME.radius *= YARD_NEAR; // 209 A ③: the yard's start view (none out) nearer, props read; 전체 보기 the whole board as before
+      const pl = propList.filter(p => p.placed && p.hab === habId && !p.nat); // 221 C ①: aimed at the middle of the placed props (their box), none: the yard's middle
+      if (pl.length) { const xs = pl.map(p => p.x * U), zs = pl.map(p => p.z * U); HOME.target.set(THREE.MathUtils.clamp((Math.min(...xs) + Math.max(...xs)) / 2, ...panX), 0, THREE.MathUtils.clamp((Math.min(...zs) + Math.max(...zs)) / 2, ...panZ)); if (S186) fitIn(HOME.target, HOME.phi, 0, HOME.radius, FIT_HOME); } } // (229 D ①: the yard's pan box is its whole open land, the tick's clamp keeps it there)
+    if (wide || !n) return;
     const t = HOME.target.set(0, 0, 0);
     for (const a of g) t.add(a.position); t.divideScalar(g.length).setY(0); t.x = THREE.MathUtils.clamp(t.x, ...panX); t.z = THREE.MathUtils.clamp(t.z, ...panZ);
     homeCam.copy(camera);
     const shows = r => { homeCam.position.copy(t).addScaledVector(homeDir, r); homeCam.lookAt(t); homeCam.updateMatrixWorld(); return g.every(a => { fv.copy(a.position).project(homeCam); return Math.abs(fv.x) < 0.8 && fv.y > -0.55 && fv.y < 0.65; }); };
     const far = atShare(0.0887); while (HOME.radius < far && !shows(HOME.radius)) HOME.radius = Math.min(HOME.radius * 1.05, far);
+    if (S186) HOME.radius = Math.min(HOME.radius * CAM186, HOME.wide); // 194 0-4 (?s186): x1.15 after the fit (on atShare the backing-off to show them all ate it)
+    if (S186) { // 202 B-12: on the board, and backed off again if that pushed a friend off the frame
+      fitIn(t, HOME.phi, 0, HOME.radius, FIT_HOME);
+      for (let i = 0; i < 8 && HOME.radius < HOME.wide && !shows(HOME.radius); i++) { HOME.radius = Math.min(HOME.radius * 1.05, HOME.wide); fitIn(t, HOME.phi, 0, HOME.radius, FIT_HOME); }
+    }
   }
   if (pose) { controls.target.copy(pose.target); camera.position.copy(pose.position); controls.update(); } // the old board's view; the reveal glides out to this one's (below)
   let watch = false; // 26-4 보러 가기 (look): following until the screen is touched (사진 모드: drags circle it, as a tapped one)
@@ -1058,7 +1161,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // inbox 154 D: along the unit ray o + s dir, where it enters the ball (c, m); NaN if it misses
   const meet = (o, dir, c, m) => { const b = dir.dot(v3.subVectors(o, c)); return -b - Math.sqrt(b * b - v3.lengthSq() + m * m); };
   const off = new THREE.Vector3(), sph = new THREE.Spherical(), want = new THREE.Vector3();
-  const FRONT_PHI = deg(74), FRONT_FILL = 0.4, NEAR_FILL = 0.7, FRONT_T = 0.7; // 정면: 16 deg above, 40% of the screen height, over 0.7 s
+  const FRONT_PHI = deg(74), FRONT_FILL = 0.4, NEAR_FILL = 0.7, FRONT_T = 0.7, GLIDE = S186 ? 2.3 : 1.4; // 196-4 (?s186): a tap's glide ends at 2.3x the nearest (the body about 35% of the screen height, not 60~75%) // 정면: 16 deg above, 40% of the screen height, over 0.7 s
   const faceOf = a => Math.atan2(Math.cos(a.obj.rotation.y), -Math.sin(a.obj.rotation.y)); // the angle round to its face (models face +x)
   // how far away the camera must be, looking from (phi, theta) at its middle, for the animal to fill `fill` of the screen height
   // (the corners of its parts' boxes projected; a few rounds, the size goes as 1/distance). Big or small, the same share of the screen.
@@ -1080,7 +1183,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   function setFocus(a) {
     if (a && a === focus) return; // a pat while following keeps the view
     focus = a; watch = false; trainCam = false; if (a) homeOn = false, aim = null; goingHome = false; facing = false; glide = tw = null; zoomed = false; extra = 0; // the camera stays put: its side room becomes plain distance; 168: following replaces a glide to a point (a stale aim left goal null)
-    if (a) { lift = 0.5 * height(a); near = fit(a, NEAR_FILL, FRONT_PHI, faceOf(a)); glide = { radius: 1.4 * near }; clear = box154.setFromPoints(pts).getSize(v3).length(); } // fit's corners: its body, not its FX
+    if (a) { lift = 0.5 * height(a); near = fit(a, NEAR_FILL, FRONT_PHI, faceOf(a)); glide = { radius: GLIDE * near }; clear = box154.setFromPoints(pts).getSize(v3).length(); } // fit's corners: its body, not its FX
     controls.zoomToCursor = !a; // following: zoom toward the animal
   }
   function overview(w = false) { skyOn = false; setFocus(null); aim = null; goingHome = true; wide = w; homeOn = !w; setHome(); } // inbox 63: w, the whole board (전체 보기); else on the friends
@@ -1160,7 +1263,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     // can't fade (a post, the volcano); after a touch too (a pat ends the glide), unless the camera itself is that near (zoomed in)
     in154 = false;
     if (focus && !hard) {
-      at.set(focus.position.x, focus.position.y + lift, focus.position.z); const m = Math.min(clear, 1.4 * near); // no farther than a tap's glide ends
+      at.set(focus.position.x, focus.position.y + lift, focus.position.z); const m = Math.min(clear, GLIDE * near); // no farther than a tap's glide ends
       if (C.distanceTo(at) < m && real.distanceTo(at) > m - 0.01) { off.subVectors(T, real).normalize(); const s = meet(real, off, at, m); if (s === s) { C.copy(real).addScaledVector(off, Math.max(0, s)); in154 = true; } }
     }
     const f = habitat.floor(C.x, C.z) + 0.8; if (C.y < f) { C.y = f; camera.lookAt(T); }
@@ -1219,8 +1322,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     }
   }
   // inbox 63: in the free view too, a prop between the camera and any animal on screen (its middle) fades the same way
-  const mids = [];
+  const mids = []; let fadeN = 0, fadeDt = 0, fading = false; // 212 C P4: the free view's check (props x every animal) every 3rd frame, dt summed; every frame while one fades in or out, and when following (one animal: cheap; 154 D's guard needs it at once)
   function fadeProps(dt) {
+    fadeDt += dt; if (!fading && !focus && ++fadeN < 3) return; dt = fadeDt; fadeN = fadeDt = 0; fading = false;
     let n = 0; if (!decorOn) for (const a of focus ? [focus] : actors.values()) if (a.obj.visible) { const v = mids[n] ??= new THREE.Vector3(); n++; v.a = a; if (a === focus) v.copy(controls.target); else v.copy(a.obj.position).setY(a.obj.position.y + 0.5 * SIZE.unit * (SIZE[a.rec.species] ?? 0.5) * (a.rec.stage === 'baby' ? SIZE.baby : 1)); } // its middle (data.js sized)
     for (const L of [habitat.solid, D.list]) for (const o of L) {
       if (!o.fade) continue;
@@ -1230,7 +1334,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       if (!tw.on) { tw.on = true; scene.add(tw.g); tw.swap.forEach(f => f(false)); }
       if (want === FADE && in154 && (camera.position.x - o.x) ** 2 + (camera.position.z - o.z) ** 2 < (o.r + 0.5) ** 2) tw.k = FADE; // 154 D: the camera drawn inside it (guard), no 0.3 s of its inside
       tw.k = want < tw.k ? Math.max(want, tw.k - dt * 2.5) : Math.min(want, tw.k + dt * 2.5); // 1 <-> 0.25 in 0.3 s
-      for (const m of tw.mats) m.opacity = tw.k;
+      for (const m of tw.mats) m.opacity = tw.k; if (tw.k !== want) fading = true;
       if (tw.k === 1) { tw.on = false; scene.remove(tw.g); tw.swap.forEach(f => f(true)); }
     }
   }
@@ -1241,6 +1345,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     ramp = Math.min(1, ramp + dt / 0.35);
     const k = calm() ? 1 : (1 - Math.exp(-dt * ((!focus && aim?.rate) || 3.2))) * (key ? smooth(ramp) : 1); // frame-rate independent ease (26-3 움직임 줄이기: a cut)
     if (focus) want.set(focus.position.x, focus.position.y + lift, focus.position.z); else want.copy(aim ? aim.at : HOME.target);
+    if (S186 && decorOn && !focus && !aim) fitIn(want, 0.5, 0, HOME.wide * 0.85, FIT_DECOR); // 202 B-12: the 꾸미기 view on the board
     const goal = focus ? glide : aim ? { radius: aim.radius, phi: aim.phi ?? 0.5, theta: aim.theta } : decorOn ? { radius: HOME.wide * 0.85, phi: 0.5, theta: 0 } : HOME; // decorating: closer, more from above
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off);
     const face = focus && faceOf(focus);
@@ -1265,7 +1370,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const m154 = focus && glide ? Math.min(clear, glide.radius) : 0;
     if (m154 && camera.position.distanceTo(want) < m154) { const d = camera.position.sub(want); (d.lengthSq() > 1e-6 ? d : d.set(0, 1, 0)).setLength(m154).add(want); }
     if (aim && goal && Math.abs(sph.radius - goal.radius) < 0.2 && controls.target.distanceTo(aim.at) < 0.1 && (aim.theta == null || Math.abs(wrap(sph.theta - aim.theta)) < 0.01)) aim = null;
-    if (goingHome && goal && Math.abs(sph.radius - goal.radius) < 0.2 && Math.abs(sph.phi - goal.phi) < 0.01 && Math.abs(wrap(sph.theta - (goal.theta ?? 0))) < 0.01 && controls.target.distanceTo(HOME.target) < 0.1) goingHome = false;
+    if (goingHome && goal && Math.abs(sph.radius - goal.radius) < 0.2 && Math.abs(sph.phi - goal.phi) < 0.01 && Math.abs(wrap(sph.theta - (goal.theta ?? 0))) < 0.01 && controls.target.distanceTo(S186 ? want : HOME.target) < 0.1) goingHome = false; // 202 B-12: want (HOME.target but fitted while decorating)
   }
 
   // perf: optional overlay (?debug) + drop resolution in steps if frames run long (never below 1x)
@@ -1275,9 +1380,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
     return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : $t('알 수 없음 (브라우저가 숨김)');
   })();
-  let fN = 0, fT = 0, slow = 0, worst = 0, lite = false;
+  let fN = 0, fT = 0, slow = 0, worst = 0, lite = false, good = 0, prDownAt = -1e9, prUpAt = -1e9, upWait = 10000; // 212 C P3: good seconds in a row, when pr last went down / up, the wait before going up (doubles when a raise did not hold)
   // 26-3 배터리 절약: 30 frames a second, 15 after a minute without a touch, a key or the mouse
-  let lastIn = performance.now(), lastDraw = 0;
+  let lastIn = performance.now(), lastDraw = 0, lastRaf = 0, gapS = 16.7; // 212 C: gapS, the screen's frame time (smoothed)
   for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown']) window.addEventListener(ev, () => { lastIn = performance.now(); }, { passive: true, ...sig });
   let deskOn = false, deskT = 0, rafOf = window, loop = 0; // 16-3 책상 모드: 15 fps, the camera drifting from friend to friend; rafOf: the 작은 창 draws in its own window
   const fpsCap = () => deskOn ? 15 : !PREFS.saver ? 60 : performance.now() - lastIn > 60000 ? 15 : 30;
@@ -1285,22 +1390,25 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     fN++; fT += rawDt; worst = Math.max(worst, rawDt); if (fT < 1) return;
     const fps = fN / fT;
     slow = fps < fpsCap() * 0.83 ? slow + 1 : 0; // 50 of 60 (25 of 30 with 배터리 절약)
+    good = fps >= fpsCap() * 0.95 ? good + 1 : 0; // 212 C P3: 57 of 60
     if (slow >= 2 && !lite && glassLite()) { lite = true; slow = 0; } // first step: drop the glass refraction pass (real glass only)
-    else if (slow >= 2 && pr > 1) { pr = Math.max(1, pr - 0.25); renderer.setPixelRatio(pr); renderer.setSize(W(), H()); slow = 0; }
+    else if (slow >= 2 && pr > 1) { pr = Math.max(1, pr - 0.25); renderer.setPixelRatio(pr); renderer.setSize(W(), H()); slow = good = 0; prDownAt = performance.now(); if (prDownAt - prUpAt < 30000) upWait = Math.min(upWait * 2, 160000); }
+    else if (good >= 5 && pr < maxPR() && performance.now() - prDownAt > upWait) { pr = Math.min(maxPR(), pr + 0.25); renderer.setPixelRatio(pr); renderer.setSize(W(), H()); good = 0; prUpAt = performance.now(); } // 212 C P3: back up after 5 good seconds, never within 10 s of a drop (20, 40 … 160 s on a phone where the step up keeps failing: no 15 s see-saw)
     if (perfEl) { const i = renderer.info.render; perfEl.textContent = $t('품질 {0}{1}  삼각형 {2}k\nFPS {3}  ({4}ms, 최장 {5}ms)\n픽셀 비율 {6}x{7} / 기기 {8}x  {9}×{10}\n드로콜 {11}\nGPU {12}', QUALITY.gfx, PREFS.saver ? $t(' (절약 {0}fps)', fpsCap()) : '', (i.triangles / 1000).toFixed(0), fps.toFixed(0), (1000 / fps).toFixed(1), (worst * 1000).toFixed(0), pr.toFixed(2), lite ? $t(' (유리 간이)') : '', (window.devicePixelRatio || 1).toFixed(2), renderer.domElement.width, renderer.domElement.height, i.calls, gpu); }
     fN = 0; fT = 0; worst = 0;
   }
 
   let active = true, lastTag = '', noteAt = 0;
-  function setActive(on) { if (!on) flushSteps(); lastTag = null; active = on; renderer.domElement.style.display = on ? '' : 'none'; clock.getDelta(); fN = fT = slow = 0; camState = null; if (!on) ambience(null); else if (DEBUG) window.__hab = dbg; } // paused (and hidden: another habitat may share the container) while the world map is shown; inbox 154 B: lastTag null makes the next frame send this board's tag (or none) again
+  function setActive(on) { if (!on) flushSteps(); lastTag = null; active = on; renderer.domElement.style.display = on ? '' : 'none'; clock.getDelta(); fN = fT = slow = good = 0; camState = null; if (!on) ambience(null); else if (DEBUG) window.__hab = dbg; } // paused (and hidden: another habitat may share the container) while the world map is shown; inbox 154 B: lastTag null makes the next frame send this board's tag (or none) again
   const clock = new THREE.Clock();
   function tick(id = loop) {
     if (dead || id !== loop) return;
     rafOf.requestAnimationFrame(() => tick(id));
     if (!active) return;
-    if (PREFS.saver || deskOn) { const now = performance.now(); if (now - lastDraw < 1000 / fpsCap() - 4) return; lastDraw = now; } // 26-3 배터리 절약
+    const now = performance.now(), iv = 1000 / fpsCap(); gapS += (Math.min(now - lastRaf, 100) - gapS) * 0.1; lastRaf = now;
+    if ((PREFS.smooth !== true || PREFS.saver || deskOn) && gapS < iv * 0.7) { if (now - lastDraw < iv - 4) return; lastDraw = Math.max(lastDraw + iv, now - 4); } // 26-3 배터리 절약; 212 C P2: 60 a second unless 설정 › 부드럽게(120). lastDraw steps by iv (not now): a 144 Hz screen draws 60, not 72; only on a screen 1.4 times faster than the cap (a 60 or 75 Hz screen draws every frame: capped, 75 Hz drew 56 with hitches and 60.05 Hz dropped a frame every 10 s)
     const raw = clock.getDelta(), dt = Math.min(PREFS.saver || deskOn ? 0.075 : 0.05, raw), t = clock.elapsedTime; // 15 fps: steps of 1/15 s keep the walk at speed
-    const w = sky.now(), L = light(w.gray); habitat.ctx.night = L.night; habitat.ctx.rain = w.rain + w.snow; habitat.ctx.az = Math.atan2(camera.position.z - controls.target.z, camera.position.x - controls.target.x); flies?.(t, L.night); ambience(habId, L.night, w.rain, w.snow); // walk.js / swim.js: sleepier at night, shelter or swim in the rain (25-1: the snow's snow alike)
+    const w = sky.now(), L = light(w.gray); habitat.ctx.night = L.night; habitat.ctx.rain = w.rain + w.snow; habitat.ctx.az = Math.atan2(camera.position.z - controls.target.z, camera.position.x - controls.target.x); flies?.(t, L.night); glows?.night(L.night); ambience(habId, L.night, w.rain, w.snow); // walk.js / swim.js: sleepier at night, shelter or swim in the rain (25-1: the snow's snow alike)
     windTime.value = t; habitat.update(dt, t); mistTick(t, dt); if (habitat.ctx.shade) { habitat.ctx.shade = false; renderer.shadowMap.needsUpdate = true; } /* 129: a fixture popped up */ bugs.tick(t, L.night, w.rain); wildFlies?.(t, L.night); lilies(lilyK); // 17-3
     if (t > noteAt) { noteAt = t + 2; const es = [...placed.values()]; // 23-2 도전 과제: what is on screen now
       if (L.night > 0.5) ui.note?.('lights', es.filter(e => e.light).length);
@@ -1328,12 +1436,17 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (peekT && (focus || decorOn || snapOn || trainCam)) peekT = 0, back0 = hello = null;
     else if (peekT && (peekT -= dt) <= 0) { peekT = 0; if (back0 === 'home') overview(); else aim = back0; back0 = null; } // inbox 43: back from the new friend (64-A: the first, the start view on it)
     if (hello && (hello.t -= dt) <= 0) { const a = hello.a; hello = null; if (a.obj.visible) { a.poke(); ui.hello?.(...project(a.obj, height(a) * 0.8)); } } // inbox 64-A
+    if (spotMesh && (decorOn || spotHeld()) && Math.abs(ringR() - spotK) > 0.6) spotPaint(); // 221 C ③: the camera went past a ring width step (0.1 dead band: no rebuild each frame on a step's edge, review)
     if (homeOn && !focus && !aim && !peekT && !decorOn && !snapOn && !trainCam && (homeT -= dt) <= 0) { homeT = 1; if (actors.size && actors.size <= 3) { setHome(); goingHome = true; } }
     feedWheel(dt); steerCamera(dt); if (deskOn) deskCam(dt);
     if (!focus && !(DEBUG && window.__hab.free)) { // keep pan inside the board (screenshot script can lift this); eased so leaving a follow near the edge doesn't jump
       const T = controls.target, k = 1 - Math.exp(-dt * 8);
       want.set(THREE.MathUtils.clamp(T.x, ...panX), goingHome || skyOn ? T.y : 0, THREE.MathUtils.clamp(T.z, ...panZ)).sub(T).multiplyScalar(k);
       T.add(want); camera.position.add(want);
+    }
+    if (S186 && decorOn && !focus && !aim) { // 202 B-12: a 꾸미기 drag or zoom keeps the board on screen (eased like the clamp above)
+      const T = controls.target, k = 1 - Math.exp(-dt * 8); off.copy(camera.position).sub(T); sph.setFromVector3(off);
+      want.copy(T); fitIn(want, sph.phi, sph.theta, sph.radius, FIT_DECOR); want.sub(T).setY(0).multiplyScalar(k); T.add(want); camera.position.add(want);
     }
     const tag = focus ? label(focus) : '', k = tag + (focus?.rec.id ?? ''); if (k !== lastTag) { lastTag = k; ui.tag?.(tag, focus?.rec); } // stage can change while followed
     band(dt);
@@ -1390,8 +1503,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     } else if (sp.length) idle().sort((a, b) => far(a) - far(b)).slice(0, 4).forEach((a, i) => { const p = sp[i % sp.length]; a.send(p.x + (Math.random() - 0.5) * 2, p.z + (Math.random() - 0.5) * 2, 'run', { fast: true }); });
   }
   // 28-1 넓히기 전과 비교: the open ground from straight above, w px wide (no mist), and the first board's part of it alone on the table
-  function topView(w = 600) {
-    const r = open, h = Math.round(w * (r[3] - r[2]) / (r[1] - r[0])), cx = (r[0] + r[1]) / 2, cz = (r[2] + r[3]) / 2;
+  function topView(w = 600, pad = 0) { // pad: 184 ④ 위에서 한 장 takes the yard's frame round the open ground too
+    const r = open.map((v, i) => v + (i % 2 ? pad : -pad)), h = Math.round(w * (r[3] - r[2]) / (r[1] - r[0])), cx = (r[0] + r[1]) / 2, cz = (r[2] + r[3]) / 2;
     const cam = new THREE.OrthographicCamera(-(r[1] - r[0]) / 2, (r[1] - r[0]) / 2, (r[3] - r[2]) / 2, -(r[3] - r[2]) / 2, 1, 200);
     cam.up.set(0, 0, -1); cam.position.set(cx, 80, cz); cam.lookAt(cx, 0, cz); cam.updateMatrixWorld(); // the back (-z) at the top, as the home view
     const mv = mistTick.mesh.visible; mistTick.mesh.visible = false;
@@ -1453,11 +1566,14 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       const c = document.createElement('canvas'); c.width = renderer.domElement.width; c.height = renderer.domElement.height; c.getContext('2d').drawImage(renderer.domElement, 0, 0);
       renderer.setPixelRatio(pr); renderer.setSize(W(), H()); renderer.render(scene, camera); return c; // drawn again: setSize cleared the screen
     },
-    dispose() { dead = true; ac.abort(); habitat.dispose?.(); for (const g of guests) g.dispose(); controls.dispose(); unhook(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); boxEl.remove(); perfEl?.remove(); }, // replaced (21-3b, main.js)
+    dispose() { dead = true; ac.abort(); glows?.dispose(); scat?.dispose(); spotMesh?.geometry.dispose(); spotMat?.dispose(); /* 194 0-5 */ habitat.dispose?.(); for (const g of guests) g.dispose(); controls.dispose(); unhook(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); boxEl.remove(); perfEl?.remove(); }, // replaced (21-3b, main.js)
     look(id) { const a = actors.get(id); if (!a) return false; setFocus(a); front(); watch = true; return true; }, // inbox 20: follow one and turn to its face (friends list, 「연못에서 보기」); 26-4 a touch lets go
     unfollow: () => { trainCam = false; setFocus(null); }, followed: () => trainCam ? 'train' : focus?.rec.id ?? null, // 26-4 사진 모드 따라가기
     hasTrain: () => !!train, followTrain() { if (!train) return false; setFocus(null); Object.assign(trainAim, { radius: 9, phi: 1 }); goingHome = false; trainCam = true; return true; }, // 28-4
-    where(id) { const a = actors.get(id); return a?.obj.visible ? project(a.obj, height(a) + 0.3) : null; }, // screen point above an animal
+    where(id) { const a = actors.get(id); if (!a?.obj.visible) return null; if (!S186) return project(a.obj, height(a) + 0.3); // screen point above an animal
+      const b = new THREE.Box3().setFromObject(a.look.obj), p = project(a.obj, 0), v = new THREE.Vector3(); let top = Infinity; // 199 C (?s186): above the body's top on screen (the card never covers it)
+      for (let k = 0; k < 8; k++) { v.set(k & 1 ? b.max.x : b.min.x, k & 2 ? b.max.y : b.min.y, k & 4 ? b.max.z : b.min.z); top = Math.min(top, project({ position: v }, 0)[1]); }
+      return [p[0], top - 4]; },
     // 66-1 떠돌이 손님 (game/guests.js judge): what is round x, z (m) within r: ground tags, prop ids, friends (not guests)
     guestLook(x, z, r) { const c = habitat.ctx, h = c.heightAt, near = (o, rr = 0) => Math.hypot(o.x - x, o.z - z) < r + rr, ground = [];
       const ring = [0, 1, 2, 3, 4, 5, 6, 7].map(k => [x + Math.cos(k * 0.785) * r, z + Math.sin(k * 0.785) * r]);

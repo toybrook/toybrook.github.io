@@ -22,6 +22,14 @@ const busy = () => topWindow() || overlayOpen() || !$('loading').hidden || docum
 const sync = () => { const M = G.S?.myth[MY.id]; if (M) H()?.set(G.mythStage(), lit(M), !!M.here && !M.shown); };
 // the 신수 card: on its stand, like a limited figure in its box
 export const mythCard = () => $t('<figure class="mcard"><div class="mstand"><img alt="{0}"></div><figcaption><b>{1}</b><small>신수 · {2}</small></figcaption></figure>', MY.name, MY.name, HAB[MY.habitat].name);
+// 199 A Q4: one picture for any mythic not met yet (「신수란?」, the codex): a glowing egg with a 「?」 and starlight, no mythic's own
+const star = (x, y, r) => `<path d='M${x} ${y - r}l${r * .25} ${r * .75} ${r * .75} ${r * .25}-${r * .75} ${r * .25}-${r * .25} ${r * .75}-${r * .25}-${r * .75}-${r * .75}-${r * .25} ${r * .75}-${r * .25}z' fill='#ffd257'/>`;
+export const MYSTERY = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs>
+<radialGradient id='g'><stop offset='0' stop-color='#fff3b8'/><stop offset='.55' stop-color='#ffe08a' stop-opacity='.55'/><stop offset='1' stop-color='#ffd36b' stop-opacity='0'/></radialGradient>
+<radialGradient id='e' cx='.38' cy='.32' r='.8'><stop offset='0' stop-color='#fffef6'/><stop offset='.55' stop-color='#ffeab4'/><stop offset='1' stop-color='#eeb862'/></radialGradient></defs>
+<circle cx='50' cy='54' r='47' fill='url(#g)'/><path d='M50 17C35 17 25 41 25 57c0 15 11 26 25 26s25-11 25-26C75 41 65 17 50 17z' fill='url(#e)' stroke='#dca04c' stroke-width='1.6'/>
+<path d='M42 45.5a8 8 0 1 1 11.6 7.1c-2.7 1.4-3.6 2.9-3.6 5.6v2.3' fill='none' stroke='#c47f2e' stroke-width='5.2' stroke-linecap='round'/><circle cx='50' cy='70' r='3.4' fill='#c47f2e'/>
+${star(17, 26, 7)}${star(83, 22, 5)}${star(86, 60, 6)}${star(14, 66, 4)}</svg>`);
 const cardImg = el => { const img = el.querySelector('.mstand img'); if (img) import('./thumbs.js').then(t => t.mythThumb(false, false, 0)).then(u => { img.src = u; }, () => {}); };
 // what to do next (the codex's "?" and the altar)
 export function mythHint(id) {
@@ -179,14 +187,14 @@ function steps(up, on, labels) {
     const li = mk('li', ol, null, k === on ? 'on' : k < on ? 'done' : ''); mk('i', li, i).setAttribute('aria-hidden', 'true'); mk('span', li, labels?.[k] ?? t); });
   return ol;
 }
-// one that has no news yet: what it waits for (rules.js mythTurn / mythPrints: the ones before it settled, its habitat open, then a day)
+// one that has no news yet: what it waits for (rules.js mythTurn / mythPick, 199 A: one at a time, any of the open ones, so
+// 「누군가의」: the next news may be another's; the one coming now not named, its own cell shows it)
 function waitLine(m) {
-  const p = MYTHIC[MYTHIC.indexOf(m) - 1];
   if (HOLD.myth) return $t('아직 아무 소식이 없어요');
-  if (p && !G.S.myth[p.id]?.settled) return $t('{0}{을/를} 획득하면 소식이 와요', p.name);
+  if (MYTHIC.some(p => G.S.myth[p.id]?.come != null && !G.S.myth[p.id].settled)) return $t('지금 오는 신수를 획득하면 소식이 와요');
   if (!G.S.unlocked.includes(m.habitat)) return $t('{0}{을/를} 열면 소식이 와요', HAB[m.habitat].name);
   const k = dayNo(mythPrints(G.S, m.id)) - dayNo(G.now());
-  return k > 1 ? $t('{0}일 뒤 아침에 소식이 와요', k) : k === 1 ? $t('내일 아침에 소식이 와요') : $t('곧 소식이 와요');
+  return k > 1 ? $t('{0}일 뒤 아침에 누군가의 소식이 와요', k) : k === 1 ? $t('내일 아침에 누군가의 소식이 와요') : $t('곧 누군가의 소식이 와요');
 }
 // 지금 할 일 and where its 「가 보기」 goes (goTo; null: nothing to go to)
 function nowOf(m, s, M) {
@@ -217,9 +225,8 @@ export const mythGo = (id, go) => goTo(myOf(id), go);
 function about(next) {
   if (!G.S.flags.mythInfo) G.flag('mythInfo', 1); // first: G.flag's redraw (an open altar) comes before this card
   after = next; view = 'about'; box.replaceChildren();
-  const d = mk('div', box, null, 'mabout'), met = !!G.S.myth[MY.id]?.here; mk('h2', d, $t('신수란?'));
-  const img = mk('img', mk('div', mk('figure', d, null, 'mcard'), null, 'mstand')); img.alt = met ? MY.name : $t('신수 실루엣');
-  import('./thumbs.js').then(t => t.mythThumb(!met, false, met ? 0 : 1)).then(u => { img.src = u; }, () => {});
+  const d = mk('div', box, null, 'mabout'); mk('h2', d, $t('신수란?'));
+  const img = mk('img', mk('div', mk('figure', d, null, 'mcard'), null, 'mstand')); img.alt = $t('신수 실루엣'); img.src = MYSTERY; // 199 A Q4
   mk('p', d, $t('신수는 서식지를 지켜 주는 특별한 동물이에요. 알에서 태어나지 않아요.'));
   mk('small', steps(d, -1).children[2], nightText());
   mk('p', d, $t('획득하면 서식지에 계속 머물고, 동물 자리를 차지하지 않아요. 이야기 카드도 받아요.'));

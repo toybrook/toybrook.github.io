@@ -57,7 +57,7 @@ function ending() {
   const out = G.firstEnd(), S = G.S, d = el('div'), P = out?.got?.prop && R.PROP[out.got.prop];
   track('step170', { s: 'end' }, 'step170:end'); sfx('grown');
   d.append(el('h2', '', $t('첫날 할 일을 다 했어요!')));
-  if (P) d.append(el('p', 'sub', $t('첫날 선물 · 「{0}」 + 성장 사탕 {1}개 · 꾸미기 › 선물에 있어요', P.name, out.got.candy)));
+  if (P) d.append(el('p', 'sub', $t('첫날 선물 · 「{0}」 + ♥{1} · 꾸미기 › 선물에 있어요', P.name, out.got.hearts))); // 227 A: ♥ in every build
   if (S.flags.week1 && S.attend.n === 1 && !R.attendDue(S, G.now())) { // the day-2 gift (rules attend, WEEK1[1]) still to come: shown here, given tomorrow as before
     const box = el('div', 'egg170'), img = el('img'), t = el('small');
     img.alt = ''; eggThumb('legendary').then(u => { img.src = u; }, () => {});
@@ -89,7 +89,8 @@ setInterval(() => {
   document.body.classList.toggle('n170on', !!s); document.body.classList.toggle('n170wait', s === 'name' || !!s && arriving() || tutOn());
   if (card.hidden) clearInterval(eggT);
   const ok = !!s && free(); quiet = ok ? quiet + 1 : 0; // ticks of 500 ms with the screen free
-  line.hidden = !ok || tutOn() || !!tutAt(S) && tutAt(S) !== 'end'; // 182 ② review: at the end step 170's line is back (a prop put away after decor: step170 'prop', nothing lit) if (ok) { line.lastChild.textContent = TEXT[s](R.firstFriend(S)); line.classList.toggle('go', s === 'end'); }
+  line.hidden = !ok || tutOn() || !!tutAt(S) && tutAt(S) !== 'end'; // 182 ② review: at the end step 170's line is back (a prop put away after decor: step170 'prop', nothing lit)
+  if (ok) { line.lastChild.textContent = TEXT[s](R.firstFriend(S)); line.classList.toggle('go', s === 'end'); } // 218-5f: was inside the comment above, so the line's text never changed
   if (ok && quiet >= 3 && !arriving() && (s === 'name' && !tick++ || s === 'end' && (tutAt(S) || 'end') === 'end')) GO[s](R.firstFriend(S)); // the naming card once a page, after the first card; the end card when all is done
   calm = free() && !tutOn() ? calm + 1 : 0; if (calm >= 4) night();
 }, 500);

@@ -204,7 +204,7 @@ body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visi
 .nsecret i{position:absolute;font-style:normal;color:#ffc93c;font-size:calc(12px*var(--fs));animation:tw 1.2s ease-in-out infinite}
 .nsecret i:nth-of-type(1){left:0;top:-6px}.nsecret i:nth-of-type(2){left:6px;bottom:-8px;animation-delay:-.3s}.nsecret i:nth-of-type(3){right:0;top:-8px;animation-delay:-.6s}
 .nsecret i:nth-of-type(4){right:8px;bottom:-6px;animation-delay:-.9s}.nsecret i:nth-of-type(5){left:40%;top:-12px;animation-delay:-.45s}.nsecret i:nth-of-type(6){left:62%;bottom:-12px;animation-delay:-.15s}
-.nbtns{margin-top:auto;width:100%;display:flex;gap:8px}
+.nbtns{margin-top:auto;width:100%;display:flex;gap:8px}.n194 .nbtns{flex-wrap:wrap}.n194 .nbtns button{flex:1 1 40%} /* 194 0-5: three buttons, the last on its own row */
 .nbtns button{flex:1;min-height:46px;border-radius:999px;font:inherit;font-weight:700;font-size:calc(15px*var(--fs));cursor:pointer}
 .nbtns .go{border:0;background:#e8805f;color:#fff}
 :root[data-adi] #ncard .nbtns button::after{content:'Ad';margin-left:6px;padding:1px 5px;border-radius:5px;background:#0000002e;font-size:calc(10px*var(--fs));font-weight:700;vertical-align:middle} /* 184 ⑤ src/toss.js: this answer shows an interstitial */
@@ -567,7 +567,7 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .snap button{flex:1;min-width:0;min-height:40px;border:0;border-radius:999px;background:#eadbc3;color:#6b4a2b;font:inherit;font-size:calc(13px*var(--fs));font-weight:600;white-space:nowrap;padding:0 4px;cursor:pointer}
 .snap button.on{background:#6b4a2b;color:#fff7e8}
 .snap .smsg{margin:2px 2px 8px;font-size:calc(12px*var(--fs));line-height:1.45;color:#7a5a3c;word-break:keep-all;min-height:17px}
-.snap .sbar{display:flex;gap:6px}.snap .sbar button{min-height:44px;font-size:calc(14px*var(--fs))}.snap .sbar .go{background:#e8805f;color:#fff}
+.snap .sbar{display:flex;gap:6px}.snap .sbar button{min-height:44px;font-size:calc(14px*var(--fs))}.snap .sbar .go{background:#e8805f;color:#fff}.snap .sbar [data-act="top"]{white-space:normal;line-height:1.1}
 /* 13-3 오늘의 진열대 */
 .dshelf{margin:0 0 8px;padding:6px;border-radius:14px;background:#fff7e8;border:1px dashed #e0b97e}
 .dshelf>p{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin:0 2px 4px;font-size:calc(12.5px*var(--fs))}.dshelf>p span{color:#8a6a4c;font-size:calc(11.5px*var(--fs));white-space:nowrap}
