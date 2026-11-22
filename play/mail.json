@@ -14,6 +14,20 @@
       "body_en": "Thanks for coming to the Toybrook open beta. Here is a little gift. Take your time and look around!",
       "title_ja": "オープンベータにきてくれてありがとう",
       "body_ja": "トイブルックのオープンベータにきてくれてありがとうございます。小さなプレゼントをおくります。ゆっくり見てまわってくださいね！"
+    },
+    {
+      "id": "fest-notice-2026",
+      "title": "12월 22일부터 겨울 별빛 축제가 열려요",
+      "body": "밤이 가장 긴 날부터 2주 동안 서식지에 따뜻한 등불이 켜져요. 조금만 기다려 주세요!",
+      "rewards": {
+        "hearts": 10
+      },
+      "start": "2026-12-12",
+      "end": "2026-12-21",
+      "title_en": "The Winter Starlight Festival begins on 12/22",
+      "body_en": "From the longest night of the year, warm lanterns light up the habitats for 2 weeks. See you soon!",
+      "title_ja": "12月22日から冬の星あかり祭りがはじまります",
+      "body_ja": "一年でいちばん夜が長い日から2週間、すみかにあたたかい灯りがともります。もうすこし待っていてくださいね！"
     }
   ],
   "codes": [

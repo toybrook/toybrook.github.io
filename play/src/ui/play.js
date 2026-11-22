@@ -4,12 +4,12 @@ import { $t, ko, LOC } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B } from '../game/data.js';
 import { SP, HAB, variantOf, growLeft, gauge, growing, feedsLeft, capOf, habitatOf, outIn, callName, eggGap, scenesOf, growStage, PROP, affLevel, affBar, step181 } from '../game/rules.js';
-import { PROPS, HABITATS, PART_NAME, GROW_ACTS, F170, AFF_ACTS, TUT181, ACCESSORIES, S186 } from '../game/data.js';
+import { PROPS, HABITATS, PART_NAME, GROW_ACTS, F170, AFF_ACTS, TUT181, ACCESSORIES, S186, TUT228 } from '../game/data.js';
 import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
 import { weatherAt } from '../habitat/weather.js';
 import { gameHours } from '../habitat/daylight.js';
-import { toast, say, hideToast, heart, span, josa, overlayOpen, clock, tip, resting, redodge } from './hud.js';
+import { toast, say, hideToast, heart, span, josa, overlayOpen, clock, tip, resting, redodge, cardUp } from './hud.js';
 import { openCodex, hasNew } from './codex.js';
 import { initNest } from './nest.js';
 import { openStore, leaveStore } from './store.js';
@@ -20,7 +20,7 @@ import { openCabinet } from './cabinet.js';
 import { figureThumb, silhouetteThumb } from './thumbs.js';
 import { guestName } from '../game/visit.js';
 import { PE } from '../game/pals.js';
-import { sfx } from './sound.js';
+import { sfx, buzz } from './sound.js';
 import { homeHintDue, appHintDue, inApp } from '../game/backup.js';
 import { DEV, open as openBackup, copyLink, chromeLink } from './backup.js';
 import { rosterOf, isRegular } from '../game/guests.js'; // 66-1 떠돌이 손님
@@ -82,6 +82,10 @@ export function initPlay(nav) {
     bubble.hidden = true; bubbleFor = null;
     if (act === 'walk') pickStroll(r);
   };
+  // 245 ③: 나의 뜰's first visit (an empty board, nothing placed): one line and the 꾸미기 button pulses; the tutorial's own step says it instead
+  const yard1 = id => { if (id !== 'yard' || G.S.flags.yard245) return;
+    if (G.S.props.some(p => p.hab === 'yard' && p.placed) || TUT228 && step181(G.S, G.now())) return G.flag('yard245');
+    const go = () => { if (habId !== 'yard' || G.S.flags.yard245) return; if (covered()) return setTimeout(go, 800); G.flag('yard245'); toast($t('나의 뜰은 마음대로 꾸미는 빈 땅이에요 · 아래 꾸미기로 채워 보세요'), 4200); decorBtn.classList.add('yshine'); setTimeout(() => decorBtn.classList.remove('yshine'), 4200); }; setTimeout(go, 1500); }; // a card (레벨 등) up: after it
   const hint = () => { if (!G.S.flags.nestTapped) tip('nest', '#nestBtn'); }; // inbox 20: a first-time tip by the button (was a toast)
   // 꾸미기's red dot: a prop for this habitat not looked at yet (one added by an update; a new game has seen them all)
   const newProps = () => PROPS.filter(p => p.habitat === habId && !(G.S.seenProps || []).includes(p.id));
@@ -166,7 +170,7 @@ export function initPlay(nav) {
   function place() {
     if (!bubbleFor) return;
     const p = hab?.where(bubbleFor.id), r = stage.getBoundingClientRect();
-    if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil && !held || overlayOpen() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
+    if (!p || p[0] < r.left || p[0] > r.right || p[1] < r.top || p[1] > r.bottom || Date.now() > bubbleUntil && !held || overlayOpen() || cardUp() || document.querySelector('#lvup:not([hidden]), #ret:not([hidden]), #news:not([hidden])')) { bubble.hidden = true; bubbleFor = null; return; } // 26-11: a card coming up
     const cb = $('camBtns'), low = cb.hidden ? 0 : cb.getBoundingClientRect().bottom + bubble.offsetHeight + 16; // following up close: kept under 정면 / 전체 보기
     const half = bubble.offsetWidth / 2 + 6, x = Math.min(Math.max(p[0], r.left + half), r.right - half); // 13-1: kept on screen near the edges, the tail still at the friend
     bubble.style.left = x + 'px'; bubble.style.setProperty('--tx', p[0] - x + 'px'); bubble.style.top = Math.max(p[1], low) + 'px';
@@ -189,7 +193,7 @@ export function initPlay(nav) {
     for (let i = 0; i < k; i++) { const part = Math.floor(n * (i + 1) / k) - Math.floor(n * i / k), e = document.createElement('div');
       e.className = 'fx heart'; e.textContent = '♥'; Object.assign(e.style, { left: x0 + 'px', top: y0 + 'px', animation: 'none' }); document.body.append(e);
       const dx = to.left + to.width * 0.3 - x0, dy = to.top + to.height / 2 - y0, ms = calm() ? 0 : 620, d = calm() ? 0 : i * 90;
-      const done = () => { e.remove(); flying -= part; draw(); hearts.classList.remove('pop'); void hearts.offsetWidth; hearts.classList.add('pop'); sfx('tok'); if (PREFS.buzz && !calm()) navigator.vibrate?.(8); };
+      const done = () => { e.remove(); flying -= part; draw(); hearts.classList.remove('pop'); void hearts.offsetWidth; hearts.classList.add('pop'); sfx('tok'); if (PREFS.buzz && !calm()) buzz(8); };
       if (!ms) { done(); continue; }
       e.animate([{ transform: 'translate(-50%,-50%) scale(1.1)' }, { transform: `translate(calc(-50% + ${dx * 0.35 + (i % 2 ? 30 : -30)}px), calc(-50% + ${dy * 0.2 - 40}px)) scale(1.2)` }, { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.6)` }],
         { duration: ms, delay: d, easing: 'ease-in', fill: 'both' }).finished.then(done, done);
@@ -202,7 +206,7 @@ export function initPlay(nav) {
       if (e.pair != null && G.S.guests.list.some(o => o.pair === e.pair && o.id < e.id)) return; // the pair: one note for both
       const two = e.pair != null && G.S.guests.list.filter(o => o.pair === e.pair);
       toast(two ? $t('손님 둘이 함께 왔어요 · 둘의 소원이 서로 달라요. 눌러서 보상을 보고 골라 주세요') : $t('{0}{이/가} 놀러 왔어요 · 눌러서 소원을 들어 보세요', nm), 3200, true);
-      if (g?.tut != null) setTimeout(() => { const r = G.withGuests().find(x => x.wg === e.id); if (r && hab?.look(r.id)) showBubble(r); }, 900); // the tutorial's guest: the camera goes to it
+      if (g?.tut != null && !(TUT228 && ['hatch', 'name', 'pet', 'feed'].includes(step181(G.S, G.now())))) setTimeout(() => { const r = G.withGuests().find(x => x.wg === e.id); if (r && hab?.look(r.id)) showBubble(r); }, 900); // the tutorial's guest: the camera goes to it
     }
     if (e.what === 'wish') fly(at(e.id), e.hearts); // a wish met for the first time: its small burst
     if (e.what === 'happy' || e.what === 'great') {
@@ -249,7 +253,7 @@ export function initPlay(nav) {
     if (eggs && hab) toast(eggs > 1 ? $t('둥지에 알이 {0}개 생겼어요', eggs) : $t('둥지에 알이 생겼어요'));
     for (const e of ev) { // later ones matter more: they win the toast
       if (e.type === 'stored') toast($t('서식지 자리가 모자라 오래된 동물이 보관함으로 갔어요 (최대 {0}마리)', capOf(G.S, habitatOf(e.animal))), 3200);
-      if (e.type === 'unlock') { toast($t('{0}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 월드맵에서 가 보세요', HAB[e.habitat].name), 3200); tip('unlock', '#habName'); }
+      if (e.type === 'unlock' && !(TUT228 && (e.habitat === 'yard' || step181(G.S, G.now())))) { toast($t('{0}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 월드맵에서 가 보세요', HAB[e.habitat].name), 3200); tip('unlock', '#habName'); } // 236 B Q16: the yard's own guide says it; none over the first day's steps
       if (e.type === 'strollBack' && hab) { const a = e.animal, nm = nameOf(a); if (!a.stored && habitatOf(a) === habId) hab.drop(a); toast($t('{0}{이/가} 산책에서 돌아왔어요 · ♥+{1}{2}', nm, e.card.hearts, a.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 3000); } // 13-1
       if (e.type === 'whole') { const r = e.reward; toast($t('{0} 모으기 {1}/3 선물: {2}', HAB[e.habitat].name, e.step, r === 'expand' ? $t('다음 땅 넓히기가 무료예요') : $t('큰 소품 「{0}」{이/가} 보관함에 왔어요', PROP[r]?.name)), 3600); } // 66-3
       if (e.type === 'reset' && hab) { bubble.hidden = true; bubbleFor = null; hint(); }
@@ -358,7 +362,7 @@ export function initPlay(nav) {
     tag(text, rec) { tagText = text; tagFor = rec || null; drawTag(); },
     attach(api, id) { hab = api; habId = id; nest.attach(api, id);
       G.guestWorld({ look: (h, x, z, r) => h === habId && hab ? hab.guestLook(x, z, r) : {}, entry: (h, from, rng, want, show) => covered() || !hab ? null : hab.guestEntry(from, rng, want, show), pos: id => hab?.guestPos(id) }, () => hab ? hab.guestEnv() : {}); // 66-1
-      draw(); hint(); setTimeout(cards, 1200); }, // grown while away: the cards together
+      draw(); hint(); setTimeout(cards, 1200); yard1(id); }, // grown while away: the cards together
     openNest: () => nest.open(), cards, firstEgg: (id, done, onCard) => nest.first(id, done, onCard), // inbox 61 B
     leave() { G.guestWorld(null); leaveDecor(); leaveStore(); leaveFriends(); hab = null; nest.leave(); hideNote(); bubble.hidden = true; bubbleFor = null; card.hidden = home.hidden = true; clearTimeout(homeT); homeT = 0; hideToast(); },
   };

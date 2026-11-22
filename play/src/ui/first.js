@@ -2,7 +2,7 @@
 // one toast when the screen is free (like 도전 과제, level.js).
 import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
-import { FIRST, BIGS, PROPS, HABITATS, BALANCE, TUT181 } from '../game/data.js';
+import { FIRST, BIGS, PROPS, HABITATS, BALANCE, TUT181, TUT228 } from '../game/data.js';
 import { PROP, HAB, can, unlockInfo, gauge, eggGap, step181 } from '../game/rules.js';
 import { toast, topWindow, overlayOpen } from './hud.js';
 import { track } from './stats.js';
@@ -39,7 +39,7 @@ function locks() {
 }
 const RC201 = !!document.documentElement.dataset.ui187;
 locks();
-G.on(ev => { said.push(...ev.filter(e => e.type === 'first' || e.type === 'firstAll')); locks(); });
+G.on(ev => { said.push(...ev.filter(e => e.type === 'first' && !(TUT228 && document.body.classList.contains('t2lead')) || e.type === 'firstAll')); locks(); }); // 236 B: under the 이정표 줄 a task's ♥ rides the 칭찬 칩 (tut228.js)
 setInterval(() => {
   locks();
   if (!said.length || topWindow() || overlayOpen() || document.body.classList.contains('photo') || RC201 && document.getElementById('habitat')?.classList.contains('decorating')) return; // 202 B-13 (?rc200): not while decorating (after it)

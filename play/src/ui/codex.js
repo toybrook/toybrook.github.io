@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { makeFigure, loadModel } from '../animals/figure.js';
 import * as G from '../game/game.js';
-import { HABITATS, RARITIES, ACCESSORIES, SPECIES, SCENES, BALANCE, MYTHIC, HOLD, COMPLETE, ZONES, S186 } from '../game/data.js';
+import { HABITATS, RARITIES, ACCESSORIES, SPECIES, SCENES, BALANCE, MYTHIC, HOLD, COMPLETE, ZONES, S186, G190 } from '../game/data.js';
 import { GUEST, guestWear } from '../game/guests-data.js';
 import { codexCells, habitatOf, known, colorsOf, SP, HAB, RAR, EARNED, displayColor, unlockInfo, lookName, variantsOf, wholeOf, wanderersOf, PROP, levelOf, nameCase } from '../game/rules.js';
 import { toast, tip, lockText, josa } from './hud.js';
@@ -25,6 +25,7 @@ import { mythCard, mythHint, G167, mythSteps, mythGo, mythAbout, MYSTERY } from 
 import { openStories, cardsIn } from './story.js';
 import { SLOTS } from '../game/sky.js';
 import { BLOOMS, recipe } from '../game/wild.js'; // 17-3 들꽃 도감
+import { collNo } from '../game/series.js'; // 215
 const SKY_N = SLOTS.length;
 
 const el = document.getElementById('codex');
@@ -42,6 +43,7 @@ G.on(() => { if (el.hidden || sig() === shown) return; const body = el.querySele
 el.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.close != null) el.hidden = true;
+  else if (b.dataset.alb != null) { el.hidden = true; import('./series.js').then(m => m.openSeries('alb')); } // 203 D5 ?g190 (series.js: ?g190 only)
   else if (b.dataset.lock) toast(`${HAB[b.dataset.lock].name}: ${lockText(b.dataset.lock)}`, 3200);
   else if (b.dataset.tab) { tab = b.dataset.tab; draw(); }
   else if (b.dataset.night != null) { const y = el.querySelector('.cbody')?.scrollTop || 0; night = !night; draw(); el.querySelector('.cbody').scrollTop = y; }
@@ -150,6 +152,8 @@ const tabs = () => $t('<div class="ctabs">{0}<button data-tab="album"{1}>치장 
 // day. Not seen: the prop's (or a friend's) flat shape and the hint. Not part of the codex count
 const scenesHtml = () => $t('<details class="cscenes"{0}><summary>놀이 장면 <small>{1}/{2}</small></summary><div class="crow sc">{3}</div>\n<p class="cnote">동물이 놀이 소품에서 놀거나 동물끼리 노는 모습을 보면 담겨요 · 처음 볼 때 ♥{4} · 도감 수에는 들어가지 않아요</p></details>', sceneOpen ? ' open' : '', SCENES.filter(s => G.S.scenes[s.id]).length, SCENES.length, SCENES.map(s => { const e = G.S.scenes[s.id];
     return `<div class="cell scene${e ? '' : ' unk'}"><img alt="${e ? s.name : $t('아직 못 본 장면')}">${e?.sp && s.prop ? '<img class="who" alt="">' : ''}<span>${e ? s.name : '?'}</span><small>${e ? new Date(e.at).toLocaleDateString(LOC) : s.hint}</small></div>`; }).join(''), BALANCE.scene.hearts);
+// 203 D5 ?g190: the 놀이 장면 moved to the 사진 앨범 (series.js), here only the way there
+const albLink = () => $t('<button class="back calb" data-alb>놀이 장면 {0}/{1} · 사진 앨범에서 봐요</button>', SCENES.filter(s => G.S.scenes[s.id]).length, SCENES.length);
 let sceneOpen = false; // 66-3: the fold stays as the player left it while the codex is redrawn
 // 17-2 작품집: the 동물 작품 of this habitat kept (그대로 두기, 기록만 남기고 치우기), newest first: the 작품 itself (its model, as the
 // 놀이 장면 cells), who made it, the day. In the codex as the 놀이 장면 are (a fold: no screen of its own); not part of the count
@@ -197,7 +201,7 @@ function draw() {
   const stored = G.S.animals.filter(a => a.stored && known(a) && habitatOf(a) === tab).length;
   const seen = c => G.S.colors[c.key] || [];
   const dots = c => { const cs = colorsOf(c.species.id, c.variant.id); return got(c) && cs.length ? $t('<b class="dots" aria-label="색 {0}/{1}">{2}</b>', cs.filter(x => seen(c).includes(x.id)).length, cs.length, cs.map(x => `<u${seen(c).includes(x.id) ? ' class="on"' : ''}></u>`).join('')) : ''; };
-  const cell = c => `<div class="cell${got(c) ? '' : ' unk'}" role="button" data-k="${c.key}"><img alt="${got(c) ? lookName(c.species.id, c.variant.id, displayColor(G.S, c.key)) : $t('아직 못 찾은 변종')}">${!isNew(c.key) ? '' : got(c) ? '<i>NEW</i>' : $t('<i class="slot">새 칸</i>')}<span>${got(c) ? nameCase(c.variant.name) : '?'}</span>${dots(c)}</div>`;
+  const cell = c => `<div class="cell${got(c) ? '' : ' unk'}" role="button" data-k="${c.key}"><img alt="${got(c) ? lookName(c.species.id, c.variant.id, displayColor(G.S, c.key)) : $t('아직 못 찾은 변종')}">${!isNew(c.key) ? '' : got(c) ? '<i>NEW</i>' : $t('<i class="slot">새 칸</i>')}<span>${got(c) ? nameCase(c.variant.name) : '?'}</span>${dots(c)}${G190 && got(c) && collNo(G.S, c.key) ? `<b class="cno">No.${collNo(G.S, c.key)}</b>` : ''}</div>`; // 215 (3-13): a number only (counted)
   const groups = RARITIES.map(r => {
     const cs = cells.filter(c => c.rarity === r.id), ss = vis.filter(c => c.rarity === r.id); if (!ss.length) return '';
     const rows = [...new Set(ss.map(c => c.species))].map(sp => `<div class="crow">${ss.filter(c => c.species === sp).map(cell).join('')}</div>`);
@@ -205,7 +209,7 @@ function draw() {
   }).join('');
   const egg = groups && $t('<h2 class="ctier">알 동물 <small>{0}/{1}</small></h2>', cells.filter(got).length, cells.length);
   const W = wholeOf(G.S, tab); // inbox 154 C: the head counts as 모으기 does (egg friends, guests, mythics); the rows below count only their own
-  el.innerHTML = $t('<div class="chead"><b>도감</b><span>{0}/{1}</span>{2}<button class="back" data-close>닫기</button></div>\n{3}{4}\n<div class="cbody">{5}{6}{7}{8}</div>', W.got, W.all, nightBtn(), tabs(), cells.length ? bar(tab, cells, cells.filter(got).length) : '', groups ? egg + groups : $t('<p class="cnote">준비 중이에요</p>'), groups ? guestRow() + mythRow() + scenesHtml() + artHtml() + (tab === 'dino' || S186 ? '' : wildHtml()) : '', stored ? $t('<p class="cnote">보관함에 {0}마리 있어요</p>', stored) : '', foot());
+  el.innerHTML = $t('<div class="chead"><b>도감</b><span>{0}/{1}</span>{2}<button class="back" data-close>닫기</button></div>\n{3}{4}\n<div class="cbody">{5}{6}{7}{8}</div>', W.got, W.all, nightBtn(), tabs(), cells.length ? bar(tab, cells, cells.filter(got).length) : '', groups ? egg + groups : $t('<p class="cnote">준비 중이에요</p>'), groups ? guestRow() + mythRow() + (G190 ? albLink() : scenesHtml()) + artHtml() + (tab === 'dino' || S186 ? '' : wildHtml()) : '', stored ? $t('<p class="cnote">보관함에 {0}마리 있어요</p>', stored) : '', foot());
   if (groups) fillScenes(), fillArt(); el.querySelector('.cscenes:not(.cart):not(.cwild)')?.addEventListener('toggle', e => { sceneOpen = e.target.open; });
   el.querySelector('.cart')?.addEventListener('toggle', e => { artOpen = e.target.open; }); // 17-2
   el.querySelector('.cwild')?.addEventListener('toggle', e => { wildOpen = e.target.open; }); // 17-3

@@ -3,7 +3,7 @@ import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // f
 import { $t, LANG, LANGS, localize, ko, SEP, esc } from './i18n/i18n.js';
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg, spotMode } from './game/rules.js';
-import { BALANCE, HABITATS, ZONES, PROPS, F170, TUT181, S186 } from './game/data.js';
+import { BALANCE, HABITATS, ZONES, PROPS, F170, TUT181, S186, G190 } from './game/data.js';
 import { initWorldMap } from './worldmap/worldmap.js';
 import { z143on } from './habitat/zones.js'; // 145 B: the new zone cards under ?z143
 import { zzz, heart, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
@@ -194,7 +194,7 @@ const rebuild = (id, ex) => { // ex: the 땅 넓히기 that asks for it (the mis
     if (shown) { veil.firstChild.textContent = reveal ? $t('땅을 넓히는 중…') : $t('다시 짓는 중…'); await fade(true); } // a slow phone can take a few seconds
     const pose = old.pose(); old.setActive(false); // the layouts are shared: the old board must be still while the new one is laid out
     const next = await build(id, { pose, reveal }); old.dispose();
-    if (cur === id) { api = next; next.setActive(true); play.attach(next, id); if (ex) next.showZone(ex.level); } else next.setActive(false); // 28-1: the camera to the new zone, animals run there
+    if (cur === id) { api = next; next.setActive(true); play.attach(next, id); if (ex && ZONES[id]?.[ex.level - 1]) next.showZone(ex.level); /* 243: the yard has no strips (ZONES.yard []), showZone threw 'side' */ } else next.setActive(false); // 28-1: the camera to the new zone, animals run there
     if (shown) fade(false);
     if (ex) next.revealed.then(() => zoneCard(id, ex.level, ex.free)); // inbox 17: once the mist is gone
     return next;
@@ -349,6 +349,7 @@ addEventListener('visibilitychange', () => {
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone();
   if (!cur && firstEgg(G.S)) nav.go(HABITATS[0].id); }; // inbox 61 B: a new player, straight to the first egg (no map tap)
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
+if (G190 && !SEE) import('./ui/series.js').then(m => m.useCam(() => cur && api ? [cur, ...api.camAt()] : null)); // 199 B-11 시리즈 · 의뢰 (?g190 only); 208 A: where the camera looks, for the request's 채움 / 모자람
 if (F170 && !SEE) import('./ui/first170.js'); // 170 C·D: the first day's one line and its end card
 let tut = null; if (TUT181 && !SEE) import('./ui/tut181.js').then(m => { tut = m; m.initTut(() => cur, () => api); }); // 182 ②: the 181 tutorial on the 170 flow (F170 is on with it)
 if (!SEE) { initAttend(() => cur); initEvent(() => cur, () => api); initMyth(() => cur, () => api, nav); initVisit(nav); initArt({ api: () => api, cur: () => cur, back: () => { if (ret.hidden) away({}); } }); }

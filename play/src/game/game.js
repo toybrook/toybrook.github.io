@@ -7,8 +7,9 @@ import * as P from './pals.js'; // 113
 import * as GU from './guests.js'; import { guestWear } from './guests-data.js'; // 66-1, 86-3마
 import * as A from './art.js'; // 17-2
 import * as W from './wild.js'; // 17-3
-import { PROPS, YARD, S186, SCHEMA_VERSION } from './data.js';
+import { PROPS, YARD, S186, G190, SCHEMA_VERSION } from './data.js';
 import * as SC from './scatter.js'; // 195 B-8 1-2
+import * as SE from './series.js'; // 199 B-11 ?g190: 시리즈 · 교환 도장 · 의뢰 · 물어오기 · 흔들어 보기 (rules only, nothing runs without the flag)
 import * as Y from './yard.js'; // 182 ④ (?yard): the yard's part of the save (184 ④: S.yard, SCHEMA 15)
 import { EDITION } from '../config.js';
 import { now as clock } from './clock.js';
@@ -86,19 +87,19 @@ export async function takeOver() { await navigator.locks.request(LOCK, { steal: 
 let view = false;
 export function start(h = {}) {
   if (h.view) { view = true; off = true; S = h.view; return []; }
-  hooks = h; const now = clock(); S = load(now) || R.weekStart(R.newGame(now), now); S.edition = EDITION; if (!held) sweep(now); // 226
+  hooks = h; const now = clock(); S = load(now) || R.weekStart(R.newGame(now), now); S.edition = EDITION; if (G190) SE.tidy(S, now); if (!held) sweep(now); // 226
   if (YARD) { Y.yardIn(S, S.yard); delete S.yard; } // 182 ④; 184 ④: S.yard on the game (saveOf writes it again); without the flag it stays as it came
-  const ev = R.advance(S, now); if (YARD) Y.giveKit(S); save(); claim(false); // saved as soon as this tab holds the lock
+  const ev = [...R.advance(S, now), ...(G190 ? SE.step(S, now) : [])]; if (YARD) Y.giveKit(S); save(); claim(false); // saved as soon as this tab holds the lock
   setInterval(() => { const ev = tick(clock()); if (ev.length) save(); emit(ev); }, 1000);
   addEventListener('visibilitychange', save); addEventListener('pagehide', save);
   return ev;
 }
 // inbox 21 백업 불러오기: s (already through R.fromSave) becomes the save; the caller reloads the page right after.
 // 27-1: false when it can't be stored (full storage): the save stays as it was
-export function replace(s) { if (held) return false; s.edition = EDITION; try { localStorage.setItem(KEY, JSON.stringify(s)); if (YARD) localStorage.removeItem(Y.YKEY); } catch { return false; } S = s; return true; }
+export function replace(s) { if (held) return false; s.edition = EDITION; if (G190) SE.tidy(s, clock()); try { localStorage.setItem(KEY, JSON.stringify(s)); if (YARD) localStorage.removeItem(Y.YKEY); } catch { return false; } S = s; return true; } // 199 B-11 review 9: tidy, S.ser there before the next tick
 const emit = ev => { for (const f of listeners) f(ev); };
 // an action, then catch up (a feed or pet that fills the gauge grows it at once), save, tell
-function act(fn) { const now = clock(), out = fn(now), ev = view ? [] : R.advance(S, now); if (YARD && !view) Y.giveKit(S); save(); emit([...(out?.events || []), ...ev]); return out; }
+function act(fn) { const now = clock(), out = fn(now), ev = view ? [] : [...R.advance(S, now), ...(G190 ? SE.step(S, now) : [])]; if (YARD && !view) Y.giveKit(S); save(); emit([...(out?.events || []), ...ev]); return out; }
 
 export const takeEgg = (hab, eggId) => act(now => R.takeEgg(S, hab, now, eggId));
 export const takeGift = () => act(now => R.takeGift(S, now)); // 112
@@ -120,6 +121,7 @@ export const setFav = (id, on) => act(() => R.setFav(S, id, on));
 export const setName = (id, text) => act(() => R.setName(S, id, text));
 export const firstEnd = () => act(now => R.firstEnd(S, now)); // 170 D
 export const tutGift = hab => act(now => R.tutGift(S, now, hab)); // 182 ②: the tutorial's 튤립 화분, once a save (rules tutGift)
+export const tutPraise = step => act(() => R.tutPraise(S, step)).n; // 236 B (?tut228): ♥ once a step
 export const unstore = id => act(now => R.unstore(S, id, now));
 export const sendStroll = (id, h, pl) => act(now => R.sendStroll(S, id, h, now, Math.random, pl)); // 13-1 (pl: 14-1 the 불의 언덕)
 export const cardsSeen = () => act(() => R.cardsSeen(S));
@@ -196,7 +198,7 @@ let gw = null, genv = () => ({});
 export const guestWorld = (w, env) => { gw = w; if (env) genv = env; };
 function tick(now) {
   const env = genv(); if (gw) for (const g of S.guests?.list || []) if (g.x != null && g.hab === env.hab) { const p = gw.pos('w' + g.id); if (p) [g.x, g.z] = p; }
-  return [...GU.guestTick(S, now, Math.random, env, gw), ...R.advance(S, now)];
+  return [...GU.guestTick(S, now, Math.random, env, gw), ...R.advance(S, now), ...(G190 ? SE.tick(S, now) : [])];
 }
 // a guest's figure record: the same object while it stays (habitat.js makes a new figure for a new record). at: the spot it keeps to
 const wrec = new Map();
@@ -211,6 +213,14 @@ function wanderers() {
 export const guestOf = id => S.guests?.list.find(g => g.id === id);
 export const guestPreview = g => GU.preview(S, g);
 export const guestMet = g => gw && g.x != null ? GU.judge(g, gw, genv()) : null; // the bubble's ✓
+// 199 B-11 ?g190 (series.js): 분해 (a duplicate into stamps), 교환 (a missing cell, a gift egg), 물어온 알 into a slot, 흔들어 보기, 의뢰 사진
+export const breakDup = id => act(() => SE.breakDup(S, id));
+export const swapCell = k => act(() => SE.swap(S, k));
+export const takeFetched = j => act(now => ({ i: SE.takeFetched(S, j, now) })).i;
+export const shake = i => act(now => SE.shake(S, i, now));
+export const reqMet = (id, x, z) => { const q = SE.reqQ(S, id); return gw && q ? GU.judge({ hab: q.hab, x, z, w: SE.reqWish(q) }, gw, genv()).met : null; }; // 208 A: also the request card's 채움 / 모자람
+export const reqSend = (id, x, z) => act(() => SE.reqShot(S, id, reqMet(id, x, z)));
+export const reqFor = hab => SE.reqHere(S, hab); // 215: what 사진 모드 may send here (the board's, then a story to shoot again)
 export const tutShop = () => S?.guests && GU.tutShop(S);
 export const moveGuest = (id, x, z) => act(() => { if (GU.moveGuest(S, id, x, z)) for (const g of S.guests.list) { const r = wrec.get('w' + g.id); if (r) r.at = [g.x, g.z]; } });
 export const sendVisit = id => act(now => V.sendVisit(S, id, now));
@@ -264,4 +274,4 @@ export const crackMany = (type, n) => act(now => {
   S.album = album;
   return { cracked: out };
 });
-export const reset = () => { S = R.weekStart(R.newGame(clock()), clock()); if (YARD) try { localStorage.removeItem(Y.YKEY); } catch { /* none */ } save(); emit([{ type: 'reset' }]); };
+export const reset = () => { S = R.weekStart(R.newGame(clock()), clock()); if (G190) SE.tidy(S, clock()); if (YARD) try { localStorage.removeItem(Y.YKEY); } catch { /* none */ } save(); emit([{ type: 'reset' }]); };

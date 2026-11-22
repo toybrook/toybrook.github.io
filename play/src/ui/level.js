@@ -4,7 +4,7 @@
 // (shown under the level). A toast when one is done.
 import { $t } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
-import { BALANCE as B, SETS, BRUSHES } from '../game/data.js';
+import { BALANCE as B, SETS, BRUSHES, G190 } from '../game/data.js';
 import { PROP, HAB, xpAt, unlocksBetween, growStage, slotsAt } from '../game/rules.js';
 import { GUESTS } from '../game/guests-data.js';
 import { overlayOpen, topWindow, tip, toast, resting } from './hud.js';
@@ -16,7 +16,7 @@ const $ = id => document.getElementById(id);
 // an unlock key in words: [name, what it is, the props to show]
 export function unlockText(k) {
   const [kind, id] = k.split(':'), where = P => P.habitat ? ` · ${HAB[P.habitat].name}` : '';
-  if (kind === 'set') { const s = SETS.find(s => s.id === id); return [$t('{0} 세트', s.name), s.props.map(p => PROP[p].name).join(' · ') + where(PROP[s.props[0]]), s.props]; }
+  if (kind === 'set') { const s = SETS.find(s => s.id === id); return [G190 ? $t('{0} 테마', s.name) : $t('{0} 세트', s.name), s.props.map(p => PROP[p].name).join(' · ') + where(PROP[s.props[0]]), s.props]; }
   if (kind === 'prop') return [PROP[id].name, $t('큰 소품') + where(PROP[id]), [id]];
   if (kind === 'brush') { const b = BRUSHES.find(b => b.id === id); return [$t('{0} 붓', b.name), $t('땅 칠하기'), [], b.c]; }
   return [$t('땅 넓히기 {0}단계', id), $t('하트 {0}개로 살 수 있어요', B.expand.price[id - 1]), []];
@@ -39,11 +39,16 @@ export function initLevel(getApi) {
     return `<li>${c ? `<i class="sw" style="background:${c}"></i>` : ''}${img ? ps.map(p => `<img alt="" data-p="${p}">`).join('') : ''}<span><b>${a}</b><small>${b}</small></span></li>`; };
 
   const done = () => ACH.filter(a => G.S.ach?.[a.id]).length;
+  const items = S => ACH.map(a => {
+    const ok = S.ach?.[a.id], v = Math.min(a.n, a.v(S)); // 74: 칭호 hidden (S.title stays in saves, shown nowhere)
+    return `<li class="${ok ? 'done' : ''}"><b>「${a.title}」</b><em>${ok ? '✓' : `${v}/${a.n}`}</em><small>${a.text}</small>${ok ? '' : `<i><s style="width:${v / a.n * 100}%"></s></i>`}</li>`; }).join('');
   pill.onclick = () => {
     const L = G.S.lv, [x, n] = part(L), X = B.level.xp, road = Object.entries(B.level.unlock);
     sheet.innerHTML = $t('<div><h2>레벨 {0}</h2><p class="bar"><i style="width:{1}%"></i></p><p class="sub">다음 레벨까지 {2} XP · 모은 XP {3}</p>\n<h3>XP를 받는 것</h3><ul class="src"><li>도감에 새 칸<b>+{4}</b></li><li>새끼가 다 자라면<b>+{5}</b></li><li>쓰다듬기 (하루 {6}번까지)<b>+{7}</b></li><li>하루 첫 방문<b>+{8}</b></li><li>업적 하나<b>+{9}</b></li></ul>\n<button class="achBtn" data-ach>업적 {10}/{11}</button>\n<h3>레벨마다 풀리는 것</h3><ol class="road">{12}\n<li class="{13}"><em>그 뒤</em><span>{14} XP마다 레벨이 올라요</span></li></ol>\n<p class="sub">하트로 사는 가격은 그대로예요. 레벨은 살 수 있는 자격이에요. 서식지는 도감으로 열려요.</p><button data-close>닫기</button></div>', L, Math.min(100, x / n * 100), n - x, G.S.xp, X.codex, X.grown, X.petDaily, X.pet, X.login, X.achieve, done(), ACH.length, road.map(([l, list]) => `<li class="${+l <= L ? 'done' : +l === L + 1 ? 'next' : ''}"><em>Lv ${l}</em><span>${list.map(k => unlockText(k)[0]).join(', ')}</span></li>`).join(''), L > road.length ? 'done' : '', B.level.after);
     sheet.querySelector('[data-close]').onclick = () => { sheet.hidden = true; };
-    sheet.querySelector('[data-ach]').onclick = () => { sheet.hidden = true; list(); };
+    if (G190) { sheet.querySelector('h2').textContent = $t('수집가 등급 {0}', L); sheet.classList.add('ach'); // 203 D5 ?g190: the 업적 list inside the 수집가 등급 sheet (no sheet of its own)
+      sheet.querySelector('[data-ach]').outerHTML = $t('<h3>업적 <small>{0}/{1} 달성 · 하나마다 XP +{2}</small></h3>', done(), ACH.length, B.level.xp.achieve) + `<ul class="achl">${items(G.S)}</ul>`; }
+    else sheet.querySelector('[data-ach]').onclick = () => { sheet.hidden = true; list(); };
     sheet.hidden = false;
     // the next level in the middle of its list: scroll only the list (scrollIntoView also moved the whole screen up, its top cut off)
     const rd = sheet.querySelector('.road'), nx = rd.querySelector('.next');
@@ -51,10 +56,7 @@ export function initLevel(getApi) {
   };
 
   function list() {
-    const S = G.S;
-    achs.innerHTML = $t('<div><h2>업적</h2><p class="sub">{0}/{1} 달성 · 하나마다 XP +{2}</p><ul class="achl">{3}</ul>\n<p class="btns"><button data-back>레벨</button><button data-close>닫기</button></p></div>', done(), ACH.length, B.level.xp.achieve, ACH.map(a => {
-      const ok = S.ach?.[a.id], v = Math.min(a.n, a.v(S)); // 74: 칭호 hidden (S.title stays in saves, shown nowhere)
-      return `<li class="${ok ? 'done' : ''}"><b>「${a.title}」</b><em>${ok ? '✓' : `${v}/${a.n}`}</em><small>${a.text}</small>${ok ? '' : `<i><s style="width:${v / a.n * 100}%"></s></i>`}</li>`; }).join(''));
+    achs.innerHTML = $t('<div><h2>업적</h2><p class="sub">{0}/{1} 달성 · 하나마다 XP +{2}</p><ul class="achl">{3}</ul>\n<p class="btns"><button data-back>레벨</button><button data-close>닫기</button></p></div>', done(), ACH.length, B.level.xp.achieve, items(G.S));
     achs.querySelector('[data-close]').onclick = () => { achs.hidden = true; };
     achs.querySelector('[data-back]').onclick = () => { achs.hidden = true; pill.onclick(); };
     achs.hidden = false;

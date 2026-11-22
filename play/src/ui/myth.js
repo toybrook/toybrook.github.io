@@ -5,7 +5,7 @@
 import { $t, SEP } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { dayNo } from '../game/clock.js';
-import { BALANCE, MYTHIC, HOLD } from '../game/data.js';
+import { BALANCE, MYTHIC, HOLD, G190 } from '../game/data.js';
 import { HAB, SP, mythNight, mythPrints, NIGHT } from '../game/rules.js';
 import { toast, topWindow, overlayOpen, eat } from './hud.js';
 import { sfx } from './sound.js';
@@ -76,7 +76,7 @@ async function goTo(m, go) {
   if (go === 'walk') { (await import('./friends.js')).openFriends(at(), api); toast(g ? $t('동물의 ⋯ › 산책에서 아무 곳이나 골라요') : $t('동물의 ⋯ › 산책에서 「불의 언덕」을 골라요'), 3200); }
   if (go === 'decor') (await import('./decor.js')).decorTab('nature');
   if (go === 'camp') (await import('./decor.js')).decorTab('play'); // 167: the campfire
-  if (go === 'scenes') (await import('./codex.js')).openCodex('scenes', api);
+  if (go === 'scenes') G190 ? (await import('./series.js')).openSeries('alb') : (await import('./codex.js')).openCodex('scenes', api); // 203 D5: ?g190's 사진 앨범
   if (go === 'big') (await import('./decor.js')).decorTab('big');
   if (go === 'win') g ? drawG(m) : draw();
 }

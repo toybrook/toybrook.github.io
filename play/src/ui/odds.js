@@ -2,7 +2,7 @@
 // props counted). Opened from the nest's 「확률」 button for the tab's egg type. oddsList() is plain data (check-eggs
 // compares it with the tables); openOdds() puts it on screen with textContent only.
 import { $t } from '../i18n/i18n.js';
-import { BALANCE as B } from '../game/data.js';
+import { BALANCE as B, G190 } from '../game/data.js';
 import { EGG, oddsInfo } from '../game/rules.js';
 
 export const pct = p => (p * 100).toFixed(p < 0.01 ? 3 : 2).replace(/\.?0+$/, '') + '%';
@@ -20,7 +20,8 @@ export function oddsList(type, S) {
     ...o.guard.map(g => $t('{0}{이/가} 나오면 아직 없는 {1}부터 나와요(그 안에서는 위 비율대로)', g.rarity.name, g.rarity.name)),
     $t('시크릿 치장: 모든 부화에 {0} · 치장 {1}가지 각 {2}', pct(o.secret.chance), o.secret.accessories.length, pct(o.secret.accessories[0]?.p || 0)),
     $t('색은 변종이 정해진 뒤 따로 골라요(변종 줄을 열면 보여요)'),
-    $t('놓아 둔 소품이 끌어당기는 동물은 몫이 커져요 · 이 표는 지금 놓은 소품을 반영했어요'),
+    ...G190 ? [$t('흔들어 보기는 결과를 바꾸지 않아요 · 부화할 때 나올 것을 미리 들려줄 뿐이에요'), $t('소품이 물어온 알도 이 둥지의 확률을 그대로 따라요 · 소품은 어떤 동물 무리인지만 좁혀요')] // 199 B-11: ?g190 has no hidden pull (BALANCE.attract off)
+      : [$t('놓아 둔 소품이 끌어당기는 동물은 몫이 커져요 · 이 표는 지금 놓은 소품을 반영했어요')],
     $t('선물 알은 등급이 정해져 있고, 아직 없는 변종부터 고르게 나와요'),
   ];
   return { title: $t('{0} 확률', EGG[type].name), rarities, gauges, notes, secret: B.secret.chance };

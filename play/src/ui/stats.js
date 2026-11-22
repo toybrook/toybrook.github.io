@@ -12,6 +12,8 @@
 // first day), play_5m (with play_1m/3m: still here at 60/180/300 s), great_d1 (대만족 on the first day, sent the next day, in bands) and return_d7.
 // 69-4: see_sent (a 구경 링크 or 구경 그림 sent) and see_open (one opened, to look at).
 // 169: load (the first screen up, in time bands, with src) and d0_last (the first time away: where, and how long), the first day only, once ever.
+// 215 (?g190): series (a new cell: the series id and its count), series_done, series_secret, request (story / small / again, the
+// request's id and stars), break and shake (a day), swap and fetch (each, the price or the prop's id and the egg's rarity).
 // No names, mail, device id or save. The service worker leaves other hosts alone (dist-web/sw.js), so the script is never stored.
 // report.js imports this before the game: nothing here may import the game.
 import { UMAMI_ID, STATS_HOST, PREFS, TOSS } from '../config.js';
@@ -47,7 +49,7 @@ export function track(name, data, key = name) {
   const today = dayOf(Date.now()); if (st.day !== today) { st.day = today; st.sent = []; }
   if (key.endsWith('#')) key += st.sent.length;
   const err = key.startsWith('error:'), tut = key.startsWith('tut:'); // errors: 5 kinds a day at most, the rest 25 (30 a device a day)
-  // 184 ③ Q2: the tutorial's tut: keys (a step each, once a day: 13 kinds at most) sit outside the 25 and don't count in it
+  // 184 ③ Q2: the tutorial's tut: keys (a step each, once a day: 13 kinds at most; 17 with ?g190 · ?tut228: ser · req · yard · swap) sit outside the 25 and don't count in it
   if (st.sent.includes(key) || !tut && st.sent.filter(k => k.startsWith('error:') === err && !k.startsWith('tut:')).length >= (err ? 5 : 25)) return;
   st.sent.push(key); keep();
   if (window.umami || TOSS) send(name, data); else { queue.push([name, data]); load(); }
@@ -108,6 +110,15 @@ export function watch(G) {
       if (e.type === 'buy') track('buy', { kind: e.kind, price: e.price < 50 ? '0~49' : e.price < 100 ? '50~99' : '100+', day: day() }, 'buy#');
       if (e.type === 'expand') track('expand', { habitat: e.habitat, step: e.level, day: day() }, 'expand:' + e.habitat + e.level);
       if (e.type === 'level') for (let L = Math.floor(e.from / 5 + 1) * 5; L <= e.level; L += 5) track('level', { level: L, day: day() }, 'level' + L);
+      // 215 (?g190 only: no other build makes these events): the series' loop, ids and bands only
+      if (e.type === 'series_cell') track('series', { id: e.id, n: e.n, day: day() }, 'series:' + e.id + ':' + e.n);
+      if (e.type === 'series_done' || e.type === 'series_secret') track(e.type, { id: e.id, day: day() }, e.type + ':' + e.id);
+      if (e.type === 'req_done') track('request', { kind: e.small ? 'small' : 'story', id: e.id, stars: e.stars, day: day() }, 'request#');
+      if (e.type === 'req_again' && e.stars > e.was) track('request', { kind: 'again', id: e.id, stars: e.stars, day: day() }, 'request#');
+      if (e.type === 'stamp_break') track('break', { rarity: e.rarity, day: day() }); // a day
+      if (e.type === 'stamp_swap') track('swap', { cost: e.cost, day: day() }, 'swap#');
+      if (e.type === 'egg_shake') track('shake', { day: day() }); // a day
+      if (e.type === 'fetch') track('fetch', { prop: e.prop, rarity: e.rarity, day: day() }, 'fetch#');
     }
     if (st.t0 !== 'old' && !st.return_d1 && today !== dayOf(st.t0)) { if (today === dayOf(st.t0 + DAY)) once('return_d1'); else { st.return_d1 = 1; keep(); } } // the next day only
     if (G.S.stats.hatch && !st.first_hatch) { once('first_hatch'); st.h1 = Date.now(); keep(); }

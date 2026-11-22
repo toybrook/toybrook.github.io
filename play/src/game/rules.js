@@ -38,11 +38,11 @@ import { blank as artBlank, tidyArt, artTick } from './art.js'; // 17-2
 import { blank as wildBlank, tidyWild, wildTick } from './wild.js'; // 17-3
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
 import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's name
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD, YARD, YARD_B, YARD_HAB, S186 } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD, YARD, YARD_B, YARD_HAB, S186, G190 } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf, dayNo } from './clock.js';
-import { F170 } from './data.js'; // 170 B
+import { F170, FIRST2, TUT228 } from './data.js'; // 170 B; 236 B
 import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore, falls143fore } from '../habitat/zones.js';
 import { lotus143off, SPOTS } from '../habitat/zones.js'; // 143 B the lotus marsh; 194 0-5 the 꾸미기 자리
 import { newlyDone } from './achieve.js';
@@ -96,6 +96,15 @@ const shape = v => v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v, 
 const BAD_KEY = new Set(['__proto__', 'constructor', 'prototype']);
 export const scrub = v => typeof v === 'string' ? v.replace(/[<>"'`]/g, '') : Array.isArray(v) ? v.map(scrub)
   : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [scrub(k), x]).filter(([k]) => !BAD_KEY.has(k)).map(([k, x]) => [k, scrub(x)])) : v; // 195 B-10 A: clean the key first, then test it
+// 199 B-11 (review 7): an egg's v / pick / sp (series.js) from a save, checked in any build: a look of the egg's own kind, not gone,
+// of its rarity (v: higher only from a gauge, p). Each field touched only when it is there, so a save without them keeps its bytes
+export function eggMarks(e) {
+  const T = Object.hasOwn(EGG, e.type) ? EGG[e.type] : null, look = x => isObj(x) && typeof x.species === 'string' && typeof x.variant === 'string' && !!T && T.species.includes(x.species) && variantOf(x.species, x.variant);
+  const ok = (x, r) => { const v = look(x); return !!v && !v.gone && v.rarity === r && Object.hasOwn(RANK, r) && Object.hasOwn(RANK, e.rarity) && RANK[r] >= RANK[e.rarity]; };
+  if (e.pick != null) { if (ok(e.pick, e.rarity)) e.pick = { species: e.pick.species, variant: e.pick.variant }; else delete e.pick; }
+  if (e.v != null) { if (ok(e.v, e.v.rarity) && (e.v.rarity === e.rarity || e.v.p === true)) e.v = { rarity: e.v.rarity, species: e.v.species, variant: e.v.variant, ...e.v.p === true && { p: true } }; else delete e.v; }
+  if (e.sp != null) { e.sp = Array.isArray(e.sp) ? e.sp.filter(x => typeof x === 'string' && !!T && T.species.includes(x)) : []; if (!e.sp.length) delete e.sp; }
+}
 export function fromSave(raw, now) {
   const snap = raw?.layoutUndo?.snap; // 135 review: 「불러오기 전으로」 keeps JSON text (layoutOf); scrub what it holds, not its quotes
   raw = scrub(raw);
@@ -123,7 +132,8 @@ export function fromSave(raw, now) {
     tidyAff(S, now); // 170 B
     for (const [h, L] of Object.entries(S.lays)) if (!Array.isArray(L)) delete S.lays[h]; else S.lays[h] = LAY_NAMES.map((_, i) => isObj(L[i]) && typeof L[i].c === 'string' ? { n: cleanName(L[i].n) || LAY_NAMES[i], c: L[i].c, at: L[i].at } : null);
     S.mailGot = S.mailGot.filter(x => typeof x === 'string'); S.codes = S.codes.filter(x => typeof x === 'string'); S.giftEggs = Math.min(99, Math.max(0, Math.floor(S.giftEggs) || 0)); // 44
-    S.giftRow = S.giftRow.filter(e => isObj(e) && Number.isInteger(e.id) && EGG[e.type] && B.hatch[e.rarity] != null).slice(0, B.nest.gifts); // 112
+    S.giftRow = S.giftRow.filter(e => isObj(e) && Number.isInteger(e.id) && Object.hasOwn(EGG, e.type) && Object.hasOwn(B.hatch, e.rarity)).slice(0, B.nest.gifts); // 112
+    for (const e of [...Object.values(S.nests).flatMap(n => n.eggs), ...S.slots.filter(Boolean).map(s => s.egg), ...S.giftRow]) eggMarks(e); // 199 B-11 review 7: any build
     { const A = S.attend; S.attend = { day: typeof A.day === 'string' ? A.day : '', at: Number.isFinite(A.at) ? A.at : 0, n: Number.isInteger(A.n) && A.n >= 0 ? A.n : 0 }; } // 41 C
     S.first = Object.fromEntries(Object.entries(S.first).filter(([, v]) => Number.isFinite(v))); // 41 D
     S.looks = Object.fromEntries(Object.entries(S.looks).filter(([k]) => Object.hasOwn(PROP, k)).map(([k, v]) => [k, (Array.isArray(v) ? v : []).filter(c => paletteOf(PROP[k])?.[c]?.[2])]).filter(([, v]) => v.length)); // 13-3
@@ -274,6 +284,7 @@ const rollColor = (spId, vId, rng) => { const cs = colorsOf(spId, vId); return c
 // Props a species likes (PROPS effect), placed in the habitat whose nest lays this egg type: that species' weight (BALANCE.attract).
 // Only the species pick: rarity odds, variants and colours are never touched.
 export function attract(S, type) {
+  if (G190) return {}; // 199 B-11: off under ?g190 only (물어오기 instead); BALANCE.attract itself unchanged
   const h = HABITATS.find(h => h.nest === type), w = {};
   for (const p of S?.props || []) { const e = p.placed && p.hab === h?.id && PROP[p.prop]?.effect; if (e) w[e] = (w[e] || 0) + 1; }
   for (const sp in w) w[sp] = 1 + Math.min(B.attract.max, w[sp] * B.attract.per);
@@ -283,8 +294,8 @@ const spWeight = (w, sp) => w[sp.id] ?? 1;
 
 // Who can come out of an egg of this type and rarity: species by weight (even without props), then variants by tier weight within the species.
 // A species with no variant of that rarity (e.g. no legendary yet) sits it out; if nobody has one, any variant.
-function hatchPool(type, rarity) {
-  const pool = EGG[type].species.map(id => SP[id]).filter(Boolean), live = sp => variantsOf(sp).filter(v => !v.gone); // 125-A: gone looks never hatch
+function hatchPool(type, rarity, only = null) { // only: 199 B-11 a fetched egg's species (series.js), none of them there: all
+  const all = EGG[type].species.map(id => SP[id]).filter(Boolean), some = Array.isArray(only) && all.filter(sp => only.includes(sp.id)), pool = some?.length ? some : all, live = sp => variantsOf(sp).filter(v => !v.gone); // 125-A: gone looks never hatch
   const has = pool.filter(sp => live(sp).some(v => v.rarity === rarity));
   return (has.length ? has : pool).map(sp => {
     const vs = live(sp).filter(v => v.rarity === rarity);
@@ -300,7 +311,7 @@ function guarded(S, pool) {
   return miss.length ? miss : pool;
 }
 export function rollHatch(S, e, rng) {
-  let pool = hatchPool(e.type, e.rarity); const w = attract(S, e.type); if (!pool.length) return null;
+  let pool = hatchPool(e.type, e.rarity, e.sp); const w = attract(S, e.type); if (!pool.length) return null;
   if (RAR[e.rarity]?.guard) pool = guarded(S, pool);
   const { sp, vs } = pick(pool, x => spWeight(w, x.sp) * (x.all ? tw(x.vs) / tw(x.all) : 1), rng);
   const pm = B.preferMissing, v = pick(vs, v => tierWeight(v) * (pm.on && !owned(S, key(sp.id, v.id)) ? pm.weight : 1), rng);
@@ -340,15 +351,22 @@ export function sureRarity(S, type) {
 // A guaranteed rarity picks evenly among that rarity's variants nobody has yet (all of them if none is missing); tiers don't count there.
 // 149: a guaranteed or gift legendary is rolled as an ordinary legendary egg instead (rollHatch: the 69-1 guard, species first).
 // Gauges: +1 each, except a gauge whose rarity (or better) came out, which empties. Every egg counts, the first one too.
-export function crack(S, e, now, rng = Math.random, forced = false) { // forced: a secret for sure (?debug 다음 알 시크릿, game.hatch)
-  const top = e.gift ? null : sureRarity(S, e.type), sure = !!top && RANK[top] >= RANK[e.rarity], rarity = sure ? top : e.rarity; // 44: a gift egg leaves the gauges alone
-  let r;
-  if ((sure || e.gift) && rarity === 'legendary') r = rollHatch(S, { ...e, rarity }, rng); // 149: as an ordinary legendary egg (its 69-1 guard: missing first, species first; a horse with two legends is not 2 in 7)
-  else if (sure || e.gift) { // 93-1: a gift egg (no pity) also picks one not owned yet first
-    const all = hatchPool(e.type, rarity).flatMap(({ sp, vs }) => vs.map(v => ({ species: sp.id, variant: v.id })));
+export const crackRarity = (S, e) => { const top = e.gift || S.slots.some(s => s && s.egg !== e && s.egg.type === e.type && s.egg.v?.p) ? null : sureRarity(S, e.type), sure = !!top && RANK[top] >= RANK[e.rarity]; return { sure, rarity: sure ? top : e.rarity }; }; // 44: a gift egg leaves the gauges alone; 199 B-11: nor an egg whose kind has one shaken to the gauge's rarity (v.p) waiting
+export function choose(S, e, rarity, sure, rng) { // the look an egg of this rarity gives (199 B-11 흔들어 보기 rolls it early, series.js shake)
+  if ((sure || e.gift) && rarity === 'legendary') return rollHatch(S, { ...e, rarity }, rng); // 149: as an ordinary legendary egg (its 69-1 guard: missing first, species first; a horse with two legends is not 2 in 7)
+  if (sure || e.gift) { // 93-1: a gift egg (no pity) also picks one not owned yet first
+    const all = hatchPool(e.type, rarity, e.sp).flatMap(({ sp, vs }) => vs.map(v => ({ species: sp.id, variant: v.id })));
     const miss = all.filter(p => !owned(S, key(p.species, p.variant))), from = miss.length ? miss : all;
-    r = from[Math.floor(rng() * from.length)];
-  } else r = rollHatch(S, e, rng);
+    return from[Math.floor(rng() * from.length)];
+  }
+  return rollHatch(S, e, rng);
+}
+// 199 B-11 (written only under ?g190, honoured by any build): pick, a series cell swapped for stamps (a gift egg); v, the look an
+// egg was shaken to: what it hatches, always (p: that rarity came from a full gauge, which the hatch then empties)
+const fixed = (e, rarity) => [e.v?.rarity === rarity && e.v, e.pick].find(x => x && variantOf(x.species, x.variant)?.rarity === rarity);
+export function crack(S, e, now, rng = Math.random, forced = false) { // forced: a secret for sure (?debug 다음 알 시크릿, game.hatch)
+  const { sure, rarity } = e.v ? { sure: e.v.p === true, rarity: e.v.rarity } : crackRarity(S, e), f = fixed(e, rarity);
+  let r = f ? { species: f.species, variant: f.variant } : choose(S, e, rarity, sure, rng);
   if (!r) return null;
   r = { ...r, color: rollColor(r.species, r.variant, rng) };
   const before = shards(S, e.type), P = e.gift ? { ...before } : S.pity[e.type] = { ...before };
@@ -427,6 +445,7 @@ export function advance(S, now, rng = Math.random) {
   for (const a of newlyDone(S)) { S.ach = { ...S.ach, [a.id]: now }; S.xp += B.level.xp.achieve; ev.push({ type: 'achieve', id: a.id }); } // 23-2
   wholeTick(S, ev); // 66-3
   firstCheck(S, now, ev, rng); // 41 D
+  if (TUT228) first2Check(S, now, ev); // 236 B
   evTick(S, now, rng); // 15-1
   mythTick(S, now, ev, rng); // 14-1
   visitTick(S, now, ev); // 16-1
@@ -503,7 +522,7 @@ export function takeGift(S, now) {
   const e = S.giftRow.shift(); S.slots[i] = { egg: e, start: now, end: now + hatchMs(S, e) }; return i;
 }
 // 112 놓아주기: nest eggs let go for hearts (BALANCE.nest.release). Never cracked, so the shard gauges don't count them; gifts stay
-export const canLetGo = e => !e.gift && !e.gv && !e.now;
+export const canLetGo = e => !e.gift && !e.gv && !e.now && !e.v; // 199 B-11: a shaken egg is never sold
 export function letGo(S, habId, ids, now) {
   const n = S.nests[habId]; if (!n) return null;
   const out = n.eggs.filter(e => ids.includes(e.id) && canLetGo(e)); if (!out.length) return null;
@@ -727,8 +746,10 @@ export function setDisplay(S, k, cId) {
 }
 export const displayColor = (S, k) => S.display[k] ?? S.colors[k]?.[0] ?? null;
 // 꾸미기: buy with hearts (put away), place/turn (free; where it may go is the habitat's layout.js), put away
+// 221 B 1 (215): a habitat's own prop only once that habitat is out (the dino jungle's: not in the yard's shop before it). Bought ones stay
+export const propReady = P => !P.habitat || !!HAB[P.habitat]?.ready;
 export function buyProp(S, propId, habId) { // habId: where it was bought (a prop sold everywhere stays there)
-  const P = PROP[propId], hab = habId === 'yard' ? 'yard' : P?.habitat ?? habId; if (!P || P.paid || P.gift || S.hearts < P.price || !hab || !(can(S, 'prop:' + P.id) || tutShop(S) === P.id)) return null; // 41: a gift one only comes as a gift; 66-1: the tutorial's 등불 before its Lv
+  const P = PROP[propId], hab = habId === 'yard' ? 'yard' : P?.habitat ?? habId; if (!P || P.paid || P.gift || !propReady(P) || S.hearts < P.price || !hab || !(can(S, 'prop:' + P.id) || tutShop(S) === P.id)) return null; // 41: a gift one only comes as a gift; 66-1: the tutorial's 등불 before its Lv
   S.hearts -= P.price;
   const p = { uid: S.nextId++, prop: P.id, hab, placed: false, x: 0, z: 0, rot: 0 };
   S.props.push(p); return p;
@@ -739,7 +760,7 @@ export function buyProp(S, propId, habId) { // habId: where it was bought (a pro
 const hid = id => [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
 export function shelfOf(S, habId, now) {
   const C = B.shelf, T = C.hours * 3600e3, k = Math.floor(now / T), ends = (k + 1) * T;
-  const pool = PROPS.filter(P => (habId === 'yard' ? !P.water && !P.art : (P.habitat ?? habId) === habId) && !P.gift && !P.paid && !P.rail && !P.stamp && can(S, 'prop:' + P.id)).sort((a, b) => hid(a.id) - hid(b.id));
+  const pool = PROPS.filter(P => (habId === 'yard' ? !P.water && !P.art : (P.habitat ?? habId) === habId) && propReady(P) && !P.gift && !P.paid && !P.rail && !P.stamp && can(S, 'prop:' + P.id)).sort((a, b) => hid(a.id) - hid(b.id));
   const n = Math.min(C.n, pool.length), items = [];
   for (let i = 0; i < n; i++) { const P = pool[(k * C.n + i) % pool.length], off = i === k % n; items.push({ id: P.id, off, price: off ? Math.round(P.price * (1 - C.off)) : P.price }); }
   if (n && k % C.every === 0) { const it = items[(k + 1) % n], pal = paletteOf(PROP[it.id]) || [], xs = pal.map((e, c) => e[2] ? c : 0).filter(Boolean);
@@ -775,7 +796,7 @@ function wholeTick(S, ev) {
       if (r === 'expand') S.freeExp = { ...S.freeExp, [h.id]: (S.freeExp?.[h.id] || 0) + 1 }; else S.props.push({ uid: S.nextId++, prop: r, hab: h.id, placed: false, x: 0, z: 0, rot: 0 });
       ev.push({ type: 'whole', habitat: h.id, step: i + 1, reward: r }); } }
 }
-export const placedIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && !p.nat && !PROP[p.prop]?.rail && !PROP[p.prop]?.art); // what counts toward decorCap (natives, rails and 17-2 동물 작품 never)
+export const placedIn = (S, habId) => S.props.filter(p => p.placed && p.hab === habId && !p.nat && Object.hasOwn(PROP, p.prop) && !PROP[p.prop].rail && !PROP[p.prop].art); // what counts toward decorCap (natives, rails and 17-2 동물 작품 never; 199 B-11 review 10: nor one this build does not know, ?g190's ser_m1 / req_r1 without the flag)
 // 28-4: rail pieces placed in a habitat (PROPS rail: a bridge counts 2), toward B.decor.rails
 export const railsIn = (S, habId) => S.props.reduce((n, p) => n + (p.placed && p.hab === habId && PROP[p.prop]?.rail || 0), 0);
 // one more of this kind (n more not placed yet before it) would go over: decorCap, or for a rail piece B.decor.rails
@@ -1383,6 +1404,23 @@ export function tutGift(S, now, hab = 'meadow') {
 export function firstEnd(S, now, rng = Math.random) {
   S.flags.end170 = 1; if (S.first?.all || S.first?.gift) return { events: [] };
   S.first = { ...S.first, gift: now }; return { got: give(S, { prop: FIRST.prop, hearts: FIRST.hearts }, now, rng, S.flags.lastHab), events: [{ type: 'firstEnd' }] };
+}
+// 236 B (?tut228, docs/design/tutorial-2.md 4·7): the 이정표 판. Its rows: FIRST's hatch · prop · photo (read here, their ♥ stay FIRST's) and
+// FIRST2's own (each once: S.first['f2:' + id] = when, its ♥), G190's ser · req · swap only with it (g). All rows done: FIRST2.hearts once
+// (f2:all). No day limit on giving (Q3 나: FIRST2.days is only how long the line leads). S.first is a save's: fromSave keeps finite values only
+export const F2_V = { yard: S => S.flags?.lastHab === 'yard', ser: S => (S.ser?.m1?.n || 0) >= 3, req: S => (S.stats?.req || 0) > 0, swap: S => (S.stats?.swap || 0) > 0 };
+export const f2Rows = (g = G190) => ['hatch', 'prop', 'yard', ...g ? ['ser', 'req', 'swap'] : [], 'photo'];
+export const f2Done = (S, id) => { const t = FIRST.tasks.find(t => t.id === id); return t ? !!S.first?.[id] || firstGot(S, t) >= t.n : !!S.first?.['f2:' + id]; };
+export const f2On = (S, now) => Array.from({ length: FIRST2.days }, (_, i) => dayOf(new Date(S.since).setHours(12, 0, 0, 0) + i * DAY_MS)).includes(dayOf(now)); // the line leads (Q19: never shown as a date)
+export function first2Check(S, now, ev, g = G190) {
+  if (!S.first?.f2) { if (!f2On(S, now)) return; S.first = { ...S.first, f2: now }; } // the board's time began (a save past its days before that: never)
+  for (const t of FIRST2.tasks) if ((!t.g190 || g) && !S.first?.['f2:' + t.id] && F2_V[t.id](S)) { S.first = { ...S.first, ['f2:' + t.id]: now }; S.hearts += t.hearts; ev.push({ type: 'first2', id: t.id, hearts: t.hearts }); }
+  if (!S.first?.['f2:all'] && f2Rows(g).every(id => f2Done(S, id))) { S.first = { ...S.first, 'f2:all': now }; S.hearts += FIRST2.hearts; ev.push({ type: 'first2All', hearts: FIRST2.hearts }); }
+}
+// 236 B 7-1: a first-day step done by hand: FIRST2.praise ♥ once a step (flags['tp:' + step]); never while replaying (flags.tut181 'again')
+export function tutPraise(S, step) {
+  if (S.flags.tut181 === 'again' || !STEPS181.includes(step) || step === 'end' || S.flags['tp:' + step]) return { n: 0 };
+  S.flags['tp:' + step] = 1; S.hearts += FIRST2.praise; return { n: FIRST2.praise };
 }
 // 174 앱인토스 보상형 광고: one waiting slot `ms` sooner (start moves with it, so the progress ring stays true); null when nothing waits
 export function hurry(S, i, ms, now) {

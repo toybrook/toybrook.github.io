@@ -247,6 +247,8 @@ body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visi
 .cell[data-k]>span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.25;height:2.5em;overflow:hidden;overflow-wrap:anywhere} /* 124: a name in two lines at most, every cell as tall */
 .cell i{position:absolute;left:4px;top:4px;font-family:inherit;font-weight:700;font-size:calc(10px*var(--fs));line-height:1;font-style:normal;background:#ff6b7d;color:#fff;border-radius:6px;padding:3px 5px}
 .cell i.slot{background:#4fa8e8}
+.cell b.cno{position:absolute;right:4px;top:4px;font-size:calc(10px*var(--fs));line-height:1;background:#d39a12;color:#fff;border-radius:6px;padding:2px 4px} /* 215: 컬렉션 번호 */
+.ncard .cno,.nwhy.cno{color:#a5740a;font-weight:700}
 .cell .dots{display:flex;justify-content:center;gap:4px;margin-top:4px}
 .dots u{width:7px;height:7px;border-radius:50%;border:1.5px solid #c9a87e;box-sizing:border-box}.dots u.on{background:#8a6a4c;border-color:#8a6a4c}
 .cnote{text-align:center;color:#8a6a4c;font-size:calc(14px*var(--fs));margin:24px 0}
@@ -591,7 +593,7 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 /* 15-2: the shop in parts (one scroll for all), the snowman row, wear icons, 옷장's buttons */
 .ev .evscroll{max-height:calc(50dvh - var(--sa-t) - var(--sa-b));overflow-y:auto;margin:0 0 8px}.ev .evscroll ul{max-height:none;overflow:visible}
 .ev h3{margin:8px 0 4px;font-size:calc(13px*var(--fs));color:#8a6a4c}.ev .evi{width:40px;flex-shrink:0;text-align:center;font-style:normal;font-size:calc(24px*var(--fs))}
-.ev li.evbuild{border-color:#9cc7e8;background:#f2f8fd}.ev .evwear li{flex-wrap:wrap;gap:6px}.ev .evwear button{min-height:40px}.ev .evwear button[aria-pressed=true]{background:#fff6e6;box-shadow:0 0 0 1px #e8805f inset;color:#b0670f}
+.ev li.evbuild{border-color:#9cc7e8;background:#f2f8fd}.ev .evwear li{flex-wrap:wrap;gap:6px}.ev .evwear li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ev .evwear button{min-height:40px}.ev .evwear button[aria-pressed=true]{background:#fff6e6;box-shadow:0 0 0 1px #e8805f inset;color:#b0670f}
 .evcard{position:relative;overflow:hidden}.evcard>*:not(.flakes){position:relative}
 .flakes{position:absolute;inset:0;margin:0;pointer-events:none}.flakes i{position:absolute;top:-1.2em;font-style:normal;color:#9cc7e8;font-size:calc(14px*var(--fs));animation:evfall 4s linear infinite;will-change:transform}
 @keyframes evfall{to{transform:translateY(380px) rotate(200deg)}}
@@ -600,6 +602,9 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .newly{animation:newly 1.4s ease-out 3}
 @keyframes newly{0%{box-shadow:0 0 0 0 rgba(255,214,102,.95)}70%{box-shadow:0 0 0 12px rgba(255,214,102,0)}100%{box-shadow:0 0 0 0 rgba(255,214,102,0)}}
 @media (prefers-reduced-motion:reduce){.newly{animation:none;outline:2px solid #ffd666}}
+/* 245 ③: 나의 뜰 first visit, the 꾸미기 button (a small bounce, not 187f's ring) */
+.yshine{animation:yshine 1.3s ease-in-out 3}@keyframes yshine{50%{transform:scale(1.14);filter:brightness(1.12)}}
+@media (prefers-reduced-motion:reduce){.yshine{animation:none}}
 .nload{display:none;margin:6px 0 0;font-size:calc(12px*var(--fs));color:#8a7a66;text-align:center}body.building .nload{display:block}
 /* 16-1 놀러 보내기 · 손님 · 엽서 · 방명록 (ui/visit.js; the list rows are the mailbox's) */
 .vfig{margin:0 0 12px}.vfig img{width:132px;height:132px;object-fit:contain}.vfig figcaption{font-size:calc(13px*var(--fs));color:#8a6a4c;word-break:keep-all}
@@ -745,3 +750,42 @@ html.f170 body:has(#boot) #intro{visibility:visible;z-index:3001}
 body.tut181 #loading:has(.lfirst:not([hidden]))>p:first-child,body.tut181 #loading:has(.lfirst:not([hidden])) .ltip{visibility:hidden}body.tut181 .toast{z-index:2200}html.calm #tut .finger{animation:none}html.calm .tutsay.shake{animation:none}
 /* 184 ③ Q1: a nest egg's wait, the egg rocks 3 times under 곧 깨어나요… (tut181.js; the class goes after 2.7 s) */
 .nslot.tutwob:not(.ready):not(.knock) img{animation:wob .9s ease-in-out 3}html.calm .nslot.tutwob img{animation:none}
+/* 236 B ?tut228 (ui/tut228.js): the 이정표 줄 where .goal sits (that one hides under it), its 8 dots, the 칭찬 칩, the 이정표 판 · 같이 해 볼까요? card, 「이건 나중에」 */
+.t2pill{position:fixed;left:50%;top:calc(60px + var(--sa-t));transform:translateX(-50%);z-index:2101;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px 6px;max-width:min(300px,calc(100vw - 32px));min-height:36px;padding:5px 12px;border:0;border-radius:18px;background:#fbf1e1;color:#4a3626;box-shadow:0 3px 12px rgba(40,25,10,.3);font:inherit;font-size:calc(13px*var(--fs));font-weight:700;line-height:1.3;word-break:keep-all;cursor:pointer}
+.t2pill[hidden],.t2chip[hidden],.t2board[hidden],.t2ask[hidden]{display:none}.t2pill .t2flag{display:flex}.t2pill small{color:#8a6a4c;font-weight:700;font-size:calc(11.5px*var(--fs))}.t2pill small:empty{display:none}
+.t2dots{display:flex;gap:4px;flex-basis:100%;justify-content:center}.t2dots:empty{display:none}.t2dots i{width:7px;height:7px;border-radius:50%;background:#e2d3bd}.t2dots i.on{background:#e9a23b}.t2dots i.now{background:#fffaf0;box-shadow:0 0 0 2px #e9a23b}
+.t2pill.mini{padding:5px 9px;min-height:30px}.t2pill.turn .t2lab{animation:t2in .35s ease-out}.t2pill.flash{animation:t2fl .9s ease-out}
+@keyframes t2in{from{opacity:0;transform:translateY(-4px)}}@keyframes t2fl{30%{box-shadow:0 0 0 4px rgba(233,162,59,.85),0 3px 12px rgba(40,25,10,.3)}}
+.t2chip{position:fixed;left:50%;transform:translateX(-50%);z-index:2102;pointer-events:none;padding:6px 12px;border-radius:14px;background:#4a3626;color:#fffaf0;font-size:calc(13px*var(--fs));font-weight:700;white-space:nowrap;box-shadow:0 3px 10px rgba(40,25,10,.3);animation:t2in .3s ease-out}.t2chip.free{top:calc(60px + var(--sa-t))!important}
+.t2board,.t2ask{position:fixed;left:50%;transform:translateX(-50%);z-index:2102;width:min(300px,calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;border-radius:16px;background:#fbf1e1;color:#4a3626;box-shadow:0 6px 24px rgba(40,25,10,.35);display:flex;flex-direction:column;gap:6px;word-break:keep-all}
+.t2board>b,.t2ask>b{font-size:calc(14px*var(--fs))}.t2board small{color:#8a6a4c;font-size:calc(12px*var(--fs));text-align:center}.t2ask p{margin:0;font-size:calc(13px*var(--fs))}
+.t2row{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 10px;border:0;border-radius:12px;background:#fffaf0;color:#4a3626;font:inherit;font-size:calc(13.5px*var(--fs));text-align:left;cursor:pointer}.t2row i{width:18px;height:18px;flex:none;border-radius:50%;box-shadow:0 0 0 2px #c9b08f inset;font-style:normal;font-size:12px;line-height:18px;text-align:center}.t2row.sel{box-shadow:0 0 0 2px #e9a23b inset}.t2row.ok{opacity:.6;cursor:default}.t2row.ok i{background:#e9a23b;box-shadow:none;color:#fff}
+.t2btns{display:flex;gap:8px;justify-content:flex-end}.t2btns button{min-height:44px;padding:0 14px;border-radius:12px;font:inherit;font-weight:700}.t2btns .go{border:0;background:#e9a23b;color:#fff}
+body.t2lead .goal{display:none}#tut.soft .hole{box-shadow:0 0 0 3px rgba(255,236,190,.95) inset}
+.tutsay .tutlater{pointer-events:auto;display:block;margin:6px auto 0;min-height:44px;padding:0 16px;border:0;border-radius:12px;background:#efe0c8;color:#4a3626;font:inherit;font-size:calc(13px*var(--fs));font-weight:700;cursor:pointer}
+html.calm .t2pill.turn .t2lab,html.calm .t2pill.flash,html.calm .t2chip{animation:none}
+/* 199 B-11 ?g190 시리즈 · 의뢰 (ui/series.js, nest.js 물어온 알) */
+.ser .cell .sswap{display:block;width:100%;margin-top:4px;min-height:32px;border:0;border-radius:10px;background:#6b4a2b;color:#fff4dc;font:inherit;font-size:calc(11px*var(--fs))}.ser .cell .sswap:disabled{opacity:.45}
+.ser .cell.sec{border-style:dashed;border-color:#c9a06a}.ser .cell.sec small{display:block;font-size:calc(10px*var(--fs));color:#8a6a4c;line-height:1.25}
+.sreq{background:#fbf1e1;border:1px solid #e3cba6;border-radius:14px;padding:10px 12px;margin:10px 0}.sreq.on{border-color:#f0a35a;background:#fff6dc}
+.sreq b{font-size:calc(15px*var(--fs))}.sreqwho{margin:4px 0;font-size:calc(13px*var(--fs))}
+.sreqs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 10px}.sreqs .sreq{margin:0;padding:6px 4px;text-align:center;opacity:.75}.sreqs .sreq b{display:block;font-size:calc(14px*var(--fs))}.sreqs .sreq small{font-size:calc(11px*var(--fs))} /* 215: 아직 안 온 이야기 의뢰 (곳 · Lv) */
+.ser .cnote{text-align:left;font-size:calc(12px*var(--fs));color:#8a6a4c;margin:4px 2px}
+.nser{font-weight:700;color:#6b4a2b}.nfetch{background:#eef6e2;border-color:#9cc76a}
+.photo #serPost:not([hidden]){display:flex!important} /* the 의뢰 postcard comes up in the photo mode, where .intro is hidden (line 380) */
+/* 203 D5 ?g190 합치기: 꾸미기 테마 머리줄 (decor.js), 도감의 사진 앨범 길 (codex.js), 앨범 칸 (series.js) */
+.dgrid .dthm{grid-column:1/-1;display:flex;align-items:baseline;gap:8px;margin:6px 2px 0;color:#6b4a2b;font-size:calc(13px*var(--fs))}.dgrid .dthm small{color:#8a6a4c;font-size:calc(11.5px*var(--fs))}
+.codex .calb{display:block;width:100%;margin:12px 0 4px;background:#6b4a2b}
+.ser .cell.scene small{display:block;font-size:calc(10px*var(--fs));color:#8a6a4c;line-height:1.25}
+/* 208 A ?g190 다듬기: 빠진 칸 등급 색, 의뢰 조건 칸(채움 / 모자람), 엽서(항공 우편 테두리 + 보낸 동물 우표) */
+.ser .cell .srar{color:var(--rc);font-weight:700}
+.scond{display:flex;align-items:center;gap:8px;min-height:40px;margin:6px 0;padding:4px 10px;box-sizing:border-box;border-radius:10px;background:#fffaf0;border:1px solid #ecd9bb;font-size:calc(13px*var(--fs))}
+.scond i{display:none}.scond span{flex:1;min-width:0}.scond.must span{font-weight:700}
+.scond small{flex:none;color:#8a6a4c;font-size:calc(11px*var(--fs))}
+.scond em{flex:none;font-style:normal;font-weight:700;font-size:calc(12px*var(--fs));padding:2px 8px;border-radius:999px}
+.scond.ok em{background:#e2f0d3;color:#3d6b22}.scond.no em{background:#f9e1d6;color:#a2461f}
+#serPost .spost{position:relative;max-width:300px;text-align:left;border:7px solid transparent;border-radius:14px;background:linear-gradient(#fffaf0,#fffaf0) padding-box,repeating-linear-gradient(135deg,#c95a3c 0 12px,#fffaf0 12px 18px,#3f6fa6 18px 30px,#fffaf0 30px 36px) border-box}
+#serPost .sstamp{float:right;width:68px;margin:0 0 8px 10px;padding:4px;background:#fff;border:2px dashed #c9a06a;border-radius:4px;transform:rotate(3deg)}
+#serPost .sstamp img{display:block;width:100%;aspect-ratio:1;border-radius:2px;background:#fbf1e1}
+#serPost h2{margin-top:2px;text-align:left}
+#serPost button{display:block;clear:both;margin:0 auto}

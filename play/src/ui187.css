@@ -1,7 +1,7 @@
 /* 187 ② 새 UI 시안 「조용한 판」. 깃발 ?ui187: index.html이 html[data-ui187]을 달고 이 파일을 부름(?ui183과 같이 오면 이것만).
    tools/build-web.mjs가 UI187 = false이면 스크립트와 이 파일을 빌드에서 뺌. 칠만 바꿈: 새 DOM·동작 없음.
    판: 따뜻한 오프화이트 하나 + 옅은 그림자 하나 / 강조색 하나(주 버튼·둥지) / 글자 진한 회색 두 단계 / 모서리 14px 하나 / 간격 4·8 / 굵기 400·600.
-   아이콘: Tabler Icons 3.19.0 (outline 13개 + filled star 1개, 187f에서 4개 더함) 14개를 CSS mask(data URI)로 옮김. (tabler.io/icons, github.com/tabler/tabler-icons; 표는 docs/assets.md)
+   아이콘: Tabler Icons 3.19.0 (outline 13개 + filled star 1개, 187f에서 4개 더함, 202 B map·208 A flower·home 더함) 17개를 CSS mask(data URI)로 옮김. (tabler.io/icons, github.com/tabler/tabler-icons; 표는 docs/assets.md)
    ---- Tabler Icons license ----
    MIT License
 
@@ -44,7 +44,10 @@
     --i-redo:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 14l4 -4l-4 -4'/><path d='M19 10h-11a4 4 0 1 0 0 8h1'/></svg>");
     --i-star:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z'/></svg>");
     --i-map:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13'/><path d='M9 4v13'/><path d='M15 7v13'/></svg>");
-    --i-starf:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8.243 7.34l-6.38 .925l-.113 .023a1 1 0 0 0 -.44 1.684l4.622 4.499l-1.09 6.355l-.013 .11a1 1 0 0 0 1.464 .944l5.706 -3l5.693 3l.1 .046a1 1 0 0 0 1.352 -1.1l-1.091 -6.355l4.624 -4.5l.078 -.085a1 1 0 0 0 -.633 -1.62l-6.38 -.926l-2.852 -5.78a1 1 0 0 0 -1.794 0l-2.853 5.78z'/></svg>")
+    --i-starf:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8.243 7.34l-6.38 .925l-.113 .023a1 1 0 0 0 -.44 1.684l4.622 4.499l-1.09 6.355l-.013 .11a1 1 0 0 0 1.464 .944l5.706 -3l5.693 3l.1 .046a1 1 0 0 0 1.352 -1.1l-1.091 -6.355l4.624 -4.5l.078 -.085a1 1 0 0 0 -.633 -1.62l-6.38 -.926l-2.852 -5.78a1 1 0 0 0 -1.794 0l-2.853 5.78z'/></svg>");
+    --i-flower:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0'/><path d='M12 2a3 3 0 0 1 3 3c0 .562 -.259 1.442 -.776 2.64l-.724 1.36l1.76 -1.893c.499 -.6 .922 -1 1.27 -1.205a2.968 2.968 0 0 1 4.07 1.099a3.011 3.011 0 0 1 -1.09 4.098c-.374 .217 -.99 .396 -1.846 .535l-2.664 .366l2.4 .326c1 .145 1.698 .337 2.11 .576a3.011 3.011 0 0 1 1.09 4.098a2.968 2.968 0 0 1 -4.07 1.098c-.348 -.202 -.771 -.604 -1.27 -1.205l-1.76 -1.893l.724 1.36c.516 1.199 .776 2.079 .776 2.64a3 3 0 0 1 -6 0c0 -.562 .259 -1.442 .776 -2.64l.724 -1.36l-1.76 1.893c-.499 .601 -.922 1 -1.27 1.205a2.968 2.968 0 0 1 -4.07 -1.098a3.011 3.011 0 0 1 1.09 -4.098c.374 -.218 .99 -.396 1.846 -.536l2.664 -.366l-2.4 -.325c-1 -.145 -1.698 -.337 -2.11 -.576a3.011 3.011 0 0 1 -1.09 -4.099a2.968 2.968 0 0 1 4.07 -1.099c.348 .203 .771 .604 1.27 1.205l1.76 1.894c-1 -2.292 -1.5 -3.625 -1.5 -4a3 3 0 0 1 3 -3z'/></svg>");
+    --i-home:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12l-2 0l9 -9l9 9l-2 0'/><path d='M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7'/><path d='M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6'/></svg>"); /* 208 A: 의뢰 조건 칸(꽃·쉼터) */
+    --i-ser:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3.5' y='3.5' width='7' height='7' rx='1.6'/><rect x='13.5' y='3.5' width='7' height='7' rx='1.6'/><rect x='3.5' y='13.5' width='7' height='7' rx='1.6'/><path d='M17 13.6l1.1 2.2 2.4.35-1.75 1.7.42 2.4-2.17-1.14-2.17 1.14.42-2.4-1.75-1.7 2.4-.35z'/></svg>"); /* 215 (214 A ③): 시리즈 — 칸 셋 + 별 하나 */
 }
 
 /* ── 글자: 굵기 두 단계(400·600) ── */
@@ -55,7 +58,7 @@
 [data-ui187] :is(.intro,.toast,.tip) :is(b,strong,h1,h2,h3,h4,th,summary,button:not(.sb)),[data-ui187] .beta{font-weight:600}
 [data-ui187] :is(button,select,input){font-family:inherit}
 /* 아이콘: 글자색을 따르는 가림판(mask) 하나 */
-[data-ui187] :is(#habName,#back,#mailBtn,#prefsBtn,.bar #overview,.dock .back,.nestbtn,:is(.chead,.fhead) [data-close],#prefsClose)::before{content:'';display:block;flex:none;width:22px;height:22px;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;position:static;animation:none;border:0;box-shadow:none;transform:none;color:inherit}
+[data-ui187] :is(#habName,#back,#mailBtn,#prefsBtn,.bar #overview,.bar #serBtn,.dock .back,.nestbtn,:is(.chead,.fhead) [data-close],#prefsClose)::before{content:'';display:block;flex:none;width:22px;height:22px;background:currentColor;-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat;position:static;animation:none;border:0;box-shadow:none;transform:none;color:inherit}
 [data-ui187] :is(#habName,#back){--ic:var(--i-back)}
 [data-ui187] #mailBtn{--ic:var(--i-mail)}
 [data-ui187] #prefsBtn{--ic:var(--i-prefs)}
@@ -248,6 +251,8 @@
 [data-ui187] .bar #overview{width:44px;min-width:44px;padding:0;font-size:0;justify-content:center;--ic:var(--i-map)}
 [data-ui187] .bar #overview[data-s=w]{--ic:var(--i-friends)}
 [data-ui187] .bar #overview[hidden]{display:none}
+/* 215 (214 A ③): 「시리즈」는 떠 있는 칩에서 위 줄 아이콘으로(아래 독은 다섯 칸이 참). 이름은 aria-label */
+[data-ui187] .bar #serBtn{width:44px;min-width:44px;padding:0;font-size:0;justify-content:center;--ic:var(--i-ser)}
 /* 3: 칸에 옅은 테두리 + 부드러운 그림자 */
 [data-ui187] :is(.gauge,.nslot:not(.empty),.cell,.dprop,.dsh,.ngift,.frow.card){box-shadow:inset 0 0 0 1px var(--u-bd),var(--u-sh2)}
 [data-ui187] .ncard{box-shadow:inset 0 0 0 1px var(--u-bd),var(--u-sh)}
@@ -279,3 +284,21 @@
 [data-ui187] #friendsBtn span{position:static;margin:0;font-size:calc(10px*var(--fs));color:var(--u-ink2);align-self:end}
 /* 14: 되돌리기·다시하기는 작은 아이콘 칸, 남는 폭은 땅 칠하기·더보기에 */
 [data-ui187] .dtools :is([data-undo],[data-redo]){flex:0 0 44px;min-width:44px;padding:0}
+/* ── 208 A ?g190 화면(시리즈·의뢰·앨범 탭, 카드의 시리즈 줄·분해, 엽서)을 rc201에 맞춤 ── */
+[data-ui187] .ser .cell .sswap{background-color:var(--u-sb);color:var(--u-sbi);border:0;border-radius:10px;box-shadow:inset 0 0 0 1px var(--u-sbb)}
+[data-ui187] .ser .cell .srar{display:inline-block;height:auto;line-height:1.5;margin-top:2px;padding:0 8px;border-radius:999px;background:color-mix(in srgb,var(--rc) 16%,#fff);box-shadow:inset 0 0 0 1px var(--rc);color:var(--u-ink)}
+[data-ui187] .ser .cell.sec.unk{background:none;box-shadow:none;border:1.5px dashed var(--u-sbb);border-radius:12px}
+[data-ui187] .ser .cell.sec small{color:var(--u-ink2)}
+[data-ui187] .sreq{background:var(--u-fill);border:0;border-radius:var(--u-r);box-shadow:inset 0 0 0 1px var(--u-bd),var(--u-sh2)}
+[data-ui187] .sreq.on{background:var(--u-th);box-shadow:inset 0 0 0 1.5px var(--u-acc),var(--u-sh2)}
+[data-ui187] .scond{background:#fff;border:0;border-radius:12px;box-shadow:inset 0 0 0 1px var(--u-line)}
+[data-ui187] .scond i{display:block;flex:none;width:20px;height:20px;background:var(--u-ink2);-webkit-mask:var(--ic) center/contain no-repeat;mask:var(--ic) center/contain no-repeat}
+[data-ui187] .scond[data-i=flower]{--ic:var(--i-flower)}[data-ui187] .scond[data-i=home]{--ic:var(--i-home)}[data-ui187] .scond[data-i=friends]{--ic:var(--i-friends)}[data-ui187] .scond[data-i=""] i{visibility:hidden}
+[data-ui187] .scond small{color:var(--u-ink2)}
+[data-ui187] .scond.ok i{background:#4f7d2c}
+[data-ui187] .scond.ok em{background:#e6f1da;color:#3d6b22}[data-ui187] .scond.no em{background:color-mix(in srgb,var(--u-acc) 14%,#fff);color:#9a4318}
+[data-ui187] #stage :is(.scond.must span,.scond em,.nser,.ser .cell .srar){font-weight:600}
+[data-ui187] #stage .nser{display:block;width:fit-content;margin:0 auto 6px;padding:2px 10px;border-radius:999px;background:var(--u-fill);box-shadow:inset 0 0 0 1px var(--u-bd);color:var(--u-ink)}
+[data-ui187] #serPost .spost{background:linear-gradient(var(--u-bg),var(--u-bg)) padding-box,repeating-linear-gradient(135deg,var(--u-acc) 0 12px,var(--u-bg) 12px 18px,#4a6fd0 18px 30px,var(--u-bg) 30px 36px) border-box;border:7px solid transparent}
+[data-ui187] #serPost .sstamp{border-color:var(--u-sbb)}
+[data-ui187] #serPost .sstamp img{background:var(--u-th)}

@@ -5,8 +5,8 @@
 // like attend.js for a quiet screen), a toast per 보상 길 step, a 새 소식 row and its weather (config WEATHER.ev).
 import { $t, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
-import { PROP, HAB, SP, habitatOf } from '../game/rules.js';
-import { BALANCE, EVENTS, EV_ACC, asHearts } from '../game/data.js';
+import { PROP, HAB, SP, habitatOf, kst } from '../game/rules.js';
+import { BALANCE, EVENTS, EV_ACC, ACCESSORIES, asHearts } from '../game/data.js';
 import { WEATHER, calm } from '../config.js';
 import { topWindow, overlayOpen, resting, toast } from './hud.js';
 import { sfx } from './sound.js';
@@ -21,19 +21,24 @@ const rew = s0 => { const s = asHearts(s0); return [s.hearts && `♥${s.hearts}`
 const soon = R => R.end - G.now() < BALANCE.event.soon * DAY;
 const left = R => { const ms = R.end - G.now(); return ms >= DAY ? $t('{0}일 남음', Math.floor(ms / DAY)) : $t('{0}시간 남음', Math.max(1, Math.ceil(ms / 3600e3))); };
 const md = t => { const d = new Date(t + 9 * 3600e3); return $t('{0}월 {1}일', d.getUTCMonth() + 1, d.getUTCDate()); };
+// 241 A 한 줄 달력: the run's dates · 다음: the next event (data.js EVENTS next, in the run's year) while it is still to come
+const cal = (R, e) => { const nx = e.next && kst(`${new Date(R.start + 9 * 3600e3).getUTCFullYear()}-${e.next.at}`);
+  return [`${md(R.start)} ~ ${md(R.end - 1)}`, nx > R.end && $t('다음: {0} {1}', e.next.name, md(nx))].filter(Boolean).join(' · '); };
 const hint = n => n.ball ? $t('동물들이 눈싸움할 때 찍기') : n.prop ? $t('「{0}」 놓고 찍기', PROP[[].concat(n.prop)[0]].name) : n.hab ? $t('{0}에서 찍기', HAB[n.hab].name) : n.sky === 'fog' ? $t('안개 낀 날 찍기') : n.night ? $t('밤에 찍기') : $t('찍기');
 const TABS = [['shop', $t('상점')], ['track', $t('보상 길')], ['album', $t('앨범')], ['wear', $t('옷장')]];
 // 15-2: the shop in parts (big, small, wear); wear is put on in 옷장 (the friends out in this habitat), kept after the event
 const KINDS = [['big', $t('큰 소품')], ['small', $t('작은 소품')], ['wear', $t('치장')]], WICON = { beanie: '🧶', scarf: '🧣' };
+// 241 A: the word too (the new UI takes emoji out of the words on screen, main.js 199 D: the two buttons looked the same)
+const wn = k => esc(ACCESSORIES[EV_ACC[k]?.base]?.name ?? EV_ACC[k].name);
 const wicon = k => WICON[EV_ACC[k]?.base] ?? '🎀', worn = k => G.S.animals.filter(a => a.wear?.includes(k)).length;
-const nm = a => a.nm || SP[a.species]?.name || $t('동물');
+const nm = a => (/[^\p{Extended_Pictographic}\p{M}\p{Cf}\s]/u.test(a.nm ?? '') ? a.nm : '') || SP[a.species]?.name || $t('동물'); // 246 A ①: a name of picture emoji only is wiped by the public UI (199 D): the kind instead
 function wardrobe(e) {
   const own = G.evOwned(), ws = e.shop.filter(i => i.wear && own[i.wear]).map(i => i.wear);
   if (!ws.length) return $t('<p class="note">상점에서 치장을 사면 여기서 동물에게 입혀요</p>');
   const here = G.S.animals.filter(a => !a.stored && !a.pending && habitatOf(a) === at());
   return `<p class="note">${ws.map(k => $t('{0} {1} {2}/{3}개 남음', wicon(k), EV_ACC[k].name, own[k] - worn(k), own[k])).join(' · ')}</p>
 <ul class="evwear">${here.map(a => `<li><span>${esc(nm(a))}</span>${ws.map(k => { const on = !!a.wear?.includes(k);
-    return `<button data-wear="${k}" data-id="${a.id}" aria-pressed="${on}"${!on && worn(k) >= own[k] ? ' disabled' : ''}>${wicon(k)} ${on ? $t('벗기기') : $t('입히기')}</button>`; }).join('')}</li>`).join('')}</ul>
+    return `<button data-wear="${k}" data-id="${a.id}" aria-pressed="${on}"${!on && worn(k) >= own[k] ? ' disabled' : ''}>${wicon(k)} ${on ? $t('{0} 벗기기', wn(k)) : $t('{0} 입히기', wn(k))}</button>`; }).join('')}</li>`).join('')}</ul>
 ${here.length ? $t('<p class="note">입힌 치장은 이벤트가 끝나도 그대로예요</p>') : $t('<p class="note">이 서식지에 나와 있는 동물이 없어요</p>')}`;
 }
 
@@ -47,7 +52,10 @@ function draw() {
     : tab === 'track' ? $t('<ol>{0}</ol>\n<p class="note">모은 {1} {2}개</p>', e.track.map((s, i) => `<li class="${i < R.step ? 'done' : i === nx ? 'next' : ''}"><b>${esc(c.icon)} ${s.at}</b><span>${rew(s)}</span>${i < R.step ? '<em>✓</em>' : ''}</li>`).join(''), c.name, R.got)
     : $t('<ol>{0}</ol>\n<p class="note">사진 모드로 찍으면 한 칸씩 채워져요 · 다 채우면 「{1}」{2}</p>', e.album.slots.map(s => `<li class="${R.shots[s.id] ? 'done' : ''}"><i aria-hidden="true">${R.shots[s.id] ? '📷' : '❔'}</i><span>${s.name}<small>${hint(s.need)}</small></span>${R.shots[s.id] ? '<em>✓</em>' : ''}</li>`).join(''), PROP[e.album.prop].name, R.cover ? $t(' 받았어요') : '');
   box.innerHTML = $t('<div><h2>{0} {1} 이벤트</h2><p class="note evc">{2} 모은 {3} <b>{4}</b>개 · {5}</p>\n<div class="evtabs" role="tablist">{6}</div>{7}\n<div class="nbtns"><button class="go" data-close>닫기</button></div></div>', esc(e.icon), esc(e.name), esc(c.icon), esc(c.name), R.got, left(R), TABS.filter(([k]) => k !== 'wear' || e.shop.some(i => i.wear)).map(([k, n]) => `<button role="tab" aria-selected="${tab === k}" data-tab="${k}"${tab === k ? ' class="on"' : ''}>${n}</button>`).join(''), body);
+  const cl = document.createElement('p'); cl.className = 'note evcal'; cl.textContent = cal(R, e); box.querySelector('.evc')?.after(cl); // 241 A: textContent
   box.dataset.step = 'win';
+  // 246 A ②: the track opens at the next slot (165 sat at the list's bottom edge and read as the last; 205~330 are under it)
+  const nl = tab === 'track' && box.querySelector('ol li.next'); if (nl) { const ol = nl.parentElement; ol.scrollTop += nl.getBoundingClientRect().top - ol.getBoundingClientRect().top - nl.offsetHeight * 0.6; }
   const H = hab(); if (tab === 'shop' && H?.decor) import('./thumbs.js').then(({ propThumb }) => box.querySelectorAll('img[data-p]').forEach(img => propThumb(img.dataset.p, H.decor.model).then(u => { img.src = u; }, () => {})));
 }
 const flakes = () => calm() ? '' : `<p class="flakes" aria-hidden="true">${Array.from({ length: 14 }, (_, i) => `<i style="left:${(i * 37) % 100}%;animation-delay:${-(i * 0.61) % 4}s">❄</i>`).join('')}</p>`;
@@ -87,7 +95,7 @@ function tick() { // after every game tick: the pill, the weather, the 새 소�
   const k = L ? `${L.e.icon}|${soon(L.R)}` : ''; // 74: no coin count on screen (♥ and Lv only)
   if (k !== pillWas) {
     pillWas = k; btn.hidden = !L;
-    if (L) { btn.innerHTML = `<span aria-hidden="true">${esc(L.e.icon)}</span>${soon(L.R) ? $t('<small>곧 끝나요</small>') : ''}`; btn.setAttribute('aria-label', $t('{0} 이벤트', L.e.name)); }
+    if (L) { btn.innerHTML = `<span aria-hidden="true">${esc(L.e.icon)}</span>${esc(L.e.name)}${soon(L.R) ? $t('<small>곧 끝나요</small>') : ''}`; btn.setAttribute('aria-label', $t('{0} 이벤트', L.e.name)); }
     const ul = document.querySelector('#news ul'), li = ul?.querySelector('[data-ev]');
     if (L && ul && !li) (ul.querySelector('[data-upd]') ?? ul).insertAdjacentHTML(ul.querySelector('[data-upd]') ? 'afterend' : 'afterbegin', $t('<li data-ev><i aria-hidden="true">{0}</i><span>{1} ({2}까지)</span></li>', esc(L.e.icon), esc(L.e.news), md(L.R.end - 1)));
     if (!L) li?.remove();

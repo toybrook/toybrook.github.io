@@ -24,7 +24,7 @@ import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
 import { SPECIES, MODELS, MYTHIC, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable, YARD, S186, CAM186, TH194 } from '../game/data.js';
 import { SP, habitatOf, known, topAt, kindName, plan186, spotMode, onSpots, spotTakes } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
-import { ambience, sfx, music, playing, hear, pet, lilies } from '../ui/sound.js';
+import { ambience, sfx, music, playing, hear, pet, lilies, buzz } from '../ui/sound.js';
 import { tracksOf, network, railEnds, joinTurn, newTrain, moveTo, stepTrain, boardAt, TILE, CARS } from './train.js';
 import { trainModel, recolor, treeCover } from './meadow/props.js';
 import { newPlay } from '../animals/play.js';
@@ -735,7 +735,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const wt = !sh && yd && !A && !st && !ed.nat && ed.P.small && ed.sz !== 3 && wallNear(x, z); let mg = null; // 195 B-8 1-2 (the yard has no 꾸미기 자리: sh is false there)
     if (A) ({ x, z } = A); else if (st) ({ x, z } = st); else if (wt) ({ x, z } = wt); else if (!sh) { x = snap(x); z = snap(z); } // 28-4: a rail snaps to its tiles (it goes under the animals)
     if (!sh && yd && !A && !st && !wt && !(!ed.nat && F.OVER.has(ed.P.id))) { const m = magnetAt(x, z, ed.P.r * SZ(ed)); if (m && fits(ed.P, m.x, m.z, SZ(ed))) { ({ x, z } = m); mg = m.d; } }
-    if (mg && mg !== magnet) navigator.vibrate?.(8); magnet = mg; // 살짝 떨림, once as it snaps on
+    if (mg && mg !== magnet) buzz(8); magnet = mg; // 살짝 떨림, once as it snaps on
     Object.assign(ed, { x, z, ok: sh ? !!sp : st || wt ? true : fits(ed.P, x, z, SZ(ed)), on: st ? st.h.uid : null, sl: st ? st.k : null, sp: sp ? sp.id : undefined });
     if (ed.P.stamp) { syncStamps(); syncNat(propList); ed.obj.traverse(m => { if (m.userData.dome) m.visible = !ed.ok; }); } // 28-6
     putProp(ed.obj, x, z, ed.rot, ed.P); const y0 = st ? seatY(st.h, st.k) : wt ? wt.top : ed.obj.position.y; ed.obj.position.y = y0 + 0.25; // lifted while held
@@ -851,7 +851,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       ui.onPropTap?.(uid); if (!ed || ed.uid !== uid) return;
       dragPlane.constant = -(ed.obj.position.y - 0.25); const p = groundAt({ clientX: at[0], clientY: at[1] }); if (!p) return;
       drag = { id, dx: ed.x - p.x, dz: ed.z - p.z, at, long: true }; controls.enabled = false; skipTap = true; aim = null;
-      if (PREFS.buzz) navigator.vibrate?.(15);
+      if (PREFS.buzz) buzz(15);
     }, 450) };
   }, { capture: true, ...sig });
   // inbox 42 E 꾹 눌러 옮기기: out of 꾸미기 and 사진 모드, a finger held still 0.45 s on an animal lifts it (DROP.carry up, dangling);
@@ -865,7 +865,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       press = null; if (pinch || carry || decorOn || snapOn || fingers !== 1) return;
       const { a } = actorAt(at), p = a?.carry && groundHit(at); if (!p) return;
       carry = { a, id, x: a.position.x, z: a.position.z, from: { x: a.position.x, z: a.position.z }, f: [p.x, p.z], dx: a.position.x - p.x, dz: a.position.z - p.z, sx: at.clientX }; a.carry(carry.x, carry.z);
-      controls.enabled = false; skipTap = true; aim = null; setFocus(null); ui.onCarry?.(a.rec); if (PREFS.buzz) navigator.vibrate?.(15); // 69-1: its 출생 기록 shows while held
+      controls.enabled = false; skipTap = true; aim = null; setFocus(null); ui.onCarry?.(a.rec); if (PREFS.buzz) buzz(15); // 69-1: its 출생 기록 shows while held
     }, 450) };
   }, { capture: true, ...sig });
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault(), sig); // a long press lifts (OrbitControls, off while carrying, no longer stops the phone's menu)
@@ -1568,6 +1568,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     },
     dispose() { dead = true; ac.abort(); glows?.dispose(); scat?.dispose(); spotMesh?.geometry.dispose(); spotMat?.dispose(); /* 194 0-5 */ habitat.dispose?.(); for (const g of guests) g.dispose(); controls.dispose(); unhook(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); boxEl.remove(); perfEl?.remove(); }, // replaced (21-3b, main.js)
     look(id) { const a = actors.get(id); if (!a) return false; setFocus(a); front(); watch = true; return true; }, // inbox 20: follow one and turn to its face (friends list, 「연못에서 보기」); 26-4 a touch lets go
+    centreOn(id) { const a = actors.get(id); if (!a) return false; centre(a.obj.position); return true; }, // 236 B (?tut228) Q14 나: the tutorial brings an animal off screen back (no follow)
     unfollow: () => { trainCam = false; setFocus(null); }, followed: () => trainCam ? 'train' : focus?.rec.id ?? null, // 26-4 사진 모드 따라가기
     hasTrain: () => !!train, followTrain() { if (!train) return false; setFocus(null); Object.assign(trainAim, { radius: 9, phi: 1 }); goingHome = false; trainCam = true; return true; }, // 28-4
     where(id) { const a = actors.get(id); if (!a?.obj.visible) return null; if (!S186) return project(a.obj, height(a) + 0.3); // screen point above an animal
@@ -1594,5 +1595,6 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     guestEnv() { if (snapOn && guestEnvAt) return guestEnvAt; const n = (habitat.ctx.night ?? 0) >= 0.5, w = weatherNow(habId), s = n && ui.skyNow?.(habId); // the real clock and weather (사진 모드's picked night or rain: the last real one)
       return guestEnvAt = { hab: habId, night: n, rain: w.rain > 0.5, snow: w.snow > 0.5, sky: !!(s?.ev && (s.meteor || s.aurora || s.comet)) }; },
     guestPos(id) { const a = actors.get(id); return a ? [a.position.x, a.position.z] : null; },
+    camAt: () => [controls.target.x, controls.target.z], // 199 B-11 ?g190 의뢰 사진: where the camera looks (judged there)
   };
 }

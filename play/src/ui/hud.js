@@ -13,6 +13,8 @@ export function toast(text, ms = 2200, small = false) {
     const t = toastEl.getBoundingClientRect(), b = btns.find(r => r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top); if (!b) break;
     toastEl.style.top = (b.bottom - sr.top) / s + 6 + 'px';
   }
+  const c = TUT228 && document.querySelector('.t2chip:not([hidden])')?.getBoundingClientRect(), tt = toastEl.getBoundingClientRect(); // 238 C ①: not under the praise chip
+  if (c && c.left < tt.right && c.right > tt.left && c.top < tt.bottom && c.bottom > tt.top) toastEl.style.top = (c.bottom - sr.top) / s + 6 + 'px';
   // 176: not over an open window's head row (the nest's 「둥지 · 정리 · 닫기」): below the window if it fits above the bottom
   // buttons, else above it if there is room under the top bar, else at the bottom edge (over the window's foot, not its head)
   const w = topWindow()?.firstElementChild?.getBoundingClientRect(), t = toastEl.getBoundingClientRect();
@@ -48,7 +50,7 @@ export const josa = (w, a, b) => { if (LANG !== 'ko') return ''; const c = w.cha
 // ---- inbox 20 편의성: a yes/no question, closing the top window (Esc / back / a tap outside), first-time tips
 import * as G from '../game/game.js';
 import { unlockInfo, step181 } from '../game/rules.js';
-import { TUT181 } from '../game/data.js'; // 182 ②
+import { TUT181, TUT228 } from '../game/data.js'; // 182 ②; 238 C
 const stageEl = () => document.getElementById('stage');
 // why a habitat is shut, and how far along: "초원 도감 8칸 + 하트 30개면 열려요 (지금 3칸 · ♥12)"
 export const lockText = id => { const L = unlockInfo(G.S, id); return L.friends ? $t('{0} 동물 {1}마리가 태어나면 열려요 (지금 {2}마리)', L.prev.name, L.friends, Math.min(L.got, L.friends)) : L.need ? $t('{0} 도감 {1}칸 + 하트 {2}개면 열려요 (지금 {3}칸 · ♥{4})', L.prev.name, L.need, L.hearts, L.have, G.S.hearts) : $t('아직 잠겨 있어요'); };
@@ -68,6 +70,8 @@ export function ask(text, ok = $t('확인'), no = $t('취소')) {
 const TOPS = ['#desk', '#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#artCard', '#story', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#visit', '#skySheet', '#oddsSheet', '#event', '#prefs', '#help', '#habMenu', '#ret', '#myth', '#grown', '#homeHint', '#n170', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
 const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden') && !el.closest('[data-lock]'); // 64-A: ui/first.js locks
+// 248 B: a window card (.intro.pop: 첫눈 이벤트 · 우편함 · 설정 …) is up: the bubble over an animal or 손님 goes under it (it was drawn on top)
+export const cardUp = () => [...document.querySelectorAll('.intro.pop')].some(shown);
 export const topWindow = (skip) => { for (const q of TOPS) { if (q === skip) continue; const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };
 export function closeTop() {
   const el = topWindow(); if (el) { el.querySelector(SHUT).click(); return true; }
@@ -87,10 +91,14 @@ const waiting = []; let tipEl = null, calm = 0;
 const NOTES = '#news,#event,#ret,#lvup,#zoneCard,#artCard,#grown,#homeHint', CARDS = NOTES + ',.tip'; let upAt = 0, noteAt = 0;
 // inbox 102: in any game, a first-time tip waits a minute after the last card (돌아왔어요 · 단짝 · 레벨 …) went: four came in a row on a visit
 const noted = () => { if ([...document.querySelectorAll(NOTES)].some(shown)) noteAt = Date.now(); return Date.now() - noteAt < 60e3; };
-export const resting = () => { if ([...document.querySelectorAll(CARDS)].some(shown)) upAt = Date.now(); return !!G.S && G.now() - G.S.since < 600e3 && Date.now() - upAt < 40e3; };
+// 245 ①: nor while the hand is moving: a card that came up the moment a window shut took the next tap (meant for 둥지 / 지도) on its
+// dark area and shut again. A card waits HAND ms after the last touch (the poll then shows it once the player stops)
+const HAND = 1500; let handAt = 0; addEventListener('pointerdown', () => { handAt = Date.now(); }, { capture: true });
+export const resting = () => { if ([...document.querySelectorAll(CARDS)].some(shown)) upAt = Date.now(); return Date.now() - handAt < HAND || !!G.S && G.now() - G.S.since < 600e3 && Date.now() - upAt < 40e3; };
 setInterval(() => { noted(); const o = tipEl && topWindow('.tip'); if (tipEl && (!shown(tipFor) || o && !o.contains(tipFor))) { waiting.unshift({ k: tipEl.dataset.k, anchor: tipFor }); tipEl.remove(); tipEl = null; } if (tipEl) dodge(); else if (!resting()) nextTip(); }, 250); // 74: its anchor went away (a window closed without a tap): the tip waits for it again (66-1 r04); 109: or a card came up over it (레벨 5 창): the whole tip, tail too, waits under it
 export function tip(k, anchor) { // anchor: an element or a selector; shown once it is on screen and no other tip is up
   if (G.S.flags.tipsOff || G.S.flags['tip_' + k] || waiting.some(w => w.k === k) || tipEl?.dataset.k === k) return;
+  if (TUT228 && TUT_SAYS.includes(k) && step181(G.S, G.now())) { G.flag('tip_' + k); return; } // 238 C ③: the tutorial's own step says it, so no tip for it after
   waiting.push({ k, anchor }); nextTip();
 }
 const TUT_SAYS = ['nest', 'next', 'hatch', 'decor']; // 182 ②: the tutorial points there itself; these tips wait (not dropped: next61 asks once) until it is done or skipped
@@ -128,7 +136,7 @@ function dodge() {
   if (T.left < tr && T.right > tl && T.top < tb && T.bottom > tt) toastEl.style.top = (tb - sr.top) / s + 6 + 'px';
 }
 export const redodge = () => { if (tipEl) dodge(); }; // 66-1: a button that just grew under a tip (the nest pill's 「부화 시작」), not up to 250 ms later
-function endTip(off) { if (!tipEl) return; const k = tipEl.dataset.k; tipEl.remove(); tipEl = null; calm = Date.now() + 380; G.flag('tip_' + k); if (off) { G.flag('tipsOff'); waiting.length = 0; } setTimeout(nextTip, 400); }
+function endTip(off) { if (!tipEl) return; const k = tipEl.dataset.k; tipEl.remove(); tipEl = null; calm = Date.now() + 380; upAt = Date.now(); /* 238 C ③ · 239 B ①: the 40 s rest after a tip too, 1판 as well (resting() never saw the tip while it was up, so 3 came in a row) */ G.flag('tip_' + k); if (off) { G.flag('tipsOff'); waiting.length = 0; } setTimeout(nextTip, 400); }
 // any tap elsewhere also counts as seen
 addEventListener('pointerdown', e => { if (tipEl && !tipEl.contains(e.target)) endTip(false); }, true);
 G.on(() => setTimeout(nextTip)); // a tick later: a card opened in the same step (level.js flags lvCard before it shows the card) is up first, so the tip waits instead of covering it

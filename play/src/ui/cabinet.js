@@ -4,13 +4,16 @@
 // The cabinet fits the screen's width; a shelf with more figures than fit slides sideways on its own (drag along it),
 // its overflowing end faded. Drag up and down for more shelves. Its own small renderer, running only while open (the
 // habitat pauses meanwhile); three.js frustum culling skips figures off screen, clipping cuts any past the side boards.
+// 215 (?g190): a tab per series (data-tab="ser:m1"): its 12 cells three to a shelf in the series' order, then a shelf for the
+// secret (as it came, its accessory on) and, once all 12 are in, the prize 「초원 시리즈 진열장」 standing beside it.
 import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import * as G from '../game/game.js';
-import { HABITATS, S186 } from '../game/data.js';
+import { HABITATS, S186, G190 } from '../game/data.js';
+import { SERIES, have as serHave } from '../game/series.js';
 import { codexCells, colorsOf, displayColor, variantsOf, key, lookName } from '../game/rules.js';
 import { studio, nightLights } from './thumbs.js';
-import { makeFigure, loadModel } from '../animals/figure.js';
+import { makeFigure, loadModel, loadAcc } from '../animals/figure.js';
 import { toyMat, roundedBox } from '../habitat/toyKit.js';
 import { DEBUG, calm } from '../config.js';
 
@@ -34,11 +37,14 @@ const clip = [new THREE.Plane(new THREE.Vector3(-1, 0, 0), W / 2), new THREE.Pla
 let night = false; // 21-1 밤에 보기: this screen only, off each time it opens
 let st = null, tab = HABITATS[0].id, hab = null, live = false, sel = null, built = '', figs = [], fx = [], star = null, bounds = null, shelves = [], topOf = null;
 const offs = {}; // how far each shelf is slid (tab + row), kept while the game runs
-const sig = () => JSON.stringify([tab, codexCells(tab, G.S).map(c => G.S.codex[c.key] ? (displayColor(G.S, c.key) ?? 1) + (G.S.codex[c.key].adult == null ? 'b' : '') : 0)]);
+const serOf = () => tab.startsWith('ser:') ? SERIES.find(s => s.id === tab.slice(4)) : null; // 215
+const cellsNow = () => { const s = serOf(); if (!s) return codexCells(tab, G.S); const all = HABITATS.flatMap(h => codexCells(h.id, G.S)); return s.cells.map(k => all.find(c => c.key === k)).filter(Boolean); };
+const cellsOf1 = x => HABITATS.flatMap(h => codexCells(h.id, G.S)).find(c => c.key === key(x.species, x.variant)); // 215: the secret's codex cell
+const sig = () => { const s = serOf(), M = s && G.S.ser?.[s.id]; return JSON.stringify([tab, cellsNow().map(c => G.S.codex[c.key] ? (displayColor(G.S, c.key) ?? 1) + (G.S.codex[c.key].adult == null ? 'b' : '') : 0), M ? [M.sec ? M.sec.species + M.sec.variant + M.sec.acc : 0, !!M.got] : 0]); };
 
 export function openCabinet(habId, api) {
   tab = habId || tab; hab = api; sel = null; el.hidden = false; hab?.setActive(false);
-  el.innerHTML = $t('<div class="chead"><b>진열장</b><span id="cabn"></span><button class="back" data-night>밤에 보기</button><button class="back" data-close>닫기</button></div>\n<div class="ctabs">{0}</div>\n<div class="cview" id="cview">{1}</div><div class="cchips" id="cchips"><p>피규어를 누르면 본 색 중에서 고를 수 있어요</p></div>', HABITATS.map(h => `<button data-tab="${h.id}"${h.id === tab ? ' class="on"' : ''}${G.S.unlocked.includes(h.id) || codexCells(h.id).some(c => G.S.codex[c.key]) ? '' : ' disabled'}>${h.name}</button>`).join(''), DEBUG ? '<p class="cfps" id="cfps"></p>' : '');
+  el.innerHTML = $t('<div class="chead"><b>진열장</b><span id="cabn"></span><button class="back" data-night>밤에 보기</button><button class="back" data-close>닫기</button></div>\n<div class="ctabs">{0}</div>\n<div class="cview" id="cview">{1}</div><div class="cchips" id="cchips"><p>피규어를 누르면 본 색 중에서 고를 수 있어요</p></div>', HABITATS.map(h => `<button data-tab="${h.id}"${h.id === tab ? ' class="on"' : ''}${G.S.unlocked.includes(h.id) || codexCells(h.id).some(c => G.S.codex[c.key]) ? '' : ' disabled'}>${h.name}</button>`).join('') + (G190 && G.S.ser ? SERIES.map(s => `<button data-tab="ser:${s.id}"${'ser:' + s.id === tab ? ' class="on"' : ''}>${$t('시리즈')}</button>`).join('') : ''), DEBUG ? '<p class="cfps" id="cfps"></p>' : '');
   if (!st) setup();
   night = false; setNight();
   el.querySelector('#cview').prepend(st.R.domElement);
@@ -89,36 +95,39 @@ function resize() {
 let own = []; const ours = x => (own.push(x), x); // 195 B-10b M1: what build() makes for itself (geometries, plaques' textures and materials, sparkles' material), gone at the next build; shared materials stay
 const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(ours(roundedBox(w, h, d, Math.min(0.06, h / 2.2), 2)), mat); m.position.set(x, y, z); return m; };
 // a variant registered but never seen grown up stands as its baby (a little smaller)
-function figure(c, sil) {
-  const baby = !sil && G.S.codex[c.key]?.adult == null;
-  const f = makeFigure(c.species.id, sil ? variantsOf(c.species)[0].id : c.variant.id, baby ? 'baby' : 'adult', null, sil ? null : displayColor(G.S, c.key)).obj; // a silhouette: the species' plain shape
+function figure(c, sil, acc = null) { // acc: 215 the series' secret, as it came
+  const baby = !sil && !acc && G.S.codex[c.key]?.adult == null;
+  const f = makeFigure(c.species.id, sil ? variantsOf(c.species)[0].id : c.variant.id, baby ? 'baby' : 'adult', acc || null, sil ? null : displayColor(G.S, c.key)).obj; // a silhouette: the species' plain shape
   f.traverse(o => { if (sil && o.isMesh) { o.material = silMat; o.children.length = 0; } if (o.material) for (const m of [o.material].flat()) m.clippingPlanes = clip; });
   const b = new THREE.Box3().setFromObject(f), s = b.getSize(new THREE.Vector3()), k = FIT / Math.max(s.y, s.x * 0.72, s.z) * (baby ? 0.8 : 1);
   const g = new THREE.Group(); f.scale.setScalar(k); f.position.y = -b.min.y * k; g.add(f); return g;
 }
 async function build() {
   const want = sig(); if (want === built) return; built = want;
-  const cells = codexCells(tab, G.S), sps = [...new Set(cells.map(c => c.species))];
-  if (!await Promise.all(sps.map(s => loadModel(s.model))).then(() => true, () => false)) { if (built === want) built = ''; return; } // 168: offline, a model never fetched: no shelves yet, the next open or change tries again
+  const ser = serOf(), M = ser && G.S.ser?.[ser.id], cells = cellsNow(), sec = M?.sec && cellsOf1(M.sec), sps = [...new Set([...cells, ...sec ? [sec] : []].map(c => c.species))];
+  const prize = M?.got ? await import('../habitat/meadow/props.js').then(m => m.decorModel, () => null) : null; // 215: shared materials (props.js dm), its own geometries
+  if (!await Promise.all([...sps.map(s => loadModel(s.model)), M?.sec?.acc && loadAcc(M.sec.acc)]).then(() => true, () => false)) { if (built === want) built = ''; return; } // 168: offline, a model never fetched: no shelves yet, the next open or change tries again
   if (want !== sig()) return;
   st.root.traverse(o => { o.skeleton?.dispose(); if (o.isPoints) o.geometry.dispose(); }); /* a legendary's sparkles (figure.js effect): its own geometry, a shared material */ for (const x of own) x.dispose(); own = []; // 195 B-10b M1 (was clear() alone: ~470 KB a build)
   st.root.clear(); figs = []; fx = []; star = null; shelves = [];
-  const rows = sps.length;
+  const groups = ser ? [0, 1, 2, 3].map(r => cells.slice(r * 3, r * 3 + 3)).concat([sec ? [sec] : []]) : sps.map(sp => cells.filter(c => c.species === sp)); // 215: a series three to a shelf, the secret's shelf last
+  const rows = groups.length;
   const top = rows * SY, all = cells.every(c => G.S.codex[c.key]);
   st.root.add(box(W + 0.5, top + 0.5, 0.2, panel, 0, top / 2 - 0.1, -0.85), box(0.25, top + 0.5, 1.8, wood, -W / 2 - 0.12, top / 2 - 0.1, 0),
     box(0.25, top + 0.5, 1.8, wood, W / 2 + 0.12, top / 2 - 0.1, 0), box(W + 0.8, 0.3, 1.9, wood, 0, top + 0.1, 0));
-  sps.forEach((sp, row) => {
-    const y = (rows - 1 - row) * SY, mine = cells.filter(c => c.species === sp), full = mine.every(c => G.S.codex[c.key]);
+  groups.forEach((mine, row) => {
+    const y = (rows - 1 - row) * SY, secRow = ser && row === 4, full = secRow ? !!sec : mine.every(c => G.S.codex[c.key]), sp = mine[0]?.species;
     st.root.add(box(W, 0.14, 1.7, wood, 0, y - 0.07, 0), box(W, 0.1, 0.08, full ? gold : wood, 0, y - 0.07, 0.86));
-    st.root.add(plaque(`${sp.name} ${mine.filter(c => G.S.codex[c.key]).length}/${mine.length}`, -W / 2 + 0.9, y - 0.07, 0.92, full));
+    if (!ser || row === 0 || secRow) st.root.add(plaque(!ser ? `${sp.name} ${mine.filter(c => G.S.codex[c.key]).length}/${mine.length}` : secRow ? $t('시크릿') : row ? '' : $t('{0} {1}/{2}', ser.name, serHave(G.S, ser), ser.cells.length), -W / 2 + 0.9, y - 0.07, 0.92, ser && !secRow ? !!M?.got : full));
     const g = new THREE.Group(); st.root.add(g);
     mine.forEach((c, i) => {
-      const got = !!G.S.codex[c.key], f = figure(c, !got), x = -W / 2 + 0.25 + SX * (i + 0.5);
+      const got = secRow || !!G.S.codex[c.key], f = figure(c, !got, secRow && M.sec.acc), x = -W / 2 + 0.25 + SX * (i + 0.5);
       f.position.set(x, y, 0.1); f.userData = { c, got, ph: row * 1.7 + i * 0.9 }; g.add(f); figs.push(f);
     });
     const fades = [1, -1].map(s => { const m = new THREE.Mesh(fadeGeo, fadeMat); m.scale.x = s; m.position.set(-s * (W / 2 - 0.375), y + (SY - 0.14) / 2, 0.88); st.root.add(m); return m; });
     const s = { g, fades, y, min: Math.min(0, W - 0.5 - mine.length * SX), key: tab + row }; shelves.push(s); slide(s, offs[s.key] ?? 0);
-    if (full) { // sparkles drifting up along the shelf
+    if (secRow && prize) { const p = prize(ser.prize); p.traverse(o => { if (o.isMesh) own.push(o.geometry); }); p.scale.setScalar(1.05); p.position.set(W / 2 - 1.1, y, -0.2); p.rotation.y = -0.35; st.root.add(p); } // 215: the prize, on the secret's shelf
+    if (full && !secRow) { // sparkles drifting up along the shelf
       const n = Math.round(W * 2.5), pos = new Float32Array(n * 3), pts = new THREE.Points(ours(new THREE.BufferGeometry()), ours(new THREE.PointsMaterial({ map: sparkTex, size: 0.32, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
       for (let i = 0; i < n; i++) pos.set([(Math.random() - 0.5) * W, y + Math.random() * SY * 0.8, 0.3 + Math.random() * 0.6], i * 3);
       pts.geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3)); pts.userData = { y, seed: row }; st.root.add(pts); fx.push(pts);
@@ -137,7 +146,8 @@ async function build() {
 function plaque(text, x, y, z, full) {
   const cv = Object.assign(document.createElement('canvas'), { width: 256, height: 64 }), g = cv.getContext('2d');
   g.fillStyle = full ? '#f5c542' : '#fbf1e1'; g.beginPath(); g.roundRect(2, 2, 252, 60, 14); g.fill();
-  g.fillStyle = '#5a3d24'; g.font = 'bold 34px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 34);
+  g.fillStyle = '#5a3d24'; g.font = 'bold 34px system-ui, sans-serif'; const w = g.measureText(text).width; if (w > 236) g.font = `bold ${Math.floor(34 * 236 / w)}px system-ui, sans-serif`; // 215: a long name (a series') fits
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 34);
   const tex = ours(new THREE.CanvasTexture(cv)); tex.colorSpace = THREE.SRGBColorSpace;
   const m = new THREE.Mesh(ours(new THREE.PlaneGeometry(1.4, 0.35)), ours(new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false }))); m.position.set(x, y, z); return m;
 }

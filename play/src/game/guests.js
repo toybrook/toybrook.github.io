@@ -58,7 +58,7 @@ export const tagLv = (hab, t) => {
   return m[t] ?? Infinity;
 };
 // a wish the player can answer now in that habitat (env wishes only come with a guest's `when`)
-function doable(S, hab, w) {
+export function doable(S, hab, w) {
   const W = WISH[w], lv = S.lv || 1, out = () => outIn(S, hab);
   switch (W?.k) {
     case 'tag': case 'not': return tagLv(hab, W.v) <= lv; // 조용함 only once a 소리 prop is there to clash with

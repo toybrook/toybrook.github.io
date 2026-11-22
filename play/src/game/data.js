@@ -805,6 +805,12 @@ export const ADI184 = false; // release build: the 184 ⑤ interstitial stays of
 // 194-7 trial flag (?th194, docs/decor-redesign.md 5-3 ②⑤⑥, 7-2): the first theme's six pieces (숲속 오두막) in the yard; off in the
 // release build (build-web.mjs TH)
 export const TH194 = false; // release build: the 194-7 theme trial stays off
+// 199 B-11 trial flag (?g190, docs/game-purpose.md 12장): 초원 시리즈 1탄, 교환 도장, 의뢰 1건, 물어오기·흔들어 보기 (game/series.js);
+// off in the release build (build-web.mjs G190)
+export const G190 = false; // release build: the 199 B-11 series trial stays off
+// 236 B trial flag (?tut228, docs/design/tutorial-2.md: 이정표 줄 · 멈춤 시계 · 직접 누르기 · 이정표 판 · 새 기능 안내): rides on the 181
+// tutorial (with the public flags ?tut181&rc200&d07; ?g190 too for the 시리즈 · 의뢰 · 교환 rows); off in the release build (build-web.mjs T228)
+export const TUT228 = false; // release build: the 236 B tutorial trial stays off
 // bigIds: measured 2026-11-20 (decorModel triangles over 8,000; the median prop 2,258; rails aside)
 // the yard's steps 0..6 (5-1; 4..6 since 184 ④): open land cells [across x, along z], props / natives / animals at once; price: ♥
 // for steps 1..6; step 6 is the whole first board (BOARD0, 36×58: the paint cap in rules.js tidyYard); big: the props over
@@ -1274,6 +1280,13 @@ export const PROPS = [
 // 66-1 손님 선물 (guests-data.js GUEST_PROPS): only from a guest's 대만족; drawn with an existing prop's model (as), its size and light
 for (const g of GUEST_PROPS) { const A = PROPS.find(p => p.id === g.as);
   PROPS.push({ id: g.id, name: g.name, as: g.as, habitat: g.hab, price: 0, r: A.r, ...A.k && { k: A.k }, ...A.small && { small: true }, ...A.light && { light: true }, ...A.water && { water: true }, gift: $t('떠돌이 손님') }); }
+// 199 B-11 (?g190 only): the series' prize and the first request's gift, an existing prop's model (as), never sold
+if (G190) PROPS.push({ id: 'ser_m1', name: $t('초원 시리즈 진열장'), price: 0, r: 0.95, k: 1.3, gift: $t('시리즈 완성') }, // 215: its own model (props.js decorModel 'ser_m1')
+  { id: 'req_r1', name: $t('몽실이의 소풍 매트'), as: 'picnic', price: 0, r: 1.3, open: true, gift: $t('의뢰') },
+  ...[['r2', $t('퐁당이의 연잎 화분'), 'tulips', 0.55], ['r3', $t('꼬순이의 곡식 자루'), 'hay', 0.8], ['r4', $t('통통이의 사과 궤짝'), 'mushrooms', 0.6], // 215: the 12 stories' prizes
+    ['r5', $t('느긋이의 낮잠 방석'), 'stones', 0.75], ['r6', $t('바람이의 언덕 깃발'), 'vane', 0.4], ['r7', $t('첨벙이의 물놀이 튜브'), 'stones', 0.75], // (requests-12.md 5장: a look of its own later;
+    ['r8', $t('뭉근이의 유자 목욕통'), 'trough', 0.85], ['r9', $t('뒤뚱이의 눈덩이 더미'), 'snowman', 0.88], ['r10', $t('몽글이의 물고기 쿠션'), 'log', 0.95], // for now the look it is drawn from), free, gift
+    ['r11', $t('방울이의 눈꽃 종'), 'bell', 0.75], ['r12', $t('살금이의 통나무 찻상'), 'table', 0.95]].map(([k, name, as, r]) => { const A = PROPS.find(p => p.id === as) || {}; return { id: 'req_' + k, name, as, price: 0, r, ...A.k && { k: A.k }, ...A.small && { small: true }, ...A.light && { light: true }, ...A.water && { water: true }, gift: $t('의뢰') }; }));
 // 17-2 동물 작품 (game/art.js): 주운 것, a friend's find (기록만 남기고 치우기 gives its one to storage; 솔방울 is the 산책 선물's),
 // and the 작품 made of them (art: by a friend only; find: what it was made of). Never sold. Not in the 꾸미기 코드 (layout.js KINDS):
 // a friend's work stays in its own garden
@@ -1310,9 +1323,10 @@ for (const p of PROPS) { p.list = p.price; if (p.price > 0) p.price = Math.max(5
 // habitats' weather odds while it runs (weather.js; 15-2 the snow on everything). shop: its props for coins. track: the free
 // 보상 길, by the coins got in all (at), each step given at once (rules give: hearts, candy, a prop; never eggs). album: photo
 // slots (need: hab, night, sky (photo.js SKIES), prop placed in that habitat), all filled = its prop. news, mail: once a run.
-// Fixed rewards, nothing random, nothing paid; the odds and pity never change for one
+// Fixed rewards, nothing random, nothing paid; the odds and pity never change for one. next (241 A): the sheet's 한 줄 달력 「다음: name M월 D일」
+// (KST 'MM-DD' of the run's year), shown while it is after the run's end
 export const EVENTS = [
-  { id: 'firstsnow', name: $t('첫눈'), icon: '❄️', start: '12-05', days: 14,
+  { id: 'firstsnow', name: $t('첫눈'), icon: '❄️', start: '11-28', days: 14, next: { name: $t('겨울 별빛 축제'), at: '12-22' }, // 241 A: 12-05 -> 11-28 (~12-11 23:59)
     coin: { name: $t('눈송이'), icon: '❄️', hearts: 2 },
     earn: { day: 15, pet: 5, pile: 7, luck: 0.15 },
     // 15-2 look: the weather odds (snow in every habitat; the snow habitat clearer, for its aurora nights, x aurora bright), cover:
@@ -1441,6 +1455,14 @@ export const FIRST = { days: 3, prop: 'firstday', hearts: 30, tasks: [
   { id: 'prop', text: $t('소품 하나 놓기'), n: 1, hearts: 15 },
   { id: 'photo', text: $t('사진 한 장 찍기'), n: 1, hearts: 10 },
   { id: 'codex', text: $t('도감 열어 보기'), n: 1, hearts: 10 }] };
+// 236 B (?tut228, tutorial-2.md 4-1): the 이정표 판's own rows beside FIRST's hatch · prop · photo (FIRST untouched). Each once (rules
+// first2Check: S.first['f2:' + id] = when); all the board's rows (7; 4 without G190's ser · req · swap): FIRST2.hearts once (S.first['f2:all']).
+// days: how long the line leads on top (never shown as a date, Q19); a row not done by then can still be done (Q3 나)
+export const FIRST2 = { days: 7, hearts: 20, praise: 2, tasks: [ // praise: ♥ for each first-day step done by hand, once (rules tutPraise, 7-1)
+  { id: 'yard', text: $t('나의 뜰 가 보기'), hearts: 5 },
+  { id: 'ser', text: $t('시리즈 칸 3개 채우기'), hearts: 10, g190: 1 },
+  { id: 'req', text: $t('첫 의뢰 들어주기'), hearts: 5, g190: 1 },
+  { id: 'swap', text: $t('도장으로 교환해 보기'), hearts: 10, g190: 1 }] };
 // 28-5 소품 색: each prop's palette (pal: its own, else toy; rails none). 0: as made; the rest: the key colour of its model turned
 // to that one (meadow/props.js recolor). 크기: sz 0 보통, 1 작게, 2 크게, 3 아주 크게 (its model, footprint and cells x sizeF)
 export const PALETTES = {

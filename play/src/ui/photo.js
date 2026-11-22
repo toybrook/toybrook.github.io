@@ -6,6 +6,8 @@
 // picture is the frame drawn again at 2-3x, the filter worked out per pixel with the CSS matrices (tint), then deco.
 import { $t, esc } from '../i18n/i18n.js';
 import { VIEW, TOSS } from '../config.js';
+import { G190 } from '../game/data.js';
+import { wishName } from '../game/series.js'; // 199 B-11 ?g190 의뢰 사진 (215: 12 stories, small ones, 다시 찍기)
 import * as G from '../game/game.js';
 import { seeLink, seeCard, seeSend } from './visit.js'; // 69-4
 import { outIn, callName } from '../game/rules.js';
@@ -77,7 +79,7 @@ export function deco(x, w, h, o, code) {
 export function initPhoto(getApi, getHab) {
   const $ = id => document.getElementById(id), el = $('snap'), ov = $('snapOv'), btn = $('snapBtn');
   const o = { hour: null, sky: null, fx: 'none', frame: true, logo: true, code: !TOSS, fold: false }; // 174: no link QR in the Toss build
-  let on = false, busy = false, code = null, text = '', msg = '';
+  let on = false, busy = false, code = null, text = '', msg = '', rq = '';
   const yd = () => getHab() === 'yard'; // 184 ④ 나의 뜰 (?yard only: never in a build)
   const ratio = () => Math.min(3, (window.devicePixelRatio || 1) * (window.__stageScale || 1));
   const seg = (k, opts) => opts.map(([t, v]) => `<button data-k="${k}" data-v="${v}"${o[k] === v ? ' class="on"' : ''}>${t}</button>`).join('');
@@ -85,6 +87,11 @@ export function initPhoto(getApi, getHab) {
     el.classList.toggle('fold', o.fold);
     el.innerHTML = $t('<div class="sbody"><div class="row"><b>시간</b><div class="seg">{0}</div></div><div class="row"><b>날씨</b><div class="seg">{1}</div></div>\n<div class="row"><b>필터</b><div class="seg">{2}</div></div>\n<div class="row"><b>넣기</b><div class="seg">{3}</div></div>\n<div class="row"><b class="w">따라가기</b><select data-follow aria-label="따라갈 동물"><option value="">안 함</option>{4}{5}</select></div></div>\n<p class="smsg" role="status">{6}</p>\n<div class="sbar"><button data-act="fold">{7}</button><button data-act="home">전체 보기</button><button class="go" data-act="save">저장</button><button data-act="card">구경 그림</button><button data-close>나가기</button></div>', seg('hour', HOURS), seg('sky', getHab() === 'snow' ? SKIES.map(k => k[1] === 'rain' ? [$t('눈'), 'rain'] : k) : SKIES), seg('fx', Object.entries(FILTERS).map(([k, [t]]) => [t, k])), ADDS.map(([k, t]) => `<button data-add="${k}"${o[k] ? ' class="on"' : ''} aria-pressed="${o[k]}">${t}</button>`).join(''), getApi()?.hasTrain?.() ? $t('<option value="train">🚂 장난감 기차</option>') : '', outIn(G.S, getHab()).map(a => `<option value="${a.id}">${a.fav ? '★ ' : ''}${esc(callName(a))}</option>`).join(''), msg || $t('끌어서 돌리고, 두 손가락을 벌려 가까이 봐요 · 시간과 날씨는 보기만 바뀌어요'), o.fold ? $t('펼치기') : $t('접기'));
     if (TOSS || yd()) el.querySelectorAll('[data-act="card"], [data-add="code"]').forEach(b => b.remove()); // 174: 구경 그림 and the link QR are links out; 184 ④ the yard has no 구경 link
+    const qs = reqs(); // 199 B-11: a request for this habitat; 215: more than one (the board's, a story to shoot again): pick which
+    if (qs.length) { const b = document.createElement('button'); b.className = 'go'; b.dataset.act = 'req'; b.textContent = $t('의뢰 사진 보내기'); el.querySelector('[data-act="save"]').after(b); }
+    if (qs.length > 1) { const row = document.createElement('div'), lb = document.createElement('b'), s = document.createElement('select'); row.className = 'row'; lb.className = 'w'; lb.textContent = $t('의뢰');
+      s.dataset.req = ''; s.setAttribute('aria-label', $t('보낼 의뢰')); for (const q of qs) { const op = document.createElement('option'); op.value = q.id; op.textContent = G.S.req.done[q.id] ? $t('{0} · 다시 찍기 ★{1}', q.name, G.S.req.done[q.id]) : q.name; s.append(op); }
+      s.value = qs.some(q => q.id === rq) ? rq : qs[0].id; row.append(lb, s); el.querySelector('.sbody').append(row); }
     if (yd()) { const b = document.createElement('button'); b.dataset.act = 'top'; b.textContent = $t('위에서 한 장'); el.querySelector('[data-act="save"]').after(b); } // 184 ④: the board from straight above
     paint();
   }
@@ -144,6 +151,14 @@ export function initPhoto(getApi, getHab) {
       const pic = seeCard(c, hab, text, qrcode); busy = false; leave(); seeSend(pic, hab, text);
     } catch { busy = false; msg = $t('그림을 만들지 못했어요 · 다시 해 주세요'); draw(); }
   }
+  const reqs = () => G190 && G.S.req ? G.reqFor(getHab()) : [];
+  function req() { // 199 B-11 의뢰: judged where the camera looks (habitat camAt), the visitor's wishes as guests.js judge
+    const api = getApi(), qs = reqs(), q = qs.find(q => q.id === rq) ?? qs[0]; if (!api || !q || busy) return;
+    const r = G.reqSend(q.id, ...api.camAt()); sfx('photo');
+    msg = !r ? '' : !r.stars ? $t('조금 모자라요 · {0}', q.must.filter((_, i) => !r.met?.[i]).map(wishName).join(', '))
+      : r.again ? (r.stars > r.was ? $t('다시 보냈어요 · ★{0} → ★{1}', r.was, r.stars) : $t('다시 보냈어요 · 별은 ★{0} 그대로예요', r.was)) : $t('의뢰를 보냈어요 · ★{0}', r.stars);
+    draw();
+  }
   btn.onclick = enter;
   el.onclick = e => {
     const d = e.target.closest('button')?.dataset; if (!d) return;
@@ -153,11 +168,12 @@ export function initPhoto(getApi, getHab) {
     if (d.act === 'save') return save();
     if (d.act === 'top') return save(true);
     if (d.act === 'card') return card();
+    if (d.act === 'req') return req();
     if (d.add) return set(d.add, !o[d.add]);
     if (d.k === 'fx') return set('fx', d.v);
     if (d.k) return set(d.k, d.v === 'null' ? null : d.k === 'hour' ? +d.v : d.v);
   };
-  el.onchange = e => { const api = getApi(), v = e.target.value, id = +v; if (e.target.dataset.follow == null || !api) return; if (v === 'train') { if (!api.followTrain()) { msg = $t('지금은 따라갈 수 없어요'); draw(); } } else if (!id) api.unfollow(); else if (!api.look(id)) { msg = $t('지금은 따라갈 수 없어요'); draw(); } };
+  el.onchange = e => { const api = getApi(), v = e.target.value, id = +v; if (e.target.dataset.req != null) { rq = v; return; } if (e.target.dataset.follow == null || !api) return; if (v === 'train') { if (!api.followTrain()) { msg = $t('지금은 따라갈 수 없어요'); draw(); } } else if (!id) api.unfollow(); else if (!api.look(id)) { msg = $t('지금은 따라갈 수 없어요'); draw(); } };
   addEventListener('resize', () => on && paint());
   return { on: () => on, enter, leave, code: () => text, followed: () => { const f = on && el.querySelector('[data-follow]'); if (f) f.value = getApi()?.followed() ?? ''; } };
 }

@@ -1344,6 +1344,21 @@ export function decorModel(id) {
     for (const x of [-(W / 2 - 0.04), 0, W / 2 - 0.04]) part(g, roundedBox(0.08, H - 0.06, D2 - 0.02, 0.03), '#b07a48', x, 0.49, 0);
     part(g, roundedBox(W - 0.08, H - 0.12, 0.04, 0.015), '#a8703f', 0, 0.49, -D2 / 2 + 0.03);
     for (const x of [-0.72, 0.72]) for (const z of [-0.17, 0.17]) part(g, new THREE.SphereGeometry(0.06, 10, 8), '#8a5a34', x, 0.05, z);
+  } else if (id === 'ser_m1') { // 215: 초원 시리즈 진열장 (the series' prize): a small three-tier cabinet, 12 tiny pastel figures (a body and a head
+    // each, no faces), a gold star on top. code only, smooth, no lines
+    const W = 1.2, D2 = 0.42, wood = '#c88a4b', side = '#b07a48';
+    for (const s2 of [-1, 1]) part(g, roundedBox(0.08, 1.3, D2, 0.03), side, s2 * (W / 2 - 0.04), 0.71, 0);
+    part(g, roundedBox(W - 0.06, 1.24, 0.04, 0.015), '#a8703f', 0, 0.71, -D2 / 2 + 0.03);
+    const tiers = [0.1, 0.5, 0.9, 1.33], pal = ['#f7c6c7', '#bfe3c9', '#c6d8f7', '#fbe3a6', '#e3cdf2', '#f9d1b0'];
+    tiers.forEach((y, i) => part(g, roundedBox(W - (i === 3 ? 0 : 0.08), 0.07, D2 - (i === 3 ? 0 : 0.03), 0.025), wood, 0, y, 0));
+    for (let t = 0; t < 3; t++) for (let i = 0; i < 4; i++) {
+      const x = (i - 1.5) * 0.25, y = tiers[t] + 0.035, c = pal[(t * 4 + i) % pal.length];
+      part(g, new THREE.SphereGeometry(0.075, 12, 9), c, x, y + 0.075, 0.02);
+      part(g, new THREE.SphereGeometry(0.055, 12, 9), c, x, y + 0.19, 0.02);
+    }
+    const star = new THREE.Shape(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.06 : 0.14, a = Math.PI / 2 + i * Math.PI / 5; star[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); }
+    part(g, new THREE.ExtrudeGeometry(star, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2 }), '#e8b84a', 0, 1.53, -0.025, { mat: { metalness: 0.35, roughness: 0.35 } });
+    for (const x of [-0.5, 0.5]) for (const z of [-0.14, 0.14]) part(g, new THREE.SphereGeometry(0.05, 10, 8), '#8a5a34', x, 0.04, z);
   } else if (id === 'platform') { // 28-5 평상: a low wooden deck of four broad boards on four short legs, a rim round it
     const W = 2.1, D2 = 1.7;
     for (let i = 0; i < 4; i++) part(g, roundedBox(W - 0.08, 0.07, D2 / 4 - 0.025, 0.025), i % 2 ? '#d29a5c' : '#c88a4b', 0, 0.42, -D2 / 2 + D2 / 8 + i * D2 / 4);

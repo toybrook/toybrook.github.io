@@ -5,7 +5,8 @@
 import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import * as G from '../game/game.js';
-import { BALANCE as B, ACCESSORIES, HABITATS } from '../game/data.js';
+import { BALANCE as B, ACCESSORIES, HABITATS, G190, PROPS } from '../game/data.js';
+import { serOf, have as serHave, brkStamps, SOUND, collNo } from '../game/series.js'; // 199 B-11 ?g190
 import { SP, RAR, HAB, EGG, RANK, pityOf, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap, kindName, canLetGo } from '../game/rules.js';
 import { toast, hideToast, heart, clock, span, josa, tip, ask } from './hud.js';
 import { eggThumb, studio } from './thumbs.js';
@@ -51,6 +52,7 @@ ${PIECES.map((p, i) => `<polygon points="${p.pts}" ${i < n ? `fill="hsl(${RAR[k]
 export function initNest(nav) {
   const el = $('nest'), btn = $('nestBtn'), badge = btn.querySelector('i');
   el.innerHTML = $t('<div class="nsheet" role="dialog" aria-label="둥지">\n  <div class="chead"><b>둥지</b><span id="ncount"></span><button class="back" data-odds>확률</button><button class="back" data-tidy>정리</button><button class="back" data-close>닫기</button></div>\n  <div class="ngift" id="ngift" hidden></div>\n  <div class="ctabs" id="ntabs"></div>\n  <div class="ntop"><div class="neggs" id="neggs"></div><div class="nstage" id="nstage" hidden></div></div>\n  <div class="nlow"><div class="ngauges" id="ngauges"></div><div class="nslots" id="nslots"></div><div class="ncard" id="ncard" hidden></div></div>\n</div>');
+  if (G190) $('ngift').insertAdjacentHTML('afterend', '<div class="ngift nfetch" id="nfetch" hidden></div>'); // 199 B-11 물어온 알
   const eggsEl = $('neggs'), giftEl = $('ngift'), tidyBtn = el.querySelector('[data-tidy]'), stageEl = $('nstage'), gEl = $('ngauges'), slotsEl = $('nslots'), cardEl = $('ncard'), tabsEl = $('ntabs');
   let sel = null, habId = null, hab = null, tab = null, busy = false, shown = null, run = 0, sig = {}, after = null, ready = null;
   const nest = () => G.S.nests[habId] || { eggs: [], t: G.now() };
@@ -91,6 +93,7 @@ export function initNest(nav) {
       giftEl.innerHTML = $t('<b>선물 알</b>{0}<small></small>', gr.map((e, i) => $t('<button class="negg" data-gift aria-label="선물 {0} 알"><img alt=""></button>', RAR[e.rarity].name)).join(''));
       giftEl.querySelectorAll('img').forEach((img, i) => eggThumb(gr[i].rarity).then(u => { img.src = u; }, () => {}));
     });
+    if (G190) drawFetch(free);
     if (gr.length) giftEl.lastChild.textContent = free ? $t('누르면 부화 칸에 들어가요') : $t('부화 칸이 비면 넣을 수 있어요');
     drawGauges(); slotsEl.classList.toggle('n3', G.S.slots.length > 2); slotsEl.classList.toggle('n4', G.S.slots.length > 3); slotsEl.classList.toggle('n5', G.S.slots.length > 4); // inbox 31: three slots in one row (112: four, five)
     G.S.slots.forEach((s, i) => { const was = sig['slot' + i]; once('slot' + i, s ? `${s.egg.id}` : '-', () => {
@@ -221,6 +224,7 @@ export function initNest(nav) {
     const H = HAB[habitatOf(a)], away = H.id !== habId, open = G.S.unlocked.includes(H.id), room = fits(G.S, a); // inbox 20: never gone without a word
     cardEl.style.setProperty('--rc', RAR[v.rarity].color); // 75
     cardEl.innerHTML = $t('<div class="nchips"><span class="rar">{0}</span>{1}{2}{3}{4}</div>\n<b class="nname">{5}{6}</b>\n{7}\n<p class="nwhy">{8} · {9} 동물 · {10}</p>\n{11}\n<div class="nbtns{12}">{13}{14}</div><p class="nload">서식지 준비 중…</p>', RAR[v.rarity].name, fresh ? '<i class="new">NEW</i>' : newCol ? $t('<i class="new">새 색!</i>') : '', gift ? `<i class="gift">♥+${B.codexHeart}</i>` : '', r?.sure ? $t('<span class="sure">조각으로 확정!</span>') : '', r?.newAcc ? $t('<i class="new">새 치장!</i>') : '', nameOf(a), col && v?.rarity !== 'common' ? ` <small>${col.name}</small>` : '', a.acc ? $t('<div class="nsecret"><em>시크릿!</em> {0} 나왔어요{1}{2}</div>', ACCESSORIES[a.acc].wear, '<i>✦</i>'.repeat(6), r?.newAcc ? $t('<small>처음 만난 치장이에요 · 치장 앨범에 남았어요</small>') : '') : '', SP[a.species].name, H.name, fresh ? $t('처음 만난 변종이에요') : newCol ? $t('처음 보는 색이에요') : back ? $t('이미 도감에 있는 변종이에요') : $t('이미 가진 변종이에요'), away ? `<p class="nwhy away">${!open ? $t('{0}{이/가} 열리면 옮길 수 있어요. 그때까지 보관함에서 기다려요.', H.name) : room ? $t('{0}에서 사는 동물이에요. {1}으로 보낼게요.', H.name, H.name) : $t('{0}에서 사는 동물이에요. {1}에 자리가 모자라 보관함에서 기다려요.', H.name, H.name)}</p>` : '', away && room && back ? ' three' : '', !room ? $t('<button class="go" data-store>보관함으로</button>') : away ? $t('<button class="sb" data-look>{0}에서 보기</button><button class="go" data-go>확인</button>', H.name) : $t('<button class="go" data-go>서식지로 보내기</button>'), back ? $t('<button class="sb" data-back>판매 <span class="hrt">♥</span>+{0}</button>', n) : ''); // inbox 64-A: the first board still being built (body.building, main.js)
+    if (G190) serCard(a, back);
     cardEl.dataset.id = a.id; cardEl.hidden = false; stageEl.classList.toggle('secret', !!a.acc);
   }
   function answer(go, e) {
@@ -235,6 +239,9 @@ export function initNest(nav) {
       const H = HAB[habitatOf(a)], shut = !G.S.unlocked.includes(H.id);
       G.store(a.id); toast($t('{0} · {1}{은/는} 보관함에서 기다려요{2}', shut ? $t('{0}{이/가} 열리면 옮길 수 있어요', H.name) : $t('{0}에 자리가 모자라요', H.name), nm, gift), 3200);
       cardEl.hidden = true; stageOff(); busy = false; resume(); // 27-7a: nothing to see outside, so the nest stays open for the next egg (as 돌려보내기)
+    } else if (go === 'brk') { // 199 B-11 분해: a duplicate into 교환 도장 (판매's other choice)
+      const r = G.breakDup(a.id); if (r) { sfx('wood'); toast($t('{0}{을/를} 분해했어요 · 도장 +{1} (모은 도장 {2})', nm, r.n, G.S.stamp)); }
+      cardEl.hidden = true; stageOff(); busy = false; resume();
     } else if (go === 'look') { // out in its own habitat, and the camera goes there to see it
       const home = habitatOf(a); G.release(a.id); close(); nav.go(home, a.id);
     } else if (go) {
@@ -267,18 +274,21 @@ export function initNest(nav) {
     else if (b.dataset.look != null) answer('look', e);
     else if (b.dataset.store != null) answer('store', e);
     else if (b.dataset.back != null) answer(false, e);
+    else if (b.dataset.brk != null) answer('brk', e);
     else if (busy) return;
     else if (b.dataset.tab) { tab = b.dataset.tab; draw(); }
     else if (b.dataset.odds != null) openOdds(tab, G.S); // 177 C
     else if (b.dataset.tidy != null || b.dataset.untidy != null) { sel = sel || b.dataset.untidy != null ? null : new Set(); draw(); }
     else if (b.dataset.letgo != null) letGo(e);
+    else if (b.dataset.fetch != null) { if (G.takeFetched(+b.dataset.fetch) < 0) toast($t('부화 칸이 가득 찼어요 · 알을 부화하면 넣을 수 있어요')); else sfx('egg'); } // 199 B-11
     else if (b.dataset.gift != null) { if (G.takeGift() < 0) toast($t('부화 칸이 가득 찼어요 · 알을 부화하면 넣을 수 있어요')); else sfx('egg'); }
     else if (sel && b.dataset.id) { const id = +b.dataset.id, x = nest().eggs.find(x => x.id === id); if (x && canLetGo(x)) { sel.has(id) ? sel.delete(id) : sel.add(id); draw(); } else toast($t('선물 알은 판매할 수 없어요')); }
     else if (b.dataset.id) { if (G.takeEgg(habId, +b.dataset.id) < 0) toast($t('부화 칸이 가득 찼어요')); else { sfx('egg'); tip('hatch', '#nslots'); } }
     else if (b.dataset.i != null) {
       const s = G.S.slots[+b.dataset.i], now = G.now();
+      if (press?.long) { press = null; return; } // 199 B-11 review 5: a long press shook it (below), not a tap
       if (!s) toast($t('위의 알을 누르면 이 칸에 들어가요'));
-      else if (now < s.end) { toast($t('{0} 알 · {1} 뒤에 부화해요', RAR[s.egg.rarity].name, span(s.end - now))); knock(b); if (TOSS) dispatchEvent(new CustomEvent('toss:egg', { detail: { i: +b.dataset.i } })); } // 174: src/toss.js may ask about an ad
+      else if (now < s.end) { toast($t('{0} 알 · {1} 뒤에 부화해요', RAR[s.egg.rarity].name, span(s.end - now)) + (G190 ? $t(' · 길게 누르면 흔들어 봐요') : '')); knock(b); if (TOSS) dispatchEvent(new CustomEvent('toss:egg', { detail: { i: +b.dataset.i } })); } // 174: src/toss.js may ask about an ad
       else hatchSlot(+b.dataset.i);
     }
   });
@@ -291,6 +301,43 @@ export function initNest(nav) {
   }
   // 69-1: an egg still waiting, tapped (톡), answers from inside a moment later: two little rocks and 톡톡 (the same for every rarity)
   function knock(b) { sfx('tok', 0.28); sfx('tok', 0.42); b.classList.remove('knock'); void b.offsetWidth; b.classList.add('knock'); }
+  // ---- 199 B-11 (?g190): 물어온 알 (a row like 선물 알), the card's 시리즈 line and 분해, 흔들어 보기 (3 a day: the sound tells its group)
+  function drawFetch(free) {
+    const fe = $('nfetch'), q = G.S.ser?.f?.q || []; fe.hidden = !q.length;
+    once('fetch', q.map(x => x.egg.id).join(), () => {
+      fe.innerHTML = $t('<b>물어온 알</b>{0}<small></small>', q.map((x, j) => $t('<button class="negg" data-fetch="{0}" aria-label="물어온 {1} 알"><img alt=""></button>', j, RAR[x.egg.rarity].name)).join(''));
+      fe.querySelectorAll('img').forEach((img, j) => eggThumb(q[j].egg.rarity).then(u => { img.src = u; }, () => {}));
+    });
+    if (q.length) { const p = G.S.props.find(p => p.uid === q[0].uid), P = p && PROPS.find(x => x.id === p.prop);
+      fe.lastChild.textContent = (P ? $t('{0}{이/가} 물어왔어요 · ', P.name) : '') + (free ? $t('누르면 부화 칸에 들어가요') : $t('부화 칸이 비면 넣을 수 있어요')); }
+  }
+  function serCard(a, back) {
+    const k = key(a.species, a.variant), s = serOf(k), row = cardEl.querySelector('.nbtns');
+    if (s) { const p = document.createElement('p'), n = serHave(G.S, s) + (G.S.codex[k] ? 0 : 1); p.className = 'nwhy nser';
+      p.textContent = $t('{0} {1}/{2}{3}', s.name, n, s.cells.length, G.S.codex[k] ? '' : $t(' · 새 칸!')); row.before(p); }
+    const sec = s && G.S.ser?.[s.id]?.sec, first = a.s && s ? !sec || sec.species + ':' + sec.variant === k && (sec.acc ?? null) === (a.acc ?? null) : !G.S.codex[k]; // the card comes before the codex has it
+    const no = !first ? 0 : a.s && s ? collNo(G.S, k, true) : collNo(G.S, k); // 215 (3-13): 「나의 n번째 전설」 / a series secret's, counted; only its first (review 6)
+    if (no) { const p = document.createElement('p'); p.className = 'nwhy cno'; p.textContent = a.s && s ? $t('No.{0} · 나의 {1}번째 시크릿', no, no) : $t('No.{0} · 나의 {1}번째 전설', no, no); row.before(p); }
+    if (!back) return;
+    const x = Object.assign(document.createElement('button'), { className: 'sb' }); x.dataset.brk = '';
+    x.textContent = $t('분해 +{0}', brkStamps(a)); row.append(x); row.classList.add('three'); // 208 A Q4
+  }
+  // review 5: a tap tells the time left as before; a long press (0.45 s, as friends.js) on a waiting egg shakes it
+  let press = null;
+  const waiting = b => { const s = b && G.S.slots[+b.dataset.i]; return !!s && G.now() < s.end; };
+  if (G190) {
+    slotsEl.addEventListener('pointerdown', e => { const b = e.target.closest('[data-i]'); if (press) clearTimeout(press.t); press = null; if (!waiting(b)) return;
+      press = { x: e.clientX, y: e.clientY, t: setTimeout(() => { press.long = true; shakeSlot(b, +b.dataset.i); }, 450) }; });
+    slotsEl.addEventListener('pointermove', e => { if (press && !press.long && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) { clearTimeout(press.t); press = null; } });
+    for (const k of ['pointerup', 'pointercancel', 'pointerleave']) slotsEl.addEventListener(k, () => { if (press) clearTimeout(press.t); });
+    slotsEl.addEventListener('contextmenu', e => { if (waiting(e.target.closest('[data-i]'))) e.preventDefault(); }); // no menu on the egg's picture
+  }
+  function shakeSlot(b, i) {
+    const r = G.shake(i); if (!r) return;
+    if (r.none) { toast($t('오늘은 흔들어 보기를 다 했어요 · 내일 다시 3번')); return knock(b); }
+    const [t, snd] = SOUND[r.sound]; b.classList.remove('knock'); void b.offsetWidth; b.classList.add('knock'); sfx(snd, 0.2);
+    toast($t('{0} · 오늘 {1}번 남았어요', t, r.left));
+  }
   G.on(ev => { if (ev.some(e => e.type === 'reset')) close(); draw(); });
 
   return {
