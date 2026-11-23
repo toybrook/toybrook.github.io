@@ -12,7 +12,7 @@
 import { $t, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { BALANCE as B, BIGS, PROPS, SCENES, NATURE, BRUSHES, SETS, ZONES, brushIn, paletteOf, SIZES, sizeF, sizable, YARD_B, G190 } from '../game/data.js';
-import { SP, PROP, HAB, propReady, placedIn, railsIn, capped, levelOf, expPrice, decorCap, layoutOf, can as canLv, needFor, natCap, natIn, callName, habitatOf, capOf, spotMode, spotsUsed } from '../game/rules.js';
+import { SP, PROP, HAB, propReady, placedIn, railsIn, capped, levelOf, expPrice, decorCap, layoutOf, can as canLv, needFor, natCap, natIn, callName, habitatOf, capOf, spotMode, spotsUsed, piecesOwned, piecesUsed } from '../game/rules.js';
 import { SPOTS, rectAt } from '../habitat/zones.js'; // 194 0-5
 import { walker, visitors, callable } from '../game/yard.js'; // 182 ④
 import { capAt } from '../game/scatter.js'; // 195 B-8 1-2
@@ -88,7 +88,7 @@ const keep = () => { undo.push(layoutOf(G.S, habId)); if (undo.length > UNDO) un
 
 export function openDecor(id, api) {
   if (!api) return; // 168: no habitat built yet (its loading screen): nothing to decorate (style.css hides the buttons then)
-  habId = id; hab = api; held = null; brush = undefined; yv = null; y3 = ypan = ytop = false; yk = -1; nightPv(0); grid = id === 'yard'; undo = []; redo = []; min = false; moreT = false; pick = null; sweep = 0; el.classList.remove('tall');
+  habId = id; hab = api; held = null; brush = undefined; yv = null; y3 = ypan = ytop = false; yk = -1; nightPv(0); grid = id === 'yard'; undo = []; redo = []; pcOk = 0; pcSpent = 0; pcSeq++; min = false; moreT = false; pick = null; sweep = 0; el.classList.remove('tall');
   if (!tabsHere().some(t => t.id === tab)) tab = 'nature';
   el.hidden = false; habEl.classList.add('decorating'); if (document.documentElement.dataset.ui187) hideToast(); /* 202 B-13 (?rc200): no note left over the board while decorating */ hab.decor.mode(true); if (grid) hab.decor.grid(true); draw(); tip('decor', '#decor .dgrid'); tip('expand', '#decor .dexp'); tip('nature', '#decor [data-sweep]'); if (tab === 'train') railGuide();
 }
@@ -100,7 +100,32 @@ export const leaveDecor = () => { closeDecor(); hab = null; };
 export function onPropTap(uid) { const rec = G.S.props.find(p => p.uid === uid); if (!rec || el.hidden || brush !== undefined || sweep || rec.nat && SPM()) return; // 194 0-5: the board's own trees stay
   if (pick) { pick.has(uid) ? pick.delete(uid) : pick.add(uid); draw(); } else hold(rec); }
 export function onEdit(can) { ok = can; if (held && sig() !== shown) draw(); }
-export function onPaint(cells, b) { if (el.hidden || !cells.length) return; const before = layoutOf(G.S, habId); if ((typeof b === 'string' ? G.scatter : G.paintCells)(habId, cells, b)) { undo.push(before); if (undo.length > UNDO) undo.shift(); redo = []; draw(); } } // 195 B-8 1-2 b 's0'.., 'sx': 흩뿌리기 붓 (G.scatter)
+// 246 B 이어지는 조각 bought as painted: asked the first time an opening of 꾸미기 needs one, at most PC_CAP ♥ an opening (openDecor resets)
+// pcOk: 0 not asked yet, 1 yes, -1 no (the bag only till the next opening); pcSeq: which opening (an ask left from an older one does nothing)
+const PC_CAP = 100; let pcOk = 0, pcSpent = 0, pcSeq = 0;
+export async function onPaint(cells, b) { if (el.hidden || !cells.length) return; // 195 B-8 1-2 b 's0'.., 'sx': 흩뿌리기 붓 (G.scatter)
+  const pz = typeof b === 'number' && BRUSHES[b]?.piece, left = () => cells.filter(([i, j]) => G.S.paint[habId]?.[`${i},${j}`] !== b).length;
+  if (pz && !pcOk && left() > piecesOwned(G.S, b) - piecesUsed(G.S, b) && G.S.hearts >= pz[1] && pcSpent + pz[1] <= PC_CAP) {
+    const seq = pcSeq, h0 = habId, ok = await ask($t('조각이 모자라면 ♥로 사서 칠해요 · 한 번에 최대 ♥{0}', PC_CAP), $t('사서 칠하기'));
+    if (el.hidden || seq !== pcSeq || h0 !== habId) return; pcOk = ok ? 1 : -1; }
+  const before = layoutOf(G.S, habId), o0 = pz && piecesOwned(G.S, b), n = (typeof b === 'string' ? G.scatter : G.paintCells)(habId, cells, b, pz ? pcOk > 0 ? PC_CAP - pcSpent : 0 : undefined);
+  if (n) { undo.push(before); if (undo.length > UNDO) undo.shift(); redo = []; draw(); }
+  if (pz) { const spent = (piecesOwned(G.S, b) - o0) * pz[1]; pcSpent += spent; // 238 E1 이어지는 조각: what the stroke cost (by pieces bought: act may add ♥ too), or why it stopped
+    if (left() && pcOk < 0) toast($t('가방의 조각만 칠했어요 · ♥로 사려면 꾸미기를 다시 열어요'));
+    else if (left() && G.S.hearts < pz[1]) toast($t('조각이 다 떨어졌어요 · 한 조각에 ♥{0}, 지금 ♥{1}', pz[1], G.S.hearts));
+    else if (left() && pcOk > 0 && pcSpent + pz[1] > PC_CAP) toast($t('이번에 조각을 ♥{0}만큼 샀어요 · 더 사려면 꾸미기를 다시 열어요', pcSpent));
+    else if (spent) toast($t('{0} {1}조각을 더 샀어요 · ♥-{2}', BRUSHES[b].name, spent / pz[1], spent)); if (!n) draw(); } }
+// 238 E1 (?h232): buy a 이어지는 조각 brush (its first price: the right and one piece), asked first; true when bought
+async function buyPieces(b) {
+  const B0 = BRUSHES[b], [first, each] = B0.piece;
+  if (G.S.hearts < first) { toast($t('하트 {0}개가 필요해요 · 지금 ♥{1}', first, G.S.hearts)); return false; }
+  if (pcSpent + first > PC_CAP) { toast($t('이번에 조각을 ♥{0}만큼 샀어요 · 더 사려면 꾸미기를 다시 열어요', pcSpent)); return false; } // 248 D Q2: the right counts too
+  const seq = pcSeq;
+  if (!await ask($t('{0}{을/를} ♥{1}에 살까요? 첫 조각이 들어 있고, 다음 조각부터 한 칸에 ♥{2}예요 · 지운 조각은 가방에 남아 다시 놓을 때 공짜예요', B0.name, first, each), $t('이어지는 조각'))) return false;
+  if (seq !== pcSeq || pcSpent + first > PC_CAP) return false; // reopened (or the cap reached) while asked
+  if (!G.buyBrush(b)) { toast($t('지금은 살 수 없어요')); return false; }
+  pcSpent += first; toast($t('{0} 샀어요 · ♥-{1}', B0.name, first)); sfx('place'); return true;
+}
 // inbox 42 F-6 자연 정리: the natives in the box drawn (habitat.js) put away at once; asked at the first box, ↶ brings them back
 export async function onSweep(uids) {
   const ps = () => G.S.props.filter(p => p.nat && p.placed && p.hab === habId && uids.includes(p.uid)); if (el.hidden || !sweep || !ps().length) return;
@@ -204,7 +229,7 @@ function draw() {
   hab.decor.picked(null);
   if (yv && brush === undefined) return yPage(); // 182 ④
   if (brush !== undefined) { // 땅 칠하기: the brushes; a finger paints the cells it passes, two move the view
-    el.innerHTML = GRIP() + $t('<div class="dhead"><b>땅 칠하기</b><span>칸을 손가락으로 칠해요 · 길은 옆 칸과 저절로 이어지고, 울타리·돌담은 동물이 돌아가요</span></div>\n<div class="dbrush">{0}<button class="{1}" data-brush="x"><i class="erase"></i>지우개</button></div>\n{2}<div class="nbtns">{3}<button class="go" data-endpaint>다 칠했어요</button></div>\n<p class="dhint">두 손가락으로 화면을 옮기고 키워요{4}</p>', BRUSHES.map((b, i) => { if (!brushIn(i, habId) || b.id === 'bloom') return ''; /* 74: 꽃밭 merged into 풀 (67-3 made them alike; painted cells stay) */ const k = 'brush:' + b.id, lk = !can(G.S, k); return `<button class="${brush === i ? 'on' : lk ? 'lock' : ''}" data-brush="${i}"><i style="background:${b.c}"></i>${b.name}${lk ? `<small>Lv ${needFor(k)}</small>` : ''}</button>`; }).join('') + scBtns(), brush === null ? 'on' : '', tools(), trails(G.S, habId).length && firmB() != null ? $t('<button class="sb" data-firm>진짜 길로 굳히기<small>동물들이 다닌 길 {0}칸 → {1}</small></button>', trails(G.S, habId).length, BRUSHES[firmB()].name) : '', habId === 'yard' ? $t(' · 「화면 옮기기」를 켜면 한 손가락으로 화면을 옮겨요 · 물은 보기만 하는 얕은 물이에요') + $t(' · 문은 울타리·돌담·생울타리 줄에 칠하면 동물이 드나들고, 두 칸이면 큰 문이에요 · 나무다리는 물을 건너요') + (hab.decor.fine?.TXT.hint ?? '') : habId === 'pond' ? $t(' · 연못은 물가 풀밭만 칠해요') : habId === 'snow' ? $t(' · 설원은 얼음 연못 밖 눈밭만 칠해요') : habId === 'dino' ? $t(' · 공룡 정글은 석호 밖 땅만 칠해요') : '');
+    el.innerHTML = GRIP() + $t('<div class="dhead"><b>땅 칠하기</b><span>칸을 손가락으로 칠해요 · 길은 옆 칸과 저절로 이어지고, 울타리·돌담은 동물이 돌아가요</span></div>\n<div class="dbrush">{0}<button class="{1}" data-brush="x"><i class="erase"></i>지우개</button></div>\n{2}<div class="nbtns">{3}<button class="go" data-endpaint>다 칠했어요</button></div>\n<p class="dhint">두 손가락으로 화면을 옮기고 키워요{4}</p>', BRUSHES.map((b, i) => { if (!brushIn(i, habId) || b.id === 'bloom') return ''; /* 74: 꽃밭 merged into 풀 (67-3 made them alike; painted cells stay) */ const k = 'brush:' + b.id, lk = !can(G.S, k), pz = b.piece, own = pz && piecesOwned(G.S, i); /* 238 E1 이어지는 조각: ♥ first, then the pieces left · ♥ each */ return `<button class="${brush === i ? 'on' : lk || pz && !own ? 'lock' : ''}" data-brush="${i}"><i style="background:${b.c}"></i>${b.name}${lk ? `<small>Lv ${needFor(k)}</small>` : pz ? `<small>${own ? $t('{0}조각 · ♥{1}', own - piecesUsed(G.S, i), pz[1]) : `<span class="hrt">♥</span>${pz[0]}`}</small>` : ''}</button>`; }).join('') + scBtns(), brush === null ? 'on' : '', tools(), trails(G.S, habId).length && firmB() != null ? $t('<button class="sb" data-firm>진짜 길로 굳히기<small>동물들이 다닌 길 {0}칸 → {1}</small></button>', trails(G.S, habId).length, BRUSHES[firmB()].name) : '', habId === 'yard' ? $t(' · 「화면 옮기기」를 켜면 한 손가락으로 화면을 옮겨요 · 물은 보기만 하는 얕은 물이에요') + $t(' · 문은 울타리·돌담·생울타리 줄에 칠하면 동물이 드나들고, 두 칸이면 큰 문이에요 · 나무다리는 물을 건너요') + (hab.decor.fine?.TXT.hint ?? '') : habId === 'pond' ? $t(' · 연못은 물가 풀밭만 칠해요') : habId === 'snow' ? $t(' · 설원은 얼음 연못 밖 눈밭만 칠해요') : habId === 'dino' ? $t(' · 공룡 정글은 석호 밖 땅만 칠해요') : '');
     return;
   }
   const rl = tab === 'train', spm = SPM() && !rl, [n, cap] = rl ? [railsIn(G.S, habId), B.decor.rails] : spm ? spotsUsed(G.S, habId) : [placedIn(G.S, habId).length, decorCap(G.S, habId)], L = levelOf(G.S, habId), price = expPrice(G.S, habId), xk = 'expand:' + (L + 1), yd = habId === 'yard', xl = price != null && !yd && !can(G.S, xk);
@@ -347,7 +372,8 @@ el.addEventListener('click', async e => {
   else if (d.rhelp != null) railHelp();
   else if (d.paint != null) { brush = brushIn(1, habId) ? 1 : 5; hab.decor.paint(brush); draw(); } // 흙길 first: the brush most will want (25-1 the snow: 눈)
   else if (d.brush) { const sc = /^s[\dx]$/.test(d.brush); if (sc && habId !== 'yard') return; // 195 B-8 1-2 흩뿌리기 붓: the yard's, no Lv (13-1 16: not sold)
-    if (!sc && d.brush !== 'x' && !can(G.S, 'brush:' + BRUSHES[+d.brush].id)) return locked('brush:' + BRUSHES[+d.brush].id); brush = sc ? d.brush : d.brush === 'x' ? null : +d.brush; hab.decor.paint(brush, sc ? capAt(levelOf(G.S, 'yard')) : undefined); draw(); }
+    if (!sc && d.brush !== 'x' && !can(G.S, 'brush:' + BRUSHES[+d.brush].id)) return locked('brush:' + BRUSHES[+d.brush].id);
+    const pz = !sc && d.brush !== 'x' && BRUSHES[+d.brush].piece; if (pz && !piecesOwned(G.S, +d.brush) && !await buyPieces(+d.brush)) return; /* 238 E1 */ brush = sc ? d.brush : d.brush === 'x' ? null : +d.brush; hab.decor.paint(brush, sc ? capAt(levelOf(G.S, 'yard')) : undefined); draw(); }
   else if (d.sweep != null) { sweep = 1; hab.decor.sweep(true); draw(); }
   else if (d.endsweep != null) { sweep = 0; hab.decor.sweep(false); draw(); }
   else if (d.firm != null) { const b = firmB(), c = trails(G.S, habId).map(([k]) => k.split(',').map(Number)); if (b == null || !c.length) return;

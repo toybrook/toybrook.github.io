@@ -36,17 +36,15 @@ function setup() {
   const c = R.domElement, drop = () => { if (R?.domElement === c) gone = true; }; c.addEventListener('webglcontextlost', drop); c.addEventListener('webglcontextrestored', drop);
   cam = new THREE.PerspectiveCamera(22, 1, 0.1, 200);
 }
-function shoot(obj, silhouette = false, night = false, alpha = 1) { // alpha 0: no background (14-1 the 신수 card's stand shows under it)
-  if (gone) setup();
-  const was = nightGlow.value; if (night) { nightLights(S, true); R.setClearColor(NIGHT_BG, 1); }
-  obj.rotation.y = -Math.PI / 2 + 0.45; scene.add(obj); // facing us, turned a little (like tools/lineup.html ?a=front)
+function shoot(obj, silhouette = false, night = false, alpha = 1, look = {}) { // alpha 0: no background (14-1 the 신수 card's stand shows under it)
+  if (gone) setup(); // look (249 C): yaw, how far turned from facing us; glow, the night glow (1: as the habitat's night)
+  const was = nightGlow.value; if (night) { nightLights(S, true); R.setClearColor(NIGHT_BG, 1); nightGlow.value = look.glow ?? 1; }
+  obj.rotation.y = -Math.PI / 2 + (look.yaw ?? 0.45); scene.add(obj); // facing us, turned a little (like tools/lineup.html ?a=front)
   const box = new THREE.Box3().setFromObject(obj), c = box.getCenter(new THREE.Vector3()), r = box.getSize(new THREE.Vector3()).length() / 2;
   cam.position.set(c.x, c.y + r * 0.35, c.z + r / Math.tan(THREE.MathUtils.degToRad(11)) * 0.95); cam.lookAt(c);
   sil.color.set(night ? '#4a5382' : '#d8c4a4'); scene.overrideMaterial = silhouette ? sil : null; // a dim shape on the night cell
-  R.setClearAlpha(alpha); R.render(scene, cam); R.setClearAlpha(1); scene.remove(obj);
-  const url = R.domElement.toDataURL('image/png');
-  if (night) { nightLights(S, false); R.setClearColor(BG, 1); nightGlow.value = was; } // back as the habitat had it
-  return url;
+  try { R.setClearAlpha(alpha); R.render(scene, cam); return R.domElement.toDataURL('image/png'); }
+  finally { R.setClearAlpha(1); scene.remove(obj); if (night) { nightLights(S, false); R.setClearColor(BG, 1); nightGlow.value = was; } } // back as the habitat had it, a throw too (249 C review)
 }
 const once = (k, f) => cache.has(k) ? cache.get(k) : (cache.set(k, f().catch(e => { cache.delete(k); throw e; })), cache.get(k)); // 27-2: a failed one (offline) is made again next time
 
@@ -54,9 +52,9 @@ const once = (k, f) => cache.has(k) ? cache.get(k) : (cache.set(k, f().catch(e =
 // (async: the species' model may not be loaded yet)
 export const figureThumb = (spId, vId, cId = null, acc = null, stage = 'adult', night = false, alpha = 1) => once(`f${spId}:${vId}:${cId}:${acc}:${stage}${night ? ':n' : ''}${alpha < 1 ? ':a' : ''}`, async () => { await Promise.all([loadModel(SP[spId].model), loadAcc(acc)]); return shoot(makeFigure(spId, vId, stage, acc, cId).obj, false, night, alpha); });
 // a habitat's decor prop (front +z), turned a little toward us like the figures (a light without its halo sprite: it would widen the framing; 154 F: nor a hidden part, 비눗방울's bubbles)
-export const propThumb = (id, make, silhouette = false, night = false) => once('p' + id + (silhouette ? ':s' : '') + (night ? ':n' : ''), async () => { const g = new THREE.Group(), m = make(id); m.remove(...m.children.filter(o => o.isSprite || o.isPoints || o.material?.blending === THREE.AdditiveBlending || !o.visible)); m.rotation.y = Math.PI / 2 - 0.9; g.add(m);
+export const propThumb = (id, make, silhouette = false, night = false) => once('p' + id + (silhouette ? ':s' : '') + (night ? ':n' : ''), async () => { const g = new THREE.Group(), m = make(id); m.remove(...m.children.filter(o => o.isSprite || o.isPoints || o.material?.blending === THREE.AdditiveBlending || o.material?.blending === THREE.CustomBlending || !o.visible)); m.rotation.y = Math.PI / 2 - 0.9; g.add(m);
   const P = PROP[id]; if (P?.stamp) for (const c of m.children) if (!c.userData.flat) c.position.y += shape(P.stamp, Math.hypot(c.position.x, c.position.z) / P.r); // inbox 154 F: the rocks and flowers up on the dome (in the habitat the ground lifts them; here they were inside it: a green lump)
-  const z = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()); if (z.y < 0.3 * Math.max(z.x, z.z)) g.rotation.x = 0.55; // 102: a flat one (웅덩이 · 돌길 · 레일 · 연잎) tipped toward us like artThumb (edge-on it was a thin line on the cream); a night pool or sparks no longer widen the framing (모닥불 was a dot)
+  const z = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()); if (z.y < 0.3 * Math.max(z.x, z.z)) g.rotation.x = 0.55; // 102: a flat one (웅덩이 · 돌길 · 레일 · 연잎) tipped toward us like artThumb (edge-on it was a thin line on the cream); a night pool or sparks no longer widen the framing (모닥불 was a dot); 238 B: nor a 230 light pool (its own blend, not additive: the 석등 was a dot)
   return shoot(g, silhouette, night); }); // 13-2: the 놀이 장면 tab's "?" cells as a flat shape
 // 17-2 작품집: a 동물 작품 lies flat on the ground: tipped toward us so its shape shows (its own key: the 꾸미기 cell keeps the plain one)
 export const artThumb = (id, make, night = false) => once('a' + id + (night ? ':n' : ''), async () => { const g = new THREE.Group(), m = make(id); m.rotation.y = Math.PI / 2 - 0.9; g.add(m); g.rotation.x = 0.55; return shoot(g, false, night); });

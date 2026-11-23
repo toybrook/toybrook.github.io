@@ -26,6 +26,7 @@ import { openStories, cardsIn } from './story.js';
 import { SLOTS } from '../game/sky.js';
 import { BLOOMS, recipe } from '../game/wild.js'; // 17-3 들꽃 도감
 import { collNo } from '../game/series.js'; // 215
+import { whoIn } from '../game/art.js'; // 254 A-5
 const SKY_N = SLOTS.length;
 
 const el = document.getElementById('codex');
@@ -160,7 +161,7 @@ let sceneOpen = false; // 66-3: the fold stays as the player left it while the c
 let artOpen = false;
 const artBook = () => G.S.art.book.filter(b => b.hab === tab).reverse();
 const artHtml = () => { const L = artBook();
-  return $t('<details class="cscenes cart"{0}><summary>작품집 <small>{1}</small></summary>{2}\n<p class="cnote">동물이 만든 작품을 「그대로 두기」나 「기록만 남기고 치우기」로 고르면 담겨요 · 도감 수에는 들어가지 않아요</p></details>', artOpen ? ' open' : '', L.length, L.length ? `<div class="crow ab">${L.map(b => `<div class="cell art"><img alt="${PROP[b.prop]?.name}"><span>${PROP[b.prop]?.name}</span><small>${esc(b.who)}<br>${new Date(b.at).toLocaleDateString(LOC)}</small></div>`).join('')}</div>` : ''); };
+  return $t('<details class="cscenes cart"{0}><summary>작품집 <small>{1}</small></summary>{2}\n<p class="cnote">동물이 만든 작품을 「그대로 두기」나 「기록만 남기고 치우기」로 고르면 담겨요 · 도감 수에는 들어가지 않아요</p></details>', artOpen ? ' open' : '', L.length, L.length ? `<div class="crow ab">${L.map(b => `<div class="cell art"><img alt="${PROP[b.prop]?.name}"><span>${PROP[b.prop]?.name}</span><small>${esc(whoIn(b.who))}<br>${new Date(b.at).toLocaleDateString(LOC)}</small></div>`).join('')}</div>` : ''); };
 const fillArt = () => { const L = artBook(); el.querySelectorAll('.cell.art img').forEach((img, i) => { if (hab?.decor) artThumb(L[i].prop, hab.decor.model, night).then(u => { img.src = u; }, () => {}); }); };
 // 17-3 들꽃 도감: the colours of the 들꽃 that spread by themselves (game/wild.js), one cell each: the flower (its petals and middle),
 // the name, the day it first bloomed; not yet: ? and how it comes (the two colours mixed, or where the colour is). The garden's

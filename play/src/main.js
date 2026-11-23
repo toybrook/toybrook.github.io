@@ -3,7 +3,7 @@ import { reportText, copyNow, placeFrom, glRebuilt } from './ui/report.js'; // f
 import { $t, LANG, LANGS, localize, ko, SEP, esc } from './i18n/i18n.js';
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg, spotMode } from './game/rules.js';
-import { BALANCE, HABITATS, ZONES, PROPS, F170, TUT181, S186, G190 } from './game/data.js';
+import { BALANCE, HABITATS, ZONES, PROPS, F170, TUT181, S186, G190, FEST } from './game/data.js';
 import { initWorldMap } from './worldmap/worldmap.js';
 import { z143on } from './habitat/zones.js'; // 145 B: the new zone cards under ?z143
 import { zzz, heart, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
@@ -83,7 +83,7 @@ const nav = {
 let touched = false; for (const k of ['pointerdown', 'keydown']) addEventListener(k, () => { touched = true; }, { capture: true, once: true });
 let play = null; const early = [];
 G.on(ev => { if (!play) early.push(...ev); });
-const code = () => code.p ??= (codeAsked(), Promise.all([import('./habitat/habitat.js'), import('./ui/play.js')]).then(([h, p]) => {
+const code = () => code.p ??= (codeAsked(), Promise.all([import('./habitat/habitat.js'), import('./ui/play.js'), FEST && import('./habitat/yard/props230.js')]).then(([h, p]) => { // 238 E2: the festival's props (?fest; yard/ is out of the build)
   play = p.initPlay(nav); play.events([...offline, ...early]); early.length = 0; return h;
 }, e => { code.p = null; throw e; }));
 const idle = f => (window.requestIdleCallback || setTimeout)(f, { timeout: 2000 });
@@ -111,7 +111,7 @@ const ui = {
     const c = document.createElement('canvas'), g = c.getContext('webgl2') || c.getContext('webgl'); if (!g || g.isContextLost()) return glFail('no context');
     g.getExtension('WEBGL_lose_context')?.loseContext(); redo(id); built[id]?.then(glRebuilt, glFail); },
   onDig: () => { const id = G.dig(); if (id) toast($t('화석을 발견했어요! {0} · 꾸미기 › 선물에 넣어 두었어요', PROPS.find(p => p.id === id).name), 2800, true); return id; }, // 14-3 화석 발굴
-  onPile: () => { const n = G.tapPile(), L = n && G.event(); if (n) toast($t('눈더미에서 {0} {1} {2}개!', L.e.coin.icon, L.e.coin.name, n), 2200, true); return n; }, // 15-2 첫눈
+  onPile: () => { const n = G.tapPile(), L = n && G.event(); if (n) toast($t('눈더미에서 {0} {1} {2}개!', L.e.coin.icon, L.e.coin.name, n), 2200, true); return n; }, // 15-2 첫눈; 238 E2 the festival's unlit lantern
   hello: (x, y) => heart(x, y), // inbox 64-A: the first friend's hop
   skyNow, onStar, // 16-2 특별한 하늘 (ui/sky.js)
   onMyth, // 14-1 the meadow's fire prints, hoofprints, altar and 신수 tapped (ui/myth.js)
@@ -167,7 +167,10 @@ function moved(then) {
   $('habitat').append(el); sfx('level');
 }
 async function enter(id) {
-  cur = id; world.classList.add('hidden'); hab.classList.remove('hidden'); hab.setAttribute('aria-label', HAB[id].name + $t(' 서식지 3D'));
+  // 257 B: a habitat still to load comes in at once under its cover (#loading, style.css): no .6 s map fade and no 토이브룩 (boot) fade, which stall under the load and let the map labels show through (under 170 the cover is the same still)
+  const now = !built[id] && !hab.classList.contains('now'); if (now) { world.classList.add('now'); hab.classList.add('now'); $('boot')?.remove(); }
+  cur = id; world.classList.add('hidden'); hab.classList.remove('hidden');
+  if (now) { void hab.offsetWidth; world.classList.remove('now'); hab.classList.remove('now'); } hab.setAttribute('aria-label', HAB[id].name + $t(' 서식지 3D'));
   $('habName').querySelector('b').textContent = HAB[id].short ?? HAB[id].name; // 14-3: the chip's room (375 wide) fits two letters
   loadBar(true, !!play); if (F170) bootOff(); if (G.S.flags.lastHab !== id) G.flag('lastHab', id);
   if (!SEE) track('habitat_open', { habitat: ko(HAB[id].name) }, 'open:' + id); // inbox 41 A: a day each
@@ -349,6 +352,7 @@ addEventListener('visibilitychange', () => {
 $('introStart').onclick = () => { intro.hidden = true; G.flag('betaIntro'); G.flag('news', VERSION); PREFS.introAt = VERSION; savePrefs(); firstDone();
   if (!cur && firstEgg(G.S)) nav.go(HABITATS[0].id); }; // inbox 61 B: a new player, straight to the first egg (no map tap)
 news.querySelector('[data-close]').onclick = () => { news.hidden = true; G.flag('news', VERSION); firstDone(); };
+if (FEST && !SEE) import('./ui/fest.js').then(m => m.initFest(() => cur, () => api, nav)); // 238 E2 (?fest; not in the build)
 if (G190 && !SEE) import('./ui/series.js').then(m => m.useCam(() => cur && api ? [cur, ...api.camAt()] : null)); // 199 B-11 시리즈 · 의뢰 (?g190 only); 208 A: where the camera looks, for the request's 채움 / 모자람
 if (F170 && !SEE) import('./ui/first170.js'); // 170 C·D: the first day's one line and its end card
 let tut = null; if (TUT181 && !SEE) import('./ui/tut181.js').then(m => { tut = m; m.initTut(() => cur, () => api); }); // 182 ②: the 181 tutorial on the 170 flow (F170 is on with it)
@@ -402,7 +406,7 @@ rows.onclick = e => {
   if (d.act === 'home') { G.flag('homeHintSeen', false); prefs.hidden = true; return toast(cur ? $t('홈 화면 안내를 다시 보여 줄게요') : $t('서식지에 들어가면 홈 화면 안내를 다시 보여 줄게요'), 2200, true); } // play.js shows it
   if (d.act === 'backup') return BK.open();
   if (d.act === 'news') { prefs.hidden = true; news.hidden = false; return; }
-  if (d.act === 'intro') { prefs.hidden = true; intro.hidden = false; return; }
+  if (d.act === 'intro') { prefs.hidden = true; intro.classList.add('all'); intro.hidden = false; return; } // 264 B ⑥: with the sentences the first card leaves out
   if (d.act === 'code') { prefs.hidden = true; return openCode(); }
   if (d.act === 'desk' || d.act === 'pip') { prefs.hidden = true; const a = api; if (!a) return toast($t('서식지를 그리는 중이에요 · 조금 뒤에 다시 눌러 주세요'), 2200, true); return import('./ui/desk.js').then(m => d.act === 'pip' ? m.openPip(a) : m.deskOn(a)).catch(e => { console.warn('desk', e); toast($t('작은 창을 열지 못했어요'), 2200, true); }); } // 16-3
   if (d.act === 'fb') return void open(fbUrl(), '_blank', 'noopener');

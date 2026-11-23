@@ -104,13 +104,13 @@ function figure(c, sil, acc = null) { // acc: 215 the series' secret, as it came
 }
 async function build() {
   const want = sig(); if (want === built) return; built = want;
-  const ser = serOf(), M = ser && G.S.ser?.[ser.id], cells = cellsNow(), sec = M?.sec && cellsOf1(M.sec), sps = [...new Set([...cells, ...sec ? [sec] : []].map(c => c.species))];
+  const ser = serOf(), M = ser && G.S.ser?.[ser.id], cells = cellsNow(), sec = null, sps = [...new Set([...cells, ...sec ? [sec] : []].map(c => c.species))];
   const prize = M?.got ? await import('../habitat/meadow/props.js').then(m => m.decorModel, () => null) : null; // 215: shared materials (props.js dm), its own geometries
   if (!await Promise.all([...sps.map(s => loadModel(s.model)), M?.sec?.acc && loadAcc(M.sec.acc)]).then(() => true, () => false)) { if (built === want) built = ''; return; } // 168: offline, a model never fetched: no shelves yet, the next open or change tries again
   if (want !== sig()) return;
   st.root.traverse(o => { o.skeleton?.dispose(); if (o.isPoints) o.geometry.dispose(); }); /* a legendary's sparkles (figure.js effect): its own geometry, a shared material */ for (const x of own) x.dispose(); own = []; // 195 B-10b M1 (was clear() alone: ~470 KB a build)
   st.root.clear(); figs = []; fx = []; star = null; shelves = [];
-  const groups = ser ? [0, 1, 2, 3].map(r => cells.slice(r * 3, r * 3 + 3)).concat([sec ? [sec] : []]) : sps.map(sp => cells.filter(c => c.species === sp)); // 215: a series three to a shelf, the secret's shelf last
+  const groups = ser ? [0, 1, 2, 3].map(r => cells.slice(r * 3, r * 3 + 3)).concat(M?.got ? [[]] : []) : sps.map(sp => cells.filter(c => c.species === sp)); // 215: a series three to a shelf; 263 A: no secret shelf, a fifth shelf only for the prize
   const rows = groups.length;
   const top = rows * SY, all = cells.every(c => G.S.codex[c.key]);
   st.root.add(box(W + 0.5, top + 0.5, 0.2, panel, 0, top / 2 - 0.1, -0.85), box(0.25, top + 0.5, 1.8, wood, -W / 2 - 0.12, top / 2 - 0.1, 0),
@@ -118,7 +118,7 @@ async function build() {
   groups.forEach((mine, row) => {
     const y = (rows - 1 - row) * SY, secRow = ser && row === 4, full = secRow ? !!sec : mine.every(c => G.S.codex[c.key]), sp = mine[0]?.species;
     st.root.add(box(W, 0.14, 1.7, wood, 0, y - 0.07, 0), box(W, 0.1, 0.08, full ? gold : wood, 0, y - 0.07, 0.86));
-    if (!ser || row === 0 || secRow) st.root.add(plaque(!ser ? `${sp.name} ${mine.filter(c => G.S.codex[c.key]).length}/${mine.length}` : secRow ? $t('시크릿') : row ? '' : $t('{0} {1}/{2}', ser.name, serHave(G.S, ser), ser.cells.length), -W / 2 + 0.9, y - 0.07, 0.92, ser && !secRow ? !!M?.got : full));
+    if (!ser || row === 0) st.root.add(plaque(!ser ? `${sp.name} ${mine.filter(c => G.S.codex[c.key]).length}/${mine.length}` : row ? '' : $t('{0} {1}/{2}', ser.name, serHave(G.S, ser), ser.cells.length), -W / 2 + 0.9, y - 0.07, 0.92, ser && !secRow ? !!M?.got : full));
     const g = new THREE.Group(); st.root.add(g);
     mine.forEach((c, i) => {
       const got = secRow || !!G.S.codex[c.key], f = figure(c, !got, secRow && M.sec.acc), x = -W / 2 + 0.25 + SX * (i + 0.5);

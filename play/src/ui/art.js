@@ -4,7 +4,7 @@
 import { $t, SEP, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { PROP } from '../game/rules.js';
-import { ART, asking } from '../game/art.js';
+import { ART, asking, whoIn } from '../game/art.js';
 import { toast, josa, ask, eat, topWindow } from './hud.js';
 import { sfx } from './sound.js';
 import { DEBUG } from '../config.js';
@@ -26,9 +26,9 @@ const wait = (f, n = 240) => f() ? Promise.resolve(true) : n ? new Promise(r => 
 export const due = hab => [...G.S.art.todo.filter(t => t.hab === hab), ...asking(G.S, hab)].filter(x => !x.art.told);
 export function retRow(hab) {
   const d = due(hab); if (!d.length) return null;
-  const last = d[d.length - 1].art, names = [...new Set(d.map(x => esc(x.art.who)))]; // 137 A: into main.js's 돌아왔어요 innerHTML
+  const last = d[d.length - 1].art, names = [...new Set(d.map(x => esc(whoIn(x.art.who))))]; // 137 A: into main.js's 돌아왔어요 innerHTML
   G.artTold(d.map(x => x.uid));
-  return d.length === 1 ? ['🎨', $t('{0} {1}{이/가} 작품을 만들었어요', when(last), esc(last.who)), $t('{0} · 보러 가요', PROP[d[0].prop].name), 'art']
+  return d.length === 1 ? ['🎨', $t('{0} {1}{이/가} 작품을 만들었어요', when(last), esc(whoIn(last.who))), $t('{0} · 보러 가요', PROP[d[0].prop].name), 'art']
     : ['🎨', $t('{0} 동물들이 작품 {1}개를 만들었어요', when(last), d.length), $t('{0}{1} · 보러 가요', names.slice(0, 2).join(SEP), names.length > 2 ? $t(' 외 {0}', names.length - 2) : ''), 'art'];
 }
 
@@ -49,7 +49,7 @@ function show(hab) {
   if (!el) { el = document.createElement('section'); el.id = 'artCard'; el.className = 'intro pop lvup artc'; el.setAttribute('aria-label', $t('동물 작품')); el.onclick = pick; $('habitat').append(el); }
   const a = p.art, P = PROP[p.prop], F = PROP[P.find], n = queue.length;
   el.dataset.hab = hab; el.dataset.uid = p.uid;
-  el.innerHTML = $t('<div><h2>{0}의 작품</h2><p class="sub">「{1}」 · {2} {3}에 만들었어요{4}</p>\n<div class="abtns"><button data-a="keep">그대로 두기<small>꾸미기에서 옮기거나 넣어 둘 수 있어요</small></button><button data-a="record">기록만 남기고 치우기<small>작품집에 남기고 {5}{은/는} 보관함으로</small></button><button data-a="clear">치우기<small>아무것도 남기지 않아요</small></button></div>\n<div class="nbtns">{6}<button class="sb" data-close>나중에</button></div></div>', esc(a.who), P.name, day(a.at), when(a), total > 1 ? ` · ${total - n + 1}/${total}` : '', F.name, n > 1 ? $t('<button class="sb" data-all>모두 치우기</button>') : '');
+  el.innerHTML = $t('<div><h2>{0}의 작품</h2><p class="sub">「{1}」 · {2} {3}에 만들었어요{4}</p>\n<div class="abtns"><button data-a="keep">그대로 두기<small>꾸미기에서 옮기거나 넣어 둘 수 있어요</small></button><button data-a="record">기록만 남기고 치우기<small>작품집에 남기고 {5}{은/는} 보관함으로</small></button><button data-a="clear">치우기<small>아무것도 남기지 않아요</small></button></div>\n<div class="nbtns">{6}<button class="sb" data-close>나중에</button></div></div>', esc(whoIn(a.who)), P.name, day(a.at), when(a), total > 1 ? ` · ${total - n + 1}/${total}` : '', F.name, n > 1 ? $t('<button class="sb" data-all>모두 치우기</button>') : '');
   el.hidden = false;
 }
 async function pick(e) {
@@ -70,7 +70,7 @@ async function pick(e) {
 export function tapped(uid) {
   const p = G.S.props.find(p => p.uid === uid); if (!p) return;
   if (p.art?.ask) { eat(); return open(p.hab, uid); } // the click after this pointerup would land on the card
-  const a = p.art; toast(a ? $t('{0}{이/가} 만든 「{1}」 · {2}', a.who, PROP[p.prop].name, day(a.at)) : PROP[p.prop].name, 2400, true);
+  const a = p.art; toast(a ? $t('{0}{이/가} 만든 「{1}」 · {2}', whoIn(a.who), PROP[p.prop].name, day(a.at)) : PROP[p.prop].name, 2400, true);
 }
 
 // the habitat chip's count (not a button of its own: the chip still goes back to the map)

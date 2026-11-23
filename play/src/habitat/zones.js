@@ -13,8 +13,8 @@ const S = UNIT;
 export const BOARD0 = [-18, 18, -29, 29].map(v => v * S);
 const SIDE = { '+x': [1, 1], '-x': [0, -1], '+z': [3, 1] };
 // the board after step L (0: the first board)
-export function rectAt(hab, L) {
-  if (hab === 'yard') { const [w, d] = YARD_B.cells[Math.min(L, YARD_B.cells.length - 1)].map(n => n * S / 2); return [-w, w, -d, d]; } // 182 ④: the open land round the middle (184 ④: w×d)
+export function rectAt(hab, L, cells = YARD_B.cells) { // 254 A-4 cells: another ladder's (data.js Y861)
+  if (hab === 'yard') { const [w, d] = cells[Math.min(L, cells.length - 1)].map(n => n * S / 2); return [-w, w, -d, d]; } // 182 ④: the open land round the middle (184 ④: w×d)
   const r = [...BOARD0];
   for (const z of ZONES[hab].slice(0, L)) { const [i, s] = SIDE[z.side]; r[i] += s * z.w * S; }
   return r;
@@ -74,16 +74,11 @@ const GRAVEL = speck(['#e2dccd', '#8d867a', '#cfc4ad', '#a39a8a'], 0.6);
 const P = pts => pts.map(([x, z, ...o]) => [x * S, z * S, ...o]); // a list of points (and spots) in the old board's metres
 const SP = l => P(l).map(([x, z, act, o]) => ({ t: 'spot', x, z, act, ...o }));
 const FORK = P([[-14.6, 32.6], [-10, 34.2], [-5, 33.4], [0, 34.3], [5.9, 33.7], [10.5, 34.2], [12.4, 33.7]]);
-// 129 (?s129=1|2, a trial: the release build sets S129 = 0, tools/build-web.mjs): the hot spring as rock steps, its milky jade
-// water (jade: meadow/water.js HOT) spilling from pool to pool down a notch in each rim (chute) and a fall. 1: three pools down
-// the rock; 2: a small one up on the rock and a big one, a wooden deck before it, more lanterns. Laid out from the strip's middle
-// (a +x strip: z runs along it); zoneprops.js builds the deck, the fence, the lanterns and the buckets where these say.
-// 139-3 (=3): the ground itself rises into a snowy hill and the spring runs down it, each pool on its own ledge (shelf)
-// 140 (=4): 3 again, the top pool really up the hill, pools out of round (wob), rock on the steep between them (zones.js),
-// loose natural stones round them, thick slow steam (zoneprops.js)
-const S129Q = 0; // release build: ?s129 off (the wide spring of 149 is S129 = 4)
-export const S129 = S129Q || 4; // 149: the wide spring (144 C, =4) is the release; ?s129=1|2|3 still show the old trials
-export const S129T = S129Q; // 149: the 넓히는 순간 (habitat.js) stays behind the flag
+// 129 -> 139-3 -> 140 -> 144 C (149: the release): the hot spring as a snowy rise the spring runs down, each pool on its own ledge
+// (shelf), out of round (wob), its milky jade water (jade: meadow/water.js HOT) spilling from pool to pool down a notch in each rim
+// (chute) and a fall, rock on the steep between them, the deck, lanterns and buckets (zoneprops.js spring129 builds them).
+// 251 C-2: the ?s129=1|2|3 trials (and the first plain pool) deleted; S129 stays 4 for the code that asks
+export const S129 = 4;
 export const SOAK = new Map(); // 129: who soaks in the spring now, rec.id -> its head's top (walk.js), for the little puffs (zoneprops.js)
 export const REVEAL = { k: 0, skip: null }; // 129 넓히는 순간 (?s129, ?z143): the zone being opened, for its fixtures to pop up (habitat.js sets it round the build, zoneprops.js reads it)
 // 143 (?z143=1, a trial: the release build sets Z143 = 0, tools/build-web.mjs): the meadow's zones made again one at a time, each
@@ -97,42 +92,16 @@ export const D07 = 1; // release build: 218-5f, 194 0-7 density (and 221 C) on w
 // tools/build-web.mjs), so opening the gate opens these too; the other habitats' 143 stays the trial
 export const JUNGLE143 = new Set(['fernwood', 'cliffs', 'riverbed', 'bigdig', 'mudflat', 'springs']);
 export const PUB143 = new Set(['flowerhill', 'grove', 'fork']), z143on = id => Z143 || PUB143.has(id) || !HOLD.dino && JUNGLE143.has(id);
-const SOAKD = { polarBear: 0.78, seal: 0.71, arcticFox: 0.63, reindeer: 0.63 }, SOAKERS = Object.keys(SOAKD), // how much of each is under the water: to just under its eyes (measured: the eyes' bottom x the sleep's squash - 0.05)
-  MOSS = speck(['#6d8a4a', '#5f7d44', '#8a8580'], 0.45, 0.55);
-function spring129(s, v) {
-  const [cx, cz] = at(s, 0.5, 0.5), p = (dx, dz) => [cx + dx, cz + dz], wl = q => q.r - 0.7;
-  const hill = (dx, dz, rx, rz, h, top) => { const [x, z] = p(dx, dz); return { t: 'hill', x, z, rx, rz, h, top, rock: 1 }; };
-  const pool = (dx, dz, r) => { const [x, z] = p(dx, dz); return { t: 'pool', x, z, r, hot: 1, jade: 1 }; };
-  const spill = (a, b) => { const L = Math.hypot(b.x - a.x, b.z - a.z), ux = (b.x - a.x) / L, uz = (b.z - a.z) / L; // a's rim notched toward b, a fall into b
-    return [{ t: 'chute', from: [a.x, a.z], to: [b.x - ux * (wl(b) - 0.3), b.z - uz * (wl(b) - 0.3)], d: 0.7 },
-      { t: 'fall', from: [a.x + ux * wl(a), a.z + uz * wl(a)], to: [b.x - ux * wl(b), b.z - uz * wl(b)], w: 0.55, jade: 1 }]; };
-  const rockFace = h => ({ t: 'tint', x: h.x, z: h.z, rx: h.rx + 0.4, rz: h.rz + 0.4, c: '#7d7872', a: 1, steep: 1 });
-  const melt = q => ({ t: 'tint', x: q.x, z: q.z, rx: q.r + 2.4, rz: q.r + 2.4, c: '#57534f', a: 1, pat: MOSS }); // the snow melted round it: wet rock, moss
-  const soak = (q, dx, dz, out) => ({ t: 'spot', x: q.x + dx, z: q.z + dz, act: 'bath', r: 0.35, soak: { d: SOAKD, out: p(...out), pool: q }, who: SOAKERS });
-  const deck = r => [{ t: 'deck', r }, { t: 'flat', r: [r[0] - 1.6, r[1] + 1.6, r[2] - 1.6, r[3] + 1.6] }]; // the ground under it smoothed (no rolling)
-  const sp = (act, dx, dz) => { const [x, z] = p(dx, dz); return { t: 'spot', x, z, act }; }, put = (t, dx, dz, o) => { const [x, z] = p(dx, dz); return { t, x, z, ...o }; };
-  if (v === 2) {
-    const T = hill(0.8, -7, 4.4, 4.2, 1.3, 0.65), A = pool(0.8, -7, 2.2), B = pool(-0.2, 1.6, 4.3);
-    return [T, A, B, ...spill(A, B), rockFace(T), melt(A), melt(B),
-      soak(B, -2, -0.2, [-2, 7.4]), soak(B, 2, 0.6, [2, 7.4]), soak(B, 0, -2.2, [-5.2, 1.6]), soak(A, 0, 0, [-2.2, -7]),
-      sp('rest', -2, 8), sp('rest', 2, 8.2), ...deck([cx - 4, cx + 4, cz + 6.6, cz + 9]), { t: 'fence', pts: [p(4.5, -11), p(4.7, -1), p(4.5, 9)] },
-      ...[[-4.4, 6.4], [3.6, 6.4], [-2.4, -10.2], [3.6, -3.8]].map(d => put('lantern', ...d)), put('buckets', 3.4, 8.6), put('buckets', -2.6, -4.4)];
-  }
-  const T0 = hill(0, -4.5, 6, 9, 1.4, 0.75), T1 = hill(0.5, -8, 4.4, 4.4, 1.4, 0.65), A = pool(0.5, -8, 2.3), B = pool(-0.4, -0.8, 2.6), C = pool(0, 7.3, 3.6);
-  return [T0, T1, A, B, C, ...spill(A, B), ...spill(B, C), rockFace(T0), rockFace(T1), melt(A), melt(B), melt(C),
-    soak(C, -1.9, 0.3, [-1.5, 11.8]), soak(C, 1.9, 0.6, [1.8, 11.8]), soak(C, 0, -1.9, [-4.5, 7.5]), soak(B, 0.2, 0.2, [3.6, -0.5]),
-    sp('rest', -3, 14), sp('rest', 3, 15), ...deck([cx - 4.8, cx - 1.8, cz + 11.4, cz + 13.4]), { t: 'fence', pts: [p(4.4, 2), p(4.5, 11)] },
-    put('lantern', -3.2, 10.6), put('lantern', 3.4, 4.2), put('buckets', 3.6, 12.4)];
-}
-// 139-3 (?s129=3): no board set on flat snow. Two smooth hills (a broad low one, a higher one behind) make one snowy rise
+// 139-3: no board set on flat snow. Two smooth hills (a broad low one, a higher one behind) make one snowy rise
 // that fades into the snowfield all round; the pools sit on ledges cut into it (shelf: the ground there held at the hills'
 // height at its middle), the top one up on the rise, the middle one half way, the big one at the foot on the snowfield.
 // Round each: wet pale stone under the rim stones, a moss collar, then clean snow (short soft fades: fo; no wide grey halo).
 // The deck and the stone lanterns of 2 (one up by each pool), snowpines on the hill (pine), big capped rocks
 // (boulder). Soak: leaning back against the rim, facing in, nose up (rot), the water at its chest (walk.js)
+const SOAKERS = ['polarBear', 'seal', 'arcticFox', 'reindeer']; // who soaks in the spring
 const ROCK4 = speck(['#8c8780', '#66625d'], 0.5, 0.5), SOAKD3 = { polarBear: 0.64, seal: 0.56, arcticFox: 0.56, reindeer: 0.68 },
   MOSS3 = speck(['#6f9446', '#8aab5c'], 0.5, 0.45);
-function spring139(s, v) {
+function spring139(s) {
   const [cx, cz] = at(s, 0.5, 0.5), p = (dx, dz) => [cx + dx, cz + dz], wl = q => q.r - 0.7, kk = (q, a) => q.wob ? wk(q, a) : 1; // 140: kk the rim out of round
   const hill = (dx, dz, rx, rz, h) => { const [x, z] = p(dx, dz); return { t: 'hill', x, z, rx, rz, h }; };
   const pool = (dx, dz, r, wob) => { const [x, z] = p(dx, dz); return wob ? { t: 'pool', x, z, r, hot: 1, jade: 1, wob } : { t: 'pool', x, z, r, hot: 1, jade: 1 }; };
@@ -143,33 +112,23 @@ function spring139(s, v) {
       { t: 'fall', from: [a.x + ux * wl(a) * ka, a.z + uz * wl(a) * ka], to: [b.x - ux * wl(b) * kb, b.z - uz * wl(b) * kb], w: 0.55, jade: 1 }]; };
   const soak = (q, a, out, off = 1.3) => { const d = Math.max(0.9, wl(q) * kk(q, a) - off); return { t: 'spot', x: q.x + Math.cos(a) * d, z: q.z + Math.sin(a) * d, act: 'bath', r: 0.3, soak: { d: SOAKD3, rot: 0.3, in: 1, out: p(...out), pool: q }, who: SOAKERS }; }; // off: in from the water's edge (144 C: 0.9 round the wide pool, so more fit)
   const sp = (act, dx, dz) => { const [x, z] = p(dx, dz); return { t: 'spot', x, z, act }; }, put = (t, dx, dz, o) => { const [x, z] = p(dx, dz); return { t, x, z, ...o }; };
-  if (v === 4) { // 140: the hill up to 5 m (the top pool on it), the pools out of round, bare rock on the steep down the falls, pines
-    // leaning on the hill round and behind the top pools (a dark ground for the steam), more big capped rocks on it
-    // 144 C: wider — the big pool 1.6x the water (r 3.4 -> 4.12), the middle one 1.3x (2.5 -> 2.75), both out toward -x (the zone's
-    // far side), the low hill and the top one broader to hold them, the deck longer and deeper; six soak places round the big
-    // pool's rim (two ways out, its sides; a bear takes two), two in the middle one; up to 6 soak at once (cap: walk.js)
-    const Hb = hill(-0.4, -4.5, 9.5, 13, 2.4), Ht = hill(0.8, -12.5, 7.5, 7.5, 4.6), A = pool(1.0, -10.6, 2.1, [0.18, 0.6, 0.1, 2.1]),
-      B = pool(-1.8, -2.6, 2.75, [0.17, 2.4, 0.11, 0.3]), C = pool(-1.3, 7.8, 4.12, [0.19, 1.3, 0.1, 4.0]), D = [cx - 4.8, cx + 2.8, cz + 13.0, cz + 16.0];
-    const soak6 = (q, a, out) => { const f = soak(q, a, out, 0.9); f.soak.cap = 6; return f; };
-    return [Hb, Ht, A, B, C, shelf(A, 1.6), shelf(B, 1.8, 2.8, Math.atan2(A.z - B.z, A.x - B.x)), ...spill(A, B), ...spill(B, C), // 141 D: the middle ledge eases down into the slope below it (no step at the hill's foot); the top one's sides stay steep
-      ...[A, B, C].flatMap(q => [ring(q, '#7f9c55', 0.3, 0.9, 0.7, MOSS3), ring(q, '#8a847c', -0.3, 0.3, 0.8)]), // moss, then dark wet stone under the rim
-      ...spill(A, B).concat(spill(B, C)).filter(f => f.t === 'fall').map(f => ({ t: 'tint', pts: [f.from, f.to], rw: 2.0, c: '#78736d', a: 0.9, pat: ROCK4 })), // bare wet rock down each fall, the snow back from it
-      ...[2.74, -2.94, -2.43].map(a => soak6(C, a, [-5.6, 10.0])), ...[-1.16, -0.66, 0.45].map(a => soak6(C, a, [3.7, 9.9])), // six round the rim, none under the fall (a -1.6) nor by the deck; set by a search of crowd.js capsules: 4 of bear seal fox reindeer seal at once, 5 of the smaller
-      soak6(B, -2.5, [-5.3, 0.0]), soak6(B, -0.6, [2.3, -1.0]), soak6(A, -1.57, [-2.6, -9]),
-      sp('rest', -2.8, 14.4), sp('rest', 0.4, 14.6), sp('rest', 2.2, 14.3), { t: 'deck', r: D }, { t: 'flat', r: [D[0] - 1.6, D[1] + 1.6, D[2] - 1.6, D[3] + 1.6] },
-      put('lantern', -5.4, 13.2), put('lantern', 3.6, 13.4), put('lantern', 3.2, -4.6), put('lantern', -2.4, -12.4), put('buckets', 3.7, 15.6),
-      ...[[3.6, -15.4, 1.1], [-1.6, -16.0, 1.0], [1.2, -18.2, 0.95], [4.6, -9.4, 0.9], [-3.8, -8.6, 0.85], [-6.0, -4.6, 0.85], [-4.4, -13.6, 0.8], [4.8, 1.8, 0.75]].map(([dx, dz, sc]) => put('pine', dx, dz, { sc })),
-      ...[[2.0, -7.0, 1.2], [-2.1, -6.0, 0.9]].map(([dx, dz, sc]) => put('boulder', dx, dz, { sc }))]; // 141 D: two heaps on the bare rock by the top fall (no more strewn over the snow)
-  }
-  const Hb = hill(0.6, -4, 8, 13, 1.8), Ht = hill(1.2, -13, 7, 8, 3.0), A = pool(1.2, -9.5, 2.0), B = pool(-0.8, -2.2, 2.4), C = pool(-0.6, 7.4, 3.3);
-  const D = [cx - 3.4, cx + 2.4, cz + 11.2, cz + 13.4];
-  return [Hb, Ht, A, B, C, shelf(A, 1.6), shelf(B, 1.8), ...spill(A, B), ...spill(B, C),
-    ...[A, B, C].flatMap(q => [ring(q, '#7f9c55', 0.45, 1.0, 0.82, MOSS3), ring(q, '#a39c92', -0.3, 0.3, 0.75)]), // moss, then wet stone under the rim stones
-    soak(C, -2.5, [-5, 7]), soak(B, -1.57, [3, -0.6]), soak(C, -0.5, [3.8, 6.4]), soak(A, -1.57, [-2.4, -8]), // the pools' back halves, in from the rim, facing the view: two far apart in the big one, one in each other (B is too small for two big ones)
-    sp('rest', -2.4, 12.3), sp('rest', 1.4, 12.4), { t: 'deck', r: D }, { t: 'flat', r: [D[0] - 1.6, D[1] + 1.6, D[2] - 1.6, D[3] + 1.6] },
-    put('lantern', -4.2, 11.4), put('lantern', 3.4, 11.6), put('lantern', 3.6, -2.4), put('lantern', -1.8, -11.2), put('buckets', 4.2, 12.6),
-    ...[[3.8, -14.2, 1.05], [-1.6, -14.6, 0.9], [4.2, -7.2, 0.85], [-4.8, -8.6, 0.95], [-4.6, -0.4, 0.8], [4.6, 1.6, 0.75]].map(([dx, dz, sc]) => put('pine', dx, dz, { sc })),
-    ...[[3.4, -5.4, 0.7], [-3.4, -4.6, 0.6], [2.2, 2.4, 0.55], [-3.2, 3.4, 0.5], [4.0, -12, 0.65], [-2.6, -12.6, 0.5]].map(([dx, dz, sc]) => put('boulder', dx, dz, { sc }))];
+  // 140: the hill up to 5 m (the top pool on it), the pools out of round, bare rock on the steep down the falls, pines
+  // leaning on the hill round and behind the top pools (a dark ground for the steam), more big capped rocks on it
+  // 144 C: wider — the big pool 1.6x the water (r 3.4 -> 4.12), the middle one 1.3x (2.5 -> 2.75), both out toward -x (the zone's
+  // far side), the low hill and the top one broader to hold them, the deck longer and deeper; six soak places round the big
+  // pool's rim (two ways out, its sides; a bear takes two), two in the middle one; up to 6 soak at once (cap: walk.js)
+  const Hb = hill(-0.4, -4.5, 9.5, 13, 2.4), Ht = hill(0.8, -12.5, 7.5, 7.5, 4.6), A = pool(1.0, -10.6, 2.1, [0.18, 0.6, 0.1, 2.1]),
+    B = pool(-1.8, -2.6, 2.75, [0.17, 2.4, 0.11, 0.3]), C = pool(-1.3, 7.8, 4.12, [0.19, 1.3, 0.1, 4.0]), D = [cx - 4.8, cx + 2.8, cz + 13.0, cz + 16.0];
+  const soak6 = (q, a, out) => { const f = soak(q, a, out, 0.9); f.soak.cap = 6; return f; };
+  return [Hb, Ht, A, B, C, shelf(A, 1.6), shelf(B, 1.8, 2.8, Math.atan2(A.z - B.z, A.x - B.x)), ...spill(A, B), ...spill(B, C), // 141 D: the middle ledge eases down into the slope below it (no step at the hill's foot); the top one's sides stay steep
+    ...[A, B, C].flatMap(q => [ring(q, '#7f9c55', 0.3, 0.9, 0.7, MOSS3), ring(q, '#8a847c', -0.3, 0.3, 0.8)]), // moss, then dark wet stone under the rim
+    ...spill(A, B).concat(spill(B, C)).filter(f => f.t === 'fall').map(f => ({ t: 'tint', pts: [f.from, f.to], rw: 2.0, c: '#78736d', a: 0.9, pat: ROCK4 })), // bare wet rock down each fall, the snow back from it
+    ...[2.74, -2.94, -2.43].map(a => soak6(C, a, [-5.6, 10.0])), ...[-1.16, -0.66, 0.45].map(a => soak6(C, a, [3.7, 9.9])), // six round the rim, none under the fall (a -1.6) nor by the deck; set by a search of crowd.js capsules: 4 of bear seal fox reindeer seal at once, 5 of the smaller
+    soak6(B, -2.5, [-5.3, 0.0]), soak6(B, -0.6, [2.3, -1.0]), soak6(A, -1.57, [-2.6, -9]),
+    sp('rest', -2.8, 14.4), sp('rest', 0.4, 14.6), sp('rest', 2.2, 14.3), { t: 'deck', r: D }, { t: 'flat', r: [D[0] - 1.6, D[1] + 1.6, D[2] - 1.6, D[3] + 1.6] },
+    put('lantern', -5.4, 13.2), put('lantern', 3.6, 13.4), put('lantern', 3.2, -4.6), put('lantern', -2.4, -12.4), put('buckets', 3.7, 15.6),
+    ...[[3.6, -15.4, 1.1], [-1.6, -16.0, 1.0], [1.2, -18.2, 0.95], [4.6, -9.4, 0.9], [-3.8, -8.6, 0.85], [-6.0, -4.6, 0.85], [-4.4, -13.6, 0.8], [4.8, 1.8, 0.75]].map(([dx, dz, sc]) => put('pine', dx, dz, { sc })),
+    ...[[2.0, -7.0, 1.2], [-2.1, -6.0, 0.9]].map(([dx, dz, sc]) => put('boulder', dx, dz, { sc }))]; // 141 D: two heaps on the bare rock by the top fall (no more strewn over the snow)
 }
 // 143 the flower hill (?z143=1): one high round hill (3.6 m, a flat top) where the strip meets the home view, three rings of tall
 // flower bushes round it (zoneprops.js: yellow at the foot, pink, lavender near the top), a big tree with a swing on the top; a
@@ -571,8 +530,7 @@ const SHAPES = {
     pillars: () => [...P([[-20, 31.6, 1.0, 0.8], [-14.5, 34.6, 0.9, 0.6], [-9, 31.2, 1.1, 0.9], [-3, 34.4, 0.9, 0.7], [3, 31.6, 1.0, 0.85], [9, 34.6, 0.95, 0.65], [14.5, 31.2, 1.05, 0.8], [20, 34.2, 0.9, 0.7]])
         .flatMap(([x, z, r, h]) => [{ t: 'col', x, z, r, h }, { t: 'tint', x, z, rx: r + 1.4, rz: r + 1.4, c: ICE, a: 0.75 }]), // each pillar on a round of ice
       ...SP([[-11.8, 33.2, 'rest'], [6, 33, 'nap'], [17.5, 32.8, 'rest']]), ...Z143 ? pillars143() : []],
-    hotspring: s => S129 >= 3 ? spring139(s, S129) : S129 ? spring129(s, S129) : [POOL(s, 0.5, 0.5, 2.9, { hot: 1 }), TINT(s, 0.5, 0.5, 3.6, 3.6, SNOWROCK, 0.55),
-      SPOT(s, 0.45, 0.48, 'bath', { r: 0.6 }), SPOT(s, 0.55, 0.53, 'bath', { r: 0.6 }), SPOT(s, 0.5, 0.42, 'bath', { r: 0.6 }), SPOT(s, 0.5, 0.25, 'rest'), SPOT(s, 0.5, 0.75, 'rest')],
+    hotspring: s => spring139(s),
     cave: s => Z143 ? cave143(s) : [H(s, 0.6, 0.42, 3.0, 4.6, 10, { rock: 1 }), // inbox 42 C2: 3.2 -> 10 (3H), its mouth at its foot (zoneprops.js)
       TINT(s, 0.6, 0.42, 3.2, 4.8, SNOWROCK, 1, { steep: 1 }), // a round rock hill, the cave's mouth on its front (+z: toward the camera)
       SPOT(s, 0.52, 0.5, 'nap'), SPOT(s, 0.66, 0.5, 'nap'), SPOT(s, 0.25, 0.25, 'rest'), SPOT(s, 0.25, 0.7, 'rest')],

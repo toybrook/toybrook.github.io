@@ -10,6 +10,7 @@ import { PROPS, HOLD } from './data.js';
 import { outIn, SP, HAB } from './rules.js';
 import { PE } from './pals.js';
 import { dayOf } from './clock.js';
+import { $t } from '../i18n/i18n.js';
 
 export const ART = { idle: 3600e3, max: 3, book: 60, pe: ['collector', 'tidy', 'prank'] };
 // the shapes each 성격 makes, by habitat (one not listed: the meadow's). 수집가 dotted rings and bunches, 깔끔이 rows, 장난꾸러기 odd piles
@@ -38,6 +39,13 @@ export function tidyArt(S) { // fromSave (a save before 17-2: none)
 // the ones placed in hab waiting for a choice; with those made and not placed yet
 export const asking = (S, hab) => S.props.filter(p => p.placed && p.hab === hab && p.art?.ask);
 export const waiting = (S, hab) => S.art.todo.filter(t => t.hab === hab).length + asking(S, hab).length;
+// 254 A-5: a kept who (in the language it was made in: Korean before) in this one: the 성격 and kind words matched as whoOf
+// put them, a name after them as it is (「수집가 말 몽실이」 → 「Collector Horse 몽실이」)
+// (each word run looked up forward with $t: a reverse lookup can land on another key with the same English, 도감 수집가 = Collector)
+export const whoIn = w => { let s = String(w ?? '').trim(); const out = [];
+  for (const L of [Object.values(PE), Object.values(SP)]) { const names = new Set(L.map(x => x.name)), ws = s.split(' ');
+    for (let k = Math.min(3, ws.length); k > 0; k--) { const p = ws.slice(0, k).join(' '), m = names.has(p) ? p : names.has($t(p)) ? $t(p) : null; if (m) { out.push(m); s = ws.slice(k).join(' '); break; } } }
+  return [...out, s].filter(Boolean).join(' '); };
 export const whoOf = a => `${PE[a.pe]?.name ?? ''} ${SP[a.species]?.name ?? ''}${a.nm ? ' ' + a.nm : ''}`.replace(/ +/g, ' ').trim(); // 「먹보 양 몽실이」 (the kind only: no 단색·얼룩)
 
 export function artTick(S, now, ev) { // advance

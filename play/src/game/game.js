@@ -7,7 +7,7 @@ import * as P from './pals.js'; // 113
 import * as GU from './guests.js'; import { guestWear } from './guests-data.js'; // 66-1, 86-3마
 import * as A from './art.js'; // 17-2
 import * as W from './wild.js'; // 17-3
-import { PROPS, YARD, S186, G190, SCHEMA_VERSION } from './data.js';
+import { PROPS, YARD, S186, YD247, G190, SCHEMA_VERSION } from './data.js';
 import * as SC from './scatter.js'; // 195 B-8 1-2
 import * as SE from './series.js'; // 199 B-11 ?g190: 시리즈 · 교환 도장 · 의뢰 · 물어오기 · 흔들어 보기 (rules only, nothing runs without the flag)
 import * as Y from './yard.js'; // 182 ④ (?yard): the yard's part of the save (184 ④: S.yard, SCHEMA 15)
@@ -25,9 +25,9 @@ export const on = f => listeners.push(f); // f(events) after every tick and acti
 
 // Before a save is migrated, or replaced because it can't be read (or comes from a newer build), the old text is kept
 // once under KEY.v<n> / KEY.bad, so an update never silently loses a collection.
-// 226 관문 4: those copies (KEY.v<n> before a migration, KEY.s186) go 30 days after they were first seen (KEY.<copy>.at; one kept
+// 226 관문 4: those copies (KEY.v<n> before a migration, KEY.s186, KEY.y247) go 30 days after they were first seen (KEY.<copy>.at; one kept
 // by an older build gets its 30 days from now). When the save itself no longer fits, the copies go first (dropCopies)
-const COPY = /^toyhabitat\.save\.(v\d+|s186)$/, KEEP_MS = 30 * 864e5;
+const COPY = /^toyhabitat\.save\.(v\d+|s186|y247)$/, KEEP_MS = 30 * 864e5;
 const keys = () => { const ks = []; for (let i = 0; i < localStorage.length; i++) ks.push(localStorage.key(i)); return ks; };
 function sweep(now) {
   try { for (const k of keys().filter(k => COPY.test(k))) { const at = +localStorage.getItem(k + '.at');
@@ -49,6 +49,7 @@ function load(now) {
   bad = !S && refused !== 'beta'; // a beta save in the release build has its own notice
   if (S) { try { if (keep && !localStorage.getItem(keep)) try { localStorage.setItem(keep, raw); } catch (e) { if (!full(e)) throw e; dropCopies(keep); localStorage.setItem(keep, raw); } fresh = keep; } catch { frozen = 'copy'; } // still full (226: room made from older copies first): 218-5 고칠 것 3: no copy, so the old text is not overwritten this run (told: backup.js)
     try { if (S186 && !(keep && localStorage.getItem(keep) === raw) && !/"s186":1/.test(raw) && !localStorage.getItem(KEY + '.s186')) localStorage.setItem(KEY + '.s186', raw); } catch { /* full */ } // 194 review: the save before the ?s186 migration, kept once (to go back); 194 0-5: not when keep (.v<n>) holds this same text (review 낮음 2: an older .v<n> does not count)
+    try { if (YD247 && /"yard":\{/.test(raw) && !/"y247":1/.test(raw) && !localStorage.getItem(KEY + '.y247')) { localStorage.setItem(KEY + '.y247', raw); fresh ??= KEY + '.y247'; } } catch { /* full */ } // 251 C ②: the whole save before the 247 yard's move (yard.js yardIn: steps, ♥ back once), kept once
     return S; }
   // 202 S1: the original is not overwritten unless a copy of it is kept (a second accident gets its own slot; ponytail: one slot per accident, no cap)
   let kept = false;
@@ -156,7 +157,8 @@ export const saveLay = (hab, k, name) => act(now => R.saveLay(S, hab, k, name, n
 export const stowProp = uid => act(() => R.stowProp(S, uid));
 export const addNatives = (hab, list, rings) => act(() => R.addNatives(S, hab, list, rings));
 export const paintCell = (hab, i, j, b) => act(() => R.paintCell(S, hab, i, j, b));
-export const paintCells = (hab, cells, b) => act(() => cells.reduce((n, [i, j]) => n + R.paintCell(S, hab, i, j, b), 0)); // a stroke: one save
+export const paintCells = (hab, cells, b, buy = 0) => act(() => cells.reduce((n, [i, j]) => { const h = S.hearts, k = R.paintCell(S, hab, i, j, b, buy); buy -= h - S.hearts; return n + k; }, 0)); // a stroke: one save; buy: ♥ it may spend on pieces (246 B; none unless said: ui/decor.js onPaint)
+export const buyBrush = b => act(() => R.buyBrush(S, b)); // 238 E1 (?h232) 이어지는 조각: the first price
 export const setLayout = (hab, snap) => act(() => R.setLayout(S, hab, snap));
 export const scatter = (hab, cells, b) => act(() => hab === 'yard' ? SC.scatterOn(S, cells, b) : 0); // 195 B-8 1-2 흩뿌리기 붓 (?yard): a stroke, one save
 export const importLayout = (hab, d, fit, cell) => act(() => R.importLayout(S, hab, d, fit, cell));
@@ -190,6 +192,10 @@ export const evBuild = (hab, x, z) => act(now => R.evBuild(S, hab, x, z, now));
 export const evWear = (id, k) => act(() => R.evWear(S, id, k));
 export const accOff = id => act(() => R.accOff(S, id)), accOn = (id, k) => act(() => R.accOn(S, id, k)); // 95
 export const evOwned = () => S ? R.evOwned(S) : {};
+// 238 E2 (?fest): the run of an id on, coming or just over; the clock check; sky lamp; ticket
+export const evWhen = id => R.evWhen(id, clock()), setSkew = R.setSkew, evHeld = () => !!S && R.held(S, R.liveRun(S, clock())?.e ?? { guard: true }, clock());
+export const sky = () => act(now => R.evSky(S, now)), skyReady = () => !!S && R.skyReady(S, clock());
+export const ticketPool = () => S ? R.ticketPool(S) : [], useTicket = sp => act(now => R.useTicket(S, sp, now));
 // 16-1 놀러 보내기 (visit.js): the guests come with the animals to the habitat (no seat, not in S.animals)
 export const withGuests = () => [...S.animals, ...S.visit.guests, ...wanderers()];
 // 66-1 떠돌이 손님 (guests.js). The habitat on screen hands in its 3D side (ui/play.js: look, entry, pos; null: none on screen) and
@@ -247,7 +253,6 @@ export const wildWalk = (hab, t, n) => { if (!view) act(() => W.walk(S, hab, t, 
 export const wildGround = (hab, c) => { if (!view) act(() => W.ground(S, hab, c)); };
 export const wildClear = hab => act(() => W.clear(S, hab));
 export const wildSeen = () => act(() => W.seen(S));
-export const skyScope = at => act(() => { if (S.sky.scope) return null; S.sky.scope = 1; return R.putGift(S, 'sky_scope', at, { cost: 0 }); });
 export const attendDue = () => R.attendDue(S, clock());
 export const attend = at => act(now => R.attend(S, now, Math.random, at));
 export const note = (k, n) => { if (n > (S.stats?.[k] || 0)) act(() => R.noteLive(S, k, n)); }; // 23-2: the habitat on screen (saved only when more)

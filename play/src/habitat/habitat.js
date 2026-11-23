@@ -7,7 +7,7 @@ import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/OrbitControls.js';
 import { buildMeadow } from './meadow/index.js';
-import { rectAt, strip, zoneSet, BOARD0, S129T, Z143, REVEAL, SPOTS, ART_SPOTS } from './zones.js';
+import { rectAt, strip, zoneSet, BOARD0, Z143, REVEAL, SPOTS, ART_SPOTS } from './zones.js';
 import { mist } from './mist.js';
 import { windTime, toyMat, snowNow } from './toyKit.js';
 import { daylight, fireflies, hourNow } from './daylight.js';
@@ -21,7 +21,7 @@ import { linesLayer } from './lines.js';
 import { glowLayer } from './glow.js';
 import { loadModel, loadAcc } from '../animals/figure.js';
 import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
-import { SPECIES, MODELS, MYTHIC, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable, YARD, S186, CAM186, TH194 } from '../game/data.js';
+import { SPECIES, MODELS, MYTHIC, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable, YARD, S186, CAM186, TH194, YD247 } from '../game/data.js';
 import { SP, habitatOf, known, topAt, kindName, plan186, spotMode, onSpots, spotTakes } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
 import { ambience, sfx, music, playing, hear, pet, lilies, buzz } from '../ui/sound.js';
@@ -35,7 +35,7 @@ import { skyLayer } from './skyfx.js';
 import { wildLayer } from './wildLayer.js';
 import { strokeOn, scBlock } from '../game/scatter.js'; // 195 B-8 1-2 (?yard; the rest: the yard's build, habitat.fine = yard/fine.js)
 import { colOf, trailsOf, WILD } from '../game/wild.js';
-const RV = S129T || Z143; // 129's 넓히는 순간 (the mist, the glide, the pop, the run in): its trial's and 143's
+const RV = Z143; // 129's 넓히는 순간 (the mist, the glide, the pop, the run in): its trial's and 143's
 
 // scene of each habitat that is ready (HABITATS ready: true). 67-2: the meadow's comes with this file (the first egg's board);
 // the others only when one is built (a new player never fetches them before the first egg; the held dino not at all)
@@ -76,7 +76,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const W = () => container.clientWidth, H = () => container.clientHeight;
   // 28-1: the open ground and the board as built, [x0, x1, z0, z1] (zones.js: each step adds a zone along one side)
   const top = Math.min(level + 1, BALANCE.expand.price.length), open = rectAt(habId, level), built = rectAt(habId, top);
-  const yp = YARD && habId === 'yard', panX = yp ? [open[0], open[1]] : [open[0] + 6, open[1] - 6], panZ = yp ? [open[2], open[3]] : [open[2] + 9, open[3] - 7]; // where the free camera may look (the first board: x +-12, z -20..22); 229 D ①: the yard's whole open land (its props go anywhere in it)
+  const yp = YARD && habId === 'yard', y247 = YD247 && yp, pm = y247 ? 6 : 0, panX = yp ? [open[0] - pm, open[1] + pm] : [open[0] + 6, open[1] - 6], panZ = yp ? [open[2] - pm, open[3] + pm] : [open[2] + 9, open[3] - 7]; // where the free camera may look (the first board: x +-12, z -20..22); 229 D ①: the yard's whole open land (its props go anywhere in it)
   const mid0 = new THREE.Vector3((open[0] + open[1]) / 2, 0, (open[2] + open[3]) / 2 + 3); // the home view's middle (the first board's: 0, 3)
   const ac = new AbortController(), sig = { signal: ac.signal }; let dead = false; // dispose(): every listener off, the loop stopped
   // Pixel ratio capped at 2 (a 3x phone renders 2.25x fewer pixels; the difference is hard to see on toys); 26-3: 보통 1.5, 낮음 1.25.
@@ -124,9 +124,10 @@ export async function startHabitat(container, ui, habId, records = [], { level =
 
   const camera = new THREE.PerspectiveCamera(34, W() / H(), 0.5, 300);
   // home view: high and wide; distance chosen so the board's width less 6 (the first board: 30) fits any screen aspect
-  const homeDir = new THREE.Vector3(0, 54, 47).normalize(), fitW = Math.max((open[1] - open[0]) / 2 - 3, ((open[3] - open[2]) / 2 - 3) * 15 / 26), kR = fitW / 15;
-  const homeRadius = () => THREE.MathUtils.clamp(fitW / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect), 60 * kR, 110 * kR);
-  camera.far = Math.max(300, 160 * kR); camera.updateProjectionMatrix(); // inbox 42 A: the bigger board's far side, zoomed all the way out
+  const homeDir = new THREE.Vector3(0, 54, 47).normalize(), fitOf = r => Math.max((r[1] - r[0]) / 2 - 3, ((r[3] - r[2]) / 2 - 3) * 15 / 26), fitW = fitOf(open), kR = fitW / 15;
+  const radiusOf = f => THREE.MathUtils.clamp(f / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect), 60 * (f / 15), 110 * (f / 15)), homeRadius = () => radiusOf(fitW);
+  const fitA = y247 ? fitOf(rectAt('yard', 99)) : fitW, allRadius = () => radiusOf(fitA); // 247 A3: the farthest zoom and 전체 보기, the whole 36×58 board whatever is open
+  camera.far = Math.max(300, 160 * (fitA / 15)); camera.updateProjectionMatrix(); // inbox 42 A: the bigger board's far side, zoomed all the way out
   // inbox 43: the start view is near while few friends are out here (0-3: 0.6 of the whole board's distance), farther with each one
   // past 3 and each step the board was widened, at most the whole board (homeRadius: the farthest zoom out, 꾸미기 and the zone view)
   const homeFit = n => homeRadius() * THREE.MathUtils.clamp(0.6 + Math.max(0, n - 3) * 0.045 + level * 0.08, 0.6, 1); // inbox 63: none out (0) / the whole board (99); friends: setHome
@@ -137,7 +138,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.screenSpacePanning = false;
-  controls.maxDistance = homeRadius() * 1.15; // tilt, turn and the nearest distance are set every frame (band)
+  controls.maxDistance = allRadius() * 1.15; // tilt, turn and the nearest distance are set every frame (band)
   // inbox 14: one finger / left drag turns round the target (360 deg), two fingers / right drag / Shift+drag move the view,
   // pinch / wheel zoom toward the point between the fingers / under the cursor (following: toward the animal). Decorating: mapping()
   controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
@@ -186,7 +187,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const buildIt = await builder; REVEAL.k = RV && reveal ? level : 0; REVEAL.skip = null; // 129 (?s129): the zone just bought, its fixtures pop up (zoneprops.js)
   const habitat = buildIt(scene, { zzz: obj => ui.zzz(project(obj)) }, sunDir, level, top), popSkip = REVEAL.skip; REVEAL.k = 0; REVEAL.skip = null;
   renderer.shadowMap.needsUpdate = true;
-  const mistTick = mist(scene, habitat.floor, open, built, reveal && level > 0 ? rectAt(habId, level - 1) : open, RV ? 3.4 : 2.6, habitat.mistPad), U = habitat.unit; // U: saved decor x, z -> here
+  const mistTick = mist(scene, habitat.floor, open, y247 ? open : built, reveal && level > 0 ? rectAt(habId, level - 1) : open, RV ? 3.4 : 2.6, habitat.mistPad), U = habitat.unit; // U: saved decor x, z -> here // 249 A (?yd247): no white mist over the land still to come (it is the faded grass), only over the band just bought while it draws back (open as built: mist.js's last step)
   if (RV && reveal) container.addEventListener('pointerdown', () => { mistTick.skip(); popSkip?.(); }, { ...sig, once: true }); // 129: a tap skips the reveal
   const flies = habId === 'meadow' ? fireflies(scene, habitat.ctx) : null; // 21-1: fireflies over the meadow at night (the pond: sparkles on its water)
   habitat.ctx.crowd = new Set(); // every animal's body capsule, so they keep apart (crowd.js)
@@ -199,8 +200,24 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   // the player's animals: one actor per saved record that lives here and isn't in storage
   const actors = new Map();
   let homed = false;
+  // 27-2 / 256 A: the shaders of root made (KHR_parallel_shader_compile links them off the main thread), done when all are ready
+  // (gone = ready; 10 s at most). A friend or guest made after the curtain lifts stays hidden till then: no 100-400 ms link stall
+  // on its first draw (a new species, a guest's hat or bundle)
+  let warmed = false;
+  // 259 A ①: the hidden parts too (compile skips them: a prop's bubbles shown on a tap linked 150-230 ms then). Not lights: their count is in the program key
+  const ready = root => new Promise(done => {
+    const hid = []; root.traverse(o => { if (!o.visible && !o.isLight) { hid.push(o); o.visible = true; } });
+    let mats; try { mats = renderer.compile(root, camera, scene); } catch { return done(); } finally { for (const o of hid) o.visible = false; }
+    const t0 = performance.now(), poll = () => {
+      if (dead || renderer.getContext().isContextLost() || performance.now() - t0 > 10000) return done();
+      try { for (const m of mats) { const p = renderer.properties.get(m).currentProgram; if (!p || p.isReady()) mats.delete(m); } } catch { return done(); }
+      if (mats.size) setTimeout(poll, 10); else done();
+    };
+    poll();
+  });
   const make = rec => { const sp = habitat.ctx.spawn; if (rec.at) habitat.ctx.spawn = () => [rec.at[0] + Math.random() * 2 - 1, rec.at[1] + Math.random() * 2 - 1]; // 66-1: a guest at its spot
-    try { const a = moves[SP[rec.species].model].createActor(habitat.ctx, rec); actors.set(rec.id, a); return a; } finally { habitat.ctx.spawn = sp; } };
+    try { const a = moves[SP[rec.species].model].createActor(habitat.ctx, rec); actors.set(rec.id, a);
+      if (warmed) { a.obj.visible = false; ready(a.obj).then(() => { a.obj.visible = true; }); } return a; } finally { habitat.ctx.spawn = sp; } };
   const asked = new Set(); // 16-1: a guest (ui/visit.js) that came after the build, of a species not fetched here: its model then
   function sync(records) {
     last = records;
@@ -524,7 +541,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   function refit(list) {
     const mine = list.filter(p => p.placed && p.hab === habId && !p.nat && PR[p.prop] && p.on == null), out = [];
     const keep = D.list.splice(0); D.list.push(...keep.filter(o => S186 ? o.uid == null && !o.nat : o.nat || o.uid == null)); // 194 0-2: the natives too are planned (plan186)
-    const spots = (P, p, x, z) => P.rail ? railSpots(P, x, z, p.rot ?? 0) : [{ x, z, r: P.r * SZ(p), water: !!P.water, open: !!P.open }];
+    const spotsOf = (P, p, x, z) => P.rail ? railSpots(P, x, z, p.rot ?? 0) : [{ x, z, r: P.r * SZ(p), water: !!P.water, open: !!P.open }];
     const fit = (p, x, z) => { const P = PR[p.prop]; return P.rail ? railFits(P, x, z, p.rot ?? 0, true) : D.placeable(x, z, P.r * SZ(p), !!P.water); };
     try {
       const rails = mine.filter(p => PR[p.prop].rail), loops = []; // rail pieces in touching groups (a tile apart)
@@ -533,7 +550,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
         let done = false;
         for (let r = 0; r <= 3 && !done; r++) for (let i = -r; i <= r && !done; i++) for (let j = -r; j <= r && !done; j++) { if (Math.max(Math.abs(i), Math.abs(j)) !== r) continue;
           const at = g.map(p => [p.x * U + i * TILE, p.z * U + j * TILE]), n0 = D.list.length;
-          if (g.every((p, k) => { const ok = fit(p, ...at[k]); if (ok) D.list.push(...spots(PR[p.prop], p, ...at[k])); return ok; })) { done = true; if (i || j) g.forEach((p, k) => out.push({ uid: p.uid, x: +(at[k][0] / U).toFixed(4), z: +(at[k][1] / U).toFixed(4) })); }
+          if (g.every((p, k) => { const ok = fit(p, ...at[k]); if (ok) D.list.push(...spotsOf(PR[p.prop], p, ...at[k])); return ok; })) { done = true; if (i || j) g.forEach((p, k) => out.push({ uid: p.uid, x: +(at[k][0] / U).toFixed(4), z: +(at[k][1] / U).toFixed(4) })); }
           else D.list.length = n0; }
         if (!done) for (const p of g) out.push({ uid: p.uid, off: true });
       }
@@ -546,7 +563,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       } else for (const p of mine) { if (PR[p.prop].rail) continue;
         let x = p.x * U, z = p.z * U;
         if (!fit(p, x, z)) { [x, z] = nearest((x, z) => fit(p, x, z), [x, z], 150); if (!fit(p, x, z)) { out.push({ uid: p.uid, off: true }); continue; } out.push({ uid: p.uid, x: +(x / U).toFixed(4), z: +(z / U).toFixed(4) }); }
-        D.list.push(...spots(PR[p.prop], p, x, z));
+        D.list.push(...spotsOf(PR[p.prop], p, x, z));
       }
     } finally { D.list.splice(0, D.list.length, ...keep); }
     return out;
@@ -821,7 +838,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (pinch?.[e.pointerId]) pinch = null;
     if (press && e.pointerId === press.id) { clearTimeout(press.t); press = null; }
     if (carry && e.pointerId === carry.id) letGo();
-    if (stroke && e.pointerId === stroke.id) { const c = [...stroke.cells.values()]; stroke = null; if (c.length) ui.onPaint?.(c, brush); }
+    if (stroke && e.pointerId === stroke.id) { const c = [...stroke.cells.values()], ps = paintSig; stroke = null; if (c.length) ui.onPaint?.(c, brush); if (paintSig === ps && typeof brush === 'number') showPaint(paintNow); } // 238 E1: nothing kept (a piece not bought): the preview goes
     if (box && e.pointerId === box.id) { const u = sweepBox(); box = null; sweepBox(); if (u) ui.onSweep?.(u); }
   }, sig);
   container.addEventListener('pointerup', () => { controls.enabled = true; }, { capture: true, ...sig }); // a long press turned it off (below), before OrbitControls sees the up
@@ -1004,22 +1021,27 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   const snowM = toyMat('#f4f7fb', { roughness: 0.85 }), ballGeo = new THREE.SphereGeometry(1, 16, 12);
   const lump = (r, x, y, z, f = 0.8) => { const m = new THREE.Mesh(ballGeo, snowM); m.scale.set(r, r * f, r); m.position.set(x, y, z); m.castShadow = true; return m; };
   const apart = (o, x, z, d) => !o || Math.hypot(x - o.position.x, z - o.position.z) > d; // the pile and the snowman's site apart
-  const spot = r => nearest((x, z) => fits({ r }, x, z) && apart(pileObj, x, z, r + 1.6) && apart(site?.obj, x, z, r + 1.6), [controls.target.x, controls.target.z]), snowPuff = (x, z) => puffs.push({ x, z, t: 0, c: '#ffffff' });
+  const spot = r => nearest((x, z) => fits({ r }, x, z) && apart(pileObj, x, z, r + 1.6) && apart(site?.obj, x, z, r + 1.6)
+    , [controls.target.x, controls.target.z]), snowPuff = (x, z) => puffs.push({ x, z, t: 0, c: '#ffffff' });
   let pileObj = null, site = null, balls = [], ballAt = -1e9;
-  function pileShow(on) {
-    if (!on === !pileObj) return; if (pileObj) { scene.remove(pileObj); pileObj = null; } if (!on) return;
-    const [x, z] = spot(1.2); pileObj = new THREE.Group(); pileObj.position.set(x, habitat.ctx.heightAt(x, z), z);
-    pileObj.add(lump(0.9, 0, 0.15, 0), lump(0.6, 0.75, 0.05, 0.35), lump(0.55, -0.6, 0.05, -0.4), lump(0.42, 0.15, 0.7, -0.1)); scene.add(pileObj);
+  // 238 E2 kit (ui/fest.js, ?fest): { pile() a Group, stage(n) the build's n-th look (1-3), free(o) its geometries, puff colour, act }
+  // in place of the snow lumps (those are shared: never freed)
+  const unkit = o => { if (!o) return; scene.remove(o); o.userData.kit?.free(o); };
+  function pileShow(on, kit) {
+    if (!on === !pileObj) return; if (pileObj) { unkit(pileObj); pileObj = null; } if (!on) return;
+    const [x, z] = spot(1.2); pileObj = kit ? kit.pile() : new THREE.Group(); pileObj.position.set(x, habitat.ctx.heightAt(x, z), z); pileObj.userData.kit = kit;
+    if (!kit) pileObj.add(lump(0.9, 0, 0.15, 0), lump(0.6, 0.75, 0.05, 0.35), lump(0.55, -0.6, 0.05, -0.4), lump(0.42, 0.15, 0.7, -0.1)); scene.add(pileObj);
   }
-  function pileTap() { const { x, z } = pileObj.position, n = ui.onPile?.(); if (!n) return; /* onPile's tick may take it away already */ sfx('place'); snowPuff(x, z); pileShow(false); gather(x, z, 3, 'roll', 2); }
-  function snowman(done) { // done(x, z as saved) builds it (false: not)
-    if (site) scene.remove(site.obj);
-    const [x, z] = spot(1.3), obj = new THREE.Group(); obj.position.set(x, habitat.ctx.heightAt(x, z), z); obj.add(lump(0.55, 0, 0, 0, 0.45)); scene.add(obj);
-    site = { obj, x, z, n: 0, done }; centre(new THREE.Vector3(x, 0, z)); snowPuff(x, z);
+  function pileTap() { const { x, z } = pileObj.position, k = pileObj.userData.kit, n = ui.onPile?.(); if (!n) return; /* onPile's tick may take it away already */ sfx('place'); puffs.push({ x, z, t: 0, c: k?.puff ?? '#ffffff' }); pileShow(false); gather(x, z, 3, k?.act ?? 'roll', 2); }
+  function snowman(done, kit) { // done(x, z as saved) builds it (false: not)
+    unkit(site?.obj);
+    const [x, z] = spot(1.3), obj = new THREE.Group(); obj.position.set(x, habitat.ctx.heightAt(x, z), z); obj.userData.kit = kit; obj.add(kit ? kit.stage(1) : lump(0.55, 0, 0, 0, 0.45)); scene.add(obj);
+    site = { obj, x, z, n: 0, done, kit }; centre(new THREE.Vector3(x, 0, z)); puffs.push({ x, z, t: 0, c: kit?.puff ?? '#ffffff' });
   }
-  function siteTap() { const s = site; s.n++; sfx('place'); snowPuff(s.x, s.z);
-    if (s.n === 1) s.obj.add(lump(0.75, 0, 0.6, 0, 0.95)); else if (s.n === 2) s.obj.add(lump(0.5, 0, 1.55, 0, 0.95));
-    else { scene.remove(s.obj); site = null; if (s.done(+(s.x / U).toFixed(4), +(s.z / U).toFixed(4))) gather(s.x, s.z, 6, 'rest', 2.4); } }
+  function siteTap() { const s = site; s.n++; sfx('place'); puffs.push({ x: s.x, z: s.z, t: 0, c: s.kit?.puff ?? '#ffffff' });
+    if (s.kit && s.n < 3) { const o = s.obj.children[0]; s.obj.remove(o); s.kit.free(o); s.obj.add(s.kit.stage(s.n + 1)); }
+    else if (s.n === 1) s.obj.add(lump(0.75, 0, 0.6, 0, 0.95)); else if (s.n === 2) s.obj.add(lump(0.5, 0, 1.55, 0, 0.95));
+    if (s.n >= 3) { unkit(s.obj); site = null; if (s.done(+(s.x / U).toFixed(4), +(s.z / U).toFixed(4))) gather(s.x, s.z, 6, 'rest', 2.4); } }
   habitat.ctx.onDig = (x, z) => { puffs.push({ x, z, t: 0, c: '#e2c890' }); ui.onDig?.(); }; // 14-3 화석 발굴: done digging at the fossil site (walk.js): a puff of sand, now and then a fossil
   habitat.ctx.onBall = (x0, z0, x1, z1) => { balls.push({ m: lump(0.24, x0, 0, z0, 1), x0, z0, x1, z1, t: 0 }); scene.add(balls.at(-1).m); ballAt = performance.now(); };
   function updSnow(dt) {
@@ -1126,7 +1148,9 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (z1 > open[3]) t.z = Math.max(Math.min(panZ[0], t.z), t.z - (z1 - open[3]));
     return t;
   }
-  const FIT_HOME = -0.75, FIT_DECOR = -0.2, YARD_NEAR = 0.83; // the screen's lowest row of ground that shows: above the bottom buttons / above the 꾸미기 sheet
+  const FIT_HOME = -0.75, FIT_DECOR = -0.2, YARD_NEAR = 0.83, YARD_HALF = 0.5; // the screen's lowest row of ground that shows: above the bottom buttons / above the 꾸미기 sheet; YARD_HALF: 264 B ①, the built box's share of the screen's width
+  const yardBox = () => { const pts = [...propList.filter(p => p.placed && p.hab === habId && !p.nat).map(p => [p.x * U, p.z * U]), ...Object.entries(paintNow).filter(([, v]) => v != null).map(([k]) => k.split(',').map(v => (+v + 0.5) * U))]; if (!pts.length) return null;
+    const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs); return { x: (x0 + x1) / 2, z: (Math.min(...zs) + Math.max(...zs)) / 2, w: x1 - x0 + U }; };
   // inbox 64-A homeOn: still on the start view with 1-3 friends out: it is worked out again every second (they wander off a near view);
   // a touch on the view, a follow or a double tap ends it (overview / the first home view start it)
   let wide = false, homeOn = false, homeT = 0;
@@ -1137,10 +1161,12 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     const as = [...actors.values()], n = as.length, dd = (a, b) => Math.hypot(b.position.x - a.position.x, b.position.z - a.position.z);
     const near = a => as.filter(b => dd(a, b) < 12).sort((x, y) => dd(a, x) - dd(a, y)).slice(0, 4), spread = g => dd(g[0], g.at(-1));
     const tg = as.find(a => a.rec.tut), g = !n ? [] : tg ? near(tg) : as.map(near).reduce((x, y) => y.length > x.length || y.length === x.length && spread(y) < spread(x) ? y : x); // 66-1: the tutorial's guest stays in the home view
-    HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(0.12, Math.min(...g.map(hOf)));
-    if (YARD && habId === 'yard' && !wide && !n) { HOME.radius *= YARD_NEAR; // 209 A ③: the yard's start view (none out) nearer, props read; 전체 보기 the whole board as before
-      const pl = propList.filter(p => p.placed && p.hab === habId && !p.nat); // 221 C ①: aimed at the middle of the placed props (their box), none: the yard's middle
-      if (pl.length) { const xs = pl.map(p => p.x * U), zs = pl.map(p => p.z * U); HOME.target.set(THREE.MathUtils.clamp((Math.min(...xs) + Math.max(...xs)) / 2, ...panX), 0, THREE.MathUtils.clamp((Math.min(...zs) + Math.max(...zs)) / 2, ...panZ)); if (S186) fitIn(HOME.target, HOME.phi, 0, HOME.radius, FIT_HOME); } } // (229 D ①: the yard's pan box is its whole open land, the tick's clamp keeps it there)
+    HOME.target.copy(mid0); HOME.radius = wide || !n ? homeFit(wide ? 99 : 0) : atShare(0.12, Math.min(...g.map(hOf))); if (wide && y247) HOME.radius = allRadius(); // 247 A3: 전체 보기 the whole 36×58 board
+    // 264 B ①: the yard's first view on what the player built there (placed props and painted cells: the cabin, the fence), friends out or not:
+    // as near as that box is about half the screen's width (YARD_HALF), never farther than 209 A ③'s; pinch / 전체 보기 reach as before
+    const yb = YARD && habId === 'yard' && !wide ? yardBox() : null;
+    if (YARD && habId === 'yard' && !wide && (!n || yb)) { HOME.radius = homeFit(0) * YARD_NEAR; // 209 A ③: the yard's start view (none out) nearer, props read; 전체 보기 the whole board as before
+      if (yb) { HOME.target.set(THREE.MathUtils.clamp(yb.x, ...panX), 0, THREE.MathUtils.clamp(yb.z, ...panZ)); HOME.radius = Math.min(HOME.radius, Math.max(9, yb.w / YARD_HALF / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect))); if (S186) fitIn(HOME.target, HOME.phi, 0, HOME.radius, FIT_HOME); return; } } // 221 C ①: aimed at the middle of that box, none: the yard's middle (229 D ①: the yard's pan box is its whole open land, the tick's clamp keeps it there)
     if (wide || !n) return;
     const t = HOME.target.set(0, 0, 0);
     for (const a of g) t.add(a.position); t.divideScalar(g.length).setY(0); t.x = THREE.MathUtils.clamp(t.x, ...panX); t.z = THREE.MathUtils.clamp(t.z, ...panZ);
@@ -1218,14 +1244,14 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   function band(dt) {
     off.copy(camera.position).sub(controls.target); sph.setFromVector3(off);
     const t = focus ? 0 : THREE.MathUtils.clamp((sph.radius - 12) / 38, 0, 1);
-    const [lo, hi] = decorOn && topOn ? [deg(0.6), deg(0.6)] : decorOn ? DECOR : snapOn ? [deg(4), deg(88)] : skyOn ? [deg(60), deg(102)] : [TOP, LOWEST - deg(12) * t]; // 16-2 하늘 보기: from below the raised target, looking up
+    const [lo, hi] = decorOn && topOn ? [deg(0.6), deg(0.6)] : decorOn ? DECOR : snapOn ? [deg(4), deg(88)] : skyOn ? [deg(60), deg(102)] : y247 ? [deg(2), deg(86)] : [TOP, LOWEST - deg(12) * t]; // 247 A3: the yard from almost straight above down to almost the ground // 16-2 하늘 보기: from below the raised target, looking up
     const phi = sph.phi + (THREE.MathUtils.clamp(sph.phi, lo, hi) - sph.phi) * (1 - Math.exp(-dt * 6));
     if (phi !== sph.phi) { sph.phi = phi; camera.position.copy(controls.target).add(off.setFromSpherical(sph)); }
     controls.minPolarAngle = Math.min(lo, phi); controls.maxPolarAngle = Math.max(hi, phi); // the hard limits never snap it
     controls.minDistance = Math.min(snapOn ? 2.25 : focus ? near : decorOn ? 9 : 5.4, sph.radius); // inbox 42 C2: x0.75 with the animals; inbox 63: x0.9 of 0.71
     const turn = decorOn ? Math.max(TURN, Math.abs(sph.theta)) : Infinity; controls.minAzimuthAngle = -turn; controls.maxAzimuthAngle = turn;
     if (decorOn && topOn) { sph.theta *= Math.exp(-dt * 6); camera.position.copy(controls.target).add(off.setFromSpherical(sph)); controls.minAzimuthAngle = controls.maxAzimuthAngle = sph.theta; } // 182 ④ 위에서: north up
-    if (habId === 'yard') { const T = controls.target, cx = THREE.MathUtils.clamp(T.x, open[0], open[1]) - T.x, cz = THREE.MathUtils.clamp(T.z, open[2], open[3]) - T.z; if (cx || cz) { T.x += cx; T.z += cz; camera.position.x += cx; camera.position.z += cz; } } // 182 ④: the view's middle stays over the open land
+    if (habId === 'yard') { const T = controls.target, cx = THREE.MathUtils.clamp(T.x, ...panX) - T.x, cz = THREE.MathUtils.clamp(T.z, ...panZ) - T.z; if (cx || cz) { T.x += cx; T.z += cz; camera.position.x += cx; camera.position.z += cz; } } // 182 ④: the view's middle stays over the open land
   }
   // the 전체 보기 button shows while following, or once the free camera has left the start view (inbox 63: always but decorating, the way to the whole board)
   const away = () => controls.target.distanceTo(HOME.target) > 0.6 || Math.abs(camera.position.distanceTo(controls.target) - HOME.radius) > 2
@@ -1298,14 +1324,14 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     for (const [m, i0, n] of o.fade) m.isInstancedMesh ? copy(m, i0, n) : m.traverse(c => c.isMesh && copy(c));
     return tw;
   }
-  function hides(o, C, T) { // the segment C -> T passes through o's cylinder
-    const R = o.r + 0.5, dx = C.x - o.x, dz = C.z - o.z, ex = T.x - C.x, ez = T.z - C.z;
+  function hides(o, C, T, R = o.r + 0.5, top = o.h + 0.3) { // the segment C -> T passes through o's cylinder (239 A: R, top: a whole-mesh prop's own box)
+    const dx = C.x - o.x, dz = C.z - o.z, ex = T.x - C.x, ez = T.z - C.z;
     const a = ex * ex + ez * ez, b = 2 * (ex * dx + ez * dz), D = b * b - 4 * a * (dx * dx + dz * dz - R * R);
     if (a < 1e-9 || D <= 0) return false;
     const t0 = Math.max(0, (-b - Math.sqrt(D)) / (2 * a)), t1 = Math.min(1, (-b + Math.sqrt(D)) / (2 * a));
     if (t0 >= t1) return false;
     const y0 = floorOf(o), ya = C.y + (T.y - C.y) * t0, yb = C.y + (T.y - C.y) * t1;
-    return Math.max(ya, yb) > y0 && Math.min(ya, yb) < y0 + o.h + 0.3;
+    return Math.max(ya, yb) > y0 && Math.min(ya, yb) < y0 + top;
   }
   // following: another animal between the camera and the followed one steps (or swims) aside (walk.js / swim.js shoo), in any habitat
   function clearView() {
@@ -1322,13 +1348,38 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     }
   }
   // inbox 63: in the free view too, a prop between the camera and any animal on screen (its middle) fades the same way
+  // 238 B: a placed prop (whole meshes, not tree instances) fades only when its solid parts really cover that middle: its cylinder
+  // alone (r + 0.5 round, as tall as its box) faded a wide thin wall (달 문) to see-through green for an animal seen over its top or
+  // beside it, or off the screen. Trees keep the cylinder (it is their shape); the camera inside the prop (154 D) still fades it.
+  const rc = new THREE.Raycaster(), rd = new THREE.Vector3(), ndc3 = new THREE.Vector3();
+  // 239 A: one ray at the middle faded for a thin pole in front (lights, a bell) and missed an animal two-thirds behind a snowman, and the
+  // cylinder (footprint r) missed a model that reaches past it (a tower, a gazebo roof) seen low. Now the cheap test takes the prop's own
+  // box, then 5 rays (the middle and four round it, as the camera sees the animal) and it fades when 2 or more meet solid parts
+  // (tools/fade-sweep.mjs: 잘못 흐림 / 놓친 가림 against the pixels really hidden).
+  const box3 = new THREE.Box3(), pt = new THREE.Vector3(), cr = new THREE.Vector3(), cu = new THREE.Vector3(), PTS = [[0, 0], [-0.5, 0.25], [0.25, 0.5], [0.5, -0.25], [-0.25, -0.5]]; // no two in a row or a column (a thin post or bar meets one), inside the body (wider: rays past its sides and between its legs)
+  const reach = o => o.rch ??= (box3.makeEmpty(), o.fade.forEach(([m]) => box3.expandByObject(m)), box3.isEmpty() ? [o.r + 0.5, o.h + 0.3]
+    : [Math.max(o.r, Math.hypot(Math.max(box3.max.x - o.x, o.x - box3.min.x), Math.max(box3.max.z - o.z, o.z - box3.min.z))) + 0.3, Math.max(o.h, box3.max.y - floorOf(o)) + 0.1]);
+  function covers(o, C, T) {
+    if (!o.fade.every(([m]) => m.isObject3D && !m.isInstancedMesh) || (C.x - o.x) ** 2 + (C.z - o.z) ** 2 < (o.r + 0.5) ** 2) return hides(o, C, T); // trees: the cylinder (their shape); the camera inside (154 D)
+    const [R, top] = reach(o), hh = Math.max(0.12, T.y - T.a.obj.position.y), w = T.a.body?.r ?? hh; let k = 0;
+    cr.setFromMatrixColumn(camera.matrixWorld, 0); cu.setFromMatrixColumn(camera.matrixWorld, 1);
+    for (const [s, t] of PTS) if (hides(o, C, pt.copy(T).addScaledVector(cr, s * w).addScaledVector(cu, t * hh), R, top) && hitsSolid(o, C, pt) && ++k >= 2) return true;
+    return false;
+  }
+  function hitsSolid(o, C, T) {
+    const L = rd.subVectors(T, C).length(); rc.set(C, rd.divideScalar(L)); rc.far = L; rc.camera = camera; // (a halo sprite needs the camera)
+    return o.fade.some(([m]) => rc.intersectObject(m, true).some(h => h.object.isMesh && !h.object.material.transparent && drawn(h.object))); // not a light pool, a halo or glass
+  }
+  const drawn = m => { for (let q = m; q; q = q.parent) if (!q.visible) return false; return true; }; // 239 A: rays meet hidden meshes too (an unseen tap target round a thin prop: 하늘 망원경, 작품)
   const mids = []; let fadeN = 0, fadeDt = 0, fading = false; // 212 C P4: the free view's check (props x every animal) every 3rd frame, dt summed; every frame while one fades in or out, and when following (one animal: cheap; 154 D's guard needs it at once)
+  const middle = (a, v) => { v.a = a; if (a === focus) return v.copy(controls.target); v.copy(a.obj.position).setY(a.obj.position.y + 0.5 * SIZE.unit * (SIZE[a.rec.species] ?? 0.5) * (a.rec.stage === 'baby' ? SIZE.baby : 1)); ndc3.copy(v).project(camera); return Math.abs(ndc3.x) > 1 || Math.abs(ndc3.y) > 1 || ndc3.z > 1 ? null : v; }; // its middle (data.js sized); 238 B: on the screen only
+  const fadesFor = (o, v) => !o.play?.seats.includes(v.a) && covers(o, camera.position, v); // 28-2: not the play prop it is on
   function fadeProps(dt) {
     fadeDt += dt; if (!fading && !focus && ++fadeN < 3) return; dt = fadeDt; fadeN = fadeDt = 0; fading = false;
-    let n = 0; if (!decorOn) for (const a of focus ? [focus] : actors.values()) if (a.obj.visible) { const v = mids[n] ??= new THREE.Vector3(); n++; v.a = a; if (a === focus) v.copy(controls.target); else v.copy(a.obj.position).setY(a.obj.position.y + 0.5 * SIZE.unit * (SIZE[a.rec.species] ?? 0.5) * (a.rec.stage === 'baby' ? SIZE.baby : 1)); } // its middle (data.js sized)
+    let n = 0; if (!decorOn) for (const a of focus ? [focus] : actors.values()) if (a.obj.visible && middle(a, mids[n] ??= new THREE.Vector3())) n++;
     for (const L of [habitat.solid, D.list]) for (const o of L) {
       if (!o.fade) continue;
-      let want = 1; for (let i = 0; i < n; i++) if (!o.play?.seats.includes(mids[i].a) && hides(o, camera.position, mids[i])) { want = FADE; break; } // 28-2: not the play prop it is on
+      let want = 1; for (let i = 0; i < n; i++) if (fadesFor(o, mids[i])) { want = FADE; break; }
       if (want === 1 && !o.twin?.on) continue;
       const tw = twinOf(o);
       if (!tw.on) { tw.on = true; scene.add(tw.g); tw.swap.forEach(f => f(false)); }
@@ -1471,11 +1522,11 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   function resize() {
     pr = Math.min(pr, maxPR()); renderer.setPixelRatio(pr); renderer.setSize(W(), H());
     camera.aspect = W() / H(); camera.updateProjectionMatrix();
-    HOME.wide = homeRadius(); setHome(); controls.maxDistance = HOME.wide * 1.15;
+    HOME.wide = homeRadius(); setHome(); controls.maxDistance = allRadius() * 1.15;
   }
   window.addEventListener('resize', resize, sig);
   // 27-1: the habitat on screen (a built one entered again is only set active, not started again)
-  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, wild: () => ({ H: wildH, layer: wild, cells: wildCells, trail: trailPaint, bugs: wildBugs, flies: wildFlies?.n ?? 0, lily: lilyK, steps, flush: flushSteps }), ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }), myth, cam: () => ({ focus: focus?.rec.species ?? null, aim: !!aim, glide: !!glide }) }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests)
+  const dbg = DEBUG && { scene, camera, controls, renderer, actors, project, placed, habitat, level, nature, natSpots: () => natSpots, decor, wild: () => ({ H: wildH, layer: wild, cells: wildCells, trail: trailPaint, bugs: wildBugs, flies: wildFlies?.n ?? 0, lily: lilyK, steps, flush: flushSteps }), ed: () => ed, snow: () => ({ pile: pileObj, site: site?.obj, balls }), myth, cam: () => ({ focus: focus?.rec.species ?? null, aim: !!aim, glide: !!glide }), fadeFor: (o, a) => { const v = middle(a, new THREE.Vector3()); return v && fadesFor(o, v); } }; if (DEBUG) { window.__hab = dbg; (window.__habs ??= {})[habId] = dbg; } // __habs: each built one (others are built ahead) // ed: the held prop (inbox 52 tests); fadeFor: tools/fade-sweep.mjs (239 A)
   if (reveal) overview(true); // out to the wider board while the mist draws back
   // 28-1: a zone just opened (main.js): the camera glides out over it, and up to 4 animals run to its spots
   function showZone(k) {
@@ -1534,19 +1585,13 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   return {
     resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, artSpot, // 17-2
     artView, syncWild, showZone, topView, setPals: (m, d) => { habitat.ctx.bf = m; habitat.ctx.duo = d; }, // 17-1; 113 d: id -> the prop the two like
-    myth, guests, pile: pileShow, snowman, building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
+    myth, guests, pile: pileShow, snowman,
+    building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)
     // 27-2: the shaders of what is out now, made before the curtain lifts (main.js). inbox 49: not three's compileAsync, which reads each material's
     // program in a timer: a material let go meanwhile (a habitat built again) or a context given back (new renderer.properties) threw
     // 'isReady' of undefined there, uncaught, and the curtain never lifted. Here gone = ready, and it always ends (10 s at most)
-    warm: () => new Promise(done => {
-      let mats; try { mats = renderer.compile(scene, camera); } catch { return done(); }
-      const t0 = performance.now(), poll = () => {
-        if (dead || renderer.getContext().isContextLost() || performance.now() - t0 > 10000) return done();
-        try { for (const m of mats) { const p = renderer.properties.get(m).currentProgram; if (!p || p.isReady()) mats.delete(m); } } catch { return done(); }
-        if (mats.size) setTimeout(poll, 10); else done();
-      };
-      poll();
-    }),
+    // 256 A: the first guest's ground (land.js, ~2 s on a slow phone the first time) made here too, under the curtain
+    warm: () => { try { habitat.ctx.land(''); } catch { /* made when a guest comes, as before */ } warmed = true; return ready(scene); },
     natives: habitat.natives && { list: habitat.natives.list.map(n => ({ ...n, x: n.x / U, z: n.z / U })), rings: habitat.natives.rings }, // 22-1: for the save (main.js)
     pose: () => ({ target: controls.target.clone(), position: camera.position.clone() }),
     // 24-1 사진 모드: the wider camera band; shot(ratio): this frame drawn again at that pixel ratio, copied out (a 2D canvas)
@@ -1566,7 +1611,8 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       const c = document.createElement('canvas'); c.width = renderer.domElement.width; c.height = renderer.domElement.height; c.getContext('2d').drawImage(renderer.domElement, 0, 0);
       renderer.setPixelRatio(pr); renderer.setSize(W(), H()); renderer.render(scene, camera); return c; // drawn again: setSize cleared the screen
     },
-    dispose() { dead = true; ac.abort(); glows?.dispose(); scat?.dispose(); spotMesh?.geometry.dispose(); spotMat?.dispose(); /* 194 0-5 */ habitat.dispose?.(); for (const g of guests) g.dispose(); controls.dispose(); unhook(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); boxEl.remove(); perfEl?.remove(); }, // replaced (21-3b, main.js)
+    dispose() { dead = true; ac.abort(); unkit(pileObj); unkit(site?.obj);
+      glows?.dispose(); scat?.dispose(); spotMesh?.geometry.dispose(); spotMat?.dispose(); /* 194 0-5 */ habitat.dispose?.(); for (const g of guests) g.dispose(); controls.dispose(); unhook(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); boxEl.remove(); perfEl?.remove(); }, // replaced (21-3b, main.js)
     look(id) { const a = actors.get(id); if (!a) return false; setFocus(a); front(); watch = true; return true; }, // inbox 20: follow one and turn to its face (friends list, 「연못에서 보기」); 26-4 a touch lets go
     centreOn(id) { const a = actors.get(id); if (!a) return false; centre(a.obj.position); return true; }, // 236 B (?tut228) Q14 나: the tutorial brings an animal off screen back (no follow)
     unfollow: () => { trainCam = false; setFocus(null); }, followed: () => trainCam ? 'train' : focus?.rec.id ?? null, // 26-4 사진 모드 따라가기

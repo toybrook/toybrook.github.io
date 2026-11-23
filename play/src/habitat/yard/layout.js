@@ -6,7 +6,7 @@
 // meadow to M past the next step's land.
 import { bump } from '../stamps.js';
 import { rectAt, edgeOf, inRect } from '../zones.js';
-import { UNIT } from '../../game/data.js';
+import { UNIT, YD247 } from '../../game/data.js';
 import { under } from './fine.js';
 
 export const S = UNIT;
@@ -42,6 +42,6 @@ export const spawn = () => { for (let k = 0; ; k++) { const x = O[0] + 1.5 + Mat
 let seed = 31;
 export const rand = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
 export function setLevel(L, top = L) {
-  O = rectAt('yard', L); N = rectAt('yard', Math.max(L, top)); R = N.map((v, i) => v + (i % 2 ? M : -M));
+  O = rectAt('yard', L); N = rectAt('yard', Math.max(L, top)); R = (YD247 && BASE === 'board' ? rectAt('yard', 99) : N).map((v, i) => v + (i % 2 ? M : -M)); // 247 A4: the whole 36×58 board from the start
   occupied.length = 0; decor.length = 0; seed = 31;
 }

@@ -368,7 +368,6 @@ export function cardPhoto(c) {
     .then(b => URL.createObjectURL(b)).catch(e => { urls.delete(k); throw e; }));
   return urls.get(k);
 }
-export const photoStats = () => ({ busy: busy.ms }); // (the 78 report's numbers)
 // the pictures of cards no longer kept (S.cards holds the last B.stroll.cards) go
 export const prunePhotos = cards => { const keep = new Set(cards.map(key)); tx('readwrite', s => s.getAllKeys()).then(ks => ks.some(k => !keep.has(k)) && tx('readwrite', s => { for (const k of ks) if (!keep.has(k)) s.delete(k); })).catch(() => {}); };
 

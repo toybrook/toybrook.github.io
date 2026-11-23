@@ -23,7 +23,7 @@ export function tidySc(a) {
 }
 // a cell no piece goes on: the water, a line's (울타리·돌담·생울타리 stand; 다리, 문)
 const LINE = new Set(['bridge', 'gate']), WATER = BRUSHES.findIndex(b => b.id === 'water');
-export const scBlock = b => b != null && (b === WATER || !!BRUSHES[b]?.stand || LINE.has(BRUSHES[b]?.id));
+export const scBlock = b => b != null && (b === WATER || !!BRUSHES[b]?.stand || !!BRUSHES[b]?.piece || LINE.has(BRUSHES[b]?.id)); // 238 E1: 이어지는 조각 too
 // cell i, j takes pieces on S's yard: on the open land at its step, not a blocked cell
 const cellOk = (S, i, j) => inRect(rectAt('yard', S.expand?.yard ?? 0), (i + 0.5) * UNIT, (j + 0.5) * UNIT) && !scBlock(S.paint?.yard?.[i + ',' + j]);
 // pieces read back (yard.js yardIn, rules.js setLayout) on S as it is: tidySc, each on a cell that takes it, under the step's cap: { list, off (left out) }

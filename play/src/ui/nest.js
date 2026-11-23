@@ -315,9 +315,8 @@ export function initNest(nav) {
     const k = key(a.species, a.variant), s = serOf(k), row = cardEl.querySelector('.nbtns');
     if (s) { const p = document.createElement('p'), n = serHave(G.S, s) + (G.S.codex[k] ? 0 : 1); p.className = 'nwhy nser';
       p.textContent = $t('{0} {1}/{2}{3}', s.name, n, s.cells.length, G.S.codex[k] ? '' : $t(' · 새 칸!')); row.before(p); }
-    const sec = s && G.S.ser?.[s.id]?.sec, first = a.s && s ? !sec || sec.species + ':' + sec.variant === k && (sec.acc ?? null) === (a.acc ?? null) : !G.S.codex[k]; // the card comes before the codex has it
-    const no = !first ? 0 : a.s && s ? collNo(G.S, k, true) : collNo(G.S, k); // 215 (3-13): 「나의 n번째 전설」 / a series secret's, counted; only its first (review 6)
-    if (no) { const p = document.createElement('p'); p.className = 'nwhy cno'; p.textContent = a.s && s ? $t('No.{0} · 나의 {1}번째 시크릿', no, no) : $t('No.{0} · 나의 {1}번째 전설', no, no); row.before(p); }
+    const no = G.S.codex[k] ? 0 : collNo(G.S, k); // 215 (3-13): 「나의 n번째 전설」, only its first (the card comes before the codex has it); 263 A: no series-secret number
+    if (no) { const p = document.createElement('p'); p.className = 'nwhy cno'; p.textContent = $t('No.{0} · 나의 {1}번째 전설', no, no); row.before(p); }
     if (!back) return;
     const x = Object.assign(document.createElement('button'), { className: 'sb' }); x.dataset.brk = '';
     x.textContent = $t('분해 +{0}', brkStamps(a)); row.append(x); row.classList.add('three'); // 208 A Q4

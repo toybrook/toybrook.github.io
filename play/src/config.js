@@ -26,7 +26,7 @@ export const TOSS = false;
 
 // 20-1 open beta. VERSION goes to the feedback form; FEEDBACK_URL is the same form as site/config.js ('TODO' = no button).
 // RATING: the rating mark (an image under assets/) and number on the start screen; both empty = hidden (until rated).
-export const VERSION = '0.86.1';
+export const VERSION = '0.87.0';
 export { EDITION } from './game/data.js'; // inbox 22/31: set in data.js, next to the PACE table it picks
 export const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeHXV6tlH6IS3tlu7Xb71qeh1fvIbkzNHUoUHnSY3j_u7dcpA/viewform';
 export const FEEDBACK_FIELD = 'entry.2112099919'; // the form's "game info" box, filled in for the player
@@ -38,19 +38,19 @@ export const UMAMI_ID = 'f186eb37-4c11-4b9d-887c-1e3eb36b4ded', STATS_HOST = 'to
 // 21-1 time of day (src/habitat/daylight.js hourNow is the only clock). 'real': the device's clock; 'cycle': a whole day
 // every CYCLE_MINUTES (for testing). ?hour=H fixes the hour (shots). Nothing about the time goes into the save.
 export const TIME_MODE = 'real', CYCLE_MINUTES = 24;
-export const HOUR = params.has('hour') ? +params.get('hour') : null;
+export const HOUR = null; // release build: ?hour= off (251 C-2)
 // 21-2 weather (src/habitat/weather.js): each habitat its own, worked out from the game clock alone (the same hour shows the
 // same weather; nothing in the save). A spell lasts every[0]..every[1] game hours; odds: each kind's share of the spells;
 // rainbow: game hours of rainbow after a rain when the next spell is clear; fade: game hours each one fades in and out.
 // ?weather=clear|rain|fog|rainbow fixes it (shots). Only for looking at: no odds, rewards or hearts depend on it.
 // 25-1 by: a habitat's own odds (the snow: snow in place of rain)
 export const WEATHER = { every: [1, 3], odds: { clear: 60, rain: 25, fog: 15 }, by: { snow: { clear: 55, snow: 30, fog: 15 }, dino: { clear: 55, rain: 35, fog: 10 } }, rainbow: 0.5, fade: 1 / 6, ev: null, cover: 0, aur: 1 }; // ev: an event's odds by habitat while it runs (15-1 ui/event.js); 15-2 cover: its snow lying (0..1), aur: the aurora x
-export const WEATHER_Q = params.get('weather');
+export const WEATHER_Q = null; // release build: ?weather= off (251 C-2)
 // 24-1 사진 모드: the hour (0..24) and weather ('clear' | 'rain' | 'fog' | 'rainbow') to show, null: as usual. Looks only (nothing is saved or counted)
 export const VIEW = { hour: null, weather: null };
 // 26-1: the bytes of the 3D code fetched after the first screen (ui/loadbar.js), and whether the offline files (dist-web/sw.js) are
 // there. Both lines are rewritten by tools/build-web.mjs; here (the source folder, no sw.js) a rough number and off.
-export const CODE_BYTES = 3189275; // release build
+export const CODE_BYTES = 3277539; // release build
 export const OFFLINE = true; // release build
 // settings sheet (main.js): kept apart from the save. time: 'real' | 'day' (항상 낮); weather: false = 날씨 효과 끄기
 // 26-2 소리: mute (모두 끄기), vAll / vAmb / vFx / vAnimal (전체 / 배경 / 효과 / 13-0 동물 소리, 0..1). Low at first (40%).

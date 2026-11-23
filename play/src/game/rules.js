@@ -38,11 +38,11 @@ import { blank as artBlank, tidyArt, artTick } from './art.js'; // 17-2
 import { blank as wildBlank, tidyWild, wildTick } from './wild.js'; // 17-3
 import { tidyGuests, skipGuests, tutShop, blank as guestsBlank } from './guests.js'; // 66-1
 import { GUESTS, GUEST } from './guests-data.js'; // 66-2: a settled guest's name
-import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD, YARD, YARD_B, YARD_HAB, S186, G190 } from './data.js';
+import { SCHEMA_VERSION, CONTENT_VERSION, GIFT, ATTEND, ATTEND_PROPS, WEEK1, EVENTS, EV_ACC, FIRST, STROLL_PROPS, PLACES, SCENES, MYTHIC, MYTHIC152, BIGS, COMPLETE, BALANCE as B, RARITIES, EARNED_TIERS, SHARED_VARIANTS, SPECIES, HABITATS, EGG_TYPES, ACCESSORIES, MODELS, PROPS, NATURE, BRUSHES, brushIn, SETS, bodyArea, ZONES, paletteOf, SIZES, sizeF, sizable, UNIT, FOSSIL, HOLD, YARD, YARD_B, YD247, YARD_HAB, S186, G190 } from './data.js';
 import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf, dayNo } from './clock.js';
-import { F170, FIRST2, TUT228 } from './data.js'; // 170 B; 236 B
+import { F170, X230V, FIRST2, TUT228 } from './data.js'; // 170 B; 230 C1 swatches (empty without ?x230); 236 B
 import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore, falls143fore } from '../habitat/zones.js';
 import { lotus143off, SPOTS } from '../habitat/zones.js'; // 143 B the lotus marsh; 194 0-5 the 꾸미기 자리
 import { newlyDone } from './achieve.js';
@@ -54,7 +54,7 @@ if (YARD) HAB.yard = YARD_HAB; // 182 ④ 나의 뜰: a habitat for the rules (p
 export const RANK = Object.fromEntries(RARITIES.map((r, i) => [r.id, i]));
 
 export const variantsOf = sp => [...SHARED_VARIANTS, ...(sp.extra || []), ...sp.legendary.map(l => ({ ...l, rarity: 'legendary' }))];
-const FIGS = new Set(MYTHIC152.map(m => m.fig.v)); // 158: only our own MYTHIC152 figure looks pass whole (a save's object never does)
+const FIGS = new Set([...MYTHIC152.map(m => m.fig.v), ...X230V]); // 158: only our own MYTHIC152 figure looks pass whole (a save's object never does)
 export const variantOf = (spId, vId) => typeof vId === 'object' ? (FIGS.has(vId) ? vId : undefined) : SP[spId] && variantsOf(SP[spId]).find(v => v.id === vId); // 158: a look given whole (MYTHIC152 fig: no SPECIES slot)
 // a variant's colours on a species: the species' own list (palette), else the variant's shared one; legendaries have none
 export const colorsOf = (spId, vId) => SP[spId]?.palette?.[vId] ?? variantOf(spId, vId)?.colors ?? [];
@@ -94,7 +94,8 @@ const shape = v => v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v, 
 // constructor / prototype keys, and no <>"'` in any string (nothing the game writes has them; names go through cleanName),
 // so a field shown with innerHTML (a postcard's name, an artwork's maker) cannot carry markup.
 const BAD_KEY = new Set(['__proto__', 'constructor', 'prototype']);
-export const scrub = v => typeof v === 'string' ? v.replace(/[<>"'`]/g, '') : Array.isArray(v) ? v.map(scrub)
+// 254 A-3: and no bidi controls (\p{Bidi_C}: U+061C, U+200E-200F, U+202A-202E, U+2066-2069), which could turn a name round on screen
+export const scrub = v => typeof v === 'string' ? v.replace(/[<>"'`]|\p{Bidi_C}/gu, '') : Array.isArray(v) ? v.map(scrub)
   : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [scrub(k), x]).filter(([k]) => !BAD_KEY.has(k)).map(([k, x]) => [k, scrub(x)])) : v; // 195 B-10 A: clean the key first, then test it
 // 199 B-11 (review 7): an egg's v / pick / sp (series.js) from a save, checked in any build: a look of the egg's own kind, not gone,
 // of its rarity (v: higher only from a gauge, p). Each field touched only when it is there, so a save without them keeps its bytes
@@ -146,7 +147,9 @@ export function fromSave(raw, now) {
       S.events = Object.fromEntries(Object.entries(S.events).filter(([, R]) => isObj(R) && EV[R.id] && Number.isFinite(R.start) && Number.isFinite(R.end)).map(([k, R]) => [k, { ...R,
         c: n(R.c), got: n(R.got), step: Math.min(n(R.step), EV[R.id].track.length), pets: n(R.pets), dayAt: n(R.dayAt), day: typeof R.day === 'string' ? R.day : '',
         buy: isObj(R.buy) ? Object.fromEntries(Object.entries(R.buy).map(([k, v]) => [k, n(v)])) : {}, shots: isObj(R.shots) ? R.shots : {},
-        pile: typeof R.pile === 'string' ? R.pile : '', pileAt: n(R.pileAt), built: n(R.built), luck: n(R.luck) }]));
+        pile: typeof R.pile === 'string' ? R.pile : '', pileAt: n(R.pileAt), built: n(R.built), luck: n(R.luck),
+        ...Object.fromEntries(['tk', 'tkPaid', 'sky', 'skyAt'].filter(f => R[f] != null).map(f => [f, Math.min(Number.isFinite(R[f]) ? n(R[f]) : 0, // 238 E2: capped (sky draws a lamp each)
+          f === 'tk' ? EV[R.id].track.filter(s => s.ticket).length : f === 'sky' ? EV[R.id].sky?.max ?? 0 : f === 'tkPaid' ? EV[R.id].track.filter(s => s.ticket).length * (EV[R.id].ticketHearts || 0) : now)])), ...R.skyDay != null && { skyDay: typeof R.skyDay === 'string' ? R.skyDay.slice(0, 10) : '' } }])); // 238 E2: only when there
       const own = evOwned(S); // 15-2: worn event wear, known ones, no more of each than bought
       for (const a of S.animals) if (a.wear != null) { a.wear = Array.isArray(a.wear) ? [...new Set(a.wear)].filter(k => EV_ACC[k] && own[k]-- > 0) : []; if (!a.wear.length) delete a.wear; } }
     S.accs = Object.fromEntries(Object.entries(S.accs).filter(([k, n]) => ACCESSORIES[k] && Number.isInteger(n) && n > 0)); // 95: kept secret accessories, by name
@@ -165,16 +168,22 @@ export function fromSave(raw, now) {
 // 184 ④ (SCHEMA 15) S.yard: the 나의 뜰 part (game/yard.js yardPart), read with the flag on by yardIn, entry by entry against this
 // save. Here, flag or not, its shape only: rebuilt from the known fields (rows that are not number rows dropped); a part that is
 // not one, or another game's (since), goes. Nothing in it is read with the flag off: a build without it keeps it as it came
-function tidyYard(S) {
-  const y = S.yard; delete S.yard;
-  if (!isObj(y) || y.v !== 1 || y.since !== S.since || !Number.isInteger(y.L) || y.L < 0 || y.L >= YARD_B.cells.length || !isObj(y.paint)
-    || ![y.props, y.nat, y.stay].every(Array.isArray)) return;
+// 251 C: yard247 (the 247 yard whole, beside the 0.86.1-shaped yard: yard.js saveOf) is checked the same way
+function tidyYard(S) { for (const f of ['yard', 'yard247']) { const y = tidyY(S, S[f]); delete S[f]; if (y) S[f] = y; } }
+function tidyY(S, y) {
+  if (!isObj(y) || y.v !== 1 || y.since !== S.since || !Number.isInteger(y.L) || y.L < 0 || y.L > YARD_TOP || !isObj(y.paint)
+    || ![y.props, y.nat, y.stay].every(Array.isArray)) return null;
   const num = v => v === null || Number.isFinite(v), row = n => e => Array.isArray(e) && e.length === n && e.every((v, i) => n === 7 && i === 0 ? Object.hasOwn(NAT, v) : num(v));
-  S.yard = { v: 1, since: y.since, L: y.L, kit: y.kit === 1 ? 1 : 0, last: y.last === 1 ? 1 : 0,
+  return { v: 1, since: y.since, L: y.L, kit: y.kit === 1 ? 1 : 0, last: y.last === 1 ? 1 : 0,
     paint: Object.fromEntries(Object.entries(y.paint).filter(([k, b]) => /^-?\d{1,2},-?\d{1,2}$/.test(k) && Number.isInteger(b) && b >= 0 && b < 64).slice(0, 2088)),
     props: y.props.filter(row(9)).slice(0, 400), nat: y.nat.filter(row(7)).slice(0, 120), stay: y.stay.filter(Number.isInteger).slice(0, 20),
-    ...(Array.isArray(y.sc) && { sc: tidySc(y.sc) }) }; // 195 B-8 1-2: 흩뿌리기 (game/scatter.js), whole pieces in range only
+    ...(Array.isArray(y.sc) && { sc: tidySc(y.sc) }), // 195 B-8 1-2: 흩뿌리기 (game/scatter.js), whole pieces in range only
+    ...(isObj(y.pc) && { pc: tidyPc(y.pc), ...((y.pb === 2 || y.pb === 3) && { pb: y.pb }) }) }; // 238 E1 (?h232): 이어지는 조각 owned; 246 B · 248 D pb (yard.js yardIn)
 }
+// 238 E1: the highest yard step any build has (?h232: 9); a build with fewer reads a higher one as its last (yard.js yardIn), so the
+// yard is kept, not dropped. pc: { brush id: pieces owned }, by shape only (a build without the brush keeps it as it came)
+const YARD_TOP = 9;
+export const tidyPc = pc => Object.fromEntries(Object.entries(pc).filter(([k, n]) => /^[a-z]{1,16}$/.test(k) && Number.isInteger(n) && n >= 1 && n <= 2088).slice(0, 16));
 // Save migrations: MIGRATIONS[v] turns a v-1 save into a v save. A new save shape = SCHEMA_VERSION + 1 in data.js and a
 // step here (fields that only need a default don't need one: newGame fills them). 1 and 2 had no steps.
 const MIGRATIONS = { 3: to3, 4: to4, 5: to5, 6: to6, 7: to7, 8: to8, 9: to9, 10: to10, 11: to11, 12: S => { for (const a of S.animals) if (a.acc) a.s = 1; }, 13: mythTo13, 14: affTo14, 16: mythTo16 }; // 12 (95): a friend that hatched in a secret accessory keeps the x2 send-back (a.s), the one worn stays on it, none kept yet // 4: animals over the new room go to storage on the first advance
@@ -440,7 +449,7 @@ export function advance(S, now, rng = Math.random) {
   HABITATS.forEach((h, i) => { if (i && h.ready && !S.unlocked.includes(h.id) && unlockInfo(S, h.id).met) { S.unlocked.push(h.id); settle(S);
     if (h.nest && h.ready && !S.nests[h.id]) S.nests[h.id] = { t: now, eggs: Array.from({ length: B.nest.onUnlock }, () => layEgg(S, h.nest, rng)) }; // inbox 31: eggs to start with
     ev.push({ type: 'unlock', habitat: h.id }); } });
-  if (YARD && !S.unlocked.includes('yard') && unlockInfo(S, 'yard').met) { S.unlocked.push('yard'); ev.push({ type: 'unlock', habitat: 'yard' }); } // 182 ④
+  if (YARD && !S.unlocked.includes('yard') && unlockInfo(S, 'yard').met) { S.unlocked.push('yard'); if (YD247) S.flags = { ...S.flags, y247: 1 }; ev.push({ type: 'unlock', habitat: 'yard' }); } // 182 ④
   const day = dayOf(now); if (S.xpDay !== day && !backDay(S, now)) { S.xpDay = day; S.xp += B.level.xp.login; bump(S, 'days'); } // the day's first visit (or the game left open past midnight)
   for (const a of newlyDone(S)) { S.ach = { ...S.ach, [a.id]: now }; S.xp += B.level.xp.achieve; ev.push({ type: 'achieve', id: a.id }); } // 23-2
   wholeTick(S, ev); // 66-3
@@ -844,10 +853,22 @@ export function clear143reeds(S) {
   return n - S.props.length;
 }
 // 22-1 땅 칠하기: cell i, j (the grid of the first board's units) of a habitat to brush b (BRUSHES index), or null: bare again
-export function paintCell(S, habId, i, j, b) {
+export function paintCell(S, habId, i, j, b, buy = Infinity) { // buy: ♥ it may spend on a piece (246 B: ui/decor.js, ♥100 an opening)
   const P = S.paint[habId] ??= {}, k = `${i},${j}`;
   if (b == null || !BRUSHES[b]) { if (!(k in P)) return false; delete P[k]; return true; }
-  if (P[k] === b || !brushIn(b, habId) || !can(S, 'brush:' + BRUSHES[b].id)) return false; P[k] = b; return true; // 25-1: only that habitat's brushes
+  if (P[k] === b || !brushIn(b, habId) || !can(S, 'brush:' + BRUSHES[b].id)) return false;
+  const pz = BRUSHES[b].piece; if (pz) { const id = BRUSHES[b].id, own = S.pc?.[id] || 0; // 238 E1 이어지는 조각: one from the bag, or one more bought
+    if (!own || habId !== 'yard') return false;
+    if (piecesUsed(S, b) >= own) { if (S.hearts < pz[1] || pz[1] > buy || own >= 2088) return false; S.hearts -= pz[1]; S.pc = { ...S.pc, [id]: own + 1 }; } }
+  P[k] = b; return true; // 25-1: only that habitat's brushes
+}
+// 238 E1 (?h232, heart-sink-232.md 4) 이어지는 조각: pieces of brush b owned (S.pc) and painted in the yard; buying the brush (its
+// first price: the right and one piece). The ♥ never comes back (erased: back to the bag; no resale)
+export const piecesOwned = (S, b) => S.pc?.[BRUSHES[b]?.id] || 0;
+export const piecesUsed = (S, b) => { let n = 0; for (const k in S.paint?.yard || {}) if (S.paint.yard[k] === b) n++; return n; };
+export function buyBrush(S, b) {
+  const pz = BRUSHES[b]?.piece; if (!pz || !brushIn(b, 'yard') || !S.unlocked.includes('yard') || piecesOwned(S, b) || S.hearts < pz[0]) return false;
+  S.hearts -= pz[0]; S.pc = { ...S.pc, [BRUSHES[b].id]: 1 }; return true;
 }
 // 22-1 되돌리기 / 다시 하기: a habitat's layout (its props where they stand, its paint) and putting one back. A prop bought since
 // goes into storage; one sold since stays gone. Hearts never move.
@@ -861,7 +882,8 @@ export function setLayout(S, habId, snap) {
     Object.assign(p, { placed: !!e[1], x: e[2], z: e[3], rot: e[4] });
     if (e.length > 5) { Object.assign(p, { c: e[5], sz: e[6], on: e[7], sl: e[8] }); if (e[7] == null) { delete p.on; delete p.sl; } }
   }
-  S.paint = { ...S.paint, [habId]: { ...o.paint } }; S.ghost = { ...S.ghost, [habId]: o.g || [] };
+  const pcs = {}, paint = Object.fromEntries(Object.entries(o.paint || {}).filter(([, b]) => !BRUSHES[b]?.piece || habId === 'yard' && (pcs[b] = (pcs[b] || 0) + 1) <= piecesOwned(S, b))); // 238 E1: a made-up layoutUndo gets no pieces
+  S.paint = { ...S.paint, [habId]: paint }; S.ghost = { ...S.ghost, [habId]: o.g || [] };
   if (habId === 'yard' && Array.isArray(o.sc)) S.scatter = fitSc(S, o.sc).list; tidy(S); // 195 B-8 1-2: as yardIn (a made-up layoutUndo too)
 }
 // 194 0-2 9-2 (?s186 trial): the size table grew props and natives, so they may overlap now: each habitat with any placed is
@@ -993,10 +1015,11 @@ export function importLayout(S, habId, d, fit, cell) {
     const far = p => Math.hypot(p.x - it.x, p.z - it.z), p = pool.reduce((a, b) => far(b) < far(a) ? b : a);
     used.add(p.uid); Object.assign(p, { placed: true }, at, look, seat); if (nat) n.trees++; else { if (r) rails += r; else props++; n.placed++; }
   })(d.items[k]);
-  const paint = {};
+  const paint = {}, pcs = {};
   for (const [key, b] of Object.entries(d.paint || {})) {
     const [i, j] = key.split(',').map(Number);
     if (!BRUSHES[b]) continue; if (!cell(i, j) || !brushIn(b, habId)) { n.cellOff++; continue; } if (!can(S, 'brush:' + BRUSHES[b].id)) { n.lock++; continue; }
+    if (BRUSHES[b].piece && (pcs[b] = (pcs[b] || 0) + 1) > piecesOwned(S, b)) { n.lock++; continue; } // 238 E1: pieces not owned (none bought here)
     paint[key] = b; n.cells++;
   }
   S.paint = { ...S.paint, [habId]: paint }; S.ghost = { ...S.ghost, [habId]: ghost }; tidy(S);
@@ -1061,7 +1084,7 @@ export function saveLay(S, habId, k, name, now) {
   L[k] = { n: cleanName(name) || LAY_NAMES[k], c: encode(S, habId), at: now }; S.lays = { ...S.lays, [habId]: L }; return L[k];
 }
 // 26-4 아끼는 친구 and names. A name: up to 8 letters, without < > & " ' ` (names go into the windows' HTML) or control characters
-export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'`\u0000-\u001f\u007f]/g, '').trim()].slice(0, 8).join('').trim() : '';
+export const cleanName = t => typeof t === 'string' ? [...t.replace(/[<>&"'`\u0000-\u001f\u007f]|\p{Bidi_C}/gu, '').trim()].slice(0, 8).join('').trim() : '';
 // inbox 58: a variant whose name has the species in it already (황금 복돼지) is not called 황금 복돼지 돼지
 // 124: a name as shown: English Title Case per word (Sky Blue Two-Tone Flamingo, Mother-of-Pearl: small words stay low),
 // Japanese グラデーション shortened to グラデ inside a name only (the cells keep two lines)
@@ -1119,7 +1142,7 @@ export function feed(S, id, now) {
 export function tapHeart(S, id, now, rng = Math.random, ev = null) { // ev: 158 the unicorn's horn (mythLuck) may fall
   const a = S.animals.find(a => a.id === id) ?? S.visit.guests.find(g => g.id === id), n = a ? heartFor(S, a, now) : 0; // 16-1: a guest too (the day's cap the same)
   if (n && growing(a)) { bank(a, now); a.g = Math.min(1, a.g + B.grow.pet); }
-  if (n) { bump(S, 'pet'); const L = liveRun(S, now); if (L) { if (++L.R.pets % L.e.earn.pet === 0) evEarn(S, L.R, 1, now); // 15-1: a coin every earn.pet hearts
+  if (n) { bump(S, 'pet'); const L = liveRun(S, now); if (L && !held(S, L.e, now)) { if (++L.R.pets % L.e.earn.pet === 0) evEarn(S, L.R, 1, now); // 15-1: a coin every earn.pet hearts
     if (L.e.earn.luck && rng() < L.e.earn.luck) { L.R.luck++; evEarn(S, L.R, 1, now); } } } // 15-2: now and then one more
   if (n && S.pet.n <= B.level.xp.petDaily) S.xp += B.level.xp.pet; // the day's first petDaily hearts (hearts.js counts them)
   if (ev && a && S.animals.includes(a)) mythLuck(S, a, now, rng, ev);
@@ -1288,22 +1311,41 @@ function runAt(e, y) { // its run of year y (by the start): { start, end } or nu
   const end = c?.end != null ? kstEnd(c.end) : start + e.days * DAY_MS;
   return Number.isFinite(start) && Number.isFinite(end) ? { start, end } : null;
 }
+// 238 E2 (an event with guard, data.js LANTERN): held = nothing earned, opened, ended or mailed while the clock is behind the latest
+// time the game has seen (S.jAt: turned back) or the device is a day or more off events.json's Date (setSkew: device - server, from
+// ui/fest.js; 0 offline or never read). A clock moved ahead offline can't be told from a real day: see docs/reports/238e2.md
+let SKEW = null; // null: not read yet (held until ui/fest.js answers: 0 offline / no Date / failed)
+export const setSkew = ms => { SKEW = ms === null ? null : Number.isFinite(ms) ? ms : 0; };
+export const held = (S, e, now) => !!e?.guard && (now < S.jAt || SKEW === null || Math.abs(SKEW) >= DAY_MS);
+const calHas = (e, y) => !!CAL?.some(c => c.id === e.id && kstYear(kst(c.start)) === y); // e.cal: only a year the calendar names
+export function evWhen(id, now) { // 238 E2: event id's run that is on, coming or ended a week ago at most: { key, start, end } (ui/fest.js)
+  const e = EV[id], Y = kstYear(now); if (!e) return null;
+  for (const y of [Y - 1, Y, Y + 1]) { const r = (!e.cal || calHas(e, y)) && runAt(e, y); if (r && now < r.end + 7 * DAY_MS) return { key: `${id}-${y}`, ...r }; }
+  return null;
+}
 const evLive = (R, now) => !R.over && R.start <= now && now < R.end;
 export function liveRun(S, now) { for (const [key, R] of Object.entries(S.events)) if (evLive(R, now)) return { key, R, e: EV[R.id] }; return null; }
 function evEarn(S, R, n, now, rng = Math.random) {
-  const e = EV[R.id]; R.got += n; // 74: no coins to spend, only the 보상 길's count (R.c: an old save's, made hearts at the end)
-  while (R.step < e.track.length && R.got >= e.track[R.step].at) give(S, e.track[R.step++], now, rng, S.flags.lastHab);
+  const e = EV[R.id]; if (held(S, e, now)) return; R.got += n; // 74: no coins to spend, only the 보상 길's count (R.c: an old save's, made hearts at the end)
+  while (R.step < e.track.length && R.got >= e.track[R.step].at) { const s = e.track[R.step++];
+    if (s.ticket) R.tk = (R.tk || 0) + 1; // 238 E2: a 야광 교환권, used in the festival window (useTicket)
+    else if (s.back && S.props.some(p => p.prop === s.prop)) S.hearts += s.back; // 8-5 복각: had already, ♥ instead
+    else give(S, s, now, rng, S.flags.lastHab); }
 }
 function evTick(S, now, rng) {
   const Y = kstYear(now);
   for (const e of EVENTS) for (const y of [Y - 1, Y]) {
     const key = `${e.id}-${y}`, r = runAt(e, y), R = S.events[key];
     if (R) { if (CAL && r && !R.over) Object.assign(R, r); }
-    else if (r && r.start <= now && now < r.end) S.events[key] = { id: e.id, ...r, c: 0, got: 0, step: 0, pets: 0, day: '', dayAt: 0, buy: {}, shots: {}, pile: '', pileAt: 0, built: 0, luck: 0 };
+    else if (r && r.start <= now && now < r.end && (!e.cal || calHas(e, y)) && !held(S, e, now)) { const P = e.keep && S.events[`${e.id}-${y - 1}`]; // 238 E2 keep: last year's album
+      S.events[key] = { id: e.id, ...r, c: 0, got: 0, step: 0, pets: 0, day: '', dayAt: 0, buy: {}, shots: P ? { ...P.shots } : {}, ...P?.cover && { cover: P.cover }, pile: '', pileAt: 0, built: 0, luck: 0 }; }
   }
   for (const R of Object.values(S.events)) {
-    if (!R.over && now >= R.end) { R.over = now; R.paid = R.c * EV[R.id].coin.hearts; R.left = R.c; S.hearts += R.paid; R.c = 0; }
-    else if (evLive(R, now) && dayOf(now) !== R.day && now >= R.dayAt) { R.day = dayOf(now); R.dayAt = now; evEarn(S, R, EV[R.id].earn.day, now, rng); }
+    if (held(S, EV[R.id], now)) continue; // 238 E2
+    if (!R.over && now >= R.end) { R.over = now; R.paid = R.c * EV[R.id].coin.hearts; R.left = R.c; S.hearts += R.paid; R.c = 0;
+      if (R.tk) { R.tkPaid = R.tk * EV[R.id].ticketHearts; S.hearts += R.tkPaid; R.tk = 0; } } // 238 E2: a 교환권 left: ♥ (its end card says so)
+    else if (evLive(R, now)) { const dk = EV[R.id].guard ? kstDay(now) : dayOf(now); // 238 E2: guard's day in KST (a changed time zone no new day)
+      if (dk !== R.day && now >= R.dayAt) { R.day = dk; R.dayAt = now; evEarn(S, R, EV[R.id].earn.day, now, rng); } }
   }
 }
 export function buyEv(S, propId, hab, now) { // the event shop: its coins, into this habitat (put away: 꾸미기 › 선물); 15-2 wear: one more to put on
@@ -1314,10 +1356,12 @@ export function buyEv(S, propId, hab, now) { // the event shop: its coins, into 
   const p = { uid: S.nextId++, prop: P.id, hab: P.habitat ?? hab, placed: false, x: 0, z: 0, rot: 0 }; S.props.push(p); return p;
 }
 // a photo saved while an event runs: ctx { hab, night, sky } (photo.js); fills the first empty slot it meets, all = album.prop
-export const shotFits = (S, n, { hab, night, sky, ball }) => (!n.hab || n.hab === hab) && (n.night == null || n.night === !!night) && (!n.sky || n.sky === sky)
-  && (!n.ball || !!ball) && (!n.prop || S.props.some(p => p.placed && p.hab === hab && [].concat(n.prop).includes(p.prop))); // 15-2: ball, a list of props
+export const shotFits = (S, n, { hab, night, sky, ball, fly, md }) => (!n.hab || n.hab === hab) && (n.night == null || n.night === !!night) && (!n.sky || n.sky === sky)
+  && (!n.ball || !!ball) && (!n.fly || !!fly) && (!n.date || n.date === md) // 238 E2: fly a sky lamp up already, md the KST day (MM-DD)
+  && (!n.prop || S.props.some(p => p.placed && p.hab === hab && [].concat(n.prop).includes(p.prop))); // 15-2: ball, a list of props
 export function evShot(S, ctx, now, rng = Math.random) {
-  const L = liveRun(S, now), A = L?.e.album, s = A?.slots.find(s => !L.R.shots[s.id] && shotFits(S, s.need, ctx)); if (!s) return null;
+  const L = liveRun(S, now), A = L?.e.album; if (!A || held(S, L.e, now)) return null;
+  ctx = { ...ctx, fly: L.R.sky > 0, md: kstDay(now).slice(5) }; const s = A.slots.find(s => !L.R.shots[s.id] && shotFits(S, s.need, ctx)); if (!s) return null;
   L.R.shots[s.id] = now; let cover = null;
   if (A.slots.every(s => L.R.shots[s.id]) && !L.R.cover) { L.R.cover = now; cover = give(S, { prop: A.prop }, now, rng, ctx.hab).prop; }
   return { slot: s.id, cover };
@@ -1328,7 +1372,7 @@ const kstDay = t => new Date(t + 9 * 3600e3).toISOString().slice(0, 10), kstHour
 export function evPile(S, now) {
   const L = liveRun(S, now), P = L?.e.piles; if (!P) return null;
   const i = P.findLastIndex(h => kstHour(now) >= h), id = `${kstDay(now)}:${i}`;
-  return i < 0 || L.R.pile === id || now < L.R.pileAt ? null : { ...L, id };
+  return i < 0 || L.R.pile === id || now < L.R.pileAt || held(S, L.e, now) ? null : { ...L, id };
 }
 // 14-3 화석 발굴: an animal done digging at the dino jungle's fossil site (walk.js 'dig', habitat.js ctx.onDig). The next of
 // FOSSIL.props the player doesn't have yet, with FOSSIL.odds, FOSSIL.gap at least after the last one: into the dino jungle's
@@ -1357,8 +1401,31 @@ export function evWear(S, id, k) {
 }
 export function evSeen(S, key, k) { const R = S.events[key]; if (R && (k === 'seen' || k === 'told')) R[k] = 1; }
 // its mail, while it runs (ui/mail.js adds it to mail.json's; mailOpen: once)
-export const evMail = (S, now) => { const L = liveRun(S, now); if (!L) return [];
-  return [{ id: 'ev-' + L.key, ...L.e.mail, end: new Date(L.R.end + 9 * 3600e3 - 1).toISOString().slice(0, 10) }]; };
+export const evMail = (S, now) => { const L = liveRun(S, now); if (!L || held(S, L.e, now)) return []; const end = kstDay(L.R.end - 1);
+  if (L.e.mails) return L.e.mails.map(m => ({ ...m, id: `ev-${L.key}-${m.id}`, start: kstDay(L.R.start + (m.day || 0) * DAY_MS), end })).filter(m => m.start <= kstDay(now)); // 238 E2: one a day of the run
+  return [{ id: 'ev-' + L.key, ...L.e.mail, end }]; };
+// 238 E2 sky lamp: once a KST day (none before the last one's time: turned back) while the run is on and its stand (sky.prop) is had,
+// at most sky.max; each is a coin of earn.day/3 rounded (the habitat lets it go, ui/fest.js). Its count, or 0
+export function evSky(S, now) {
+  const L = liveRun(S, now), k = L?.e.sky; if (!k || held(S, L.e, now) || (L.R.sky || 0) >= k.max || L.R.skyDay === kstDay(now) || now < (L.R.skyAt || 0) || !S.props.some(p => p.prop === k.prop)) return 0;
+  L.R.sky = (L.R.sky || 0) + 1; L.R.skyDay = kstDay(now); L.R.skyAt = now; evEarn(S, L.R, Math.round(L.e.earn.day / 3), now); return L.R.sky;
+}
+export const skyReady = (S, now) => { const L = liveRun(S, now), k = L?.e.sky; return !!k && !held(S, L.e, now) && (L.R.sky || 0) < k.max && L.R.skyDay !== kstDay(now) && now >= (L.R.skyAt || 0) && S.props.some(p => p.prop === k.prop); };
+// 238 E2 야광 교환권: a friend of an open habitat's nest whose 야광 (glow) look isn't had; it waits on its reveal card (pending) as a
+// hatch does. None left to have: ticketHearts instead. { animal } / { hearts } / null (no ticket, not the window)
+export const ticketPool = S => [...new Set(HABITATS.filter(h => h.ready && S.unlocked.includes(h.id) && EGG[h.nest]).flatMap(h => EGG[h.nest].species))]
+  .filter(id => SP[id] && variantsOf(SP[id]).some(v => v.id === 'glow' && !v.gone) && !owned(S, key(id, 'glow')));
+export function useTicket(S, sp, now) {
+  const L = liveRun(S, now); if (!L?.R.tk || held(S, L.e, now) || S.animals.some(a => a.pending)) return null;
+  const pool = ticketPool(S);
+  if (!pool.length) { L.R.tk--; S.hearts += L.e.ticketHearts; return { hearts: L.e.ticketHearts }; }
+  if (!pool.includes(sp)) return null;
+  const h = HABITATS.find(h => EGG[h.nest]?.species.includes(sp)), a = { id: S.nextId++, species: sp, variant: 'glow', color: 'lime', egg: h.nest, stage: 'baby', born: now,
+    g: 0, gAt: now, fed: 0, adultAt: null, stored: false, heartAt: 0, pending: true };
+  a.pe = peOf(a.id, now); const seen = S.colors[key(sp, 'glow')] ??= [];
+  if (!seen.includes('lime')) { seen.push('lime'); a.newColor = true; }
+  L.R.tk--; S.animals.push(a); return { animal: a };
+}
 // inbox 41 D 첫날 할 일 (data.js FIRST): on while today (dayOf) is one of the game's first FIRST.days days and not all are done.
 // advance gives each task's hearts once (S.first[id] = when); all of them: FIRST.prop (into the habitat last entered) + FIRST.hearts (227 A: was candy)
 export const FIRST_V = { hatch: S => S.stats?.hatch || 0, pet: S => S.stats?.pet || 0, prop: S => S.props.filter(p => p.placed && !p.nat && !PROP[p.prop]?.art).length, photo: S => S.stats?.photo || 0, codex: S => S.stats?.codex || 0 };

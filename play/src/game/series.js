@@ -5,8 +5,8 @@
 // With the flag tidy() checks their shape after every load. Eggs may carry v (shaken), pick (swapped), sp (fetched): rules.crack
 // honours them in any build, each only when it is a real look of the egg's rarity.
 import { $t } from '../i18n/i18n.js';
-import { BALANCE as B, HABITATS, ACCESSORIES, TUT228 } from './data.js';
-import { SP, RAR, EGG, variantOf, rollRarity, crackRarity, choose, canSendBack, putGift, hatchMs, eggMarks, bump } from './rules.js';
+import { BALANCE as B, HABITATS, ACCESSORIES, TUT228, TH194 } from './data.js';
+import { SP, RAR, EGG, PROP, variantOf, rollRarity, crackRarity, choose, canSendBack, putGift, hatchMs, eggMarks, bump } from './rules.js';
 import { dayOf } from './clock.js';
 import { GUESTS } from './guests-data.js';
 import { doable } from './guests.js';
@@ -211,6 +211,13 @@ export function reqShot(S, id, met) {
   if (q.small) { S.req.on = S.req.on.filter(y => y !== x); S.hearts += q.hearts; if (TUT228) bump(S, 'req'); return { stars: n, met, hearts: q.hearts, small: true, events: [{ type: 'req_done', id, stars: n, small: true, hab: q.hab, who: q.who }] }; }
   const was = S.req.done[id] || 0; S.req.done[id] = Math.max(was, n); S.req.on = S.req.on.filter(y => y.id !== id);
   if (was) return { stars: n, met, again: true, was, events: [{ type: 'req_again', id, stars: n, was }] }; // 다시 찍기: the stars only
-  S.hearts += q.hearts; if (TUT228) bump(S, 'req'); const gift = putGift(S, q.prop, null, { cost: 0 });
-  return { stars: n, met, hearts: q.hearts, gift, events: [{ type: 'req_done', id, stars: n }] };
+  S.hearts += q.hearts; if (TUT228) bump(S, 'req'); const gift = putGift(S, q.prop, null, { cost: 0 }), cab = cabTaste(S);
+  return { stars: n, met, hearts: q.hearts, gift, ...(cab && { cab }), events: [{ type: 'req_done', id, stars: n }] };
+}
+// 254 A Q1 숲속 오두막 맛보기: the first story request answered with the yard open puts a fence and the cabin's log bench (통나무 의자)
+// in the yard's storage, free (cost 0: nothing back if sold), never placed; once a save (flags.cab254)
+export const CAB_TASTE = ['fence', 'th_logchair'];
+function cabTaste(S) {
+  if (!TH194 || S.flags.cab254 || !S.unlocked.includes('yard') || !CAB_TASTE.every(id => PROP[id])) return null;
+  S.flags.cab254 = 1; return CAB_TASTE.map(id => putGift(S, id, null, { cost: 0, hab: 'yard' }).prop);
 }

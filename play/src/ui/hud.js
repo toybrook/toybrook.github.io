@@ -73,6 +73,8 @@ const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('
 // 248 B: a window card (.intro.pop: 첫눈 이벤트 · 우편함 · 설정 …) is up: the bubble over an animal or 손님 goes under it (it was drawn on top)
 export const cardUp = () => [...document.querySelectorAll('.intro.pop')].some(shown);
 export const topWindow = (skip) => { for (const q of TOPS) { if (q === skip) continue; const el = document.querySelector(q); if (shown(el) && el.querySelector(SHUT)) return el; } return null; };
+// 264 B ③: a guest's note (도착·선물 띠, 손님의 의뢰) waits while a card or sheet is up (the name card, 둥지, 확인 cards …) and comes after it closes; a minute on: dropped
+export const whenClear = (f, t = Date.now()) => topWindow() ? void (Date.now() - t < 60000 && setTimeout(() => whenClear(f, t), 500)) : f();
 export function closeTop() {
   const el = topWindow(); if (el) { el.querySelector(SHUT).click(); return true; }
   const b = document.getElementById('bubble'); if (!b.hidden) { b.hidden = true; return true; }
@@ -101,9 +103,10 @@ export function tip(k, anchor) { // anchor: an element or a selector; shown once
   if (TUT228 && TUT_SAYS.includes(k) && step181(G.S, G.now())) { G.flag('tip_' + k); return; } // 238 C ③: the tutorial's own step says it, so no tip for it after
   waiting.push({ k, anchor }); nextTip();
 }
-const TUT_SAYS = ['nest', 'next', 'hatch', 'decor']; // 182 ②: the tutorial points there itself; these tips wait (not dropped: next61 asks once) until it is done or skipped
+const TUT_SAYS = ['nest', 'next', 'hatch', 'decor', 'grow']; // 264 B ④ (261 A): grow too, not over the tutorial·the name card (2판: folded, line above); 182 ②: the tutorial points there itself; these tips wait (not dropped: next61 asks once) until it is done or skipped
 function nextTip() {
   if (document.body.classList.contains('tut181')) return; // 182 ②: not over the tutorial's bubble
+  if (!document.body.classList.contains('building') && document.querySelector('#loading:not([hidden])')) return; // 257 B: not over the loading cover
   if (tipEl || G.S.flags.tipsOff || Date.now() < calm || resting() || document.querySelector('.rate')) return; // 26-11: not while the tap that closed the last one is still landing; 64-A: nor under a band (어때요·이어서 하기)
   const over = topWindow(), el = w => typeof w.anchor === 'string' ? document.querySelector(w.anchor) : w.anchor;
   const wait = noted(), held = TUT181 && step181(G.S, G.now()), i = waiting.findIndex(w => shown(el(w)) && (!over || over.contains(el(w))) && (!wait || over) && !(held && TUT_SAYS.includes(w.k))); if (i < 0) return; // not under another window; 102: a minute after a card only a sheet's own (one the player opened)

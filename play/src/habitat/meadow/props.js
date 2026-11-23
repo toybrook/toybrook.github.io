@@ -10,7 +10,7 @@ import { G as PLAY, newPlay, propTick } from '../../animals/play.js';
 import { playing } from '../../ui/sound.js';
 import { PIECES, ARCH } from '../train.js';
 import { shape } from '../stamps.js';
-import { PROPS, NAT_K, THEMES, S186 } from '../../game/data.js';
+import { PROPS, NAT_K, THEMES, S186, X230, FEST } from '../../game/data.js';
 
 const pickOf = arr => arr[Math.floor(rand() * arr.length)];
 // inbox 42 A: the board spread by S (layout.js): spots below in the old board's metres times S, counts by its area
@@ -445,7 +445,7 @@ const dm = (c, o) => decorMats[c + (o ? JSON.stringify(o) : '')] ??= toyMat(c, o
 // (additive, faded in with the night too). No real lights and no bloom: cheap on phones.
 const NIGHT = sh => { sh.uniforms.uNight = nightGlow; sh.fragmentShader = 'uniform float uNight;\n' + sh.fragmentShader; };
 const litSh = sh => { NIGHT(sh); sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uNight;'); };
-const lit = c => decorMats['lit' + c] ??= Object.assign(toyMat(c, { emissive: c, emissiveIntensity: 1.3, roughness: 0.4 }), { onBeforeCompile: litSh });
+const lit = (c, k = 1.3) => decorMats['lit' + c + (k === 1.3 ? '' : k)] ??= Object.assign(toyMat(c, { emissive: c, emissiveIntensity: k, roughness: 0.4 }), { onBeforeCompile: litSh }); // 238 B k: a stronger glow (part's lit: a number)
 // inbox 35: a flame glows a little by day as well (more by night)
 const fireMat = c => decorMats['fire' + c] ??= Object.assign(toyMat(c, { emissive: c, emissiveIntensity: 1, roughness: 0.5 }), { onBeforeCompile: sh => { NIGHT(sh);
   sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= 0.3 + 1.2 * uNight;'); } });
@@ -481,7 +481,7 @@ export function halo(g, color, size, x, y, z) {
   const sp = new THREE.Sprite(m); sp.position.set(x, y, z); sp.scale.setScalar(size); sp.renderOrder = 3; sp.userData.glow = color; g.add(sp); return sp; // glow: 195 B-8 (habitat.js syncGlow)
 }
 export function part(g, geo, color, x = 0, y = 0, z = 0, o = {}) {
-  const m = new THREE.Mesh(geo, o.m || (o.lit ? lit(color) : dm(color, o.mat))); m.position.set(x, y, z);
+  const m = new THREE.Mesh(geo, o.m || (o.lit ? lit(color, o.lit === true ? undefined : o.lit) : dm(color, o.mat))); m.position.set(x, y, z);
   if (o.rx) m.rotation.x = o.rx; if (o.ry) m.rotation.y = o.ry; if (o.rz) m.rotation.z = o.rz;
   m.castShadow = m.receiveShadow = true; g.add(m); return m;
 }
@@ -521,8 +521,10 @@ function artModel(g, id) {
     bloom(g, 0.38, 0.12, 0.14, 0, -0.3); }
   if (id.startsWith('art_')) { const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.45, 10)); hit.position.y = 0.22; hit.visible = false; g.add(hit); g.userData.tap = () => true; } // small: an unseen tap target round it
 }
+export const DECOR230 = {}; // 230 C3 (?x230): yard/props230.js fills it (that file stays out of the build)
 export function decorModel(id) {
   id = PROPS.find(p => p.id === id)?.as ?? id; // 15-1: an event prop drawn as another
+  if ((X230 || FEST) && DECOR230[id]) return bake(DECOR230[id]());
   const g = new THREE.Group();
   if (id === 'hay') { // two round bales, one leaning on the other, with a band each
     const bale = lathe([[0, -0.42], [0.36, -0.42], [0.44, -0.34], [0.46, -0.2], [0.46, 0.2], [0.44, 0.34], [0.36, 0.42], [0, 0.42]], 16);

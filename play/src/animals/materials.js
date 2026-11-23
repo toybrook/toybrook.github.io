@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { toyMat, windTime, nightGlow } from '../habitat/toyKit.js';
 import { QUALITY } from '../config.js';
-import { SHARED_VARIANTS } from '../game/data.js';
+import { SHARED_VARIANTS, X230 } from '../game/data.js';
 import { SP, RAR, variantOf, colorOf } from '../game/rules.js';
 import { mergeGeometries, mergeVertices } from '../../vendor/utils/BufferGeometryUtils.js';
 
@@ -2962,6 +2962,181 @@ Object.assign(LOOKS, {
 // yet, as dispose163: nothing tears the looks down; the 183 leg copies are dispose163's L183)
 export const dispose192 = () => { for (const [k, s] of cache) if (/^(iceberg|polarnight|rime|amberlamp)192\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
   snow192?.g.dispose(); snow192?.m.dispose(); snow192 = null; };
+
+// ---- 230 C1 (?x230 trial only; expansion-230.md 16장): 12 material swatches + the 백자 sample (13 looks, 14 entries with the rimless 법랑) on bodies we already have (data.js X230V). All GLSL,
+// no texture. Not in any pool, egg or save; dispose230 frees the sets (and takes the two clear ones out of clearMats)
+// thk230: the baked thickness (the _thickness attribute clear() reads) as vThk230, for the wax's thin parts
+const thk230 = m => { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r);
+  sh.vertexShader = 'attribute float _thickness;\nvarying float vThk230;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvThk230 = _thickness;');
+  sh.fragmentShader = 'varying float vThk230;\n' + sh.fragmentShader; }; return m; };
+// M1 법랑: thick glossy enamel in one colour; uChip 1: a small navy rim round the very top (ear tips) and a few tiny chips of black iron
+const ENAMEL230 = AA127 + `if (uChip > 0.5) { float t = AA(p.y, uTop); vec3 c = cells(p * 16.0 + 3.0); float chip = step(0.955, c.z) * (1.0 - AA(c.x, 0.15)) * (1.0 - t);
+  diffuseColor.rgb = mix(mix(diffuseColor.rgb, uNavy, t), vec3(0.03, 0.03, 0.035), chip); roughnessFactor = mix(roughnessFactor, 0.55, chip); }`;
+// M9 무쇠 주물: black matte iron, sand-cast pebbling; worn to bright metal only on the high, rubbed places (top, toes)
+const IRON230 = BUMP115 + `float fd = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 60.0), h = vn3(p * 90.0) * 0.6 + vn3(p * 37.0 + 2.0) * 0.4;
+  BUMP115(h * fd, 0.0035)
+  float wr = smoothstep(0.84, 0.9, fbm3(p * 7.0 + 1.0) + 0.12 * max(on.y, 0.0) + 0.4 * (1.0 - smoothstep(0.0, 0.05, p.y)));
+  diffuseColor.rgb = mix(diffuseColor.rgb * (0.88 + 0.24 * h * fd), uWorn, wr * 0.8);
+  metalnessFactor = mix(0.45, 1.0, wr); roughnessFactor = mix(0.82, 0.3, wr); lookStudio = mix(0.15, 0.7, wr);`;
+// M3 온도 변색: colour A by day, B at night and in rain; the change creeps in in blotches, low parts first (the cold ground)
+const THERMO230 = `float t = clamp(max(uNight, uWet) * 1.15 - 0.075, 0.0, 1.0), f = fbm3(p * 3.2 + 4.0) * 0.7 + (1.0 - p.y) * 0.3;
+  diffuseColor.rgb = mix(uA, uB, smoothstep(f - 0.12, f + 0.12, t * 1.4 - 0.2));`;
+// M17 옹기: dark brown ash glaze, glossy, pooling darker in runs, thinning to rust at the edges; speckled close up; soles bare clay
+const ONGGI230 = `float fd = 1.0 - smoothstep(0.25, 0.6, fwidth(p.y) * 40.0), pool = fbm3(p * vec3(2.0, 6.0, 2.0) + 1.3);
+  vec3 col = mix(diffuseColor.rgb, diffuseColor.rgb * 0.55, smoothstep(0.45, 0.75, pool));
+  col = mix(col, uEdge, 0.6 * pow(1.0 - nv, 2.0) * (1.0 - smoothstep(0.35, 0.7, pool)));
+  if (uHab < 0.5) col *= 1.0 - 0.3 * step(0.93, vn3(p * 160.0)) * fd;
+  float clay = 1.0 - smoothstep(0.035, 0.06, p.y); diffuseColor.rgb = mix(col, uClay, clay); roughnessFactor = mix(roughnessFactor, 0.85, clay);`;
+// M21 바다 유리: frosted bottle glass worn by the waves: a milky skin over the green, fine pits; never ice blue
+const SEA230 = `float pit = vn3(p * 60.0) * vn3(p * 23.0 + 5.0);
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, uFrost * (0.7 + 0.3 * nv) * (0.9 + 0.15 * pit) * (1.0 - 0.6 * uNight), 0.5 * (1.0 - fr));`;
+// M22 유리 구슬: clear glass with three coloured ribbons twisting round the long axis head to tail (more than one turn), a little
+// inside the surface (they shift as the figure turns)
+const BEAD230 = `vec3 q = p + rd * 0.06; float ph = atan(q.z, q.y - uAx) / 6.2832 + q.x * 1.6, aw = clamp(fwidth(ph), 0.002, 0.03), rib = 0.0; vec3 rc = vec3(0.0);
+  for (int i = 0; i < 3; i++) { float d = abs(fract(ph - float(i) / 3.0 + 0.5) - 0.5), k = 1.0 - smoothstep(0.05 - aw, 0.05 + aw, d);
+    rc += k * (i == 0 ? uR1 : i == 1 ? uR2 : uR3); rib += k; }
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, rc * (0.55 + 0.45 * nv) * (1.0 - 0.6 * uNight), min(rib, 1.0) * 0.9 * (1.0 - fr));`;
+// M25 밀랍: honey wax, soft and cloudy; light comes through where the body is thin (ears, tail). Not at night (no glow: 겨울 등불's)
+const WAX230 = `float thin = 1.0 - smoothstep(0.12, 0.3, vThk230); diffuseColor.rgb *= 0.9 + 0.16 * fbm3(p * 5.0);
+  diffuseColor.rgb = mix(diffuseColor.rgb, min(uWax * 1.25, vec3(1.0)), 0.45 * thin);
+  totalEmissiveRadiance += uWax * (0.03 + 0.9 * thin) * (0.6 + 0.4 * (1.0 - nv)) * (1.0 - 0.9 * uNight);`;
+// M10 인쇄 양철: thin printed tin in bands round the body (red with cream pinstripes, cream with navy stars, navy with gold gears),
+// gold lines between; the two halves crimped together down the middle (bare tin). uAcc 1: one print colour, no motif
+const TIN230 = AA127 + BUMP115 + `if (uAcc < 0.5) { float fd = 1.0 - smoothstep(0.3, 0.7, fwidth(p.y) * 30.0), by = p.y * 7.0, band = mod(floor(by), 3.0), fy = fract(by);
+  vec2 c = vec2(fract((atan(p.z, p.x) / 6.2832 + 0.5) * 18.0) - 0.5, fy - 0.5); float r = length(c), a = atan(c.y, c.x);
+  vec3 col; float m;
+  if (band < 0.5) { col = uRed; m = 1.0 - AA(abs(abs(fy - 0.5) - 0.28), 0.03); col = mix(col, uCream, m * fd); }
+  else if (band < 1.5) { float fs = abs(fract(a * 5.0 / 6.2832 + 0.25) - 0.5) * 2.0; m = AA(0.3 * (0.42 + 0.58 * (1.0 - fs) * (1.0 - fs)) - r, 0.0); col = mix(uCream, uNavy, m * fd); }
+  else { float R = 0.27 + 0.07 * step(0.5, fract(a * 8.0 / 6.2832)); m = AA(R - r, 0.0) * AA(r, 0.09); col = mix(uNavy, uGold, m * fd); }
+  col = mix(col, uGold, (1.0 - AA(min(fy, 1.0 - fy), 0.04)) * fd);
+  float sm = 1.0 - AA(abs(p.z), 0.012);
+  diffuseColor.rgb = mix(col, vec3(0.78, 0.78, 0.8), sm); metalnessFactor = mix(metalnessFactor, 1.0, sm); roughnessFactor = mix(roughnessFactor, 0.22, sm);
+  BUMP115(sm * (0.5 + 0.5 * sin(p.x * 220.0)), 0.003) }`;
+// M11 거울 조각: small square mirror tiles all over (each tilted its own way, so they flash one by one), dark grout between
+const MIRROR230 = PL138 + `float F; vec2 Q; PL138(Q, F) vec2 g = Q * 30.0, gi = floor(g), gf = fract(g) - 0.5;
+  float aa = fwidth(g.x) + fwidth(g.y) + 1e-4, fd = 1.0 - smoothstep(0.3, 0.6, aa), e = 0.5 - max(abs(gf.x), abs(gf.y)), gr = (1.0 - smoothstep(0.06, 0.06 + aa, e)) * fd;
+  normal = normalize(normal + normalMatrix * (h33(vec3(gi, F * 7.0)) - 0.5) * 0.35 * (1.0 - gr));
+  diffuseColor.rgb = mix(diffuseColor.rgb, uGrout, gr); metalnessFactor = 1.0 - gr; roughnessFactor = mix(0.04, 0.7, gr); lookStudio *= 1.0 - gr;`;
+// M18 테라초: a pale ground with angular stone chips of three sizes in six colours, ground flat and polished; the chips crisp
+// (each an inset cell, so straight edges); the smaller ones fade out before they turn to mud far off
+const TERRAZZO230 = AA127 + `vec3 col = diffuseColor.rgb * (0.97 + 0.05 * vn3(p * 40.0));
+  for (int i = 0; i < 3; i++) { float s = i == 0 ? 9.0 : i == 1 ? 21.0 : 46.0; vec3 c = cells(p * s + float(i) * 13.1);
+    float ch = step(i == 0 ? 0.7 : i == 1 ? 0.5 : 0.4, fract(c.z * 3.7)) * AA(c.y - c.x, 0.22 + 0.16 * fract(c.z * 11.3)) * (1.0 - smoothstep(0.25, 0.6, fwidth(p.y) * s * 1.2));
+    float k = fract(c.z * 5.3) * 6.0; vec3 cc = k < 1.0 ? uT1 : k < 2.0 ? uT2 : k < 3.0 ? uT3 : k < 4.0 ? uT4 : k < 5.0 ? uT5 : vec3(0.9);
+    col = mix(col, cc * (0.92 + 0.12 * fract(c.z * 17.0)), ch); }
+  diffuseColor.rgb = col;`;
+// M24 나무·레진 이음: wood (as 원목) and blue resin poured between in diagonal bands (four or five over back, belly and legs):
+// the resin deep blue in the middle of a band and face on, lighter at its edges and grazing, cloudy, a few tiny bubbles close up
+const WRESIN230 = GRAIN127 + `float s = p.x * 2.6 + p.y * 1.8 + 0.15 * fbm3(p * 3.0), d = abs(fract(s) - 0.5), aa = fwidth(s) + 1e-4, r = 1.0 - smoothstep(0.16 - aa, 0.16 + aa, d);
+  vec3 rc = mix(uLight, uDeep, clamp(0.7 * (0.16 - d) / 0.16 + 0.3 * nv, 0.0, 1.0)) * (0.85 + 0.3 * fbm3(p * 8.0));
+  rc = mix(rc, vec3(0.85), step(0.965, vn3(p * 120.0)) * 0.5 * (1.0 - uHab));
+  diffuseColor.rgb = mix(wood, rc, r); roughnessFactor = mix(roughnessFactor, 0.04, r);
+  totalEmissiveRadiance += uLight * 0.06 * r * (1.0 - nv) * (1.0 - 0.5 * uNight);`;
+// M28 라탄 엮음: cane strips woven like a basket over and under, one family along the body, one round it (round the long axis, a
+// whole number of strips round: no seam); dark gaps between. The strips along pinch where the axis meets the surface (chest, rump)
+const RATTAN230 = BUMP115 + `float fd = 1.0 - smoothstep(0.25, 0.6, fwidth(p.y) * 30.0);
+  vec2 w = vec2(p.x * 26.0, (atan(p.z, p.y - uAx) / 6.2832 + 0.5) * 48.0), c = floor(w), f = fract(w);
+  float pA = max(0.0, 1.0 - pow(abs(f.y - 0.5) / 0.44, 2.0)), pB = max(0.0, 1.0 - pow(abs(f.x - 0.5) / 0.44, 2.0));
+  float hA = pA * (1.0 + 0.5 * cos(3.1416 * (w.x - 0.5 - c.y))), hB = pB * (1.0 - 0.5 * cos(3.1416 * (w.y - 0.5 - c.x))), h = max(hA, hB);
+  vec3 col = mix(uA, uB, step(hA, hB)) * (0.75 + 0.25 * min(h, 1.0));
+  diffuseColor.rgb = mix(mix(uGap, col, smoothstep(0.05, 0.25, h)), (uA + uB) * 0.45, 1.0 - fd);
+  BUMP115(h * fd, 0.004)`;
+// M19 백자 (inbox 232 F R13, a sample): milky white glaze, faintly blue-grey where it runs thick (the foot, under the curves); no crackle
+// (청자 has it), no drawing (청화백자), no navy rim or chips (법랑)
+const BAEKJA230 = `float pool = 0.6 * (1.0 - smoothstep(0.0, 0.16, p.y)) + 0.4 * smoothstep(0.2, -0.6, on.y);
+  diffuseColor.rgb = mix(diffuseColor.rgb * (0.975 + 0.035 * vn3(p * 2.2)), uPool, 0.55 * pool);`;
+if (X230) Object.assign(LOOKS, {
+  baekja230: c => { const b = col => look(pale116(phys(col, { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.02 })), 'baekja230', BAEKJA230, { uPool: c.pool }), m = b(c.body), acc = b(dk(c.body, 0.96));
+    return { body: m, accent: m, hoof: acc, beak: acc, horn: acc }; },
+  enamel230: c => { const e = (col, rim) => look(([1, 3, 5].every(i => parseInt(col.slice(i, i + 2), 16) > 209) ? pale116 : x => x)(phys(col, { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.02 })),
+    'enamel230', ENAMEL230, { uNavy: c.navy, uChip: rim, uTop: 0.93 }), b = e(c.body, c.rim), n = e(c.navy, 0);
+    return { body: b, accent: b, hoof: c.rim ? n : b, beak: n }; },
+  castiron230: c => { const m = look(phys(c.body, { roughness: 0.82, metalness: 0.45 }), 'iron230', IRON230, { uWorn: c.worn }, { studio: 0.15 }); return same(m); },
+  thermo230: c => { const t = (a, b) => wet127(look(phys(a, { roughness: 0.35, clearcoat: 0.3, clearcoatRoughness: 0.3 }), 'thermo230', THERMO230, { uA: a, uB: b })), acc = t(dk(c.a, 0.8), dk(c.b, 0.8));
+    return { body: t(c.a, c.b), accent: acc, hoof: acc }; },
+  onggi230: c => { const o = b => hab89(look(phys(b, { roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.03 }), 'onggi230', ONGGI230, { uEdge: c.edge, uClay: c.clay })), acc = o(dk(c.body, 0.85));
+    return { body: o(c.body), accent: acc, hoof: acc, horn: acc }; },
+  seaglass230: c => same(clear({ key: 'seaglass230', tint: c.tint, absorb: 2.0, rough: 0.55, neutral: 0.7, rimK: 0.3, bend: 0.06, dark: 0.4, color: dk(c.frost, 0.2), uniforms: { uFrost: c.frost }, post: SEA230 })),
+  beeswax230: c => { const w = b => thk230(look(phys(b, { roughness: 0.5, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color(c.wax) }), 'wax230', WAX230, { uWax: c.wax })), acc = w(dk(c.body, 0.92));
+    return { body: w(c.body), accent: acc, hoof: acc }; },
+  tinprint230: c => { const t = (b, a) => look(phys(b, { roughness: 0.28, metalness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.08 }), 'tin230', TIN230,
+      { uRed: c.red, uCream: c.cream, uNavy: c.navy, uGold: c.gold, uAcc: a }, { studio: 0.4 }), gold = t(c.gold, 1);
+    return { body: t(c.red, 0), accent: t(c.red, 1), hoof: gold, beak: gold }; },
+  mirror230: c => { const m = b => look(phys(b, { roughness: 0.04, metalness: 1 }), 'mirror230', MIRROR230, { uGrout: c.grout }, { studio: 1 }), acc = m(dk(c.body, 0.85));
+    return { body: m(c.body), accent: acc, hoof: acc, beak: phys('#111114', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03 }) }; },
+  terrazzo230: c => { const t = b => look(phys(b, { roughness: 0.2, clearcoat: 0.8, clearcoatRoughness: 0.06 }), 'terrazzo230', TERRAZZO230,
+      { uT1: '#c8664a', uT2: '#7fa07a', uT3: '#5a6f94', uT4: '#d9a640', uT5: '#3a3634' }), b = t(c.body);
+    return { body: b, accent: b, hoof: t(dk(c.body, 0.55)), beak: b, horn: b }; },
+  woodresin230: c => { const w = (b, g) => L127(phys(b, { roughness: 0.38, clearcoat: 0.5, clearcoatRoughness: 0.12 }), 'wresin230', WRESIN230, { uGrain: g, uDeep: c.deep, uLight: c.light }), acc = w(dk(c.body, 0.82), dk(c.grain, 0.82));
+    return { body: w(c.body, c.grain), accent: acc, hoof: phys(c.deep, { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02 }) }; },
+  rattan230: c => { const r = k => look(phys(c.a, { roughness: 0.62, clearcoat: 0.25, clearcoatRoughness: 0.4 }), 'rattan230', RATTAN230, { uA: dk(c.a, k), uB: dk(c.b, k), uGap: c.gap, uAx: 0.45 }), acc = r(0.85);
+    return { body: r(1), accent: acc, hoof: phys('#6a4a2a', { roughness: 0.6 }) }; },
+});
+// marblebead230 is a clear look too (its uAx: the long axis' height, as rattan's)
+if (X230) LOOKS.marblebead230 = c => same(clear({ key: 'marblebead230', tint: '#eaf4f0', absorb: 0.8, coat: 1, neutral: 0.8, uniforms: { uR1: c.r1, uR2: c.r2, uR3: c.r3, uAx: 0.42 }, post: BEAD230 }));
+// ---- 233 A (inbox 233, ?x230 trial only): the five that read as 「색만 바꾼 것」 once more, each with a mark that says the material at a
+// glance, and M22 with one twisted core inside instead of ribbons on the skin. New slots (data.js X230V 14..19): the 230 ones stay as they were.
+// M1 법랑 2: no rim; one deep glossy enamel colour with a faint orange-peel wave (the thick glaze's reflections ripple), and a very few chips
+// on the thin edges (ear tips, tail) and the soles: black iron in the middle, the white ground coat in a ring round it
+const ENAMEL233 = BUMP115 + `BUMP115(vn3(p * 16.0) + 0.5 * vn3(p * 31.0 + 4.0), 0.0012)
+  vec3 c = cells(p * 11.0 + 7.0); float zone = max(1.0 - smoothstep(0.14, 0.34, vThk230), 1.0 - smoothstep(0.02, 0.06, p.y)), pick = step(0.62, fract(c.z * 7.3)) * zone;
+  float r = 0.2 + 0.12 * fract(c.z * 3.1), aw = fwidth(c.x) + 1e-4, hole = pick * (1.0 - smoothstep(r - aw, r + aw, c.x)), ring = pick * (1.0 - smoothstep(r + 0.08 - aw, r + 0.08 + aw, c.x)) - hole;
+  diffuseColor.rgb = mix(mix(diffuseColor.rgb, vec3(0.9, 0.89, 0.85), ring), vec3(0.05, 0.05, 0.055), hole);
+  roughnessFactor = mix(roughnessFactor, 0.65, hole + 0.4 * ring); lookStudio *= 1.0 - hole;`;
+// M9 무쇠 2: sand-cast: a coarse pebbled skin with casting pits (a much bigger bump than 230's), grey-black speckle; worn bright on the high
+// places; a little rust on the thin edges and the soles, broken up
+const IRON233 = BUMP115 + `float fd = 1.0 - smoothstep(0.2, 0.6, fwidth(p.y) * 30.0), h = vn3(p * 55.0) * 0.55 + vn3(p * 21.0 + 2.0) * 0.45, pit = smoothstep(0.66, 0.82, vn3(p * 30.0 + 9.0));
+  BUMP115((h - 0.9 * pit) * fd, 0.009)
+  vec3 base = diffuseColor.rgb * (0.75 + 0.6 * h * fd);
+  float wr = smoothstep(0.78, 0.86, fbm3(p * 6.0 + 1.0) + 0.15 * max(on.y, 0.0));
+  float edge = max(1.0 - smoothstep(0.1, 0.3, vThk230), 1.0 - smoothstep(0.0, 0.05, p.y)), rust = edge * smoothstep(0.42, 0.6, fbm3(p * 9.0 + 3.0));
+  vec3 rc = mix(vec3(0.4, 0.16, 0.07), vec3(0.72, 0.36, 0.14), vn3(p * 40.0));
+  diffuseColor.rgb = mix(mix(base, uWorn, wr * 0.7), rc, rust);
+  metalnessFactor = mix(mix(0.5, 1.0, wr), 0.0, rust); roughnessFactor = mix(mix(0.86, 0.35, wr), 1.0, rust); lookStudio = mix(mix(0.12, 0.6, wr), 0.0, rust);`;
+// M3 온도 변색 2: warm on top, cold below, and the change between them runs through the in-between hues (gold, teal: a mood ring's sweep),
+// wavy and blotched; by night (or rain) the cold climbs up the body. Four stops, so it never reads as the common two-colour 그라데이션
+const THERMO233 = `float t = clamp(max(uNight, uWet), 0.0, 1.0), f = p.y + 0.22 * (fbm3(p * 3.0 + 4.0) - 0.5), e = mix(0.42, 0.92, t), k = smoothstep(e - 0.26, e + 0.26, f);
+  vec3 c1 = vec3(0.22, 0.68, 0.7), c2 = vec3(0.98, 0.8, 0.3);
+  diffuseColor.rgb = k < 0.33 ? mix(uB, c1, k / 0.33) : k < 0.66 ? mix(c1, c2, (k - 0.33) / 0.33) : mix(c2, uA, (k - 0.66) / 0.34);`;
+// M25 밀랍 2: light from inside (the thick middle a deeper amber, the edges and thin parts glowing: the 「속빛」), and wax runs down from the top
+// in a few columns round the body, each ending in a round bead, raised and paler
+const WAX233 = BUMP115 + `float thin = 1.0 - smoothstep(0.1, 0.45, vThk230), fd = 1.0 - smoothstep(0.3, 0.7, fwidth(p.y) * 30.0);
+  float R = length(p.xz) + 0.02, u = (atan(p.z, p.x) / 6.2832 + 0.5) * 14.0, ci = floor(u), fu = fract(u) - 0.5, rr = h31(vec3(ci, 3.0, 1.0));
+  float yE = 0.9 - 0.42 * fract(rr * 7.1), cw = 6.2832 * R / 14.0, side = 1.0 - smoothstep(0.55, 0.85, abs(on.y));
+  float run = step(0.45, rr) * smoothstep(yE - 0.005, yE + 0.005, p.y) * (1.0 - smoothstep(0.016, 0.024, abs(fu) * cw));
+  float bead = step(0.45, rr) * (1.0 - smoothstep(0.028, 0.036, length(vec2(fu * cw, (p.y - yE) * 0.8))));
+  float drip = max(run, bead) * side * fd;
+  BUMP115(drip, 0.008)
+  diffuseColor.rgb *= (0.9 + 0.14 * fbm3(p * 5.0)) * mix(1.0, 0.72, smoothstep(0.7, 1.8, vThk230) * nv);
+  diffuseColor.rgb = mix(diffuseColor.rgb, min(uWax * 1.3, vec3(1.0)), 0.22 * thin + 0.8 * drip);
+  roughnessFactor = mix(roughnessFactor, 0.12, drip);
+  totalEmissiveRadiance += uWax * (0.12 + 0.45 * thin + 0.2 * drip) * (0.45 + 0.55 * pow(1.0 - nv, 1.5)) * (1.0 + 0.5 * uNight);`;
+// M21 바다 유리 2: frosted all over (matte, milky, not see-through: only a faint shadow of what is behind), lit softly from above, thin
+// parts glowing with the light through, fine pits; no bright glass rim
+const SEA233 = `float pit = vn3(p * 70.0) * vn3(p * 26.0 + 5.0);
+  vec3 fro = uFrost * (0.55 + 0.3 * nv + 0.2 * vn.y) * (0.92 + 0.12 * pit) + uFrost * 0.3 * (1.0 - smoothstep(0.15, 0.6, vThick));
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, fro * (1.0 - 0.6 * uNight), 0.42 + 0.4 * smoothstep(0.1, 0.7, vThick));`;
+// M22 유리 구슬 2: clear glass with ONE twisted core inside (a flat ribbon through the long axis, turning as it runs head to tail, its two
+// halves two colours), seen through the glass by marching the view ray in; nothing on the skin
+const BEAD233 = `vec3 rc = vec3(0.0); float hit = 0.0, at = 0.0, sp = 0.0;
+  for (int i = 0; i < 28; i++) { float t = 0.008 + float(i) * 0.018; vec3 q = p + rd * t; vec2 d = vec2(q.y - uAx, q.z);
+    float r = length(d), R = uCore * (1.0 - smoothstep(0.38, 0.72, abs(q.x))), a = atan(d.y, d.x) - q.x * uTw, s = sin(a) * r;
+    if (hit < 0.5 && i > 0 && r < R && s * sp <= 0.0) { hit = 1.0; at = t; rc = cos(a) > 0.0 ? uR1 : uR2; } sp = s; }
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, rc * (0.6 + 0.4 * nv) * (1.0 - 0.6 * uNight), hit * 0.88 * (1.0 - fr) * (1.0 - 0.5 * at / 0.5));`;
+if (X230) Object.assign(LOOKS, {
+  enamel233: c => { const e = col => thk230(look(phys(col, { roughness: 0.08, clearcoat: 1, clearcoatRoughness: 0.02 }), 'enamel233', ENAMEL233, {}, { studio: 0.45 })), b = e(c.body);
+    return { body: b, accent: b, hoof: b, beak: e(dk(c.body, 0.7)) }; },
+  castiron233: c => same(thk230(look(phys(c.body, { roughness: 0.86, metalness: 0.5 }), 'iron233', IRON233, { uWorn: c.worn }, { studio: 0.12 }))),
+  thermo233: c => { const t = (a, b) => wet127(look(phys(a, { roughness: 0.35, clearcoat: 0.3, clearcoatRoughness: 0.3 }), 'thermo233', THERMO233, { uA: a, uB: b }));
+    return same(t(c.a, c.b)); },
+  beeswax233: c => { const w = b => thk230(look(phys(b, { roughness: 0.5, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color(c.wax) }), 'wax233', WAX233, { uWax: c.wax })), acc = w(dk(c.body, 0.92));
+    return { body: w(c.body), accent: acc, hoof: acc }; },
+  seaglass233: c => same(clear({ key: 'seaglass233', tint: c.tint, absorb: 1.4, rough: 0.85, neutral: 0.85, rimK: 0.1, bend: 0.03, dark: 0.12, color: dk(c.frost, 0.15), uniforms: { uFrost: c.frost }, post: SEA233 })),
+  marblebead233: c => same(clear({ key: 'marblebead233', tint: '#eaf4f0', absorb: 0.8, coat: 1, neutral: 0.8, uniforms: { uR1: c.r1, uR2: c.r2, uAx: 0.42, uCore: 0.11, uTw: 7.0 }, post: BEAD233 })),
+});
+export const dispose230 = () => { for (const [k, s] of cache) if (/^[a-z]+23[03]\{/.test(k)) {
+  for (const m of new Set(Object.values(s))) { if (!m?.isMaterial) continue; const i = clearMats.indexOf(m); if (i >= 0) clearMats.splice(i, 1); m.dispose(); }
+  cache.delete(k); } };
 // ---- 198 C 순록 둘 다 다시 (?m89 시범; data.js LEGEND198; 192 A's two kept, HOLD192): 183 B's body, legs and antler as they are, only
 // their look. 백야 순록: the white night's sky in the antler: milky, half see-through (HORN155C's way: a pale diffuse, lit from inside
 // most where we look straight in, the drifts seen again deeper), bright apricot at the root, pink, then lavender toward the tips

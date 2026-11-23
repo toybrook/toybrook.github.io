@@ -20,7 +20,7 @@ const load = () => navigator.onLine && fetch('events.json', { cache: 'no-cache' 
 const rew = s0 => { const s = asHearts(s0); return [s.hearts && `♥${s.hearts}`, PROP[s.prop] && $t('소품 「{0}」', PROP[s.prop].name)].filter(Boolean).join(' · '); }; // 203 D4·227 A: candy as hearts
 const soon = R => R.end - G.now() < BALANCE.event.soon * DAY;
 const left = R => { const ms = R.end - G.now(); return ms >= DAY ? $t('{0}일 남음', Math.floor(ms / DAY)) : $t('{0}시간 남음', Math.max(1, Math.ceil(ms / 3600e3))); };
-const md = t => { const d = new Date(t + 9 * 3600e3); return $t('{0}월 {1}일', d.getUTCMonth() + 1, d.getUTCDate()); };
+const md = t => { const d = new Date(t); return $t('{0}월 {1}일', d.getMonth() + 1, d.getDate()); }; // 255 D ①: the player's own date (as ui/fest.js; the run opens and ends at KST instants)
 // 241 A 한 줄 달력: the run's dates · 다음: the next event (data.js EVENTS next, in the run's year) while it is still to come
 const cal = (R, e) => { const nx = e.next && kst(`${new Date(R.start + 9 * 3600e3).getUTCFullYear()}-${e.next.at}`);
   return [`${md(R.start)} ~ ${md(R.end - 1)}`, nx > R.end && $t('다음: {0} {1}', e.next.name, md(nx))].filter(Boolean).join(' · '); };
@@ -43,7 +43,7 @@ ${here.length ? $t('<p class="note">입힌 치장은 이벤트가 끝나도 그�
 }
 
 function draw() {
-  const L = G.event(); if (!L) { box.hidden = true; return; }
+  const L = ev(); if (!L) { box.hidden = true; return; }
   const { R, e } = L, c = e.coin, nx = e.track.findIndex((s, i) => i >= R.step);
   const row = i => { const id = i.prop ?? i.wear; return `<li>${i.wear ? `<i class="evi" aria-hidden="true">${wicon(id)}</i>` : `<img alt="" data-p="${id}">`}<span>${esc(i.wear ? EV_ACC[id].name : PROP[id].name)}${R.buy[id] ? $t('<small>{0}개 샀어요</small>', R.buy[id]) : ''}</span><button data-buy="${id}"${G.S.hearts < i.price ? ' disabled' : ''}>♥ ${i.price}</button></li>`; };
   const build = e.build ? $t('<ul><li class="evbuild"><i class="evi" aria-hidden="true">⛄</i><span>눈사람 만들기<small>서식지에서 눈을 세 번 눌러요 · 그대로 남아요</small></span><button data-build{0}>♥ {1}</button></li></ul>', G.S.hearts < e.build.price || !at() ? ' disabled' : '', e.build.price) : '';
@@ -68,7 +68,7 @@ function endCard(key, R) {
   box.innerHTML = $t('<div class="evcard"><h2>{0} {1} 이벤트가 끝났어요</h2><p class="note">모은 {2} {3}개 · 보상 길 {4}/{5}칸</p>\n{6}\n<div class="nbtns"><button class="go" data-close>좋아요</button></div></div>', esc(e.icon), esc(e.name), esc(c.name), R.got, R.step, e.track.length, R.left ? $t('<p class="note got">남은 {0} {1}개 → ♥{2}</p>', c.name, R.left, R.paid) : '');
   box.dataset.step = 'end'; box.hidden = false; G.evSeen(key, 'told'); sfx('grown');
 }
-const EV = id => EVENTS.find(e => e.id === id);
+const EV = id => EVENTS.find(e => e.id === id), ev = () => { const L = G.event(); return L?.e.own ? null : L; }; // 238 E2: own (238 E2): ui/fest.js shows it, not this window
 
 btn.onclick = () => { tab = 'shop'; draw(); box.hidden = false; };
 box.onclick = e => {
@@ -91,23 +91,24 @@ function tick() { // after every game tick: the pill, the weather, the 새 소�
   // 15-2: snow lying (all through it; melting over the day after its end), the snow habitat's aurora, a snow pile when one is due
   const now = G.now(), gone = !L && G.S && Object.values(G.S.events).find(R => R.end <= now && now < R.end + DAY && EV(R.id)?.look.cover);
   WEATHER.cover = L ? (L.e.look.cover ? 1 : 0) : gone ? 1 - (now - gone.end) / DAY : 0; WEATHER.aur = L?.e.look.aurora ?? 1;
-  hab()?.pile?.(!!(L && at() && G.pile()));
+  const O = L?.e.own ? null : L; if (!L?.e.own) hab()?.pile?.(!!(L && at() && G.pile())); // 238 E2: own: ui/fest.js (its pill, piles, toasts, cards; the weather and 새 소식 row here)
+  if (!O && !box.hidden && box.dataset.step === 'start' && !box.dataset.fest) box.hidden = true; // 255 D ②: a start card still open when the run ends goes (the end card follows by its rule; ui/fest.js's own card stays)
   const k = L ? `${L.e.icon}|${soon(L.R)}` : ''; // 74: no coin count on screen (♥ and Lv only)
   if (k !== pillWas) {
-    pillWas = k; btn.hidden = !L;
-    if (L) { btn.innerHTML = `<span aria-hidden="true">${esc(L.e.icon)}</span>${esc(L.e.name)}${soon(L.R) ? $t('<small>곧 끝나요</small>') : ''}`; btn.setAttribute('aria-label', $t('{0} 이벤트', L.e.name)); }
+    pillWas = k; btn.hidden = !O;
+    if (O) { btn.innerHTML = `<span aria-hidden="true">${esc(L.e.icon)}</span>${esc(L.e.name)}${soon(L.R) ? $t('<small>곧 끝나요</small>') : ''}`; btn.setAttribute('aria-label', $t('{0} 이벤트', L.e.name)); }
     const ul = document.querySelector('#news ul'), li = ul?.querySelector('[data-ev]');
     if (L && ul && !li) (ul.querySelector('[data-upd]') ?? ul).insertAdjacentHTML(ul.querySelector('[data-upd]') ? 'afterend' : 'afterbegin', $t('<li data-ev><i aria-hidden="true">{0}</i><span>{1} ({2}까지)</span></li>', esc(L.e.icon), esc(L.e.news), md(L.R.end - 1)));
     if (!L) li?.remove();
   }
-  if (L) { const was = stepWas[L.key]; stepWas[L.key] = L.R.step;
+  if (O) { const was = stepWas[L.key]; stepWas[L.key] = L.R.step;
     if (was != null && L.R.step > was) toast($t('{0} 보상 길 {1}칸째 · {2}', L.e.name, L.R.step, rew(L.e.track[L.R.step - 1])), 3200); }
 }
 G.on(tick);
 const busy = () => topWindow() || overlayOpen() || !$('loading').hidden && !$('loading').closest('.scene.hidden') || $('tabOff') || document.body.classList.contains('photo') || document.hidden || !at() || resting();
 setInterval(() => {
   if (!G.S) return;
-  const L = G.event(), end = Object.entries(G.S.events).find(([, R]) => R.over && !R.told && (R.seen || R.paid > 0));
+  const L = ev(), end = Object.entries(G.S.events).find(([, R]) => R.over && !R.told && (R.seen || R.paid > 0) && !EV(R.id)?.own);
   if (!box.hidden || !(L && !L.R.seen || end) || busy()) { quiet = 0; return; }
   if ((quiet += 800) < 1600) return;
   quiet = 0; if (end) endCard(...end); else card(L);

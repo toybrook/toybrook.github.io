@@ -38,7 +38,7 @@ const q = v => Math.max(0, Math.min(511, Math.round(v * 4) + 256));
 export function encode(S, habId, step = S.expand?.[habId] || 0) {
   const bits = [], put = (v, n) => { for (let k = n - 1; k >= 0; k--) bits.push((v >> k) & 1); };
   const bs = Object.values(S.paint?.[habId] || {}), ver = bs.some(b => b > 15) ? 4 : bs.some(b => b > 7) ? 3 : 2, bw = [3, 3, 3, 4, 6][ver];
-  put(ver, 4); put(Math.max(0, HABITATS.findIndex(h => h.id === habId)), 4); put(Math.min(7, step), 3);
+  put(ver, 4); put(Math.max(0, HABITATS.findIndex(h => h.id === habId)), 4); put(Math.min(7, step), 3); // 238 E1: 3 bits, the yard's 8·9 (?h232) read as 7
   const by = new Map();
   for (const p of S.props) if (p.placed && p.hab === habId && KINDS.includes(p.prop)) (by.get(p.prop) ?? by.set(p.prop, []).get(p.prop)).push(p);
   put(by.size, 7);

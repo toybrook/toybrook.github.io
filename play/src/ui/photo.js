@@ -156,7 +156,7 @@ export function initPhoto(getApi, getHab) {
     const api = getApi(), qs = reqs(), q = qs.find(q => q.id === rq) ?? qs[0]; if (!api || !q || busy) return;
     const r = G.reqSend(q.id, ...api.camAt()); sfx('photo');
     msg = !r ? '' : !r.stars ? $t('조금 모자라요 · {0}', q.must.filter((_, i) => !r.met?.[i]).map(wishName).join(', '))
-      : r.again ? (r.stars > r.was ? $t('다시 보냈어요 · ★{0} → ★{1}', r.was, r.stars) : $t('다시 보냈어요 · 별은 ★{0} 그대로예요', r.was)) : $t('의뢰를 보냈어요 · ★{0}', r.stars);
+      : r.again ? (r.stars > r.was ? $t('다시 보냈어요 · ★{0} → ★{1}', r.was, r.stars) : $t('다시 보냈어요 · 별은 ★{0} 그대로예요', r.was)) : $t('의뢰를 보냈어요 · ★{0}', r.stars) + (r.cab ? ' · ' + $t('나의 뜰 보관함에 울타리와 통나무 의자를 넣어 뒀어요') : '');
     draw();
   }
   btn.onclick = enter;

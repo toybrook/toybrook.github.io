@@ -419,6 +419,8 @@ html.calm .rate{animation:none}
 .dock .back{font-size:calc(13px*var(--fs));padding:0 13px}
 /* 168: while a habitat loads (#loading) there is none to decorate, list or follow yet: its buttons wait (display, so decorTab's offsetParent check sees it too) */
 #loading:not([hidden])~:is(.tools,.dock,.camb){display:none}
+/* 257 B: one cover over all while it loads (the map, the board being made); the bars come after. Not over the first egg (body.building: its nest shows) */
+body:not(.building) #loading:not([hidden]){background-color:#f5dcbc}body:not(.building) #loading:not([hidden])~:is(.bar,.nestbtn,.npill,.tag,#sceneNote,.skybar){visibility:hidden}
 #friendsBtn span{font-variant-numeric:tabular-nums}
 /* above the nest button: the soonest hatch, and 「부화 시작」 when a slot is empty and an egg waits.
    27-2: above the 친구들·꾸미기 row (124px), not between it — 「깨울 알 1개 · 둥지를 눌러요」 + 「부화 시작」 is wider than the gap on a 390px phone */
@@ -569,7 +571,7 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .snap button{flex:1;min-width:0;min-height:40px;border:0;border-radius:999px;background:#eadbc3;color:#6b4a2b;font:inherit;font-size:calc(13px*var(--fs));font-weight:600;white-space:nowrap;padding:0 4px;cursor:pointer}
 .snap button.on{background:#6b4a2b;color:#fff7e8}
 .snap .smsg{margin:2px 2px 8px;font-size:calc(12px*var(--fs));line-height:1.45;color:#7a5a3c;word-break:keep-all;min-height:17px}
-.snap .sbar{display:flex;gap:6px}.snap .sbar button{min-height:44px;font-size:calc(14px*var(--fs))}.snap .sbar .go{background:#e8805f;color:#fff}.snap .sbar [data-act="top"]{white-space:normal;line-height:1.1}
+.snap .sbar{display:flex;flex-wrap:wrap;gap:6px}.snap .sbar button{flex:1 1 auto;min-width:auto;padding:0 10px;min-height:44px;font-size:calc(14px*var(--fs))}.snap .sbar .go{background:#e8805f;color:#fff}.snap .sbar [data-act="top"]{white-space:normal;line-height:1.1}
 /* 13-3 오늘의 진열대 */
 .dshelf{margin:0 0 8px;padding:6px;border-radius:14px;background:#fff7e8;border:1px dashed #e0b97e}
 .dshelf>p{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin:0 2px 4px;font-size:calc(12.5px*var(--fs))}.dshelf>p span{color:#8a6a4c;font-size:calc(11.5px*var(--fs));white-space:nowrap}
@@ -594,7 +596,7 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .ev .evscroll{max-height:calc(50dvh - var(--sa-t) - var(--sa-b));overflow-y:auto;margin:0 0 8px}.ev .evscroll ul{max-height:none;overflow:visible}
 .ev h3{margin:8px 0 4px;font-size:calc(13px*var(--fs));color:#8a6a4c}.ev .evi{width:40px;flex-shrink:0;text-align:center;font-style:normal;font-size:calc(24px*var(--fs))}
 .ev li.evbuild{border-color:#9cc7e8;background:#f2f8fd}.ev .evwear li{flex-wrap:wrap;gap:6px}.ev .evwear li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ev .evwear button{min-height:40px}.ev .evwear button[aria-pressed=true]{background:#fff6e6;box-shadow:0 0 0 1px #e8805f inset;color:#b0670f}
-.evcard{position:relative;overflow:hidden}.evcard>*:not(.flakes){position:relative}
+.evcard{position:relative;overflow:hidden}.evcard>*:not(.flakes){position:relative} .evcard .note{text-wrap:balance}html.ja .evcard .note{word-break:auto-phrase!important} /* 240 E: no lone 「す」/「ます」 on the last line (ja; pretty still left 「ます」); auto-phrase: ja balances at phrase breaks where Chrome can, normal elsewhere */
 .flakes{position:absolute;inset:0;margin:0;pointer-events:none}.flakes i{position:absolute;top:-1.2em;font-style:normal;color:#9cc7e8;font-size:calc(14px*var(--fs));animation:evfall 4s linear infinite;will-change:transform}
 @keyframes evfall{to{transform:translateY(380px) rotate(200deg)}}
 /* inbox 64-A: a new game's first minutes hide most buttons (ui/first.js locks); one that comes sparkles a little */
@@ -731,6 +733,8 @@ html.f170 #loading:has(.lfirst:not([hidden])) .lbar::before{box-shadow:inset -9p
 @keyframes ljolt{0%{transform:none}25%{transform:scale(1.14,.88) rotate(-16deg)}55%{transform:scale(.94,1.1) rotate(13deg) translateY(-8px)}80%{transform:rotate(-5deg)}100%{transform:none}}
 html.calm.f170 .lbar.tap::before{animation:none}
 html.f170 body:has(#boot) #intro{visibility:visible;z-index:3001}
+html.f170 body:has(#intro:not([hidden])) #boot>div{visibility:hidden} /* 264 B ⑤ (261 B①): the start cover's title·egg·tip not through the see-through card */
+#intro:not(.all) .more{display:none} /* 264 B ⑥: the first card says two sentences; 설정 › 베타 안내 all of them */
 /* 177 C 확률표 (src/ui/odds.js) */
 .odds details{margin:0 0 6px;text-align:left}.odds summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-weight:700;color:#6b4a2b;font-size:calc(13px*var(--fs))}
 .odds .skodds td:last-child{text-align:right;white-space:nowrap}.odds tr.cc td{border-top:0;padding-top:0;font-size:calc(11px*var(--fs));color:#8a6a4c;text-align:left!important;white-space:normal!important}
@@ -760,6 +764,7 @@ body.tut181 #loading:has(.lfirst:not([hidden]))>p:first-child,body.tut181 #loadi
 .t2board,.t2ask{position:fixed;left:50%;transform:translateX(-50%);z-index:2102;width:min(300px,calc(100vw - 32px));box-sizing:border-box;padding:12px 14px;border-radius:16px;background:#fbf1e1;color:#4a3626;box-shadow:0 6px 24px rgba(40,25,10,.35);display:flex;flex-direction:column;gap:6px;word-break:keep-all}
 .t2board>b,.t2ask>b{font-size:calc(14px*var(--fs))}.t2board small{color:#8a6a4c;font-size:calc(12px*var(--fs));text-align:center}.t2ask p{margin:0;font-size:calc(13px*var(--fs))}
 .t2row{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 10px;border:0;border-radius:12px;background:#fffaf0;color:#4a3626;font:inherit;font-size:calc(13.5px*var(--fs));text-align:left;cursor:pointer}.t2row i{width:18px;height:18px;flex:none;border-radius:50%;box-shadow:0 0 0 2px #c9b08f inset;font-style:normal;font-size:12px;line-height:18px;text-align:center}.t2row.sel{box-shadow:0 0 0 2px #e9a23b inset}.t2row.ok{opacity:.6;cursor:default}.t2row.ok i{background:#e9a23b;box-shadow:none;color:#fff}
+.t2board .t2row .t2wait{display:block;text-align:left;font-size:calc(11.5px*var(--fs));font-weight:700;color:#b5762a}.t2board .t2wait:empty{display:none} /* 258 B Q1 */
 .t2btns{display:flex;gap:8px;justify-content:flex-end}.t2btns button{min-height:44px;padding:0 14px;border-radius:12px;font:inherit;font-weight:700}.t2btns .go{border:0;background:#e9a23b;color:#fff}
 body.t2lead .goal{display:none}#tut.soft .hole{box-shadow:0 0 0 3px rgba(255,236,190,.95) inset}
 .tutsay .tutlater{pointer-events:auto;display:block;margin:6px auto 0;min-height:44px;padding:0 16px;border:0;border-radius:12px;background:#efe0c8;color:#4a3626;font:inherit;font-size:calc(13px*var(--fs));font-weight:700;cursor:pointer}

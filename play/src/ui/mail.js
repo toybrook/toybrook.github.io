@@ -5,7 +5,7 @@
 // Beta: the list and the received ids live on the phone, so a player who edits them can take a gift again (release: a server).
 import { $t, LANG, esc } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
-import { mailOpen, legendRoom, PROP, kindName } from '../game/rules.js';
+import { mailOpen, legendRoom, PROP, kindName, kst } from '../game/rules.js';
 import { GIFT, BALANCE, asHearts } from '../game/data.js';
 import { gardenName, PICS, LINES } from '../game/visit.js';
 import { dayOf } from '../game/clock.js';
@@ -21,7 +21,8 @@ const all = () => [...(Array.isArray(list?.mail) ? list.mail : []), ...G.evMail(
 const waiting = () => all().filter(m => mailOpen(G.S, m, G.now()));
 const cards = () => G.S.visit.cards.filter(c => !c.got); // 16-1: postcards from where a friend went
 const dot = () => { const on = waiting().length > 0 || cards().length > 0 || (G.S.giftEggs > 0 && legendRoom(G.S)); btn.classList.toggle('new', on); if (box.hidden) btn.hidden = !on; }; // 74: shown only with mail
-const day = s => { const m = /^\d{4}-(\d\d)-(\d\d)/.exec(String(s ?? '')); return m ? $t('{0}월 {1}일까지', +m[1], +m[2]) : ''; };
+// 255 D ①: the last minute of a KST end ('YYYY-MM-DD': through that day; with HH:MM: till then) as the player's own date
+const day = s => { const t = kst(s); if (Number.isNaN(t)) return ''; const d = new Date(t + (/:/.test(String(s)) ? 0 : 864e5) - 1); return $t('{0}월 {1}일까지', d.getMonth() + 1, d.getDate()); };
 const gifts = r0 => { const r = asHearts(r0); return [r?.hearts > 0 && `♥${Math.floor(r.hearts)}`,
   r?.eggs > 0 && $t('둥지 알 {0}개', Math.floor(r.eggs)), PROP[r?.prop] && $t('소품 「{0}」', PROP[r.prop].name), r?.legendEggs > 0 && $t('전설 알 {0}개', Math.floor(r.legendEggs))].filter(Boolean).join(' · '); }; // 203 D4·227 A: candy as hearts
 

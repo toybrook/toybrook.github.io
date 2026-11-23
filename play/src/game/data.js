@@ -802,15 +802,47 @@ export const YARD = S186; // release build: 194 0-6, the yard from the first day
 // 184 ⑤ flag (?adi184, docs/ad-interstitial.md): the interstitial ad (src/toss.js, so Toss only). Off in every build (build-web.mjs ADI)
 // until it opens with the 광고 제거 sale (Q6)
 export const ADI184 = false; // release build: the 184 ⑤ interstitial stays off
-// 194-7 trial flag (?th194, docs/decor-redesign.md 5-3 ②⑤⑥, 7-2): the first theme's six pieces (숲속 오두막) in the yard; off in the
-// release build (build-web.mjs TH)
-export const TH194 = false; // release build: the 194-7 theme trial stays off
+// 230 C (inbox 230): the material swatches, two prop themes, the event mockup. Trial only (?x230), off in the release build
+export const X230 = false; // release build: the 230 C trial stays off
+// 238 E2 (묶음 3): the event (EVENTS LANTERN) behind ?fest until the user OKs it; off in every build (build-web.mjs)
+export const FEST = false; // release build: the 238 E2 festival stays off
+// 230 C1: the material swatches (expansion-230.md 16장), each a look given whole to makeFigure (rules.js FIGS lets these objects
+// through, as MYTHIC152's). No SPECIES slot, no egg, no pool, no save: the trial page only. Korean names only (never shipped)
+export const X230V = X230 ? [
+  { id: 'enamel230', m: 'M1', name: '법랑', rarity: 'rare', sp: 'pig', colors: [{ id: 'white', body: '#f3efe6', navy: '#1c2a55', rim: 1 }] },
+  { id: 'enamel230', m: 'M1', name: '법랑 (테 없음)', rarity: 'rare', sp: 'pig', colors: [{ id: 'plain', body: '#f3efe6', navy: '#1c2a55', rim: 0 }] },
+  { id: 'castiron230', m: 'M9', name: '무쇠 주물', rarity: 'rare', sp: 'pig', colors: [{ id: 'black', body: '#1f1e20', worn: '#8e8e94' }] },
+  { id: 'thermo230', m: 'M3', name: '온도 변색 도료', rarity: 'rare', sp: 'duck', colors: [{ id: 'coral', a: '#ff8e86', b: '#6a63d8' }] },
+  { id: 'onggi230', m: 'M17', name: '옹기', rarity: 'rare', sp: 'turtle', colors: [{ id: 'brown', body: '#4a2614', edge: '#a0602e', clay: '#b38160' }] },
+  { id: 'seaglass230', m: 'M21', name: '바다 유리', rarity: 'rare', sp: 'otter', colors: [{ id: 'bottle', tint: '#2f8a46', frost: '#86c290' }] },
+  { id: 'beeswax230', m: 'M25', name: '밀랍', rarity: 'rare', sp: 'rabbit', colors: [{ id: 'honey', body: '#e2a645', wax: '#ffb44a' }] },
+  { id: 'tinprint230', m: 'M10', name: '인쇄 양철', rarity: 'heroic', sp: 'chicken', colors: [{ id: 'red', red: '#d4372c', cream: '#f2e6c8', navy: '#22305e', gold: '#f0b630' }] },
+  { id: 'mirror230', m: 'M11', name: '거울 조각', rarity: 'heroic', sp: 'arcticFox', colors: [{ id: 'silver', body: '#e9edf3', grout: '#46464c' }] },
+  { id: 'terrazzo230', m: 'M18', name: '테라초', rarity: 'heroic', sp: 'cow', colors: [{ id: 'cream', body: '#f1ebe0' }] },
+  { id: 'marblebead230', m: 'M22', name: '유리 구슬', rarity: 'heroic', sp: 'otter', colors: [{ id: 'trio', r1: '#e23a26', r2: '#f2bb12', r3: '#2266e0' }] },
+  { id: 'woodresin230', m: 'M24', name: '나무·레진 이음', rarity: 'heroic', sp: 'horse', colors: [{ id: 'blue', body: '#c99c66', grain: '#a2723f', deep: '#0b3a86', light: '#3aa2ec' }] },
+  { id: 'rattan230', m: 'M28', name: '라탄 엮음', rarity: 'heroic', sp: 'sheep', colors: [{ id: 'honey', a: '#dcb57c', b: '#c49558', gap: '#4e321a' }] },
+  { id: 'baekja230', m: 'M19', name: '백자', rarity: 'rare', sp: 'seal', colors: [{ id: 'white', body: '#f4f2ea', pool: '#bfd3da' }] }, // inbox 232 F R13: a sample only (year 1 adds no new limited material)
+  // 233 A: the second try of the five that failed and of M22 (new slots, 14..19; the ones above stay as they were)
+  { id: 'enamel233', m: 'M1', name: '법랑 2', rarity: 'rare', sp: 'pig', colors: [{ id: 'cobalt', body: '#2a5aa8' }] },
+  { id: 'castiron233', m: 'M9', name: '무쇠 주물 2', rarity: 'rare', sp: 'pig', colors: [{ id: 'black', body: '#2e2d30', worn: '#9a9aa0' }] },
+  { id: 'thermo233', m: 'M3', name: '온도 변색 도료 2', rarity: 'rare', sp: 'duck', colors: [{ id: 'coral', a: '#ff7f74', b: '#5c55cc' }] },
+  { id: 'seaglass233', m: 'M21', name: '바다 유리 2', rarity: 'rare', sp: 'otter', colors: [{ id: 'bottle', tint: '#5aa878', frost: '#b4dcc4' }] },
+  { id: 'beeswax233', m: 'M25', name: '밀랍 2', rarity: 'rare', sp: 'rabbit', colors: [{ id: 'honey', body: '#d8962e', wax: '#ffb44a' }] },
+  { id: 'marblebead233', m: 'M22', name: '유리 구슬 2', rarity: 'heroic', sp: 'otter', colors: [{ id: 'duo', r1: '#e2442c', r2: '#2a6ad8' }] },
+] : [];
+// 194-7 trial flag (?th194, docs/decor-redesign.md 5-3 ②⑤⑥, 7-2): the first theme's six pieces (숲속 오두막) in the yard; on in the
+// release build only with RC250 (build-web.mjs TH)
+export const TH194 = true; // release build: E-7 bundle 2 (RC250), 숲속 오두막 on
 // 199 B-11 trial flag (?g190, docs/game-purpose.md 12장): 초원 시리즈 1탄, 교환 도장, 의뢰 1건, 물어오기·흔들어 보기 (game/series.js);
-// off in the release build (build-web.mjs G190)
-export const G190 = false; // release build: the 199 B-11 series trial stays off
+// in the release build only with RC250 (build-web.mjs G190)
+export const G190 = true; // release build: E-7 bundle 2 (RC250), 시리즈 · 의뢰 on
 // 236 B trial flag (?tut228, docs/design/tutorial-2.md: 이정표 줄 · 멈춤 시계 · 직접 누르기 · 이정표 판 · 새 기능 안내): rides on the 181
-// tutorial (with the public flags ?tut181&rc200&d07; ?g190 too for the 시리즈 · 의뢰 · 교환 rows); off in the release build (build-web.mjs T228)
-export const TUT228 = false; // release build: the 236 B tutorial trial stays off
+// tutorial (with the public flags ?tut181&rc200&d07; ?g190 too for the 시리즈 · 의뢰 · 교환 rows); in the release build only with RC250 (build-web.mjs T228)
+export const TUT228 = true; // release build: E-7 bundle 2 (RC250), the tutorial 2nd version on
+// 238 E1 trial flag (?h232, docs/design/heart-sink-232.md 4, 6): ♥ 쓸 곳, the yard's steps 7..9 (on the S186 ladder) and the
+// 이어지는 조각 brushes bought a piece at a time (BRUSHES piece); in the release build only with RC250 (build-web.mjs H232)
+export const H232 = true; // release build: E-7 bundle 2 (RC250), ♥ 쓸 곳 on (the ladder: YD247 below)
 // bigIds: measured 2026-11-20 (decorModel triangles over 8,000; the median prop 2,258; rails aside)
 // the yard's steps 0..6 (5-1; 4..6 since 184 ④): open land cells [across x, along z], props / natives / animals at once; price: ♥
 // for steps 1..6; step 6 is the whole first board (BOARD0, 36×58: the paint cap in rules.js tidyYard); big: the props over
@@ -822,6 +854,20 @@ export const YARD_B = { price: [30, 60, 120, 200, 350, 500], cells: [[16, 16], [
 // ladder to 36 cells and 80 props; the start kit the same
 if (S186) Object.assign(YARD_B, { price: [15, 30, 60, 120, 200, 350], cells: [[12, 12], [16, 16], [20, 20], [24, 24], [28, 28], [32, 32], [36, 36]],
   props: [16, 28, 40, 52, 62, 72, 80], nat: [8, 12, 16, 20, 24, 28, 32], animals: [3, 4, 5, 6, 7, 7, 7], level: 0 });
+// 238 E1 (?h232, heart-sink-232.md 6) 뜰 넓히기 7~9단: on to the whole board (36×58); props, nature and animals at once as at step 6
+if (S186 && H232) { const Y = YARD_B; Y.price.push(500, 750, 1000); Y.cells.push([36, 44], [36, 51], [36, 58]); for (const k of ['props', 'nat', 'animals']) Y[k].push(...Array(3).fill(Y[k].at(-1))); }
+// 247 A trial flag (?yd247, docs/design/yard-247.md): the yard starts at 28×28 (custom-zone 5-1 step 3's caps), four paid steps on
+// to the whole board (prices: the sim in yard-247.md 1), a free camera over it, the land still to come shown; on the public ladder
+// (S186) only; in the release build only with RC250 (build-web.mjs YD247)
+export const YD247 = S186; // release build: E-7 bundle 2 (RC250), 나의 뜰 넓게 on (the S186 ladder only, as the flag)
+// 254 A-4: 0.86.1's own steps 0..6 (the S186 ladder above), to tell what it keeps of the yard part (yard.js old861)
+export const Y861 = { cells: YARD_B.cells.slice(0, 7), props: YARD_B.props.slice(0, 7), nat: YARD_B.nat.slice(0, 7), animals: YARD_B.animals.slice(0, 7) , gone: id => /^(ser_|req_|th_)/.test(id) }; // gone: props 0.86.1 does not have (its yardIn drops their rows): the series shelf, the 12 request gifts, the theme pieces (G190/TH194 off there)
+if (YD247) Object.assign(YARD_B, { price: [250, 550, 850, 1150], cells: [[28, 28], [32, 36], [36, 44], [36, 51], [36, 58]],
+  props: [90, 110, 130, 140, 150], nat: [40, 48, 54, 57, 60], animals: [7, 8, 9, 10, 10] });
+// yard-247.md 2: the save keeps L on the old S186+h232 ladder (0..9). old: the old step a new one is saved as (the biggest whose land
+// fits in it); from: the new step an old one opens as (the smallest whose land covers it); paid: ♥ paid for old steps 1..L, all told
+// 251 C: 0.86.1 knows 0..6 only, so the save's `yard` carries at most 6 and `yard247` the step itself (yard.js saveOf, mergeNew): SCHEMA stays 16
+export const Y247 = { old: [4, 5, 7, 8, 9], from: [0, 0, 0, 0, 0, 1, 2, 2, 3, 4], paid: [0, 15, 45, 105, 225, 425, 775, 1275, 2025, 3025] };
 // 120 (public since 123): new slots for the rabbit and the sheep, looks made from code (materials.js 115); the old variants stay
 // as they are. tier 'often' (inbox 120: 「흔함」 쪽 가중치). mono: one colour only (the shader paints it), so no colour list (check-eggs). 솜사탕 (candy115) and 뜨개 니트 (knit115) dropped: their looks are kept, no slot
 // 125-A: 박하사탕·반딧불·뭉게구름 gone (user 11/17: only 밤하늘 stays): no egg hatches them, the codex shows one only to a player who has
@@ -1592,6 +1638,14 @@ else if (YARD) for (let k = 0; k < 4; k++) BRUSHES.push({ id: 'th194_' + k, name
 // habitat/yard/scatter.js from the cell, not saved apart). Nothing stands in the way: animals and props as on 풀·모래
 if (YARD) BRUSHES.push({ id: 'thicket', name: $t('풀숲'), c: '#6a9e3c', hab: ['yard'], tuft: { kind: 'grass', per: 3, h: 1 } },
   { id: 'shore', name: $t('물가'), c: '#cbbf8e', hab: ['yard'], tuft: { kind: 'reed', per: 2, h: 0.8 } });
+// 238 E1 (?h232, heart-sink-232.md 4) 이어지는 조각: 29 화단 테두리 (P052), 30 텃밭 이랑 (P081), 31 수상 데크 (P003). piece: [♥ the
+// first (the right to draw it and one piece), ♥ each piece after] (no priceX); a piece is a painted cell, erased back to the bag
+// (S.pc: owned, never refunded: rules.js paintCell). Low, walked over (lines.js: open spots). Saved by index: new ones only at the end.
+// 246 B: 21..28 are TH218's places (decor-stage2.md 6 「붓 번호」), kept off here; 248 D: the three in a row after them, 29..31.
+// Before 246 these were 21..23, at 246 B 22 · 29 · 30 (yard.js yardIn moves a trial save's cells, pb)
+const th218 = k => ({ id: 'th218_' + k, name: '', c: '#000000', hab: [], off: 1 });
+if (YARD && H232) BRUSHES.push(...[0, 1, 2, 3, 4, 5, 6, 7].map(th218), { id: 'bedrim', name: $t('화단 테두리'), c: '#e6d8bd', hab: ['yard'], piece: [30, 10] },
+  { id: 'ridge', name: $t('텃밭 이랑'), c: '#a8774f', hab: ['yard'], piece: [30, 10] }, { id: 'deck', name: $t('수상 데크'), c: '#d8b27e', hab: ['yard'], piece: [30, 15] });
 export const brushIn = (b, habId) => !!BRUSHES[b] && !BRUSHES[b].off && (habId === 'yard' || !BRUSHES[b].hab || BRUSHES[b].hab.includes(habId));
 
 // Egg kinds. species: who can hatch from it, picked evenly. odds: rarity weights (%). pity: its shard gauges (75: each egg its own;

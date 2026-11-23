@@ -16,7 +16,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.86.1-b291d1d4">
+<meta name="build" content="toybrook-0.87.0-dc664c51">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -30,7 +30,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="1482188" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="1504983" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected || document.getElementById('intro')?.hidden === false) return; /* 176: not under the intro card (170 A keeps #boot there) */ const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -58,7 +58,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <div class="bar">
       <button class="back" id="back" hidden aria-label="월드맵으로 돌아가기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       <button class="back" id="habName" aria-label="월드맵으로 돌아가기"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><b>초원</b></button>
-      <div class="pill hearts" id="hearts"><span aria-hidden="true">♥</span><b>0</b></div>
+      <div class="pill hearts" id="hearts"><span aria-hidden="true">♥</span><b>…</b></div>
       <button class="back sq" id="mailBtn" hidden style="margin-left:auto" aria-label="우편함"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.8 7l8.2 6.2L20.2 7"/></svg></button>
       <button class="back sq" id="prefsBtn" aria-label="설정"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
     </div>
@@ -105,7 +105,8 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
       <li data-upd><i aria-hidden="true">🔄</i><span>새 판이 나오면 위에 「새로 고침」 띠가 떠요</span></li>
-      <li data-top><i aria-hidden="true">🌨️</i><span>첫눈 이벤트가 와요: 11월 28일 ~ 12월 11일, 눈송이를 모아 보상 길과 옷장을 채워요</span></li>
+      <li data-top><i aria-hidden="true">🧸</i><span>새 판 0.87.0: 시리즈 판(1탄 12칸 모으기), 의뢰판과 의뢰 사진, 나의 뜰 오두막과 땅 넓히기, 더 쉬워진 처음 길잡이</span></li>
+      <li><i aria-hidden="true">🌨️</i><span>첫눈 이벤트가 와요: 11월 28일 ~ 12월 11일, 눈송이를 모아 보상 길과 옷장을 채워요</span></li>
       <li><i aria-hidden="true">🏡</i><span>큰 업데이트: 새 화면, 나의 뜰, 꾸미기 자리, 백야 순록, 처음 5분 길잡이. 저장은 그대로예요(동물·소품·♥)</span></li>
       <li><i aria-hidden="true">❄️</i><span>설원 알에 새 전설: 극야 곰</span></li>
       <li><i aria-hidden="true">🛠️</i><span>화면을 더 깔끔하게 다듬는 중이에요. 잠시 예전 모습으로 돌아갔어요</span></li>
@@ -131,7 +132,8 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
   </div></section>
   <section class="intro pop" id="intro" hidden aria-label="오픈 베타 안내"><div>
     <h2>토이브룩 오픈 베타</h2>
-    <p>만들면서 계속 업데이트하는 게임이에요. 모은 동물은 이 기기·브라우저에 저장돼요. 웹 베타 저장은 그대로 남아요. 토스판은 새 저장으로 시작해요. 게임 안에는 결제·광고가 없어요.</p>
+    <p>모은 동물은 이 기기·브라우저에 저장돼요. 게임 안에는 결제·광고가 없어요.</p>
+    <p class="more">만들면서 계속 업데이트하는 게임이에요. 웹 베타 저장은 그대로 남아요. 토스판은 새 저장으로 시작해요.</p>
     <button id="introStart" data-close>시작</button>
   </div></section>
 </div></div>

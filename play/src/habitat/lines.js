@@ -78,6 +78,7 @@ export function linesLayer(scene, y, U, std = false) { // std: 195 B-8 (the yard
       for (const k in paint) {
         const b = paint[k]; if (b >= 0 && (b === LOGF || b === GATE || b === STEP || b === LEAF)) { theme(T, at, k, b, y, U, cells); continue; }
         if (b >= 0 && (b === HEDGE || b === BRIDGE || b === DOOR)) { yardPiece(T, at, k, b, y, U, cells); continue; } // 195 B-8
+        if (b >= 0 && (b === RIM || b === RIDGE || b === DECK)) { piece(T, at, k, b, y, U, cells); continue; } // 238 E1
         if (b !== FENCE && b !== WALL) continue;
         const [i, j] = k.split(',').map(Number), x = (i + 0.5) * U, z = (j + 0.5) * U, g = y(x, z); cells.push([x, z]);
         const knot = std && knotOf(joins(at, i, j, b)), byD = std && nextTo(at, i, j, DOOR), K = std ? (b === FENCE ? 1.25 : 1.26) : 1; // 195 B-8
@@ -223,6 +224,43 @@ function yardPiece(T, at, k, b, y, U, cells) {
       for (const h of [0.42, 1.0]) { const [bx, bz] = at2(L / 2, 0.09); T.rail.push({ x: bx, y: gy + h, z: bz, ry, s: [L + 0.04, 0.068, 0.068], c: bar }); }
       const [cx, cz] = at2(L / 2, 0.1); T.rail.push({ x: cx, y: gy + 0.71, z: cz, ry, rz: Math.atan2(0.58, L - 0.2), s: [Math.hypot(L - 0.2, 0.58), 0.05, 0.05], c: bar }); // the brace
       for (const v of [-0.12, 0.17]) { const [kx, kz] = at2(L - 0.1, v); T.blob.push({ x: kx, y: gy + 0.85, z: kz, s: 0.065, c: '#8a5a34' }); } // a knob each side
+    }
+  }
+}
+
+// 238 E1 (?h232) 이어지는 조각, from the shapes above (no new art): 화단 테두리 (bedrim) a low cream kerb, a block on each cell and one
+// along each join (as the hedge's, 0.2 high), for a bed's edge; 텃밭 이랑 (ridge) a mound of soil along the way it goes on a flat dark
+// patch, two seedlings (a pair of leaves each) on it; 수상 데크 (deck) rounded boards across the way, a little higher than the bridge's,
+// two mooring posts at an end (the yard's water under it where water lies beside it: terrain.js). All open spots (walked over, props
+// keep off). Without the flag none of this is reached (the brushes are not there: -1)
+const RIM = BRUSHES.findIndex(b => b.id === 'bedrim'), RIDGE = BRUSHES.findIndex(b => b.id === 'ridge'), DECK = BRUSHES.findIndex(b => b.id === 'deck');
+const RIMS = ['#e6d8bd', '#dccbab', '#efe3cb'], SOIL = ['#a8774f', '#9c6d47', '#b07f55'], SPROUT = ['#7cb843', '#6fa83b', '#8cc450'], DECKS = ['#d8b27e', '#cfa771', '#e0bc89'];
+function piece(T, at, k, b, y, U, cells) {
+  const [i, j] = k.split(',').map(Number), x = (i + 0.5) * U, z = (j + 0.5) * U, g = y(x, z), r = h01(i, j), has = (a, c) => at(i + a, j + c) === b;
+  const alongX = has(1, 0) || has(-1, 0) || !(has(0, 1) || has(0, -1));
+  cells.push([x, z, 1]);
+  const box = (bx, bz, s, ry, c, lift = 0) => T.rbox.push({ x: bx, y: y(bx, bz) + s[1] - 0.03 + lift, z: bz, ry, s, c });
+  const joinsTo = f => { for (const [di, dj] of [[1, 0], [0, 1], [1, 1], [1, -1]]) { // along each join to the same brush (a corner only where no side joins)
+    if (!has(di, dj) || di && dj && (has(di, 0) || has(0, dj))) continue;
+    const xb = (i + di + 0.5) * U, zb = (j + dj + 0.5) * U; f((x + xb) / 2, (z + zb) / 2, Math.hypot(xb - x, zb - z) / 2, Math.atan2(-(zb - z), xb - x), h01(xb, zb)); } };
+  if (b === RIM) {
+    box(x, z, [0.17, 0.1, 0.17], r * 0.4, RIMS[Math.floor(r * 3)]);
+    joinsTo((mx, mz, hl, ry, q) => box(mx, mz, [hl, 0.08, 0.11], ry, RIMS[Math.floor(q * 3)]));
+  } else if (b === RIDGE) {
+    const ry = alongX ? 0 : Math.PI / 2;
+    box(x, z, [0.6, 0.025, 0.5], ry, '#7d5a3c', -0.02); // the bed's soil, flat
+    box(x, z, [0.5, 0.15, 0.27], ry, SOIL[Math.floor(r * 3)]);
+    joinsTo((mx, mz, hl, jr, q) => { if (Math.abs(mx - x) > 0.01 && Math.abs(mz - z) > 0.01) return; box(mx, mz, [hl, 0.14, 0.26], jr, SOIL[Math.floor(q * 3)]); box(mx, mz, [hl, 0.025, 0.5], jr, '#7d5a3c', -0.02); });
+    for (const t of [-0.25, 0.25]) { const sx = x + (alongX ? t * U : 0), sz = z + (alongX ? 0 : t * U), sy = y(sx, sz) + 0.27, a = h01(sx * 2.3, sz) * 6.28, c = SPROUT[Math.floor(h01(sz, sx) * 3)];
+      for (const w of [0, Math.PI]) T.leaf.push({ x: sx, y: sy, z: sz, ry: a + w, rz: 0.55, s: 0.17, c }); }
+  } else { // DECK
+    const yd = g + 0.16, ex = alongX ? [1, 0] : [0, 1];
+    for (const o of [-0.54, -0.18, 0.18, 0.54]) T.rbox.push({ x: x + ex[0] * o, y: yd, z: z + ex[1] * o, ry: alongX ? Math.PI / 2 : 0, s: [U * 0.49, 0.05, 0.16], c: DECKS[Math.floor(h01(x + o, z - o) * 3)] });
+    for (const o of [-0.42, 0.42]) T.rail.push({ x: x + ex[1] * o, y: yd - 0.1, z: z + ex[0] * o, ry: alongX ? 0 : Math.PI / 2, s: [U, 0.07, 0.07], c: '#8a5a34' }); // two beams along it
+    for (const sd of [-1, 1]) { // the end(s) of the way; alone: one end only
+      if (has(sd * ex[0], sd * ex[1]) || sd < 0 && !has(-sd * ex[0], -sd * ex[1])) continue;
+      for (const q of [-1, 1]) { const px = x + ex[0] * sd * (U / 2 - 0.1) + ex[1] * q * (U / 2 - 0.12), pz = z + ex[1] * sd * (U / 2 - 0.1) + ex[0] * q * (U / 2 - 0.12);
+        T.post.push({ x: px, y: g - 0.3, z: pz, s: [0.09, 0.85, 0.09], c: '#9a6a40' }); T.cap.push({ x: px, y: g + 0.55, z: pz, s: 0.09, c: '#e9c38c' }); }
     }
   }
 }

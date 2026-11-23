@@ -9,7 +9,7 @@ import { when, TODS } from '../game/story.js';
 import { tonight, skyTime, AURORAS } from '../game/sky.js';
 import { weatherAt } from '../habitat/weather.js';
 import { gameHours } from '../habitat/daylight.js';
-import { toast, say, hideToast, heart, span, josa, overlayOpen, clock, tip, resting, redodge, cardUp } from './hud.js';
+import { toast, say, hideToast, heart, span, josa, overlayOpen, clock, tip, resting, redodge, cardUp, topWindow, whenClear } from './hud.js';
 import { openCodex, hasNew } from './codex.js';
 import { initNest } from './nest.js';
 import { openStore, leaveStore } from './store.js';
@@ -119,14 +119,23 @@ export function initPlay(nav) {
   // 214 A ② (?rc200): the habitat's name is never cut (「< 초」). Short of room, the bar's padding goes first, then ♥ is shown short (9.7만 · 97K · 9.7万)
   const nameB = $('habName').querySelector('b'), cut = () => nameB.scrollWidth > nameB.clientWidth, bar = hearts.parentElement;
   const SHORT = [1, 0].map(d => new Intl.NumberFormat(LOC, { notation: 'compact', maximumFractionDigits: d, roundingMode: 'floor' })); // 123.4만, then 123만 · floor: 99,999 is 9.9만, not 10만 (older browsers ignore it)
+  // 259 A ②: cut() reads the layout, and draw runs on every game tick (1 s): the same bar, the same screen, the same answer as last time.
+  // Measured again only when the bar's own markup, the screen, the page's classes/attributes or a font changed (the slow frame after each tick)
+  // The ♥ number itself changes on most ticks: not cut last time with room to spare (fitS px > 3 px a digit) and no more digits now → still not cut
+  let fitK = '', fitT = '', fitV = '', fitS = 0; document.fonts?.addEventListener?.('loadingdone', () => { fitK = ''; });
   function fitBar() {
-    if (!document.documentElement.dataset.ui187) return;
-    bar.classList.remove('tight', 'tight2'); if (!cut()) return;
+    const D = document.documentElement; if (!D.dataset.ui187) return;
+    const hv = hearts.lastChild.textContent, ho = hearts.outerHTML;
+    const k = [bar.innerHTML.replace(ho, ho.replace('<b>' + hv + '</b>', '<b></b>')), bar.className.replace(/\btight2?\b/g, ''), innerWidth, innerHeight, [...D.attributes].map(a => a.name + '=' + a.value).join(' '), document.body.className].join('|');
+    if (k === fitK && (hv === fitV || (fitS > 3 * hv.length && hv.length <= fitV.length))) { if (fitT !== fitV && hv !== fitT) hearts.lastChild.textContent = fitT; return; }
+    fitK = k; fitV = hv; fitS = 0;
+    bar.classList.remove('tight', 'tight2'); if (!cut()) { fitT = hv; const r = document.createRange(); r.selectNodeContents(nameB); fitS = nameB.clientWidth - r.getBoundingClientRect().width; return; }
     bar.classList.add('tight'); for (const f of SHORT) if (cut()) hearts.lastChild.textContent = f.format(G.S.hearts - flying); // under 1,000 it reads the same
     if (cut()) bar.classList.add('tight2'); // last: the BETA tag's word goes (a long level, Lv 1000+ · ui187.css)
+    fitT = hearts.lastChild.textContent;
   }
   function draw() {
-    hearts.lastChild.textContent = G.S.hearts - flying; fitBar(); if (tagFor) drawTag(); // 66-1: the hearts still flying in are added as they land (202: drawTag was inside this comment since 66-1)
+    const hv = String(G.S.hearts - flying); if (hearts.lastChild.textContent !== hv) hearts.lastChild.textContent = hv; fitBar(); if (tagFor) drawTag(); // 66-1: the hearts still flying in are added as they land (202: drawTag was inside this comment since 66-1)
     codexBtn.classList.toggle('new', hasNew()); $('storeBtn').classList.toggle('new', G.S.cards.some(c => c.new)); // 13-1 a postcard not seen
     if (habId) {
       const out = outIn(G.S, habId); friendsBtn.lastChild.textContent = `${out.length}/${capOf(G.S, habId)}`;
@@ -205,7 +214,9 @@ export function initPlay(nav) {
     if (e.what === 'arrive' && here) { const g = G.guestOf(e.id);
       if (e.pair != null && G.S.guests.list.some(o => o.pair === e.pair && o.id < e.id)) return; // the pair: one note for both
       const two = e.pair != null && G.S.guests.list.filter(o => o.pair === e.pair);
-      toast(two ? $t('손님 둘이 함께 왔어요 · 둘의 소원이 서로 달라요. 눌러서 보상을 보고 골라 주세요') : $t('{0}{이/가} 놀러 왔어요 · 눌러서 소원을 들어 보세요', nm), 3200, true);
+      const h0 = habId; whenClear(() => { if (!G.guestOf(e.id) || habId !== h0) return;
+        toast(two ? $t('손님 둘이 함께 왔어요 · 둘의 소원이 서로 달라요. 눌러서 보상을 보고 골라 주세요') : $t('{0}{이/가} 놀러 왔어요 · 눌러서 소원을 들어 보세요', nm), 3200, true);
+        if (e.big != null) setTimeout(() => say($t('{0}{이/가} 큰 소원을 들고 왔어요 ({1}/{2}) · 눌러서 보세요', nm, e.big + 1, GUEST.big), 3600), 3300); }); // 66-2 큰 소원: after the arrival note
       if (g?.tut != null && !(TUT228 && ['hatch', 'name', 'pet', 'feed'].includes(step181(G.S, G.now())))) setTimeout(() => { const r = G.withGuests().find(x => x.wg === e.id); if (r && hab?.look(r.id)) showBubble(r); }, 900); // the tutorial's guest: the camera goes to it
     }
     if (e.what === 'wish') fly(at(e.id), e.hearts); // a wish met for the first time: its small burst
@@ -219,12 +230,11 @@ export function initPlay(nav) {
       fly(p, e.hearts + (e.egg?.hearts || 0) + (e.gift?.hearts || 0) + (e.memo?.hearts || 0)); if (e.what === 'great') sfx('grown');
       if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; }
     }
-    if (e.what === 'bye' && hab) { toast($t('{0}: 「다음에 또 올게」', nm), 2400, true); if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; } }
+    if (e.what === 'bye' && hab) { if (!topWindow()) toast($t('{0}: 「다음에 또 올게」', nm), 2400, true); if (bubbleFor?.wg === e.id) { bubble.hidden = true; bubbleFor = null; } }
     if (e.what === 'free') { const P = PROPS.find(p => p.id === e.prop); G.flag('ui:decorBtn'); decorBtn.classList.add('newly'); setTimeout(() => decorBtn.classList.remove('newly'), 4200);
-      if (!['hatch', 'name', 'pet', 'feed', 'decor'].includes(TUT181 && step181(G.S, G.now()))) toast($t('「{0}」{을/를} 받았어요 · 꾸미기 › {1}에서 꺼내 손님 곁에 놓아 주세요', P?.name ?? '', tabName(e.prop)), 4200, true); } // 182 ②: unless the tutorial's decor step (still ahead) says it; skipped or done: the toast
+      if (!['hatch', 'name', 'pet', 'feed', 'decor'].includes(TUT181 && step181(G.S, G.now()))) whenClear(() => toast($t('「{0}」{을/를} 받았어요 · 꾸미기 › {1}에서 꺼내 손님 곁에 놓아 주세요', P?.name ?? '', tabName(e.prop)), 4200, true)); } // 182 ②: unless the tutorial's decor step (still ahead) says it; skipped or done: the toast
     // 66-2 단골 · 큰 소원 · 정착 (after the 기뻐해요 toast: the next one waits for it)
     const later = (ms, f) => setTimeout(f, ms);
-    if (e.what === 'arrive' && here && e.big != null) later(3300, () => say($t('{0}{이/가} 큰 소원을 들고 왔어요 ({1}/{2}) · 눌러서 보세요', nm, e.big + 1, GUEST.big), 3600));
     if (e.what === 'regular') later(3700, () => say($t('{0}{이/가} 단골이 됐어요 · 다음에 오면 큰 소원을 말해 줄 거예요', nm), 4200));
     if (e.what === 'step' && e.s < e.n) later(3700, () => say($t('큰 소원 {0}/{1} · {2}: 「내일 또 올게」', e.s, e.n, nm), 3600));
     if (e.what === 'settle') later(3700, () => { say($t('{0}{이/가} 여기 살기로 했어요 · 떠돌이 동물{1}', nm, e.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 4800); sfx('level'); });

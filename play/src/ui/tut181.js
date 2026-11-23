@@ -68,6 +68,7 @@ function tick() {
   if (k !== key) { if (mode === 'main' && key) passed(key, k); key = k; enter(k); }
   const busy = arriving() && !(T2 && !k && X?.asked) && !(k === 'hatch' && vis($('nstage')) && !vis($('ncard'))); // 184 ③ Q1: the first egg's 곧 깨어나요… over the open nest (the guest's camera is under it)
   if (!busy) P = k ? plan181(S, k, now) : null;
+  else if (T2 && (k || late) && (gw => !gw || gw.matches('#decor, #nest') && !vis(q('button.go, [data-go]', gw)))(topWindow())) P = { t: null, wait: 1, under: 1, c: 'guest', inBox: [$('decor'), $('nest')].find(vis) }; // E-19: the guest's 12 s said under the line, not a blank; not over a card or tip that asks (the hatch card's 보내기, 알겠어요)
   // map·aff: when the first day's steps are done, or in the nest's wait (Q7)
   if (!busy && mode === 'main' && (!k || !T2 && k === 'nest' && P?.wait)) { // 236 B: not in the nest's wait (the first day's line stays on it)
     if (!late) { late = T2 ? !X?.asked && topWindow('.tip')?.matches(':not(#decor, #nest, #snap)') ? null : X?.pick(S, { map: !S.flags.tutMap && !!hab2(S), aff: !S.flags.tutAff && affDue(S), ser: !S.flags.tutSer && serDue(S), req: !S.flags.tutReq && reqDue(S) }, getCur()) ?? null : !S.flags.tutMap && hab2(S) ? 'map' : !S.flags.tutAff && affDue(S) ? 'aff' : !S.flags.tutSer && serDue(S) ? 'ser' : !S.flags.tutReq && reqDue(S) ? 'req' : null; lateT = 0; lateB = true; if (T2 && late) { X.begin(late, S); dw = rr = 0; } }
@@ -136,7 +137,7 @@ function plan181(S, k, now) {
     const f = S.slots.filter(Boolean).length; if (f > nFill) waitAt = 0; nFill = f; // 184 ③ review: a new egg in another slot starts its own wait
     if (f) { waitAt ||= now; const w = now - waitAt, ni = S.slots.reduce((b, x, i) => x && now < x.end && (b < 0 || x.start > S.slots[b].start) ? i : b, -1), egg = ni < 0 ? null : q(`#nslots .nslot[data-i="${ni}"]:not(.ready)`); // the newest waiting egg
       if (vis($('nest')) && vis(egg)) { // 184 ③ Q1: the nest open on it: the egg rocks with one line over it, once a wait
-        if (w < WOB[0] || w >= WOB[1]) return { wait: 1, none: 1 };
+        if (w < WOB[0] || w >= WOB[1]) return { wait: 1, none: 1, c: 'nest_wait' }; // E-19: the line keeps 알이 깨는 중 (was 다음 알 넣기)
         if (wobAt !== waitAt) { wobAt = waitAt; egg.classList.remove('tutwob'); void egg.offsetWidth; egg.classList.add('tutwob'); setTimeout(() => egg.classList.remove('tutwob'), WOB[1] - WOB[0]); }
         return { t: null, text: $t('곧 부화해요…'), wait: 1, near: egg, inBox: $('nest'), c: 'nest_wait' };
       }
@@ -223,12 +224,13 @@ function dress(P) {
   if (!hold) st.t += STEP;
   if (Math.floor(st.t / 9e3) > st.b) { st.b = Math.floor(st.t / 9e3); rr++; fing.style.animation = 'none'; void fing.offsetWidth; fing.style.animation = ''; X?.flash(); }
   if (st.t >= 18e3 * ((st.f || 0) + 1) && P.aid && off) { st.f = (st.f || 0) + 1; getApi()?.centreOn?.(P.aid); } // every 18 s while it is away
+  if (c === 'aff' && off && P.aid && st.t - (st.a ?? -9e9) >= 3e3) { st.a = st.t; getApi()?.centreOn?.(P.aid); } // E-19: 친밀도's friend away: brought on screen at once, again every 3 s (it walks off; was 9 s of words only)
   const T = X?.tx(c, a ? nm(a) : '', HABITATS.find(h => h.id === hab2(S))?.name ?? ''), B = st.b > 0 && T?.[2]; T2T = T;
-  const Q = { ...P, text: T ? T[0] : P.text, text2: T ? B || T[1] : P.text2, later: !!late || st.t >= 18e3 && (['d_drag', 'd_turn', 'd_move'].includes(sub) || mode === 'again' && ['map', 'aff'].includes(key)), ok: 1 };
+  const Q = { ...P, text: T ? T[0] : P.text, text2: T ? B || T[1] : P.text2, later: !!late || st.t >= 18e3 && (['d_drag', 'd_turn', 'd_move'].includes(sub) || mode === 'again' && ['map', 'aff'].includes(key)), ok: 1, ...c === 'pet_off' && X && vis(X.pillEl()) ? { t: X.pillEl(), pt: null, fing: 'tap' } : {} }; // E-19: 안 보이나요? lights the line it speaks of (it brings the friend back)
   if (P.photo ? vis(P.t) : clear(P.t ?? null, P.inBox) && (P.t != null ? vis(P.t) : true)) return Q; // 236 B: the photo mode's own 저장 · 의뢰 사진 보내기
-  const W = topWindow('.tip'); // covered: under the line, and from 9 s the window's own 닫기 (not the naming card's, not the nest's)
+  const W = topWindow('.tip') ?? (X && late && vis($('ser')) ? $('ser') : null); // E-19: the series sheet is not in hud's TOPS: a guide after 교환 left it over the 꾸미기 button (100 s, nothing lit) · covered: under the line, and from 9 s the window's own 닫기 (not the naming card's, not the nest's)
   if (!W || !(P.t || P.pt) || P.t && W.contains(P.t) || vis(q('#introStart, button.go, [data-go]', W))) return { ...P, none: 1 }; // a card asking (시작 · 좋아요): the card speaks, as 1판
-  const x = (st.b > 0 || W.matches('#decor')) && !W.matches(late ? '#n170, #nest' : '#n170, #nest, #decor') && q('[data-close], [data-shut], #decor .dhead [data-done]', W); // 236 B bot: a guide past the first day under the decor panel: its 완료
+  const x = (st.b > 0 || late || W.matches('#decor')) && !W.matches(late ? '#n170' : '#n170, #nest, #decor') && q('[data-close], [data-shut], #decor .dhead [data-done]', W); // 236 B bot: a guide past the first day under the decor panel: its 완료 · E-19: past the first day any window's 닫기 at once, the nest's too (의뢰 under the nest, 친밀도 under the codex: 9 s of words)
   return vis(x) ? { ...Q, t: x, pt: null, text: $t('닫고 이어서 해요'), text2: '', fing: 'tap', dec: 0, near: null } : { ...Q, t: null, pt: null, fing: '', under: 1, dec: 0, near: null, text2: Q.text2 };
 }
 function frame() {
@@ -242,7 +244,9 @@ function frame() {
     Object.assign(fing.style, { left: c[0] + 'px', top: c[1] + 'px' }); fing.className = 'finger ' + P.fing; }
   const H = innerHeight, sh = say.offsetHeight, D = $('decor'), n = P.near && vis(P.near) ? P.near.getBoundingClientRect() : null;
   const top = T2 && P.under ? X?.below() ?? 70 : P.dec && vis(D) ? D.getBoundingClientRect().top - sh - 12 : n ? n.top - sh - 10 : c ? (c[1] > H * 0.55 ? c[1] - c[3] / 2 - sh - 18 : c[1] + c[3] / 2 + 18) : H * 0.6;
-  say.style.top = Math.round(Math.max(12, Math.min(H - sh - 12, top))) + 'px';
+  let y = Math.max(12, Math.min(H - sh - 12, top));
+  const L = T2 && X?.pillEl(); if (L && vis(L)) { const r = L.getBoundingClientRect(); if (y < r.bottom + 6 && y + sh > r.top - 6) { y = r.bottom + 8; if (c && y < c[1] + c[3] / 2 && y + sh > c[1] - c[3] / 2) y = c[1] + c[3] / 2 + 18; y = Math.min(H - sh - 12, y); } } // 258 B Q3 · 추가: never over the line (안 보이나요? · 이름을 지어 줘요 sat on it): under it
+  say.style.top = Math.round(y) + 'px';
 }
 
 // a drag that missed the prop (the camera moved instead): twice and the hole grows, a second line says where to put the finger (§2-2)
@@ -275,5 +279,5 @@ export function initTut(cur, api) {
   getCur = cur; getApi = api; const S = G.S;
   if (S?.flags.tut181 === 'again') { G.flag('tut181', 'done'); } // a replay cut by a reload: over (it gave nothing)
   mode = 'main'; start();
-  if (T2) import('./tut228.js').then(m => { X = m; m.init({ wake: () => { if (!iv) { mode = 'main'; start(); } }, poke: () => { st.t = Math.max(st.t, 18e3 - STEP); } }); if (!iv) start(); }); // build-web leaves the file out
+  if (T2) import('./tut228.js').then(m => { X = m; m.init({ wake: () => { if (!iv) { mode = 'main'; start(); } }, poke: () => { st.t = Math.max(st.t, 18e3 - STEP); } }); if (!iv) start(); }); // build-web copies the file only with RC250
 }

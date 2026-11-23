@@ -1,6 +1,20 @@
 {
   "mail": [
     {
+      "id": "update-0870",
+      "title": "0.87.0 나의 뜰이 넓어졌어요",
+      "body": "나의 뜰을 더 넓게 넓힐 수 있어요. 예전에 넓힌 단계는 새 단계로 옮겼고, 남은 ♥는 한 번 돌려 드렸어요. 초원 시리즈 1탄도 시작했어요. 모아서 진열장을 채워 보세요!",
+      "rewards": {
+        "hearts": 10
+      },
+      "start": "2026-11-23",
+      "end": "2027-01-31",
+      "title_en": "0.87.0 My Yard got bigger",
+      "body_en": "You can now make My Yard even bigger. Steps you had already opened moved to the new steps, and any ♥ left over came back to you once. Meadow Series 1 has begun too. Collect it and fill your Display shelf!",
+      "title_ja": "0.87.0 わたしの庭がひろくなりました",
+      "body_ja": "わたしの庭をもっとひろげられるようになりました。前にひろげた段階は新しい段階にうつして、あまった♥は一度だけおかえししました。草原シリーズ第1弾もはじまりました。あつめて、かざり棚をいっぱいにしてみてくださいね！"
+    },
+    {
       "id": "beta-welcome",
       "title": "오픈 베타에 와 주셔서 고마워요",
       "body": "토이브룩 오픈 베타에 와 주셔서 고마워요. 작은 선물을 보내요. 천천히 둘러보세요!",

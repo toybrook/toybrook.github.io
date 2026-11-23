@@ -136,7 +136,7 @@ export function watch(G) {
   // 169: the first time the page is hidden or closed, marked even when not sent (a later day, or off); not reached: dropped
   const left = e => {
     if (st.d0 || e.type === 'visibilitychange' && !document.hidden) return; st.d0 = 1; keep(); const s = performance.now() / 1000;
-    if (firstDay()) track('d0_last', { at: where(petAt), s: s < 30 ? '~30s' : s < 60 ? '~1m' : s < 180 ? '~3m' : s < 300 ? '~5m' : '5m+' });
+    if (firstDay()) track('d0_last', { at: where(petAt), src, s: s < 30 ? '~30s' : s < 60 ? '~1m' : s < 180 ? '~3m' : s < 300 ? '~5m' : '5m+' });
   };
   addEventListener('visibilitychange', left); addEventListener('pagehide', left);
   // inbox 54: time on the game screen today (hidden or asleep not counted: a gap over 10 s counts 10 s)
