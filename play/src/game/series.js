@@ -6,6 +6,9 @@
 // honours them in any build, each only when it is a real look of the egg's rarity.
 import { $t } from '../i18n/i18n.js';
 import { BALANCE as B, HABITATS, ACCESSORIES, TUT228, TH194 } from './data.js';
+// <sec263>
+import { SEC263, SEC263_CELLS } from './data.js'; // 263 B · 267 B the series secret (trial flag)
+// </sec263>
 import { SP, RAR, EGG, PROP, variantOf, rollRarity, crackRarity, choose, canSendBack, putGift, hatchMs, eggMarks, bump } from './rules.js';
 import { dayOf } from './clock.js';
 import { GUESTS } from './guests-data.js';
@@ -35,9 +38,9 @@ export const SOUND = { clear: [$t('맑은 소리가 나요'), 'bell'], heavy: [$
 // (shot again for more: no second reward). The prize props: data.js req_r1..r12 (free, gift only)
 const rq = (id, who, hab, lv, must, extra, name, line, post, thanks) => ({ id, who, hab, lv, must, extra, name, line, post, thanks, hearts: 15, prop: 'req_' + id });
 export const REQUESTS = [
-  rq('r1', 'm_sheep', 'meadow', 1, ['꽃', 'pals2'], ['쉼터', 'sp:sheep'], $t('꽃밭에 둘러앉은 친구들'), $t('꽃 곁에 친구 둘이 모여 있는 사진을 받고 싶어요'), $t('사진을 보따리 맨 위에 넣어 두었어요. 꽃 냄새가 여기까지 나는 것 같아요.'), $t('다음 소풍은 이 매트 위에서 해요.')),
+  rq('r1', 'm_sheep', 'meadow', 1, ['꽃', 'pals2'], ['쉼터', 'sp:sheep'], $t('꽃밭에 둘러앉은 동물들'), $t('꽃 곁에 동물 둘이 모여 있는 사진을 받고 싶어요'), $t('사진을 보따리 맨 위에 넣어 두었어요. 꽃 냄새가 여기까지 나는 것 같아요.'), $t('다음 소풍은 이 매트 위에서 해요.')),
   rq('r2', 'p_duck', 'pond', 1, ['물가', 'sp:duck'], ['꽃', 'pals2'], $t('물가에 핀 꽃과 오리'), $t('물가에서 꽥꽥 노는 오리 사진을 받고 싶어요'), $t('물소리가 들리는 것 같아서 사진을 자꾸 꺼내 봐요.'), $t('다음엔 같이 퐁당 해요!')),
-  rq('r3', 'm_chicken', 'meadow', 2, ['먹을 것', 'pals1'], ['물가', 'baby'], $t('든든한 새참 시간'), $t('먹을 것 곁에 친구가 있는 사진을 받고 싶어요'), $t('사진을 보다가 배가 고파져서 낟알을 세 번이나 쪼았어요.'), $t('잘 먹는 친구들, 참 보기 좋아요.')),
+  rq('r3', 'm_chicken', 'meadow', 2, ['먹을 것', 'pals1'], ['물가', 'baby'], $t('든든한 새참 시간'), $t('먹을 것 곁에 동물이 있는 사진을 받고 싶어요'), $t('사진을 보다가 배가 고파져서 낟알을 세 번이나 쪼았어요.'), $t('잘 먹는 동물들, 참 보기 좋아요.')),
   rq('r4', 'm_pig', 'yard', 2, ['먹을 것', '쉼터'], ['꽃', 'pals2'], $t('뜰에서 여는 소풍'), $t('먹을 것과 쉴 자리가 있는 뜰 사진을 받고 싶어요'), $t('사진을 보고 모자를 고쳐 쓰고 길을 나섰어요. 소풍 가는 길이에요.'), $t('자리 하나만 남겨 둬요!')),
   rq('r5', 'p_turtle', 'pond', 1, ['쉼터', 'sp:turtle'], ['그늘', 'quiet'], $t('거북의 낮잠 자리'), $t('쉴 자리 곁에 거북이 있는 사진을 받고 싶어요'), $t('사진을 천천히, 아주 천천히 봤어요. 다 보는 데 하루가 걸렸어요.'), $t('서두르지 않아도 괜찮아요.')),
   rq('r6', 'm_horse', 'meadow', 1, ['높은 곳', 'sp:horse'], ['풀밭', 'pals3'], $t('언덕 위의 말'), $t('높은 곳에 말이 서 있는 사진을 받고 싶어요'), $t('사진을 보니 다리가 근질근질해서 언덕을 두 번 달렸어요.'), $t('바람이 불면 제 생각 해 줘요.')),
@@ -45,21 +48,21 @@ export const REQUESTS = [
   rq('r8', 'p_capy', 'yard', 1, ['놀이', '그늘'], ['물가', 'pals3'], $t('그늘 아래 놀이터'), $t('그늘에 놀 거리가 있는 뜰 사진을 받고 싶어요'), $t('사진을 보다가 그대로 잠들었어요. 좋은 꿈을 꿨어요.'), $t('뜰이 참 포근해 보여요.')),
   rq('r9', 's_penguin', 'snow', 1, ['놀이', 'sp:penguin'], ['높은 곳', 'pals2'], $t('눈밭의 놀이 시간'), $t('눈밭에서 노는 펭귄 사진을 받고 싶어요'), $t('눈밭에서 노는 모습을 보고, 저도 뒤뚱뒤뚱 나가서 놀았어요.'), $t('눈밭은 같이 놀 때 제일 신나요!')),
   rq('r10', 's_seal', 'snow', 1, ['쉼터', 'sp:seal'], ['pals2', 'baby'], $t('눈밭의 포근한 집'), $t('쉴 자리 곁에 물범이 있는 사진을 받고 싶어요'), $t('사진이 너무 포근해서 베고 잤어요. 조금 구겨졌지만 괜찮아요.'), $t('같이 뒹굴 날을 기다려요.')),
-  rq('r11', 's_deer', 'snow', 6, ['소리', 'pals1'], ['빛', 'pals3'], $t('눈밭 음악회'), $t('소리 나는 것 곁에 친구가 있는 사진을 받고 싶어요'), $t('사진을 보는데 어디선가 딸랑딸랑 소리가 났어요. 제 보따리였어요.'), $t('그 소리, 여기까지 들려요.')),
+  rq('r11', 's_deer', 'snow', 6, ['소리', 'pals1'], ['빛', 'pals3'], $t('눈밭 음악회'), $t('소리 나는 것 곁에 동물이 있는 사진을 받고 싶어요'), $t('사진을 보는데 어디선가 딸랑딸랑 소리가 났어요. 제 보따리였어요.'), $t('그 소리, 여기까지 들려요.')),
   rq('r12', 's_fox', 'yard', 2, ['먹을 것', '빛'], ['쉼터', 'alone'], $t('아무도 모르는 찻집'), $t('불빛 곁에 먹을 것이 놓인 뜰 사진을 받고 싶어요'), $t('아무도 없을 때 살금살금 다녀갔어요. 찻잔이 비어 있으면 저예요.'), $t('비밀로 해 줘요.'))];
 export const REQ = Object.assign(Object.create(null), Object.fromEntries(REQUESTS.map(q => [q.id, q])));
 // 작은 의뢰 (221 B 3): 8 templates, ♥15, no prop, never done; its habitat and visitor drawn when it comes (kept on its board entry).
 // They fill the board's places a story does not take and go at the day's end (a story stays till it is answered)
 const sm = (id, must, extra, name, line) => ({ id, must, extra, name, line, hearts: 15, small: true });
 export const SMALL = [
-  sm('s1', ['꽃', 'pals1'], ['pals2'], $t('꽃 곁의 친구'), $t('꽃 곁에 친구가 있는 사진을 받고 싶어요')),
-  sm('s2', ['먹을 것', 'pals1'], ['쉼터'], $t('간식 시간'), $t('먹을 것과 친구가 함께 있는 사진을 받고 싶어요')),
-  sm('s3', ['쉼터', 'pals2'], ['그늘'], $t('쉼터의 친구들'), $t('쉴 자리에 친구 둘이 모인 사진을 받고 싶어요')),
-  sm('s4', ['놀이', 'pals1'], ['물가'], $t('노는 시간'), $t('놀 거리 곁에 친구가 있는 사진을 받고 싶어요')),
-  sm('s5', ['빛', 'pals1'], ['꽃'], $t('반짝이는 불빛'), $t('불빛 곁에 친구가 있는 사진을 받고 싶어요')),
-  sm('s6', ['소리', 'pals2'], ['풀밭'], $t('작은 음악회'), $t('소리 나는 것 곁에 친구 둘이 있는 사진을 받고 싶어요')),
-  sm('s7', ['물가', 'pals2'], ['baby'], $t('물가 나들이'), $t('물가에 친구 둘이 있는 사진을 받고 싶어요')),
-  sm('s8', ['높은 곳', 'pals1'], ['그늘'], $t('높은 곳 구경'), $t('높은 곳에 친구가 있는 사진을 받고 싶어요'))];
+  sm('s1', ['꽃', 'pals1'], ['pals2'], $t('꽃 곁의 동물'), $t('꽃 곁에 동물이 있는 사진을 받고 싶어요')),
+  sm('s2', ['먹을 것', 'pals1'], ['쉼터'], $t('간식 시간'), $t('먹을 것과 동물이 함께 있는 사진을 받고 싶어요')),
+  sm('s3', ['쉼터', 'pals2'], ['그늘'], $t('쉼터의 동물들'), $t('쉴 자리에 동물 둘이 모인 사진을 받고 싶어요')),
+  sm('s4', ['놀이', 'pals1'], ['물가'], $t('노는 시간'), $t('놀 거리 곁에 동물이 있는 사진을 받고 싶어요')),
+  sm('s5', ['빛', 'pals1'], ['꽃'], $t('반짝이는 불빛'), $t('불빛 곁에 동물이 있는 사진을 받고 싶어요')),
+  sm('s6', ['소리', 'pals2'], ['풀밭'], $t('작은 음악회'), $t('소리 나는 것 곁에 동물 둘이 있는 사진을 받고 싶어요')),
+  sm('s7', ['물가', 'pals2'], ['baby'], $t('물가 나들이'), $t('물가에 동물 둘이 있는 사진을 받고 싶어요')),
+  sm('s8', ['높은 곳', 'pals1'], ['그늘'], $t('높은 곳 구경'), $t('높은 곳에 동물이 있는 사진을 받고 싶어요'))];
 export const SMALLQ = Object.assign(Object.create(null), Object.fromEntries(SMALL.map(q => [q.id, q])));
 export const SMALL_HABS = ['meadow', 'pond', 'snow'];
 // 0장 10번 ⑤: the board takes `all` a day, `story` of them stories (`first` on the first day stories come), `board` waiting at most
@@ -69,9 +72,9 @@ export const reqOf = (id, x) => REQ[id] ?? (SMALLQ[id] && x ? { ...SMALLQ[id], h
 export const reqQ = (S, id) => reqOf(id, S.req.on.find(x => x.id === id));
 // what 사진 모드 may send in a habitat: the board's there, then its stories sent with fewer than 3 stars (221 B 2 다시 찍기)
 export const reqHere = (S, hab) => [...S.req.on.map(x => reqOf(x.id, x)), ...REQUESTS.filter(q => S.req.done[q.id] < 3 && !S.req.on.some(x => x.id === q.id))].filter(q => q && q.hab === hab);
-const WN = { quiet: $t('조용한 곳'), alone: $t('동물 없이'), baby: $t('아기 동물') };
+const WN = { quiet: $t('조용한 곳'), alone: $t('동물 없이'), baby: $t('유체 동물') };
 // a WISH key (Korean) in the reader's language (208 A: no emoji, the ui187 icon by .scond[data-i])
-export const wishName = w => /^pals(\d)$/.test(w) ? $t('친구 {0}마리', w.slice(4)) : w.startsWith('sp:') ? $t('{0} 한 마리', SP[w.slice(3)]?.name ?? '') : WN[w] ?? $t(w);
+export const wishName = w => /^pals(\d)$/.test(w) ? $t('동물 {0}마리', w.slice(4)) : w.startsWith('sp:') ? $t('{0} 한 마리', SP[w.slice(3)]?.name ?? '') : WN[w] ?? $t(w);
 
 // 215 (3-13 컬렉션 번호): counted, never saved, so an old save has its numbers too. A legendary (a story rarity): by its codex `at`
 // among theirs (one without `at` last, then by key); a series secret: by its accessory's album `at` among the series' secrets.
@@ -101,7 +104,13 @@ export function tidy(S, now) {
   S.stamp = int(S.stamp, 0, 1e6);
   const T = isObj(S.ser) ? S.ser : {}; S.ser = {};
   for (const s of SERIES) { const M = isObj(T[s.id]) ? T[s.id] : {}, sec = look(M.sec) && s.cells.includes(M.sec.species + ':' + M.sec.variant), acc = sec && Object.hasOwn(ACCESSORIES, M.sec.acc) ? M.sec.acc : null;
-    S.ser[s.id] = { n: Number.isInteger(M.n) ? int(M.n, 0, s.cells.length) : have(S, s), ...Number.isFinite(M.got) && { got: M.got }, ...sec && { sec: { species: M.sec.species, variant: M.sec.variant, acc } } }; }
+    S.ser[s.id] = { n: Number.isInteger(M.n) ? int(M.n, 0, s.cells.length) : have(S, s), ...Number.isFinite(M.got) && { got: M.got }, ...sec && { sec: { species: M.sec.species, variant: M.sec.variant, acc } } };
+    // <sec263> 263 B (trial flag SEC263): sec is { species, variant, at }, kept only when it is this series' secret and its codex cell is
+    // filled; at within 0..now (263 B review)
+    if (SEC263) { delete S.ser[s.id].sec; const k = SEC263_CELLS[s.id]?.sec, c = k && isObj(M.sec) && M.sec.species + ':' + M.sec.variant === k && Object.hasOwn(S.codex, k) && S.codex[k];
+      if (c) S.ser[s.id].sec = { species: M.sec.species, variant: M.sec.variant, at: Math.min(Math.max(Number.isFinite(M.sec.at) ? M.sec.at : Number.isFinite(c.at) ? c.at : now, 0), now) }; }
+    // </sec263>
+  }
   const F = isObj(T.f) ? T.f : {}, K = isObj(T.k) ? T.k : {};
   S.ser.f = { day: day(F.day), n: int(F.n, 0, FETCH.cap), w: Number.isInteger(F.w) ? F.w : Math.floor(now / FETCH.every),
     q: (Array.isArray(F.q) ? F.q : []).filter(x => isObj(x) && okEgg(x.egg)).slice(0, FETCH.wait).map(x => ({ uid: int(x.uid, 0, Number.MAX_SAFE_INTEGER), egg: x.egg })) };
@@ -120,7 +129,12 @@ export function step(S, now) {
   const ev = [];
   for (const s of SERIES) { const M = S.ser[s.id], n = have(S, s);
     if (n > M.n) ev.push({ type: 'series_cell', id: s.id, n }); M.n = n;
-    if (!M.sec) { const a = S.animals.find(a => a.s && !a.pending && s.cells.includes(a.species + ':' + a.variant)); if (a) { M.sec = { species: a.species, variant: a.variant, acc: a.acc ?? null }; ev.push({ type: 'series_secret', id: s.id }); } }
+    let sk = false;
+    // <sec263> 263 B: with the flag the codex fills the series' secret (not a.s)
+    sk = SEC263 && SEC263_CELLS[s.id]?.sec;
+    if (sk && !M.sec && Object.hasOwn(S.codex, sk)) { const [species, variant] = sk.split(':'); M.sec = { species, variant, at: S.codex[sk].at ?? now }; ev.push({ type: 'series_secret', id: s.id }); }
+    // </sec263>
+    if (!sk && !M.sec) { const a = S.animals.find(a => a.s && !a.pending && s.cells.includes(a.species + ':' + a.variant)); if (a) { M.sec = { species: a.species, variant: a.variant, acc: a.acc ?? null }; ev.push({ type: 'series_secret', id: s.id }); } }
     if (n === s.cells.length && (!M.got || !S.props.some(p => p.prop === s.prize))) { const first = !M.got; M.got ??= now; putGift(S, s.prize, null, { cost: 0 }); if (first) ev.push({ type: 'series_done', id: s.id }); } // a build without the flag may have dropped it: given again
   }
   issue(S, now, ev);
@@ -217,7 +231,7 @@ export function reqShot(S, id, met) {
 // 254 A Q1 숲속 오두막 맛보기: the first story request answered with the yard open puts a fence and the cabin's log bench (통나무 의자)
 // in the yard's storage, free (cost 0: nothing back if sold), never placed; once a save (flags.cab254)
 export const CAB_TASTE = ['fence', 'th_logchair'];
-function cabTaste(S) {
+export function cabTaste(S) { // 281 ②: also from the empty yard's card (main.js yard281)
   if (!TH194 || S.flags.cab254 || !S.unlocked.includes('yard') || !CAB_TASTE.every(id => PROP[id])) return null;
   S.flags.cab254 = 1; return CAB_TASTE.map(id => putGift(S, id, null, { cost: 0, hab: 'yard' }).prop);
 }

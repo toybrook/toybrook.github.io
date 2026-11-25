@@ -134,6 +134,7 @@ html.calm .lbar::before{animation:none}
 .nest[hidden]{display:none}
 .nsheet{background:#f3e2c7;color:#4a3626;border-radius:22px 22px 0 0;padding:0 var(--sa-r) calc(14px + var(--sa-b)) var(--sa-l);box-shadow:0 -6px 24px rgba(60,35,15,.25);animation:up .25s ease-out}
 @keyframes up{from{transform:translateY(40px);opacity:0}}
+@keyframes ncup{from{transform:translateY(40px)}} /* 295: the hatch card rises only, never fades: opaque from the first frame (the board behind showed through) */
 .ntop{position:relative;height:222px;margin:0 12px;border-radius:16px;background:#fbf1e1;border:1px solid #e3cba6;overflow:hidden}
 /* inbox 43: more eggs than fit scroll by a finger (the stage is touch-action:none; this box is its own scroll container), with a faint shadow at the bottom while there is more below (the local cover slides over it at the end) */
 .neggs{box-sizing:border-box;height:100%;display:flex;flex-direction:column;padding:8px 10px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:linear-gradient(rgba(251,241,225,0),#fbf1e1 60%) 0 100%/100% 18px no-repeat local,radial-gradient(farthest-side at 50% 100%,rgba(90,60,25,.2),transparent) 0 100%/100% 10px no-repeat scroll}
@@ -159,6 +160,7 @@ html.calm .lbar::before{animation:none}
 .nstage.secret::before{left:22%;top:16%}.nstage.secret::after{right:22%;top:30%;animation-delay:-.6s}
 .nlow{position:relative;margin:8px 12px 0}
 .nlow:has(>.ncard:not([hidden])){min-height:186px}
+.nlow>.ncard{top:auto;box-sizing:border-box;min-height:100%} /* 281 보너스: a long card (치장·다른 서식지 줄) grows up over the stage, not off the screen's bottom (its 연못에서 보기 · 확인 were cut at 375×812) */
 .ngauges{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .gauge{position:relative;display:flex;align-items:center;gap:8px;background:#fbf1e1;border:1px solid #e3cba6;border-radius:14px;padding:6px 8px;line-height:1.3}
 .gauge svg{width:46px;height:67px;flex:none;overflow:visible} /* 69-1: + the base with its 천장 눈금 */
@@ -189,7 +191,7 @@ body:has(.intro:not([hidden],.fmenu,.scene.hidden *)) :is(.fx,.shell,.flyg){visi
 @keyframes knock{20%{transform:rotate(-8deg)}45%{transform:rotate(6deg)}70%{transform:rotate(-3deg)}}
 .nslot.fresh img{animation:egin .35s ease-out}
 @keyframes egin{from{transform:translateY(-26px) scale(.6);opacity:0}}
-.ncard{position:absolute;inset:0;background:#fffaf0;border:1px solid #e3cba6;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;box-shadow:0 4px 18px rgba(60,35,15,.18);animation:up .25s ease-out}
+.ncard{position:absolute;inset:0;background:#fffaf0;border:1px solid #e3cba6;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;box-shadow:0 4px 18px rgba(60,35,15,.18);animation:ncup .25s ease-out}
 .nchips{display:flex;gap:6px;align-items:center;justify-content:center}
 .ncard .rar{font-size:calc(12px*var(--fs));font-weight:700;color:#fff;border-radius:999px;padding:3px 10px;background:var(--rc)}
 .ncard .new{font-style:normal;font-size:calc(11px*var(--fs));font-weight:700;background:#ff6b7d;color:#fff;border-radius:6px;padding:3px 6px}
@@ -447,6 +449,7 @@ body:not(.building) #loading:not([hidden]){background-color:#f5dcbc}body:not(.bu
 .ret ul{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px}
 .ret li button{width:100%;min-height:48px;display:flex;align-items:center;gap:10px;padding:0 14px;border:1px solid #e3cba6;border-radius:14px;background:#fff6e6;color:#4a3626;font:inherit;font-size:calc(14px*var(--fs));text-align:left;font-weight:600}
 .ret li button::after{content:'›';margin-left:auto;font-size:calc(20px*var(--fs));color:#b39878}
+.ret li button[data-go="q283"]::after{content:none} /* 292: 「호일 풍선으로 새로 만들어졌어요」 goes nowhere (a tap only closes the card) */
 .ret li i{font-style:normal;font-size:calc(18px*var(--fs))}
 .ret li small{display:block;font-weight:400;font-size:calc(12px*var(--fs));color:#8a6a4c;word-break:keep-all} /* 27-7c: 「가득 찼/어요」 */
 .news li{display:flex;align-items:center;gap:10px;padding:6px 12px;line-height:1.35;border:1px solid #e3cba6;border-radius:14px;background:#fff6e6;font-size:calc(14px*var(--fs));text-align:left;font-weight:600;word-break:keep-all} /* 26-8 */
@@ -512,6 +515,7 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .fname{display:block;width:100%;box-sizing:border-box;min-height:48px;margin:0 0 12px;padding:0 12px;border:1px solid #d6bb93;border-radius:12px;background:#fffaf0;color:#4a3626;font:inherit;font-size:max(16px,calc(17px*var(--fs)))}
 .frow img{width:48px;height:48px;border-radius:10px;flex:none}.frow img:not([src]){visibility:hidden}
 .frow div{flex:1;min-width:0}.frow b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;font-size:calc(14px*var(--fs));line-height:1.25;height:2.5em;overflow:hidden;overflow-wrap:anywhere}
+.ptag{display:inline-block;font-style:normal;font-size:calc(11px*var(--fs));font-weight:700;line-height:1.5;color:#6b4a2b;background:#f1e2c9;border-radius:999px;padding:0 7px;margin-right:5px;white-space:nowrap;vertical-align:1px} /* 285 성격 태그 */
 .frow small{font-size:calc(12px*var(--fs));color:#8a6a4c}.frow small.hold{color:#5f7d93;font-weight:700}
 .frow em{font-style:normal;font-size:calc(11px*var(--fs));font-weight:700;color:#fff;border-radius:999px;padding:2px 8px;flex:none}
 .frow.card{border-color:#f0c35a;background:#fff6dc}
@@ -547,6 +551,7 @@ i.fav{font-style:normal;color:#e0a21a;margin-right:3px}
 .sact button.sb{background:#fbf1e1;border:1px solid #d6bb93;color:#6b4a2b}.sact button:disabled{opacity:.45}
 .sbtns .go.off{background:#cdb89a}
 .nwhy.away{color:#b0670f;font-weight:700;word-break:keep-all}
+.nbtns [data-look]{flex:1.7;white-space:nowrap;padding:0 8px}.nbtns [data-look]~.go{flex:.8} /* 295: 「…에서 보기」 one line at 375 (width shared, font kept) */
 .nbtns.three button{font-size:calc(13.5px*var(--fs));padding:0 6px}
 /* inbox 21 내 저장 백업 */
 .bk .bkp{font-size:calc(13px*var(--fs));margin:0 0 14px}

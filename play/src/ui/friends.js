@@ -11,13 +11,13 @@ import { SP, HAB, RAR, variantOf, outIn, capOf, gauge, growing, habitatOf, callN
 import { figureThumb } from './thumbs.js';
 import { toast, heart, josa } from './hud.js';
 import { SORTS } from './store.js';
-import { pickStroll } from './stroll.js';
+import { pickStroll, peTag } from './stroll.js';
 import { openBook } from './visit.js';
 import { PE, mateOf } from '../game/pals.js';
 
 const el = document.getElementById('friends');
 const rarOf = a => variantOf(a.species, a.variant).rarity;
-const stageText = a => a.stage !== 'baby' ? $t('성체') : $t('새끼 · {0} {1}%', a.hold ? (S186 ? $t('크기 고정') : $t('성장 멈춤')) : growing(a) ? $t('자라는 중') : '', Math.floor(gauge(a, G.now()) * 100));
+const stageText = a => a.stage !== 'baby' ? $t('성체') : $t('유체 · {0} {1}%', a.hold ? (S186 ? $t('크기 고정') : $t('성장 멈춤')) : growing(a) ? $t('자라는 중') : '', Math.floor(gauge(a, G.now()) * 100));
 const subText = a => (a.nm ? kindName(a) + ' · ' : '') + stageText(a);
 const star = a => a.fav ? $t('<i class="fav" aria-label="잠금">★</i>') : '';
 let habId = null, hab = null, sort = 'new', stage = 'all', rar = '', fsp = '', shown = '';
@@ -38,7 +38,8 @@ function draw() {
   for (const a of out) count[a.species] = (count[a.species] || 0) + 1;
   if (fsp && !count[fsp]) fsp = '';
   const opt = (v, t, on) => `<option value="${v}"${on ? ' selected' : ''}>${t}</option>`;
-  el.innerHTML = $t('<div class="nsheet fsheet" role="dialog" aria-label="친구들">\n<div class="fhead"><b>친구들</b><span>{0} {1}/{2}</span><button class="back" data-book>방명록</button><button class="back" data-close>닫기</button></div>\n<p class="fsum">{3}</p>\n<div class="fbar"><span class="seg">{4}</span>\n<select data-fsp aria-label="종">{5}{6}</select>\n<select data-rar aria-label="등급">{7}{8}</select>\n<select data-sort aria-label="정렬">{9}</select></div>\n<div class="flist">{10}</div>\n<p class="fnote">{11}</p></div>', HAB[habId].name, out.length, capOf(G.S, habId), Object.entries(count).map(([s, n]) => `${SP[s].name} ×${n}`).join(' · ') || $t('아직 서식지에 나온 동물이 없어요'), [['all', $t('전체')], ['baby', $t('새끼')], ['adult', $t('성체')]].map(([k, t]) => `<button data-stage="${k}"${k === stage ? ' class="on"' : ''}>${t}</button>`).join(''), opt('', $t('모든 종'), !fsp), Object.keys(count).map(s => opt(s, SP[s].name, s === fsp)).join(''), opt('', $t('모든 등급'), !rar), RARITIES.map(r => opt(r.id, r.name, r.id === rar)).join(''), Object.entries(SORTS).map(([k, [t]]) => opt(k, t + $t('순'), k === sort)).join(''), rows.map(a => $t('<div class="frow{0}" data-id="{1}"><button class="fgo" data-go="{2}"><img alt=""><div><b>{3}{4}</b><small{5}>{6}</small></div><em data-r="{7}" style="background:{8}">{9}</em></button><button class="fmore" data-more="{10}" aria-label="{11} 더 보기">⋯</button></div>', a.card ? ' card' : '', a.id, a.id, star(a), callName(a), a.hold ? ' class="hold"' : '', subText(a), a.wd ? 'wanderer' : rarOf(a), tierOf(a).color, tierOf(a).name, a.id, callName(a))).join(''), rows.length ? $t('누르면 보러 가요 · ⋯에서 잠금·이름 짓기') : out.length ? $t('고른 조건에 맞는 동물이 없어요') : '');
+  el.innerHTML = $t('<div class="nsheet fsheet" role="dialog" aria-label="친구들">\n<div class="fhead"><b>친구들</b><span>{0} {1}/{2}</span><button class="back" data-book>방명록</button><button class="back" data-close>닫기</button></div>\n<p class="fsum">{3}</p>\n<div class="fbar"><span class="seg">{4}</span>\n<select data-fsp aria-label="종">{5}{6}</select>\n<select data-rar aria-label="등급">{7}{8}</select>\n<select data-sort aria-label="정렬">{9}</select></div>\n<div class="flist">{10}</div>\n<p class="fnote">{11}</p></div>', HAB[habId].name, out.length, capOf(G.S, habId), Object.entries(count).map(([s, n]) => `${SP[s].name} ×${n}`).join(' · ') || $t('아직 서식지에 나온 동물이 없어요'), [['all', $t('전체')], ['baby', $t('유체')], ['adult', $t('성체')]].map(([k, t]) => `<button data-stage="${k}"${k === stage ? ' class="on"' : ''}>${t}</button>`).join(''), opt('', $t('모든 종'), !fsp), Object.keys(count).map(s => opt(s, SP[s].name, s === fsp)).join(''), opt('', $t('모든 등급'), !rar), RARITIES.map(r => opt(r.id, r.name, r.id === rar)).join(''), Object.entries(SORTS).map(([k, [t]]) => opt(k, t + $t('순'), k === sort)).join(''), rows.map(a => $t('<div class="frow{0}" data-id="{1}"><button class="fgo" data-go="{2}"><img alt=""><div><b>{3}{4}</b><small{5}>{6}</small></div><em data-r="{7}" style="background:{8}">{9}</em></button><button class="fmore" data-more="{10}" aria-label="{11} 더 보기">⋯</button></div>', a.card ? ' card' : '', a.id, a.id, star(a), callName(a), a.hold ? ' class="hold"' : '', subText(a), a.wd ? 'wanderer' : rarOf(a), tierOf(a).color, tierOf(a).name, a.id, callName(a))).join(''), rows.length ? $t('누르면 보러 가요 · ⋯에서 잠금·이름 짓기') : out.length ? $t('고른 조건에 맞는 동물이 없어요') : '');
+  el.querySelectorAll('.frow small').forEach((s, i) => s.before(peTag(rows[i]))); // 285
   el.querySelectorAll('.frow img').forEach((img, i) => { const a = rows[i]; figureThumb(a.species, a.variant, a.color, a.acc, a.stage).then(u => { img.src = u; }, () => {}); });
 }
 function tick() { // growth numbers only
@@ -73,7 +74,7 @@ el.addEventListener('click', e => {
 function more(id) {
   const a = G.S.animals.find(x => x.id === id); if (!a) return;
   const nm = callName(a), home = SP[a.species].habitat, guest = habitatOf(a) !== home;
-  const m = G.S.animals.find(x => x.id === mateOf(G.S, a.id)), pe = G.S.flags.palOff || !PE[a.pe] ? '' : `<p class="sub pe">${PE[a.pe].name} · ${PE[a.pe].line}${m ? $t('<br>콤비: {0}{1}', esc(callName(m)), G.S.pals.list.find(p => (p.a === a.id || p.b === a.id) && p.played) ? $t('<small> · 함께 논 소품 ✓</small>') : '') : ''}</p>`; // 17-1 성격과 단짝
+  const m = G.S.animals.find(x => x.id === mateOf(G.S, a.id)), pe = G.S.flags.palOff || !PE[a.pe] ? '' : `<p class="sub pe">${PE[a.pe].line}${m ? $t('<br>콤비: {0}{1}', esc(callName(m)), G.S.pals.list.find(p => (p.a === a.id || p.b === a.id) && p.played) ? $t('<small> · 함께 논 소품 ✓</small>') : '') : ''}</p>`; // 17-1 성격과 단짝
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
   menu.innerHTML = $t('<div><h2>{0}{1}</h2>{2}{3}<div class="col"><button data-do="go">보러 가기</button>\n<button data-do="fav" aria-pressed="{4}">{5}</button><button data-do="name">{6}</button>\n<button data-do="pet">쓰다듬기</button><button data-do="walk">산책 보내기</button>{7}<button data-do="store">보관함으로</button><button data-do="move">다른 서식지로</button><button class="sb" data-shut>닫기</button></div></div>', star(a), esc(nm), a.nm ? `<p class="sub">${kindName(a)}</p>` : '', pe, !!a.fav, a.fav ? $t('★ 별 떼기') : $t('☆ 잠금'), a.nm ? $t('이름 바꾸기') : $t('이름 짓기'), a.acc ? $t('<button data-do="accoff">치장 떼기 · {0}</button>', ACCESSORIES[a.acc]?.name) : Object.keys(G.S.accs).length ? $t('<button data-do="accon">치장 끼우기</button>') : '');
   menu.onclick = e => {
@@ -90,6 +91,7 @@ function more(id) {
     if (d.do === 'move') toast(guest ? $t('{0}{은/는} {1}이 열리면 그리로 이사 가요', nm, HAB[home].name) : $t('{0}{은/는} {1}에서만 살아요', SP[a.species].name, HAB[home].name), 2600);
     menu.remove(); menu = null;
   };
+  menu.querySelector('.pe')?.prepend(peTag(a)); // 285
   el.closest('#habitat').append(menu);
 }
 // 95 치장 끼우기: the kept secret accessories (S.accs, by count); one goes on this friend

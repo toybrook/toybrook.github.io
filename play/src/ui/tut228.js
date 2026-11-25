@@ -19,7 +19,7 @@ const TX = {
   hatch: () => [$t('바로 부화를 눌러 봐요'), $t('알이 깨는 걸 부화라고 해요'), $t('아래 큰 버튼을 눌러요')],
   hatch_egg: () => [$t('알을 톡 눌러 봐요'), '', $t('반짝이는 알을 눌러요')],
   hatch_wait: () => [$t('곧 알이 깨요'), $t('조금만 기다려요'), '', $t('알이 깨는 중')],
-  hatch_card: () => [$t('새 친구를 서식지로 보내요'), '', $t('아래 큰 버튼을 눌러요')],
+  hatch_card: () => [$t('새 동물을 서식지로 보내요'), '', $t('아래 큰 버튼을 눌러요')],
   name: () => [$t('이름을 지어 줘요'), $t('비워 둬도 괜찮아요'), $t('글자 칸을 눌러 써 봐요')],
   name_save: () => [$t('다 썼으면 저장을 눌러요'), '', $t('아래 저장을 눌러요')],
   pet: n => [$t('{0}{을/를} 톡 눌러요', n), $t('쓰다듬으면 ♥가 생겨요'), $t('반짝이는 동물을 눌러요')],
@@ -44,8 +44,8 @@ const TX = {
   nest_egg: () => [$t('알을 눌러 둥지에 넣어요'), '', $t('반짝이는 알을 눌러요')],
   nest_wait: () => [$t('깨는 동안 놀아 줘요'), $t('남은 시간은 위에 보여요'), '', $t('알이 깨는 중')],
   nest_ready: () => [$t('알이 다 됐어요!'), $t('톡 눌러 부화해요'), $t('반짝이는 알을 눌러요'), $t('알 부화하기')],
-  nest_card: () => [$t('새 친구를 서식지로 보내요'), '', $t('아래 큰 버튼을 눌러요'), $t('알 부화하기')],
-  end_card: () => [$t('새 친구를 서식지로 보내요'), $t('보내면 첫날 선물이 와요'), $t('아래 큰 버튼을 눌러요')],
+  nest_card: () => [$t('새 동물을 서식지로 보내요'), '', $t('아래 큰 버튼을 눌러요'), $t('알 부화하기')],
+  end_card: () => [$t('새 동물을 서식지로 보내요'), $t('보내면 첫날 선물이 와요'), $t('아래 큰 버튼을 눌러요')],
   pill: () => [$t('다음 할 일은 여기 있어요'), $t('이정표를 눌러 봐요'), $t('위의 깃발 줄을 눌러요'), $t('이정표')],
   map1: (n, h) => [$t('{0}{이/가} 열렸어요!', h), $t('먼저 지도로 나가요'), $t('왼쪽 위 버튼을 눌러요'), $t('{0} 가 보기', h)],
   map2: (n, h) => [$t('지도에서 {0}{을/를} 눌러요', h), '', $t('반짝이는 땅을 눌러요'), $t('{0} 가 보기', h)],
@@ -64,13 +64,13 @@ const TX = {
   d_snap: () => [$t('사진을 눌러요'), '', $t('반짝이는 버튼을 눌러요'), $t('사진 한 장 찍기 2/3')],
   d_more: () => [$t('더보기를 눌러요'), $t('사진은 더보기 안에 있어요'), $t('반짝이는 버튼을 눌러요'), $t('사진 한 장 찍기 2/3')], // 검토 4: not 자리 모드
   photo3: () => [$t('마음에 들면 저장!'), '', $t('저장 버튼을 눌러요'), $t('사진 한 장 찍기 3/3')],
-  swap0: () => [$t('시리즈를 열어 봐요'), '', $t('시리즈 버튼을 눌러요'), $t('교환 도장')],
-  swap1: () => [$t('남는 동물은 분해해 봐요'), $t('분해하면 도장이 돼요'), $t('분해 버튼을 눌러요'), $t('교환 도장')],
-  swap2: () => [$t('도장으로 빈 칸을 채워요'), $t('교환을 누르면 알이 와요'), $t('교환 버튼을 눌러요'), $t('교환 도장')],
+  swap0: () => [$t('시리즈를 열어 봐요'), '', $t('시리즈 버튼을 눌러요'), $t('교환 토큰')],
+  swap1: () => [$t('남는 동물은 분해해 봐요'), $t('분해하면 토큰이 돼요'), $t('분해 버튼을 눌러요'), $t('교환 토큰')],
+  swap2: () => [$t('토큰으로 빈 칸을 채워요'), $t('교환을 누르면 알이 와요'), $t('교환 버튼을 눌러요'), $t('교환 토큰')],
   m_egg: () => [$t('알은 조금 뒤에 또 와요'), $t('그동안 다른 이정표를 해 봐요'), ''], // E-19: and the line's 다음 moves on (held)
   guest: () => [$t('손님이 오고 있어요…'), $t('조금만 기다려요'), ''], // E-19: tut181's 12 s pause for a guest
   m_full: () => [$t('부화 칸이 가득 찼어요'), $t('그동안 다른 이정표를 해 봐요'), ''],
-  m_stamp: () => [$t('도장이 10개 모이면 돼요'), $t('그동안 다른 이정표를 해 봐요'), ''],
+  m_stamp: () => [$t('토큰이 10개 모이면 돼요'), $t('그동안 다른 이정표를 해 봐요'), ''],
 };
 export const tx = (c, n, h) => TX[c]?.(n, h) ?? null;
 const LINE = { hatch: $t('알 부화하기'), name: $t('이름 짓기'), pet: $t('쓰다듬기'), feed: $t('먹이 주기'), codex: $t('도감 보기'), nest: $t('다음 알 넣기'), end: $t('첫날 선물') };
@@ -200,8 +200,10 @@ export function pick(S, cand, cur) {
   if (S.flags.tut181 === 'skip') return null; // skipped: only what is asked (8장)
   const c = { ...cand, yard: cur === 'yard' && !S.flags.tutYard, brk: G190 && !S.flags.tutBrk && vis(q('[data-brk]')), swap: G190 && !S.flags.tutSwap && vis(q('#ser .sswap[data-swap]:not([disabled])')) };
   const k = Object.keys(c).find(k => c[k]);
-  return k && today(S) < 2 ? k : null;
+  return k && (today(S) < 2 || S.flags.tour281 === G.dayOf(G.now())) ? k : null; // 281: 둘러보기 picked today: all of them, not two
 }
+// 281: the guides that would come one by one (tut181 asks 「새 기능 둘러보기 (n)」 first when back with two or more)
+export const due = (S, cand) => Object.entries({ pill: !S.flags.tutPill && live(S), ...cand, yard: !S.flags.tutYard && S.unlocked.includes('yard'), brk: G190 && !S.flags.tutBrk, swap: G190 && !S.flags.tutSwap }).filter(([, v]) => v).map(([k]) => SEEN[k]);
 export function begin(k, S) {
   gm = { k, asked: k === asked, req: S.stats.req || 0, swap: S.stats.swap || 0, prop: R.FIRST_V.prop(S), eggs: S.slots.filter(Boolean).length + (S.stats.hatch || 0) };
 }
@@ -237,8 +239,8 @@ export function guide(S, k, cur, api) {
       if (photo) { gm.snap = 1; return R.f2Done(S, 'photo') ? { done: 1 } : { t: q('#snap [data-act="save"]'), c: 'photo3', fing: 'tap', photo: 1 }; }
       if (gm.snap) return { done: 1 };
       return vis(D) ? (s => s ? { t: s, c: 'd_snap', fing: 'tap', dec: 1, inBox: D } : { t: q('[data-moretools]', D), c: 'd_more', fing: 'tap', dec: 1, inBox: D })(q('[data-snap]', D)) : { t: $('decorBtn'), c: 'photo1', fing: 'tap' };
-    case 'ser': // 238 C: 「같이 가요」 on to the nest like the other rows (the cells fill from eggs); an egg put in = done
-      if (open) { gm.s = 1; return { t: q('[data-close]', W), c: 'ser2', fing: 'tap', inBox: W }; }
+    case 'ser': // 238 C · 281: ser2 low (the bubble under the board, its first row clear): 「같이 가요」 on to the nest like the other rows (the cells fill from eggs); an egg put in = done
+      if (open) { gm.s = 1; return { t: q('[data-close]', W), c: 'ser2', fing: 'tap', inBox: W, low: 1 }; }
       return gm.s || vis($('nest')) ? guide(S, 'egg', cur, api) : { t: $('serBtn'), c: 'ser1', fing: 'tap' }; // asked again with the nest open: straight to the next egg
     case 'egg':
       if (S.slots.filter(Boolean).length + (S.stats.hatch || 0) > gm.eggs) return { done: 1 };

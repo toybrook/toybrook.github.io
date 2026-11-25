@@ -71,12 +71,31 @@ function tick() {
   else if (T2 && (k || late) && (gw => !gw || gw.matches('#decor, #nest') && !vis(q('button.go, [data-go]', gw)))(topWindow())) P = { t: null, wait: 1, under: 1, c: 'guest', inBox: [$('decor'), $('nest')].find(vis) }; // E-19: the guest's 12 s said under the line, not a blank; not over a card or tip that asks (the hatch card's 보내기, 알겠어요)
   // map·aff: when the first day's steps are done, or in the nest's wait (Q7)
   if (!busy && mode === 'main' && (!k || !T2 && k === 'nest' && P?.wait)) { // 236 B: not in the nest's wait (the first day's line stays on it)
-    if (!late) { late = T2 ? !X?.asked && topWindow('.tip')?.matches(':not(#decor, #nest, #snap)') ? null : X?.pick(S, { map: !S.flags.tutMap && !!hab2(S), aff: !S.flags.tutAff && affDue(S), ser: !S.flags.tutSer && serDue(S), req: !S.flags.tutReq && reqDue(S) }, getCur()) ?? null : !S.flags.tutMap && hab2(S) ? 'map' : !S.flags.tutAff && affDue(S) ? 'aff' : !S.flags.tutSer && serDue(S) ? 'ser' : !S.flags.tutReq && reqDue(S) ? 'req' : null; lateT = 0; lateB = true; if (T2 && late) { X.begin(late, S); dw = rr = 0; } }
+    if (!late) { const cand = { map: !S.flags.tutMap && !!hab2(S), aff: !S.flags.tutAff && affDue(S), ser: !S.flags.tutSer && serDue(S), req: !S.flags.tutReq && reqDue(S) };
+      late = T2 ? !X?.asked && topWindow('.tip')?.matches(':not(#decor, #nest, #snap)') || tourWait(S, cand) ? null : X?.pick(S, cand, getCur()) ?? null : !S.flags.tutMap && hab2(S) ? 'map' : !S.flags.tutAff && affDue(S) ? 'aff' : !S.flags.tutSer && serDue(S) ? 'ser' : !S.flags.tutReq && reqDue(S) ? 'req' : null; lateT = 0; lateB = true; if (T2 && late) { X.begin(late, S); dw = rr = 0; } }
     if (late) { P = lateP(S, late); if (P.done) { lateEnd(0); P = null; } }
   }
   // map·aff pass themselves after 30 s on screen (n:1)
   if (T2 && (k || late)) { dw += STEP; if (sub) dc[sub] = (dc[sub] || 0) + STEP; } // 236 B 8장: time in the step, decor's by cell
   if (show(P) && !T2 && (late || k === 'map' || k === 'aff') && (lateT += STEP) >= LATE) { if (late) lateEnd(1); else next(); }
+}
+// 281: back on a later day (the first day's steps done before this load) with two or more guides waiting: asked once, before any
+// runs, 「새 기능 둘러보기 (n)」 (no window up: 돌아왔어요 closed first). 둘러보기: flags.tour281 the day (they come one after another,
+// not two a day); 나중에: -1 and those guides seen (no more asking; the 이정표's 「같이 가요」 and 설정's 다시 보기 stay)
+let was181 = false, tourEl = null;
+function tourWait(S, cand) {
+  if (!T2 || !was181 || X?.asked || S.flags.tour281 != null) return false; const ks = X?.due(S, cand) ?? []; if (ks.length < 2) return false;
+  if (!tourEl && clear(null)) {
+    tourEl = el('section', 'intro pop lvup t281'); tourEl.id = 'zoneCard'; tourEl.setAttribute('aria-label', $t('새 기능 둘러보기'));
+    const d = el('div', ''), b = el('div', 'nbtns'), no = el('button', 'sb', $t('나중에')), go = el('button', 'go', $t('둘러보기'));
+    no.type = go.type = 'button'; no.dataset.close = ''; b.append(no, go);
+    d.append(el('h2', '', $t('새 기능 둘러보기 ({0})', ks.length)), el('p', 'sub', $t('새로 생긴 기능을 하나씩 짚어 드려요')), b); tourEl.append(d);
+    // 나중에: the dark area or 뒤로 (hud closeTop: a script click) only this load, asked again next time
+    no.onclick = e => { if (!e.isTrusted) { tourEl.remove(); return; } for (const f of (T2 && X?.due(G.S, cand)) || ks) G.flag(f, 1); G.flag('tour281', -1); tourEl.remove(); track('tut', { s: 'tour', n: 0 }, 'tut:tour'); };
+    go.onclick = () => { G.flag('tour281', G.dayOf(G.now())); tourEl.remove(); track('tut', { s: 'tour', n: 1 }, 'tut:tour'); };
+    $('habitat').append(tourEl);
+  }
+  return true;
 }
 function lateEnd(n) { if (T2) { X?.end(late, n, X.meas(dw, rr)); late = null; return; } G.flag(LATEF[late], 1); track('tut', n ? { s: late, n: 1 } : { s: late }, 'tut:' + late); late = null; }
 
@@ -153,7 +172,7 @@ function lateP(S, k) {
   if (k === 'ser' || k === 'req') { // 215: the window opened (lateB off), then closed: done. Its tab for req; the close lit once it is in
     const W = $('ser'), open = vis(W), there = open && (k === 'ser' || !!q('[data-tab="req"].on', W));
     if (there) lateB = false; else if (!lateB) return { done: 1 };
-    if (there) return { t: q('[data-close]', W), text: k === 'ser' ? $t('알에서 나오면 칸이 차요') : $t('바라는 것을 살펴봐요'), text2: $t('다 봤으면 닫아요'), fing: 'tap', inBox: W, c: 'ser2' };
+    if (there) return { t: q('[data-close]', W), text: k === 'ser' ? $t('알에서 나오면 칸이 차요') : $t('바라는 것을 살펴봐요'), text2: $t('다 봤으면 닫아요'), fing: 'tap', inBox: W, c: 'ser2', low: !!there }; // 281: low, the board's first row clear
     return { t: open ? q('[data-tab="req"]', W) : $('serBtn'), text: k === 'ser' ? $t('시리즈를 열어 봐요') : $t('의뢰를 열어 봐요'), text2: k === 'ser' ? $t('시리즈는 모으는 세트예요') : $t('의뢰는 손님의 부탁이에요'), fing: 'tap', inBox: open ? W : undefined, c: 'ser1' };
   }
   if (k === 'aff') { const b = vis($('bubble')); if (!b) lateB = false; else if (!lateB) return { done: 1 }; return plan181(S, 'aff', G.now()); } // its bubble (정 줄) opened after it was lit (not the one open as the level came)
@@ -243,7 +262,7 @@ function frame() {
   if (c) { Object.assign(hole.style, { left: c[0] - c[2] / 2 + 'px', top: c[1] - c[3] / 2 + 'px', width: c[2] + 'px', height: c[3] + 'px', borderRadius: c[4] ? '50%' : '14px' });
     Object.assign(fing.style, { left: c[0] + 'px', top: c[1] + 'px' }); fing.className = 'finger ' + P.fing; }
   const H = innerHeight, sh = say.offsetHeight, D = $('decor'), n = P.near && vis(P.near) ? P.near.getBoundingClientRect() : null;
-  const top = T2 && P.under ? X?.below() ?? 70 : P.dec && vis(D) ? D.getBoundingClientRect().top - sh - 12 : n ? n.top - sh - 10 : c ? (c[1] > H * 0.55 ? c[1] - c[3] / 2 - sh - 18 : c[1] + c[3] / 2 + 18) : H * 0.6;
+  const top = T2 && P.under ? X?.below() ?? 70 : P.low ? H - sh - 28 : P.dec && vis(D) ? D.getBoundingClientRect().top - sh - 12 : n ? n.top - sh - 10 : c ? (c[1] > H * 0.55 ? c[1] - c[3] / 2 - sh - 18 : c[1] + c[3] / 2 + 18) : H * 0.6;
   let y = Math.max(12, Math.min(H - sh - 12, top));
   const L = T2 && X?.pillEl(); if (L && vis(L)) { const r = L.getBoundingClientRect(); if (y < r.bottom + 6 && y + sh > r.top - 6) { y = r.bottom + 8; if (c && y < c[1] + c[3] / 2 && y + sh > c[1] - c[3] / 2) y = c[1] + c[3] / 2 + 18; y = Math.min(H - sh - 12, y); } } // 258 B Q3 · 추가: never over the line (안 보이나요? · 이름을 지어 줘요 sat on it): under it
   say.style.top = Math.round(y) + 'px';
@@ -278,6 +297,7 @@ export function again() {
 export function initTut(cur, api) {
   getCur = cur; getApi = api; const S = G.S;
   if (S?.flags.tut181 === 'again') { G.flag('tut181', 'done'); } // a replay cut by a reload: over (it gave nothing)
+  was181 = S?.flags.tut181 === 'done'; // 281: the tour question is for a later day, not the first day's end
   mode = 'main'; start();
   if (T2) import('./tut228.js').then(m => { X = m; m.init({ wake: () => { if (!iv) { mode = 'main'; start(); } }, poke: () => { st.t = Math.max(st.t, 18e3 - STEP); } }); if (!iv) start(); }); // build-web copies the file only with RC250
 }

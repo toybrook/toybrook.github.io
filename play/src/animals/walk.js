@@ -493,6 +493,9 @@ export function createActor(ctx, rec) {
       look.update(dt);
       let lift = 0, sq = 1, rot = 0, gait = 'still', ph = 0, tuck = 0, py = null, lie = 0, shut = false, roll = 0, spin = 0, ox = 0, oz = 0; // py: 28-2 on a prop, its height (world); spin: 69-2 a turn on top of its yaw
       if (api.hold) { endPlay(); h.soc = h.shel = null; h.state = 'idle'; h.t = 0; h.then = null; if (ctx.onBridge === h) ctx.onBridge = null; }
+      // <sec263> 275 B 태엽 속 시크릿 (data.js windup): figure pose.wind, the key and gears (materials.js parts275); 'rest' unless walking
+      if (h.wu ??= !!SP[rec.species].extra?.some(v => v.id === rec.variant && v.windup)) { pose.wind = 'rest'; if (h.state !== 'walk') h.wd = 0; } // picked up, sent off mid run-down: not carried into the next walk
+      // </sec263>
       h.t += dt; h.now = t; if (h.state !== 'graze') h.sn = h.dr = 0; if (h.state !== 'sleep') h.nap = h.gz = 0; if (h.state !== 'nuzzle') h.bt = h.snw = 0; // 143: sniffing only while it grazes there, lying in the shade only while it sleeps there
       let dig = 0, spr = 0; if (h.state !== 'graze') h.dg = h.sw = 0; if (h.state !== 'sleep') h.sun = 0; if (h.state !== 'shake') h.wet = 0; // 143 B the sandbar: digging only while it grazes there, sunning only while it sleeps there
       if (h.pad && h.state !== 'sleep') unpad(); // 143 B the lotus marsh: on the pad only while it sleeps there (picked up, sent off: off it)
@@ -505,6 +508,9 @@ export function createActor(ctx, rec) {
       if (h.state === 'hop') { const k = Math.min(1, h.t / h.dur), hops = Math.max(2, Math.round(h.dur / 0.32)), hp = (k * hops) % 1;
         if (!step(k)) { h.sx = h.tx = h.x; h.sz = h.tz = h.z; h.cut ??= (Math.floor(k * hops) + 1) / hops; if (h.then) { h.then = null; ctx.onBridge = null; } } // someone in the way: land this hop, then go round
         lift = Math.sin(hp * Math.PI) * 0.45; sq = 1 + (hp < 0.12 || hp > 0.88 ? -0.07 : 0.03); rot = Math.sin(hp * Math.PI * 2) * -0.05; gait = 'hop'; ph = hp; if (h.cut && k >= h.cut) detour(); else if (k >= 1) { if (h.then) { go('cross', h.then.x, h.then.z, 1.3); h.then = null; } else { h.state = 'idle'; h.t = 0; h.dur = 0.8 + Math.random() * 1.5; } } }
+      // <sec263> 275 B: run down after WALK s of walking (h.ws), it stands where it is (h.t held) STOP s, then the key winds it back WIND s, then on
+      else if (h.state === 'walk' && h.wd > 0) { h.wd -= dt; h.t -= dt; pose.wind = h.wd > 1.6 ? 'stop' : 'wind'; sq = h.wd > 1.6 ? 1 - 0.015 * Math.min(1, (2.6 - h.wd) * 4) : 1; }
+      // </sec263>
       else if (h.state === 'cross' || h.state === 'walk') { // walking, never hopping: a small step bob and sway only
         const k = Math.min(1, h.t / h.dur);
         if (!step(k)) { h.t -= dt; h.wait += dt; // someone in the way: stop
@@ -520,6 +526,9 @@ export function createActor(ctx, rec) {
           else if (W.lope && !(heightAt(h.x, h.z) < ctx.water - 0.06)) { const s = Math.sin(h.t * f * 0.5); lift = Math.abs(s) * 0.06 * S.s; rot = s * 0.06; sq = 1 - Math.abs(s) * 0.03; gait = 'walk'; } // the seal humps along on land
           else if (W.hop < 1) { sq = 1 + Math.abs(Math.sin(h.t * f)) * 0.02; rot = Math.sin(h.t * f) * 0.02; gait = 'walk'; ph = h.t * f / (2 * Math.PI); // one stride per two bobs
             if (W.stride) { const a = 0.38 * Math.sin(h.t * f); lift = -S.s * sq * Math.max(0, S.legs.hip * (1 - Math.cos(a)) - S.legs.foot * Math.abs(Math.sin(a))); } } // a long leg swung out rises off the ground: sink the body until the hoof's low edge touches
+          // <sec263> 275 B: the steps tick (it gets on at the swing, holds at the ends: h.t slowed there, faster between), 7 s of it then run down (h.wd = STOP 1 + WIND 1.6)
+          if (h.wu && gait === 'walk') { pose.wind = 'walk'; h.t -= dt * (1 - Math.max(0.25, 1 + 0.8 * Math.cos(4 * Math.PI * ph))); if (h.state === 'walk' && (h.ws = (h.ws || 0) + dt) > 7) { h.ws = 0; h.wd = 2.6; } }
+          // </sec263>
           if (h.tum) { const e = smooth(Math.max(0, Math.min(1, h.t / 0.35, (h.dur - h.t) / 0.35))), th = 2 * Math.PI * h.tum.n * k, yc = 0.32 * S.h * S.s, a = h.yaw + Math.PI / 2 * e; // 143: side over side about its length (crosswise), round its middle
             spin = Math.PI / 2 * e; roll = th; lie = e; gait = 'still'; sq = 1; rot = 0; lift = yc * (1 - Math.cos(th)); ox = -yc * Math.sin(th) * Math.sin(a); oz = -yc * Math.sin(th) * Math.cos(a); }
           if (k >= 1 && h.then) { go('cross', h.then.x, h.then.z, 1.3); h.then = null; }

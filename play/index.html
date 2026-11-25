@@ -16,7 +16,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="토이브룩">
 <script>/* inbox 62: was this page served by a service worker (src/ui/offline.js) */ self.swAt = !!navigator.serviceWorker?.controller;</script>
-<meta name="build" content="toybrook-0.87.0-dc664c51">
+<meta name="build" content="toybrook-0.87.1-479eb223">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 <script>/* inbox 61 A: a first visit (no save) goes from 시작 straight to its first egg: the 3D code it needs is asked for now */
 try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/three.module.min.js', 'src/habitat/habitat.js', 'src/ui/play.js', 'src/habitat/meadow/props.js', 'vendor/GLTFLoader.js'])
@@ -25,12 +25,12 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
 <body>
 <div class="side">
   <h1>토이브룩 · 오픈 베타</h1>
-  <span data-t>월드맵에서 <b>초원</b>에 들어가 아래 <b>둥지</b> 버튼을 누르면 알과 부화 칸이 나와요. 알을 칸에 넣고 다 되면 눌러 부화하세요. 새끼를 서식지로 보내면 도감에 올라가고, 시간이 지나면 자라요(쓰다듬기·먹이로 조금 빨리). 성장 사탕을 주면 새끼 모습 그대로 있어요.</span><br><br>
+  <span data-t>월드맵에서 <b>초원</b>에 들어가 아래 <b>둥지</b> 버튼을 누르면 알과 부화 칸이 나와요. 알을 칸에 넣고 다 되면 눌러 부화하세요. 유체를 서식지로 보내면 도감에 올라가고, 시간이 지나면 성체가 돼요(쓰다듬기·먹이로 조금 빨리). 성장 사탕을 주면 유체 모습 그대로 있어요.</span><br><br>
   <span data-t>드래그로 돌려 보기, 휠·두 손가락 벌리기로 확대, 오른쪽 드래그·Shift+드래그·두 손가락 드래그로 옮기기, 두 번 눌러 가까이 보기. 진행은 이 기기에만 저장돼요.</span>
 </div>
 <div class="wrap"><div class="stage" id="stage">
   <!-- 26-1: until the world map is up. The bar: what has arrived of the first screen's files (data-bytes: tools/build-web.mjs writes it) -->
-  <div class="boot" id="boot" data-bytes="1504983" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
+  <div class="boot" id="boot" data-bytes="1524032" role="progressbar" aria-label="불러오는 중"><div><b>토이브룩</b><p class="lbar"><i></i></p><p class="ltip"></p></div></div>
   <script>(() => { const b = document.getElementById('boot'), i = b.querySelector('i'), N = +b.dataset.bytes; let k = 0;
     (function f() { if (!b.isConnected || document.getElementById('intro')?.hidden === false) return; /* 176: not under the intro card (170 A keeps #boot there) */ const n = performance.getEntriesByType('resource').reduce((s, e) => s + (e.decodedBodySize || 0), 0);
       k = Math.max(k, Math.min(0.97, n / N)); i.style.width = (k * 100).toFixed(1) + '%'; setTimeout(f, 100); })(); })();</script>
@@ -78,7 +78,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <section class="codex" id="store" hidden aria-label="보관함"></section>
     <section class="codex" id="cards" hidden aria-label="엽서"></section>
     <section class="codex cab" id="cab" hidden aria-label="진열장"></section>
-    <section class="intro grown pop" id="grown" hidden aria-label="다 자랐어요"></section>
+    <section class="intro grown pop" id="grown" hidden aria-label="성체가 됐어요"></section>
     <section class="intro grown pop" id="homeHint" hidden aria-label="홈 화면에 추가"><div><h2>홈 화면에 추가해 주세요</h2>
       <p>아이폰에서는 한동안 들어오지 않으면 기록이 지워질 수 있어요. 공유 버튼 → 「홈 화면에 추가」로 열면 안전해요.</p>
       <div class="nbtns"><button class="sb" data-act="backup">백업 코드 저장하기</button><button class="go" data-close>알겠어요</button></div></div></section>
@@ -105,7 +105,8 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
     <h2>새 소식 <small data-ver></small></h2>
     <ul>
       <li data-upd><i aria-hidden="true">🔄</i><span>새 판이 나오면 위에 「새로 고침」 띠가 떠요</span></li>
-      <li data-top><i aria-hidden="true">🧸</i><span>새 판 0.87.0: 시리즈 판(1탄 12칸 모으기), 의뢰판과 의뢰 사진, 나의 뜰 오두막과 땅 넓히기, 더 쉬워진 처음 길잡이</span></li>
+      <li data-top><i aria-hidden="true">🔔</i><span>새 판 0.87.1: 장난감 소리, 초원 시리즈 1탄의 숨은 친구, 새 모습 호일 풍선, 빈 뜰 길잡이와 치장 발견, 더 차분해진 성격</span></li>
+      <li><i aria-hidden="true">🧸</i><span>새 판 0.87.0: 시리즈 판(1탄 12칸 모으기), 의뢰판과 의뢰 사진, 나의 뜰 오두막과 땅 넓히기, 더 쉬워진 처음 길잡이</span></li>
       <li><i aria-hidden="true">🌨️</i><span>첫눈 이벤트가 와요: 11월 28일 ~ 12월 11일, 눈송이를 모아 보상 길과 옷장을 채워요</span></li>
       <li><i aria-hidden="true">🏡</i><span>큰 업데이트: 새 화면, 나의 뜰, 꾸미기 자리, 백야 순록, 처음 5분 길잡이. 저장은 그대로예요(동물·소품·♥)</span></li>
       <li><i aria-hidden="true">❄️</i><span>설원 알에 새 전설: 극야 곰</span></li>
@@ -117,7 +118,7 @@ try { if (!localStorage.getItem('toyhabitat.save')) for (const u of ['vendor/thr
       <li><i aria-hidden="true">🦢</i><span>연못 알에 두 번째 전설 6종: 흑진주 오리·에메랄드 등껍질 거북·금박 레진 수달·흑요석 백조·네온 플라밍고·문스톤 카피바라</span></li>
       <li><i aria-hidden="true">🐴</i><span>초원 알에 새 전설: 무지개 티타늄 말</span></li>
       <li><i aria-hidden="true">🌼</i><span>초원의 꽃 언덕·작은 숲·개울 갈래가 새로 꾸며졌어요: 꽃 언덕 굴러 내려오기, 큰 나무 그늘 낮잠, 물레방아와 징검다리</span></li>
-      <li><i aria-hidden="true">🎨</i><span>모든 동물에 새 재질 11가지: 원목·크롬·플로킹·대리석·이슬 코팅(희귀), 쪽매 나무·십자수·두드린 동판·비즈 공예·페이퍼 퀼링·가죽 공예(영웅)</span></li>
+      <li><i aria-hidden="true">🎨</i><span>모든 동물에 새 재질 11가지: 원목·크롬·플로킹·대리석·이슬 코팅(희귀), 쪽매 나무·십자수·두드린 동판·비즈 공예·호일 풍선·가죽 공예(영웅)</span></li>
       <li><i aria-hidden="true">♨️</i><span>설원의 김 나는 온천이 넓어졌어요: 큰 탕에 여섯 마리까지</span></li>
       <li><i aria-hidden="true">✨</i><span>초원 알에 두 번째 전설 5종: 금 이음 양·루비 토끼·유리 저금통 돼지·청금석 소·풍향계 닭</span></li>
       <li><i aria-hidden="true">🐰</i><span>옥토끼 비취가 더 빛나요: 귀 끝·발끝 금테, 은은한 속빛</span></li>

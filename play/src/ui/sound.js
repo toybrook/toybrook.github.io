@@ -2,16 +2,18 @@
 // CC0 sources: docs/assets.md); the small effects of the buttons and toys and the music box are still made here with Web Audio.
 // Beds by habitat, hour and weather (habitat.js calls ambience() every frame; they move slowly to what they are told); the
 // world's sounds where they happen (hear(), every frame: birds in the trees, bees at the flowers, frogs at the pond's rim, the
-// animals' calls, steps, breath and eating, the play props), heard from the camera (near: louder, left or right: that side);
-// short effects (sfx); the volumes in PREFS (설정: 전체 / 배경 / 효과 / 동물 소리, 모두 끄기). Nothing plays before the first touch
+// dinosaurs' roars (260 C: the recorded calls gone, a figure sounds like its toy: toy()), steps, breath and eating, the play props), heard from the camera (near: louder, left or right: that side);
+// short effects (sfx); the volumes in PREFS (설정: 전체 / 배경 / 효과 (0.87.1: 동물 소리 in it) / 장난감 소리, 모두 끄기). Nothing plays before the first touch
 // (iPhone needs one), everything stops while the tab is hidden, and a habitat's files are fetched when it is entered (not with the
 // first screen). Light: no three.js (the first screen has it).
 import { $t } from '../i18n/i18n.js';
 import { DEBUG, PREFS } from '../config.js';
 import { HABITATS, YARD_HAB } from '../game/data.js';
 import { LOOP, BEDS, SPRITES, SHOTS } from './sound-map.js';
+import { variantOf } from '../game/rules.js';
+import { TOY_FAMS, TOY, MYTH_FAM, toyGate, toyRate, TOY_URL } from './toy-sound.js';
 
-let A = null, out, amb, fx, ani, white, meter = null;
+let A = null, out, amb, fx, ani, toyBus, white, meter = null;
 // each bed's loudness at full volume (the files are about -22 dBFS RMS; rainLeaves -28 and rainWater -35, their drops kept under the
 // peak: lifted here), and how slowly they follow (s, setTargetAtTime: about 3x this to settle). The world's sounds a little over
 // the beds; FX_GAIN lifts the effects, ANI_GAIN the animals
@@ -253,9 +255,9 @@ function animal(a, now) {
   // steps: very quiet, by the ground under it, only near the camera
   if (d < NEAR && dd < 0.5 && !QUIET.has(st)) { if ((m.d += dd) > (a.body?.r || 0.4) + 0.35) { m.d = 0; const k = W.ground(p.x, p.y, p.z); if (k) play('step_' + k, { at: [p.x, p.y, p.z], ref: 1.5, gain: 0.3, rate: rnd(0.9, 1.1) * baby }); } }
   else m.d = 0;
-  // now and then its call (fewer at night; never two of a species within SP_GAP, never more than MAX_CALLS at once)
+  // now and then its call: 260 C (235 C Q1 OK) the recorded ones no longer, only the dinosaurs' made ones (fewer at night; never two of a species within SP_GAP, never more than MAX_CALLS at once)
   if (now > m.call) { m.call = now + rnd(60, 150) * (cur.night > 0.5 ? 2.5 : 1);
-    if ((V.call || V.roar) && st !== 'sleep' && st !== 'carry' && now - (lastCall[a.rec.species] ?? -99) > SP_GAP && say(V, { at: at(), ref: 6, rate: (V.rate || 1) * baby * rnd(0.92, 1.08), gain: V.gain ?? 0.8, call: true })) lastCall[a.rec.species] = now; }
+    if (V.roar && st !== 'sleep' && st !== 'carry' && now - (lastCall[a.rec.species] ?? -99) > SP_GAP && say(V, { at: at(), ref: 6, rate: (V.rate || 1) * baby * rnd(0.92, 1.08), gain: V.gain ?? 0.8, call: true })) lastCall[a.rec.species] = now; }
   // asleep: slow breaths; grazing: small bites (near only)
   if (d < NEAR && now > m.br && (st === 'sleep' || st === 'graze')) {
     if (st === 'sleep') { m.br = now + rnd(3.2, 4.4); play('breath', { at: at(), ref: 2, rate: V.b * 0.8 * baby * rnd(0.95, 1.05), gain: 0.3, lp: 1500 }); }
@@ -291,21 +293,37 @@ export function hear(cam, target, actors, ctx, list, ground) {
   for (const a of actors.values()) animal(a, now);
   for (const st of ctx.play || []) prop(st, now);
 }
-// petted (habitat.js, a tap on it): a content little breath (a bird: its call, soft and a little higher), once a second at most
+// petted (habitat.js, a tap on it): its material's 톡 (260 C; was a breath or a bird's call: 235 C Q1 OK), once a second at most
 export function pet(a) {
   if (!A || A.state !== 'running') return;
-  const V = VOICE[a.rec.species] || {}, p = a.position, baby = a.look?.stage === 'baby' ? 1.2 : 1, m = mem.get(a), now = A.currentTime;
+  const m = mem.get(a), now = A.currentTime;
   if (m) { if (now < m.pet) return; m.pet = now + 1; }
-  if (V.bird) play(V.call, { at: [p.x, p.y + 0.3, p.z], ref: 4, rate: (V.rate || 1) * 1.12 * baby, gain: 0.45 });
-  else play('breath', { at: [p.x, p.y + 0.3, p.z], ref: 4, rate: (V.b || 1) * baby * rnd(0.95, 1.05), gain: 0.6, lp: 3000 });
+  touch(a, 'tap');
 }
-// a first cry as its shell opens (nest.js): a bird peeps; the others a small breath, and their call, high, when it is loaded here
-export function cry(species) {
-  if (!A || A.state !== 'running') return;
-  const V = VOICE[species] || {}; need('common');
-  setTimeout(() => { if (V.bird) play('chick', { rate: rnd(0.95, 1.1), gain: 0.5 });
-    else { play('breath', { rate: (V.b || 1) * 1.5, gain: 0.45 }); if (V.roar || V.call && V.call !== 'breath') say(V, { rate: (V.rate || 1) * 1.35, gain: 0.35, delay: 0.25 }); } }, 350);
+// 260 C 장난감 소리 (toy-sound.js; docs/design/toy-sounds.md): the figure's material, tapped / lifted / put down. Its own bus
+// (설정 「장난감 소리」 켜기·크기, 모두 끄기 and a hidden tab: A suspended). The files are fetched with the common ones (8, 20 KB)
+const TOYS = Object.keys(TOY_FAMS).map(f => 'toy_' + f);
+for (const g of TOYS) { SPRITES[g] = TOY_URL[g.slice(4)]; SHOTS[g] = [g, [[0, 1]]]; } // one take, the whole file
+const TOY_K = { tap: [1, 0.5], lift: [1.12, 0.3], drop: [1, 0.6] }; // pitch x, gain (design 1; ±3% pitch, ±2 dB each time: design 7)
+const tg = { n: 0, last: {} };
+// false: not played and no reason not to (not loaded yet: the caller's old sound instead); true: played, or kept quiet (off, too soon)
+export function toy(fam, kind, { k = 1, r, baby, at, delay = 0 } = {}) {
+  if (!A || A.state !== 'running' || PREFS.mute) return false;
+  if (!PREFS.toy || desk) return true;
+  const name = 'toy_' + fam; if (!ready[name]) return false;
+  if (!toyGate(tg, name, A.currentTime + delay)) return true;
+  const [up, g] = TOY_K[kind] || TOY_K.tap;
+  if (!play(name, { bus: toyBus, at, ref: 4, delay, rate: toyRate(r, baby, k) * up * rnd(0.97, 1.03), gain: g * 10 ** (rnd(-2, 2) / 20) })) return false;
+  tg.n++; setTimeout(() => tg.n--, (delay + 0.4) * 1000); // the longest file 0.32 s
+  return true;
 }
+// an animal's: its look's family (a mythic by its species), pitch by its size and age; put down: where it lands
+export function touch(a, kind, delay = 0) {
+  const v = variantOf(a.rec.species, a.rec.variant), [fam, k] = TOY[v?.mat || v?.id] || [MYTH_FAM[a.rec.species] || 'vinyl', 1], p = a.position;
+  return toy(fam, kind, { k, r: a.body?.r, baby: a.look?.stage === 'baby', at: kind === 'drop' && p ? [p.x, p.y, p.z] : undefined, delay });
+}
+// a first sound as its shell opens (nest.js; 235 C Q5 OK): its material's 톡, once
+export function cry(rec) { touch({ rec, look: { stage: 'baby' } }, 'tap', 0.35); }
 
 // a habitat entered: its shots wanted (and the common ones), another's let go, all its files fetched (beds decoded when they play).
 // The meadow has a pond too: the pond's shots as well (its frogs at night, a fish)
@@ -314,9 +332,10 @@ function enter(hab) {
   here = hab;
   const H = HABITATS.find(h => h.id === hab) ?? (hab === YARD_HAB.id ? YARD_HAB : undefined), beds = Object.keys(H?.sound?.({ day: 1, night: 1, dry: 1, rain: 1, snow: 1 }) || {}), wet = beds.some(k => k.startsWith('rain'));
   if (wet) beds.push('rainLight', 'rainHeavy');
-  const own = hab === 'meadow' ? [hab, 'pond'] : hab === 'dino' ? ['meadow', 'pond'] : [hab], keep = new Set([...beds.map(k => BEDS[k]), SPRITES.common, ...own.map(g => SPRITES[g]), wet && SPRITES.rain]);
+  const own = hab === 'meadow' ? [hab, 'pond'] : hab === 'dino' ? ['meadow', 'pond'] : [hab], keep = new Set([...beds.map(k => BEDS[k]), SPRITES.common, ...own.map(g => SPRITES[g]), wet && SPRITES.rain, ...TOYS.map(g => SPRITES[g])]);
   for (const g in ready) if (!keep.has(SPRITES[g])) { delete ready[g]; delete dec[SPRITES[g]]; }
   for (const u in raw) if (!keep.has(u)) delete raw[u];
+  for (const g of TOYS) need(g); // 260 C: on the map too (an egg hatches there; touched() asks at the first touch as well)
   if (!hab) return;
   for (const u of keep) if (u) fetchRaw(u);
   for (const g of ['common', ...own]) if (SPRITES[g]) need(g);
@@ -341,7 +360,8 @@ export const deskSound = m => { const was = desk; desk = m; applySound(); return
 export function applySound() {
   if (!A) return void touched(); // 27-7e: 켜기 itself (a tap) makes the sound, not the touch after it
   const t = A.currentTime;
-  out.gain.setTargetAtTime(PREFS.vAll, t, 0.05); amb.gain.setTargetAtTime(PREFS.vAmb, t, 0.05); fx.gain.setTargetAtTime(desk ? 0 : PREFS.vFx * FX_GAIN, t, 0.05); ani.gain.setTargetAtTime(desk ? 0 : PREFS.vAnimal * ANI_GAIN, t, 0.05);
+  out.gain.setTargetAtTime(PREFS.vAll, t, 0.05); amb.gain.setTargetAtTime(PREFS.vAmb, t, 0.05); fx.gain.setTargetAtTime(desk ? 0 : PREFS.vFx * FX_GAIN, t, 0.05); ani.gain.setTargetAtTime(desk ? 0 : PREFS.vFx * ANI_GAIN, t, 0.05);
+  toyBus.gain.setTargetAtTime(desk || !PREFS.toy ? 0 : PREFS.vToy, t, 0.05); // 260 C
   wake();
 }
 // every 0.1 s: the music box's next notes, the world's sounds, beds silent 30 s let go (their decoded sound: memory)
@@ -353,10 +373,10 @@ function tick() {
 }
 function build() {
   const lim = A.createDynamicsCompressor(); lim.threshold.value = -6; lim.knee.value = 3; lim.ratio.value = 12; lim.attack.value = 0.002; lim.release.value = 0.2; lim.connect(A.destination); // never clips when several stack
-  out = A.createGain(); out.connect(lim); amb = A.createGain(); amb.connect(out); fx = A.createGain(); fx.connect(out); ani = A.createGain(); ani.connect(out);
+  out = A.createGain(); out.connect(lim); amb = A.createGain(); amb.connect(out); fx = A.createGain(); fx.connect(out); ani = A.createGain(); ani.connect(out); toyBus = A.createGain(); toyBus.connect(out);
   white = noise();
   setInterval(tick, 100);
-  if (DEBUG) { meter = A.createAnalyser(); meter.fftSize = 4096; lim.connect(meter); window.__snd = { get A() { return A; }, L, ready, busy, stats, cur, meter, play, buses: { out, amb, fx, ani } }; } // 13-0: measured in the report
+  if (DEBUG) { meter = A.createAnalyser(); meter.fftSize = 4096; lim.connect(meter); window.__snd = { get A() { return A; }, L, ready, busy, stats, cur, meter, play, buses: { out, amb, fx, ani, toy: toyBus }, tg }; } // 13-0: measured in the report
 }
 // running only when it may be heard: touched once, the tab shown, not muted (a silent context still costs battery)
 function wake() {
@@ -367,7 +387,7 @@ function touched() {
   if (!A) {
     if (PREFS.mute) return; // 27-7e 모두 끄기: no sound made at all (made at the first touch after 켜기)
     const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
-    A = new C(); build(); applySound(); ambience(cur.hab, cur.night, cur.rain, cur.snow);
+    A = new C(); build(); applySound(); for (const g of TOYS) need(g); ambience(cur.hab, cur.night, cur.rain, cur.snow);
   }
   wake(); // iPhone: also after a call or the lock screen ('interrupted'), the next touch brings it back
 }

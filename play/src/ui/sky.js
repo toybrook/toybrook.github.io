@@ -8,7 +8,7 @@ import * as G from '../game/game.js';
 import * as K from '../game/sky.js';
 import { BALANCE as B } from '../game/data.js';
 import { HOUR, VIEW, DEBUG } from '../config.js';
-import { toast, josa, topWindow, overlayOpen, resting } from './hud.js';
+import { toast, josa, topWindow, overlayOpen, resting, whenClear } from './hud.js';
 import { sfx } from './sound.js';
 
 const $ = id => document.getElementById(id), bar = $('skyBar'), box = $('skySheet');
@@ -40,7 +40,7 @@ const slotName = k => K.SLOTS.find(s => s.id === k).name;
 function seen() {
   const w = shown(); if (!w || !w.slots.length || document.body.classList.contains('see')) return; // 69-4: 구경 중엔 기록·♥ 없음
   const r = G.skySeen(w.n, w.slots); if (!r?.fresh.length) return;
-  sfx('grown'); toast($t('하늘 기록 · {0} ♥{1}', r.fresh.map(slotName).join(SEP), r.hearts), 3000);
+  const tx = $t('하늘 기록 · {0} ♥{1}', r.fresh.map(slotName).join(SEP), r.hearts); whenClear(() => { sfx('grown'); toast(tx, 3000); }); // 0.87.1: under a card it waits (1 min: dropped; the slot is kept)
 }
 function barText() {
   const h = cur(), T = over ? over.T : G.skyTonight(h), ev = over ? over.v.ev : K.skyTime(hour()), s = A()?.skyState();
@@ -113,6 +113,6 @@ setInterval(() => {
   const n = K.nightNo(G.now());
   // 74: the 하늘 망원경 is no longer given (one placed in an old save stays, a prop)
   // a sure night, said once a day (from the morning; random ones never)
-  const T = G.skyTonight(h); if (T.sure && S.sky.told !== n && hour() >= 5) { G.skyMark('told', n); toast(T.peak ? $t('오늘 밤은 {0} 유성우 극대일이에요 · 밤에 하늘을 올려다봐요', T.meteor.name) : $t('오늘 밤엔 유성우나 오로라가 꼭 와요 · 밤에 하늘을 올려다봐요'), 3600); }
+  const T = G.skyTonight(h); if (T.sure && S.sky.told !== n && hour() >= 5) { G.skyMark('told', n); const say1 = T.peak ? $t('오늘 밤은 {0} 유성우 극대일이에요 · 밤에 하늘을 올려다봐요', T.meteor.name) : $t('오늘 밤엔 유성우나 오로라가 꼭 와요 · 밤에 하늘을 올려다봐요'); whenClear(() => toast(say1, 3600)); } // 0.87.1: waits under a card
 }, 1000);
 export function initSky(getApi, getHab) { A = getApi; cur = getHab; }

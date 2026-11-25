@@ -57,7 +57,7 @@ goalEl.innerHTML = '<span></span><i><b></b></i>'; document.getElementById('habit
 const GOALS = [
   ['pond', S => S.unlocked.includes(H2.id), S => { const L = unlockInfo(S, H2.id); return L.friends ? [$t('{0} 동물 {1}/{2} → {3} 열림', L.prev.name, Math.min(L.got, L.friends), L.friends, H2.name), L.got / L.friends] : null; }],
   ['decor', S => S.props.some(p => p.placed && !p.nat), () => [$t('꾸미기에서 소품 하나 놓기 → 동물들이 보러 와요'), 0]],
-  ['adult', S => S.stats.grown > 0, S => { const g = Math.max(0, ...S.animals.filter(a => a.stage === 'baby' && !a.pending).map(a => gauge(a, G.now()))); return [$t('새끼 하나 다 키우기 {0}% → 성체 도감', Math.floor(g * 100)), g]; }],
+  ['adult', S => S.stats.grown > 0, S => { const g = Math.max(0, ...S.animals.filter(a => a.stage === 'baby' && !a.pending).map(a => gauge(a, G.now()))); return [$t('유체 하나 성체로 키우기 {0}% → 성체 도감', Math.floor(g * 100)), g]; }],
   ['snow', S => S.unlocked.includes(H3.id), S => { const L = unlockInfo(S, H3.id); return L.need ? [$t('{0} 도감 {1}/{2} · ♥{3}/{4} → {5} 열림', L.prev.name, Math.min(L.have, L.need), L.need, Math.min(S.hearts, L.hearts), L.hearts, H3.name), Math.min(L.have / L.need, S.hearts / L.hearts)] : null; }],
 ];
 function goal() {

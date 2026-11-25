@@ -6,7 +6,7 @@
 //   slots:   [{ egg, start, end } | null],
 //   animals: [{ id, species, variant, color (colour id | null), acc (secret accessory id | null), egg (type id), parents: [null, null], stage: 'baby' | 'adult',
 //              born, g (growth gauge 0..1 as of gAt), gAt, fed (feeds on fedDay), fedDay, hold (a 꼬마 사탕 holds its growth), adultAt,
-//              card (grown, its "다 자랐어요" card not seen yet), stored, heartAt, pending (hatched, reveal card not answered yet: not out
+//              card (grown, its "성체가 됐어요" card not seen yet), stored, heartAt, pending (hatched, reveal card not answered yet: not out
 //              in the habitat), newColor (pending only: a colour first seen on this card), fav (26-4 아끼는 친구: true | absent),
 //              nm (26-4 its name: cleanName | absent), j (170 B 정 레벨: { p points past the gauge, l level announced, d, n the day's pet·play bonus } | absent: affTick) }],
 //   codex:   { 'species:variant': { at (first one of it out: registered), adult (first seen grown up), h (26-5: the habitat whose nest it hatched from; absent before 0.60) } },   seen: [codex keys already looked at (or not new)],
@@ -43,6 +43,9 @@ import { encode } from './layout.js';
 import { heartFor } from './hearts.js';
 import { dayOf, dayNo } from './clock.js';
 import { F170, X230V, FIRST2, TUT228 } from './data.js'; // 170 B; 230 C1 swatches (empty without ?x230); 236 B
+// <sec263>
+import { SEC263, SEC263_P, secFor } from './data.js'; // 263 B · 267 B the series secret (nothing without its trial flag)
+// </sec263>
 import { BOARD0, rectAt, inRect, zoneSet, hill143, fork143off, grove143off, Z143, spring149off, S129, reeds143off, sand143fore, falls143fore } from '../habitat/zones.js';
 import { lotus143off, SPOTS } from '../habitat/zones.js'; // 143 B the lotus marsh; 194 0-5 the 꾸미기 자리
 import { newlyDone } from './achieve.js';
@@ -83,6 +86,7 @@ export function newGame(now) {
   const first = HABITATS[0];
   S.nests[first.id] = { t: now, eggs: Array.from({ length: B.nest.start }, () => egg(S, first.nest, B.nest.startRarity)) };
   S.guests = guestsBlank(S); // 66-1
+  S.flags.q283 = 2; // 292: a new game never held 페이퍼 퀼링 (fromSave)
   return S;
 }
 
@@ -121,6 +125,9 @@ export function fromSave(raw, now) {
     for (let v = raw.schemaVersion + 1; v <= SCHEMA_VERSION; v++) MIGRATIONS[v]?.(S, now); // each step in order, oldest first
     { const known = k => { const [sp, v, x] = k.split(':'); return x === undefined && !!variantOf(sp, v); }; // 195 B-10 L: only real cells (the leaderboard and codex achievements count these keys)
       S.codex = Object.fromEntries(Object.entries(S.codex).filter(([k, e]) => known(k) && isObj(e))); S.colors = Object.fromEntries(Object.entries(S.colors).filter(([k, v]) => known(k) && Array.isArray(v))); S.seen = S.seen.filter(k => typeof k === 'string' && known(k)); }
+    delete S.flags.forceSec; delete S.flags.forceSecret; // 298: the ?debug next-secret flags live in a session only; a hand-edited save or backup cannot fix the next hatch
+    for (const a of S.animals) { const k = key(a.species, a.variant); if (!a.pending && variantOf(a.species, a.variant) && !S.codex[k]) S.codex[k] = { at: a.born ?? now, ...a.stage === 'adult' && { adult: a.adultAt ?? a.born ?? now } }; } // 298: a save that went back to an older build and returned: the cell its animal held is filled again (the cell only: no hearts, xp, album, notice)
+    if ('tour281' in S.flags && !(Number.isInteger(S.flags.tour281) && S.flags.tour281 >= -1 && S.flags.tour281 < 1e7)) delete S.flags.tour281; // 281: -1 나중에 · the day 둘러보기 was picked
     { const m = S.flags.mv214; if (!(isObj(m) && Number.isInteger(m.n) && m.n >= 0 && m.n < 1e6)) delete S.flags.mv214; else S.flags.mv214 = { n: m.n }; } // 229 E ①: from a save, only { n } (a whole count)
     if (S186) { const moved = !raw.flags?.s186; to186(S); to194(S); const n = to203(S); // 194 0-2, 0-5; 203 D4
       if (moved) S.flags.mv214 = { n }; } // 214 (229 E ① saved): the first open with ?rc200 of a save from before it: main.js says what changed, once (it clears the flag as the card shows; the next open has s186)
@@ -158,6 +165,10 @@ export function fromSave(raw, now) {
     if (S129 === 4) clear149(S); // 149
     if (Z143) clear143reeds(S); // 143 B
     tidyYard(S); // 184 ④ SCHEMA 15
+    // 292 (283 c): 페이퍼 퀼링's slot is 호일 풍선 now and keeps its id (quilling), so animals, codex, colours and eggs come through
+    // as they are; only the one-time line is owed (main.js showRet), to a save that holds one: flags.q283 1 = owed, 2 = said or not
+    // needed (read off the save's own flag, past scrub above: a new game's 2 is not this save's; any other value counted afresh)
+    { const f = raw.flags?.q283; S.flags.q283 = f === 1 || f === 2 ? f : S.animals.some(a => a.variant === 'quilling') || Object.keys(S.codex).some(k => k.endsWith(':quilling')) ? 1 : 2; }
     delete S.noAds; // 184 ⑤: 광고 제거 is never read from a save (a backup, a link): src/toss.js sets it each run (game.js setNoAds)
     S.schemaVersion = SCHEMA_VERSION; S.contentVersion = CONTENT_VERSION; // keys added since are not in `seen`: they show NEW
     settle(S);
@@ -373,18 +384,23 @@ export function choose(S, e, rarity, sure, rng) { // the look an egg of this rar
 // 199 B-11 (written only under ?g190, honoured by any build): pick, a series cell swapped for stamps (a gift egg); v, the look an
 // egg was shaken to: what it hatches, always (p: that rarity came from a full gauge, which the hatch then empties)
 const fixed = (e, rarity) => [e.v?.rarity === rarity && e.v, e.pick].find(x => x && variantOf(x.species, x.variant)?.rarity === rarity);
-export function crack(S, e, now, rng = Math.random, forced = false) { // forced: a secret for sure (?debug 다음 알 시크릿, game.hatch)
+export function crack(S, e, now, rng = Math.random, forced = false) { // forced: true a secret for sure (?debug 다음 알 시크릿, game.hatch); 'sec' the series secret (263 B)
   const { sure, rarity } = e.v ? { sure: e.v.p === true, rarity: e.v.rarity } : crackRarity(S, e), f = fixed(e, rarity);
   let r = f ? { species: f.species, variant: f.variant } : choose(S, e, rarity, sure, rng);
   if (!r) return null;
+  let sec = false;
+  // <sec263> 263 B · 267 B ⑦: a series cell's hatch (not a gift egg: picks, swaps, every gift: gift, gv mail·code·walk) turns into its series' secret at SEC263_P;
+  // rarity and pity stay the cell's. Without the flag no rng call is added (the block is not in the release build)
+  { const sv = SEC263 && !e.gift && !e.gv && secFor(r.species, r.variant); sec = !!sv && (forced === 'sec' || rng() < SEC263_P); if (sec) r = sv; }
+  // </sec263>
   r = { ...r, color: rollColor(r.species, r.variant, rng) };
   const before = shards(S, e.type), P = e.gift ? { ...before } : S.pity[e.type] = { ...before };
   if (!e.gift) for (const k in pityOf(e.type)) P[k] = RANK[rarity] >= RANK[k] ? 0 : P[k] + 1;
   const accs = Object.keys(ACCESSORIES);
-  const acc = (forced || rng() < B.secret.chance) ? accs[Math.floor(rng() * accs.length)] : null;
+  const acc = (forced === true || rng() < B.secret.chance) ? accs[Math.floor(rng() * accs.length)] : null;
   const newAcc = !!acc && !S.album[acc]; // first time this accessory turns up: the reveal card says 새 치장!
   if (newAcc) S.album[acc] = { species: r.species, variant: r.variant, color: r.color, at: now };
-  return { ...r, rarity, sure, acc, newAcc, shards: { before, after: { ...P } } };
+  return { ...r, rarity, sure, acc, newAcc, ...sec && { sec }, shards: { before, after: { ...P } } };
 }
 
 // Everything an egg type can give, in one place: the ?debug screen now, the public odds page when eggs are sold.
@@ -559,7 +575,7 @@ export function hatch(S, i, now, rng = Math.random, forced = false) {
   const c = crack(S, s.egg, now, rng, forced); if (!c) return null;
   const a = { id: S.nextId++, species: c.species, variant: c.variant, color: c.color, acc: c.acc, egg: s.egg.type, parents: s.egg.parents, stage: 'baby', born: now,
     g: 0, gAt: now, fed: 0, adultAt: null, stored: false, heartAt: 0, pending: true };
-  if (c.acc) a.s = 1; // 95: hatched a secret (x2 on sending back, whatever it wears later)
+  if (c.acc || c.sec) a.s = 1; // 95: hatched a secret (x2 on sending back, whatever it wears later); 263 B · 267 B ⑥ the series secret too
   a.pe = peOf(a.id, now); // 17-1 성격
   const seen = a.color && (S.colors[key(a.species, a.variant)] ??= []);
   if (seen && !seen.includes(a.color)) { seen.push(a.color); a.newColor = true; }
@@ -1174,7 +1190,7 @@ export function to203(S) {
   const n = Math.min(999, Math.max(0, Math.floor(S.candy) || 0)); S.candy = 0; // 999: more than any game gives (an edited save gets no more)
   S.hearts += n * B.candy.price; return n;
 }
-// the "다 자랐어요" cards were seen
+// the "성체가 됐어요" cards were seen
 export function grownSeen(S, ids) { for (const a of S.animals) if (ids.includes(a.id)) delete a.card; }
 // 170 B 정 레벨 (BALANCE.aff): one bar per friend, Lv1..Lv10, never down. Its front part is the growth gauge (x aff.at[3]); past
 // it a.j.p: aff.idle an hour while it is out and not a growing baby (grown, or held by a 꼬마 사탕: the level goes on, the look

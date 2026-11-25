@@ -39,14 +39,17 @@ export function tidyArt(S) { // fromSave (a save before 17-2: none)
 // the ones placed in hab waiting for a choice; with those made and not placed yet
 export const asking = (S, hab) => S.props.filter(p => p.placed && p.hab === hab && p.art?.ask);
 export const waiting = (S, hab) => S.art.todo.filter(t => t.hab === hab).length + asking(S, hab).length;
-// 254 A-5: a kept who (in the language it was made in: Korean before) in this one: the 성격 and kind words matched as whoOf
-// put them, a name after them as it is (「수집가 말 몽실이」 → 「Collector Horse 몽실이」)
-// (each word run looked up forward with $t: a reverse lookup can land on another key with the same English, 도감 수집가 = Collector)
-export const whoIn = w => { let s = String(w ?? '').trim(); const out = [];
-  for (const L of [Object.values(PE), Object.values(SP)]) { const names = new Set(L.map(x => x.name)), ws = s.split(' ');
-    for (let k = Math.min(3, ws.length); k > 0; k--) { const p = ws.slice(0, k).join(' '), m = names.has(p) ? p : names.has($t(p)) ? $t(p) : null; if (m) { out.push(m); s = ws.slice(k).join(' '); break; } } }
-  return [...out, s].filter(Boolean).join(' '); };
-export const whoOf = a => `${PE[a.pe]?.name ?? ''} ${SP[a.species]?.name ?? ''}${a.nm ? ' ' + a.nm : ''}`.replace(/ +/g, ' ').trim(); // 「먹보 양 몽실이」 (the kind only: no 단색·얼룩)
+// 254 A-5 · 285: a kept who (made in any language) in this one: since 285 only the name, or the kind when it has none
+// (「먹보 말 보리」 → 「보리」, 「호기심쟁이 말」 → 「말」); a 성격 word in front (the names before 285 too) is dropped, the kind words
+// looked up forward with $t (a reverse lookup can land on another key with the same English, 도감 수집가 = Collector)
+const OLD_PE = new Set(['겁쟁이', '호기심쟁이', '먹보', '잠꾸러기', '장난꾸러기', '깔끔이', '느긋이', '수집가', 'Scaredy', 'Curious', 'Foodie', 'Sleepyhead', 'Prankster', 'Neat', 'Easygoing', 'Collector',
+  'こわがり', 'しりたがり', 'くいしんぼう', 'ねぼすけ', 'いたずらっこ', 'きれいずき', 'のんびりや', 'コレクター']);
+export const whoIn = w => { let ws = String(w ?? '').trim().split(/ +/); const pe = new Set(Object.values(PE).map(x => x.name));
+  if (ws.length > 1 && (OLD_PE.has(ws[0]) || pe.has(ws[0]) || pe.has($t(ws[0])))) ws = ws.slice(1);
+  const names = new Set(Object.values(SP).map(x => x.name));
+  for (let k = Math.min(3, ws.length); k > 0; k--) { const p = ws.slice(0, k).join(' '), m = names.has(p) ? p : names.has($t(p)) ? $t(p) : null; if (m) return ws.slice(k).join(' ') || m; }
+  return ws.join(' '); };
+export const whoOf = a => a.nm || SP[a.species]?.name || ''; // 285: 「보리」, no name 「말」 (the 성격 is a tag on the cards, not in the name)
 
 export function artTick(S, now, ev) { // advance
   const A = S.art, hab = S.flags.lastHab; if (!A.here) A.here = now;

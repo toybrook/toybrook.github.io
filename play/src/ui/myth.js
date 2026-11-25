@@ -7,7 +7,7 @@ import * as G from '../game/game.js';
 import { dayNo } from '../game/clock.js';
 import { BALANCE, MYTHIC, HOLD, G190 } from '../game/data.js';
 import { HAB, SP, mythNight, mythPrints, NIGHT } from '../game/rules.js';
-import { toast, topWindow, overlayOpen, eat } from './hud.js';
+import { toast, topWindow, overlayOpen, eat, whenClear } from './hud.js';
 import { sfx } from './sound.js';
 
 const MY = MYTHIC[0], $ = id => document.getElementById(id), box = $('myth'), cutEl = $('mythCut');
@@ -248,6 +248,6 @@ export const mythNightText = m => $t('밤이 됐어요 · {0}{을/를} 부를 �
 export const mythNightTold = () => G.flag('mythInfo', nightOf(G.now()));
 function nightTick() {
   if (!nav || document.hidden) return; const t = G.now(), m = mythNightDue();
-  if (m && awake && awake < dusk(t) && t - awake < 10 * 60000) { if ($('toast').classList.contains('on')) return; mythNightTold(); toast(mythNightText(m), 3600); } // another toast up (the sky's at dusk): the next tick
+  if (m && awake && awake < dusk(t) && t - awake < 10 * 60000) { if ($('toast').classList.contains('on')) return; mythNightTold(); const tx = mythNightText(m); whenClear(() => toast(tx, 3600)); } // 0.87.1: waits under a card (1 min: dropped) // another toast up (the sky's at dusk): the next tick
   awake = t;
 }

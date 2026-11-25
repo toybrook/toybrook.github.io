@@ -15,6 +15,8 @@ const inOpen = (S, x, z) => inRect(rectAt('yard', levelOf(S, 'yard')), x * UNIT,
 const homeOf = p => HABS.has(p.from) ? p.from : PROP[p.prop]?.habitat ?? HABITATS[0].id; // where a yard prop goes back to
 export const walker = a => MODELS[SP[a.species]?.model]?.move === 'walk'; // 1단계: no swimmers (the duck, the swan)
 export const visitors = S => S.animals.filter(a => a.stay === 'yard');
+// 281 ①: nothing placed or painted in the yard and no one staying there (its first view would be a screen of green)
+export const yardEmpty = S => !S.props.some(p => p.hab === 'yard' && p.placed) && !visitors(S).length && !Object.values(S.paint?.yard || {}).some(v => v != null);
 
 // the save as the game keeps it with the flag on: the main save as a build without the flag reads it, the yard part beside it
 // 251 C (YD247): the yard part twice. `yard` as 0.86.1 (16, steps 0..6) can read it: L at most 6 (past its last step it drops the

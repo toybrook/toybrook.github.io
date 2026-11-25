@@ -8,6 +8,9 @@ import * as GU from './guests.js'; import { guestWear } from './guests-data.js';
 import * as A from './art.js'; // 17-2
 import * as W from './wild.js'; // 17-3
 import { PROPS, YARD, S186, YD247, G190, SCHEMA_VERSION } from './data.js';
+// <sec263>
+import { SEC263 } from './data.js'; // 263 B
+// </sec263>
 import * as SC from './scatter.js'; // 195 B-8 1-2
 import * as SE from './series.js'; // 199 B-11 ?g190: 시리즈 · 교환 도장 · 의뢰 · 물어오기 · 흔들어 보기 (rules only, nothing runs without the flag)
 import * as Y from './yard.js'; // 182 ④ (?yard): the yard's part of the save (184 ④: S.yard, SCHEMA 15)
@@ -108,7 +111,15 @@ export const hurry = (i, ms) => act(now => R.hurry(S, i, ms, now)); // 174 앱�
 export const setNoAds = on => { if (!S) return; if (on) S.noAds = true; else delete S.noAds; }; // 184 ⑤ 광고 제거 (not sold yet): only this run, never saved (fromSave deletes it)
 export const letGo = (hab, ids) => act(now => R.letGo(S, hab, ids, now)); // 112 놓아주기
 export const hatch = i => act(now => { // ?debug 「다음 알 시크릿」 (flags.forceSecret) is used up here; rules only take forced
-  const f = !!S.flags.forceSecret, out = R.hatch(S, i, now, Math.random, f); if (out && f) delete S.flags.forceSecret; return out;
+  let f = !!S.flags.forceSecret;
+  // <sec263> 263 B (trial flag SEC263): flags.forceSec makes the next series cell's hatch its secret (kept until one is)
+  if (!f && SEC263 && S.flags.forceSec) f = 'sec';
+  // </sec263>
+  const out = R.hatch(S, i, now, Math.random, f); if (out && f === true) delete S.flags.forceSecret;
+  // <sec263>
+  if (out?.sec) delete S.flags.forceSec;
+  // </sec263>
+  return out;
 });
 export const release = id => act(now => R.release(S, id, now));
 export const feed = id => act(now => R.feed(S, id, now));
@@ -151,6 +162,8 @@ export const buyShelf = (hab, i) => act(now => { const h = S.hearts, p = R.buySh
 export const buyExpand = hab => act(() => R.buyExpand(S, hab));
 export const refit = (hab, moves) => act(() => R.refit(S, hab, moves)); // inbox 42 A
 export const setHome = (id, home) => act(() => R.setHome(S, id, home)); // inbox 53
+export const yardEmpty = () => YARD && Y.yardEmpty(S); // 281 ①
+export const cabTaste = () => G190 ? act(() => SE.cabTaste(S)) : null; // 281 ②: 숲속 오두막 맛보기 now, if not given yet
 export const placeProp = (uid, x, z, rot, ex) => act(() => R.placeProp(S, uid, x, z, rot, ex)); // 28-5 ex: { c, sz, on, sl }
 export const placeRing = (hab, cells, clear) => act(() => R.placeRing(S, hab, cells, clear)); // inbox 37 작은 고리
 export const saveLay = (hab, k, name) => act(now => R.saveLay(S, hab, k, name, now)); // 28-5 배치 저장 칸
@@ -264,6 +277,9 @@ export const markProps = () => act(() => { S.seenProps = PROPS.map(p => p.id); }
 export const skip = ms => act(now => ({ events: R.skip(S, ms, now) }));
 export const addHearts = n => act(() => { S.hearts += n; });
 export const forceSecret = () => act(() => { S.flags.forceSecret = true; });
+// <sec263>
+export const forceSec = () => act(() => { S.flags.forceSec = true; }); // 263 B ?debug 「다음 시리즈 알 시크릿」
+// </sec263>
 // fill the codex (one species, or the whole habitat), every colour seen: for 진열장 screenshots and FPS
 export const fillCodex = (habId, spId) => act(now => {
   for (const c of R.codexCells(habId)) if (!spId || c.species.id === spId) {

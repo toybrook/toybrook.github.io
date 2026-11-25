@@ -8,17 +8,22 @@ import { figureThumb } from './thumbs.js';
 import { PHOTO_PLACES, cardPhoto, photoCard, prunePhotos } from './postcard3d.js'; // 78: the places whose cards are a photo
 import { toast, josa } from './hud.js';
 import { TOSS } from '../config.js';
+import { PE } from '../game/pals.js';
 
 const FH = MYTHIC[0].place, PL = Object.fromEntries([...PLACES, FH].map(p => [p.id, p])), PNAME = Object.fromEntries(PROPS.map(p => [p.id, p.name]));
 export const cardLine = c => (PL[c.pl]?.lines[c.ln] ?? '').replace('{n}', c.nm).replace(/\{(.)\/(.)\}/g, (_, a, b) => josa(c.nm, a, b));
 export const strollLeft = a => { const m = Math.max(1, Math.ceil((a.stroll.end - G.now()) / 60000)); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 const host = () => document.getElementById('habitat');
 
+// 285: the 성격 as a small tag (cards, 상세, the pickers), never in the name
+export const peTag = a => { if (G.S.flags.palOff || !PE[a.pe]) return ''; const t = document.createElement('i'); t.className = 'ptag'; t.textContent = PE[a.pe].name; return t; };
+
 let menu = null;
 export function pickStroll(a) {
   const nm = callName(a), n = strolling(G.S).length, cap = strollCap(G.S), R = B.stroll, full = n >= cap;
   menu?.remove(); menu = document.createElement('section'); menu.className = 'intro pop fmenu'; menu.id = 'fmenu';
   menu.innerHTML = $t('<div><h2>산책 보내기</h2><p class="sub">{0} · {1}</p><div class="col">{2}{3}<button data-visit>친구네 놀러 가기</button><button class="sb" data-shut>닫기</button></div></div>', esc(nm), full ? $t('지금 {0}마리가 산책 중이라 더 못 가요', n) : $t('산책 중 {0}/{1} · 돌아오면 엽서와 하트를 줘요', n, cap), R.hours.map(h => asHearts({ hearts: R.hearts[h], candy: R.candy[h] })).map((g, i) => $t('<button data-h="{0}"{1}>{2}시간 · ♥{3}{4}</button>', R.hours[i], full ? ' disabled' : '', R.hours[i], g.hearts, g.candy ? $t(' · 사탕 {0}', g.candy) : '')).join(''), mythHill(G.S) ? $t('<button data-h="{0}" data-pl="{1}"{2}>🔥 {3} · {4}시간 · {5}</button>', R.hours[0], FH.id, full ? ' disabled' : '', FH.name, R.hours[0], MYTHIC[0].hair) : '');
+  menu.querySelector('.sub').prepend(peTag(a));
   if (TOSS) menu.querySelector('[data-visit]')?.remove(); // 174: 친구네 놀러 가기 is a link to send (none out of Toss)
   menu.onclick = e => {
     const b = e.target.closest('button'); if (!b) return;

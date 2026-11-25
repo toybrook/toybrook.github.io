@@ -47,7 +47,7 @@ export const WISH = {
   alone: { k: 'alone', icon: '🍃', riddle: $t('잠깐만 혼자 있고 싶어') },
   pals1: { k: 'pals', n: 1, icon: '🐾' }, pals2: { k: 'pals', n: 2, icon: '🐾' },
   pals3: { k: 'pals', n: 3, icon: '🐾', riddle: $t('동물 셋이랑 둘러앉고 싶어') },
-  baby: { k: 'baby', icon: '🍼', riddle: $t('아기 동물을 보면 기운이 날 것 같아') },
+  baby: { k: 'baby', icon: '🍼', riddle: $t('유체 동물을 보면 기운이 날 것 같아') },
   'sp:horse': { k: 'sp', v: 'horse', riddle: $t('갈기 날리는 동물이 보고 싶어') },
   'sp:sheep': { k: 'sp', v: 'sheep', riddle: $t('구름처럼 폭신한 동물이 보고 싶어') },
   'sp:duck': { k: 'sp', v: 'duck', riddle: $t('꽥꽥 노래하는 동물이 보고 싶어') },
@@ -104,7 +104,7 @@ export const GUESTS = [
   { k: 's_cub', hab: 'snow', sp: 'polarBear', name: $t('보따리 북극곰 꼬미'), mark: 'bundle', stay: 'normal', egg: 'snow', lv: 14, wish: ['놀이', '먹을 것', '빛', 'theme:snow'], bonus: ['pals2', '소리'] }, // 66-2
 ];
 
-// 손님 선물 (소품): 3 a habitat, only from a guest's 대만족. New ids; the main session adds them to PROPS (gift: '떠돌이 손님',
+// 손님 선물 (소품): 3 a habitat, only from a guest's 대만족. New ids; the main session adds them to PROPS (gift: '방랑자 손님',
 // price 0) with a model. as: the existing model to start from (props.js `as`), so they work before their own model.
 export const GUEST_PROPS = [
   { id: 'gst_kite', name: $t('가오리연'), hab: 'meadow', tags: ['놀이'], as: 'pinwheel' },

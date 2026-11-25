@@ -90,7 +90,7 @@ export function openDecor(id, api) {
   if (!api) return; // 168: no habitat built yet (its loading screen): nothing to decorate (style.css hides the buttons then)
   habId = id; hab = api; held = null; brush = undefined; yv = null; y3 = ypan = ytop = false; yk = -1; nightPv(0); grid = id === 'yard'; undo = []; redo = []; pcOk = 0; pcSpent = 0; pcSeq++; min = false; moreT = false; pick = null; sweep = 0; el.classList.remove('tall');
   if (!tabsHere().some(t => t.id === tab)) tab = 'nature';
-  el.hidden = false; habEl.classList.add('decorating'); if (document.documentElement.dataset.ui187) hideToast(); /* 202 B-13 (?rc200): no note left over the board while decorating */ hab.decor.mode(true); if (grid) hab.decor.grid(true); draw(); tip('decor', '#decor .dgrid'); tip('expand', '#decor .dexp'); tip('nature', '#decor [data-sweep]'); if (tab === 'train') railGuide();
+  el.hidden = false; habEl.classList.add('decorating'); if (document.documentElement.dataset.ui187) hideToast(); /* 202 B-13 (?rc200): no note left over the board while decorating */ hab.decor.mode(true); if (grid) hab.decor.grid(true); draw(); tip('decor', '#decor .dgrid'); tip('expand', '#decor .dexp'); if (G.S.props.some(p => p.nat && p.placed && p.hab === habId && p.prop !== 'wildflowers')) tip('nature', '#decor [data-sweep]'); /* 295: no trees·rocks·bushes here (an empty yard): skipped, not marked seen, comes up where there are */ if (tab === 'train') railGuide();
 }
 // decorTab opens 꾸미기 on a tab (in a habitat; the panel up: that tab); first.js 「다음은 큰 소품」
 export function decorTab(t) { const b = document.getElementById('decorBtn'); tab = t; if (!el.hidden) draw(); else if (b.offsetParent) b.click(); }
@@ -150,7 +150,7 @@ function step(from, to) { // 되돌리기 (from undo) / 다시 하기 (from redo
   if (held) { hab.decor.cancel(); held = null; }
   to.push(layoutOf(G.S, habId)); G.setLayout(habId, from.pop()); draw(); sfx('undo');
   // 184 ④ 되돌리기 다듬기: in the yard say what came back and what stays (♥로 산 것은 보관함, 넓힌 땅·부른 친구는 그대로, custom-zone.md 3-5)
-  if (habId === 'yard') toast(from === undo ? $t('되돌렸어요 · 산 소품은 보관함으로, 넓힌 땅·부른 친구는 그대로예요') : $t('다시 했어요'));
+  if (habId === 'yard') toast(from === undo ? $t('되돌렸어요 · 산 소품은 보관함으로, 넓힌 땅·부른 동물은 그대로예요') : $t('다시 했어요'));
 }
 // 86-3다: the full row shows only ↶ ↷ 땅 칠하기, the rest (격자 고르기 링크 사진) under 더보기, a second row (74: 사진 moved here from the top tools)
 const DIST = [$t('가까이'), $t('보통'), $t('멀리')];

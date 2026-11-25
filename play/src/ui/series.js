@@ -6,6 +6,9 @@ import { $t, LOC } from '../i18n/i18n.js';
 import * as G from '../game/game.js';
 import { SP, RAR, HAB, lookName, variantsOf, colorsOf } from '../game/rules.js';
 import { PROPS, SCENES, SPECIES, BALANCE as B, TUT228 } from '../game/data.js';
+// <sec263>
+import { SEC263 } from '../game/data.js'; // 263 B · 267 B the series secret (trial flag)
+// </sec263>
 import { GUESTS, guestWear } from '../game/guests-data.js';
 import { SERIES, STAMP, REQUESTS, REQ, DAILY, cellsOf, have, queued, reqOf, wishName, collNo } from '../game/series.js';
 import { figureThumb, silhouetteThumb, propThumb } from './thumbs.js';
@@ -43,9 +46,12 @@ function drawSer(body, S) {
     const row = mk('div', 'crow'); for (const c of cellsOf(s)) row.append(cell(c, S));
     body.append(row); // 263 A: 12 cells only, no secret place (M.sec stays in the save for the secret redone, 263 B)
     body.append(mk('p', 'cnote', M.got ? $t('다 모았어요 · 「{0}」{을/를} 받았어요(보관함의 소품)', prop(s.prize), prop(s.prize)) : $t('12칸을 다 모으면 「{0}」{을/를} 받아요', prop(s.prize), prop(s.prize))));
+    // <sec263> 263 B 3절 · 267 B ①: a rumor once all 12 are in and no secret yet; once met, where it stands
+    if (SEC263 && (M.sec || M.got)) body.append(mk('p', 'cnote', M.sec ? $t('시크릿을 만났어요 · 진열장 가운데 자리에 있어요') : $t('다 모은 사람에게만 들리는 소문 · 시리즈 알에서 아주 드물게 반짝이는 친구가 하나 더 나온대요')));
+    // </sec263>
   }
-  body.append(mk('h3', null, $t('교환 도장')), mk('p', 'cnote', $t('도감에 있는 변종이 또 나오면 카드에서 판매 대신 분해를 고를 수 있어요 · 일반 {0} · 희귀 {1} · 영웅 {2} · 전설 {3}개 (시크릿은 두 배)', ...['common', 'rare', 'heroic', 'legendary'].map(r => STAMP.brk[r]))),
-    mk('p', 'cnote', $t('도장으로 빠진 칸을 하나 골라 선물 알로 받아요 · 일반 {0} · 희귀 {1} · 영웅 {2}개 · 시크릿과 전설은 교환하지 않아요', STAMP.swap.common, STAMP.swap.rare, STAMP.swap.heroic)));
+  body.append(mk('h3', null, $t('교환 토큰')), mk('p', 'cnote', $t('도감에 있는 변종이 또 나오면 카드에서 판매 대신 분해를 고를 수 있어요 · 일반 {0} · 희귀 {1} · 영웅 {2} · 전설 {3}개 (치장 동물은 두 배)', ...['common', 'rare', 'heroic', 'legendary'].map(r => STAMP.brk[r]))),
+    mk('p', 'cnote', $t('토큰으로 빠진 칸을 하나 골라 선물 알로 받아요 · 일반 {0} · 희귀 {1} · 영웅 {2}개 · 시크릿과 전설은 교환하지 않아요', STAMP.swap.common, STAMP.swap.rare, STAMP.swap.heroic)));
 }
 const habName = h => HAB[h]?.name ?? $t('나의 뜰'); // the yard: HAB.yard only with ?yard
 function reqBox(q, S, x) { // a request on the board (x: its entry) or a story sent
@@ -89,7 +95,7 @@ const sig = () => JSON.stringify([tab, G.S.stamp, G.S.ser, G.S.req, G.S.giftRow.
 let shown = '';
 function draw() {
   if (el.hidden || !G.S?.ser) return;
-  const S = G.S, body = $('serBody'), y = body.scrollTop; $('serStamp').textContent = $t('도장 {0}', S.stamp);
+  const S = G.S, body = $('serBody'), y = body.scrollTop; $('serStamp').textContent = $t('토큰 {0}', S.stamp);
   el.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   body.textContent = ''; ({ ser: drawSer, req: drawReq, alb: drawAlb }[tab] ?? drawSer)(body, S); body.scrollTop = y; shown = sig();
 }
@@ -101,7 +107,7 @@ el.addEventListener('click', e => {
   else if (b.dataset.tab) { tab = b.dataset.tab; draw(); }
   else if (b.dataset.shot) { el.hidden = true; if (!document.body.classList.contains('photo')) $('snapBtn').click(); } // 203 D5 찍기 (as sky.js, share.js)
   else if (b.dataset.swap) { const r = G.swapCell(b.dataset.swap);
-    if (!r) return; if (r.short) return toast($t('도장이 {0}개 모자라요', r.short)); if (r.full) return toast($t('선물 알 줄이 가득 찼어요 · 둥지에서 먼저 넣어 주세요'));
+    if (!r) return; if (r.short) return toast($t('토큰이 {0}개 모자라요', r.short)); if (r.full) return toast($t('선물 알 줄이 가득 찼어요 · 둥지에서 먼저 넣어 주세요'));
     sfx('egg'); toast($t('교환했어요 · 둥지의 선물 알로 왔어요'), 3000); }
 });
 post.addEventListener('click', e => { if (e.target.closest('[data-close]') || e.target === post) post.hidden = true; });

@@ -24,7 +24,7 @@ import { DROP, STAGE_NAME, dropFrom } from '../animals/growth.js';
 import { SPECIES, MODELS, MYTHIC, PROPS, PAT, NATURE, BALANCE, SETS, SIZES, BRUSHES, SIZE, sizeF, paletteOf, sizable, YARD, S186, CAM186, TH194, YD247 } from '../game/data.js';
 import { SP, habitatOf, known, topAt, kindName, plan186, spotMode, onSpots, spotTakes } from '../game/rules.js';
 import { QUALITY, DEBUG, PREFS, calm } from '../config.js';
-import { ambience, sfx, music, playing, hear, pet, lilies, buzz } from '../ui/sound.js';
+import { ambience, sfx, music, playing, hear, pet, lilies, buzz, touch } from '../ui/sound.js';
 import { tracksOf, network, railEnds, joinTurn, newTrain, moveTo, stepTrain, boardAt, TILE, CARS } from './train.js';
 import { trainModel, recolor, treeCover } from './meadow/props.js';
 import { newPlay } from '../animals/play.js';
@@ -882,7 +882,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
       press = null; if (pinch || carry || decorOn || snapOn || fingers !== 1) return;
       const { a } = actorAt(at), p = a?.carry && groundHit(at); if (!p) return;
       carry = { a, id, x: a.position.x, z: a.position.z, from: { x: a.position.x, z: a.position.z }, f: [p.x, p.z], dx: a.position.x - p.x, dz: a.position.z - p.z, sx: at.clientX }; a.carry(carry.x, carry.z);
-      controls.enabled = false; skipTap = true; aim = null; setFocus(null); ui.onCarry?.(a.rec); if (PREFS.buzz) buzz(15); // 69-1: its 출생 기록 shows while held
+      controls.enabled = false; skipTap = true; aim = null; setFocus(null); ui.onCarry?.(a.rec); touch(a, 'lift'); if (PREFS.buzz) buzz(15); // 69-1: its 출생 기록 shows while held
     }, 450) };
   }, { capture: true, ...sig });
   renderer.domElement.addEventListener('contextmenu', e => e.preventDefault(), sig); // a long press lifts (OrbitControls, off while carrying, no longer stops the phone's menu)
@@ -907,7 +907,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     if (pen || a.rec.home) ui.onHome?.(a.rec.id, pen ? [nx, nz] : null);
     if (a.rec.wg) ui.onGuestMove?.(a.rec.wg, nx, nz); // 66-1: a guest carried: its spot (and its pair's) moves there
     a.drop(nx, nz, DROP.carry); const [px, pz] = st && a.use(st) || [nx, nz]; // on a play prop: by its seat (walk.js use)
-    puffs.push({ x: px, z: pz, t: dropFrom(DROP.carry) - DROP.fall, bits: null }); sfx('place', DROP.fall - dropFrom(DROP.carry)); // 13-0: a plastic 톡 as it lands
+    puffs.push({ x: px, z: pz, t: dropFrom(DROP.carry) - DROP.fall, bits: null }); { const d = DROP.fall - dropFrom(DROP.carry); if (!touch(a, 'drop', d)) sfx('place', d); } // 13-0: a 톡 as it lands (260 C: its material's; not loaded yet: the plastic one)
   }
   // 13-0: what is underfoot at x, y, z (sound.js steps): a deck, shallow water (deeper: swimming, none), the paint, else the habitat's own
   const underfoot = (x, y, z) => { const c = habitat.ctx; if (c.deckAt(x, z) > y - 0.3) return 'wood'; const d = c.water - c.heightAt(x, z);
@@ -1166,6 +1166,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
     // as near as that box is about half the screen's width (YARD_HALF), never farther than 209 A ③'s; pinch / 전체 보기 reach as before
     const yb = YARD && habId === 'yard' && !wide ? yardBox() : null;
     if (YARD && habId === 'yard' && !wide && (!n || yb)) { HOME.radius = homeFit(0) * YARD_NEAR; // 209 A ③: the yard's start view (none out) nearer, props read; 전체 보기 the whole board as before
+      if (!yb && !n) { HOME.radius = radiusOf(Math.max((open[1] - open[0]) / 2, (open[3] - open[2]) / 2 * 15 / 26) + 1); return; } // 281 ③: nothing built and no one out: the whole fence (209 A ③'s near view was a screen of green)
       if (yb) { HOME.target.set(THREE.MathUtils.clamp(yb.x, ...panX), 0, THREE.MathUtils.clamp(yb.z, ...panZ)); HOME.radius = Math.min(HOME.radius, Math.max(9, yb.w / YARD_HALF / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect))); if (S186) fitIn(HOME.target, HOME.phi, 0, HOME.radius, FIT_HOME); return; } } // 221 C ①: aimed at the middle of that box, none: the yard's middle (229 D ①: the yard's pan box is its whole open land, the tick's clamp keeps it there)
     if (wide || !n) return;
     const t = HOME.target.set(0, 0, 0);
@@ -1583,7 +1584,7 @@ export async function startHabitat(container, ui, habId, records = [], { level =
   tick();
   if (DEBUG) Object.assign(dbg, { showZone, topView, setFocus, fx, artView, overview });
   return {
-    resize, overview: toggle, front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, artSpot, // 17-2
+    resize, overview: toggle, near281(x, z) { setFocus(null); goingHome = homeOn = false; aim = { at: new THREE.Vector3(THREE.MathUtils.clamp(x * U, ...panX), 0, THREE.MathUtils.clamp(z * U, ...panZ)), radius: homeFit(0) * YARD_NEAR, phi: sph.setFromVector3(off.copy(camera.position).sub(controls.target)).phi, rate: 8 }; }, /* 294: after 놓기, one glide to the placed props at the yard's usual distance (~0.6 s) */ front, setActive, sync, drop, syncProps, decor, revealed: mistTick.done, artSpot, // 17-2
     artView, syncWild, showZone, topView, setPals: (m, d) => { habitat.ctx.bf = m; habitat.ctx.duo = d; }, // 17-1; 113 d: id -> the prop the two like
     myth, guests, pile: pileShow, snowman,
     building: () => !!site, ball: () => performance.now() - ballAt < 6000, // 15-2 첫눈 (ui/event.js, photo.js)

@@ -26,7 +26,8 @@ export const TOSS = false;
 
 // 20-1 open beta. VERSION goes to the feedback form; FEEDBACK_URL is the same form as site/config.js ('TODO' = no button).
 // RATING: the rating mark (an image under assets/) and number on the start screen; both empty = hidden (until rated).
-export const VERSION = '0.87.0';
+export const VERSION = '0.87.1';
+import { TOY_VOL, tidyToy } from './ui/toy-sound.js'; // 260 C
 export { EDITION } from './game/data.js'; // inbox 22/31: set in data.js, next to the PACE table it picks
 export const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeHXV6tlH6IS3tlu7Xb71qeh1fvIbkzNHUoUHnSY3j_u7dcpA/viewform';
 export const FEEDBACK_FIELD = 'entry.2112099919'; // the form's "game info" box, filled in for the player
@@ -50,14 +51,18 @@ export const WEATHER_Q = null; // release build: ?weather= off (251 C-2)
 export const VIEW = { hour: null, weather: null };
 // 26-1: the bytes of the 3D code fetched after the first screen (ui/loadbar.js), and whether the offline files (dist-web/sw.js) are
 // there. Both lines are rewritten by tools/build-web.mjs; here (the source folder, no sw.js) a rough number and off.
-export const CODE_BYTES = 3277539; // release build
+export const CODE_BYTES = 3317114; // release build
 export const OFFLINE = true; // release build
 // settings sheet (main.js): kept apart from the save. time: 'real' | 'day' (항상 낮); weather: false = 날씨 효과 끄기
 // 26-2 소리: mute (모두 끄기), vAll / vAmb / vFx / vAnimal (전체 / 배경 / 효과 / 13-0 동물 소리, 0..1). Low at first (40%).
+// 0.87.1 (260 C Q3): 동물 소리 goes with 효과음 (vFx); vAnimal no longer read (a kept one stays, harmless)
+// 260 C: toy (장난감 소리 켜기), vToy (its 크기, 0..1, 0.35 at first)
 // 26-3: gfx (GFX above; at first picked from the device), saver (배터리 절약), font 's' | 'm' | 'l', calm (움직임 줄이기;
 // null = the device's 「동작 줄이기」), buzz (진동, Android). 212 C: smooth (부드럽게(120): the habitat draws at the screen's rate; off = 60 a second)
-export const PREFS = { lang: null, time: 'real', weather: true, mute: false, vAll: 0.4, vAmb: 1, vFx: 1, vAnimal: 1, gfx: null, saver: false, smooth: false, font: 'm', calm: null, buzz: true, signs: true, stats: true, palLine: true, deskSound: false, deskWake: true }; // signs: the zones' name signs (inbox 34); stats: 이용 통계 보내기 (inbox 41 A); palLine: 17-1 단짝 하트 끈
-try { Object.assign(PREFS, JSON.parse(localStorage.getItem('toyhabitat.prefs') || '{}')); } catch { /* broken: defaults */ }
+export const PREFS = { lang: null, time: 'real', weather: true, mute: false, vAll: 0.4, vAmb: 1, vFx: 1, vAnimal: 1, toy: true, vToy: TOY_VOL, gfx: null, saver: false, smooth: false, font: 'm', calm: null, buzz: true, signs: true, stats: true, palLine: true, deskSound: false, deskWake: true }; // signs: the zones' name signs (inbox 34); stats: 이용 통계 보내기 (inbox 41 A); palLine: 17-1 단짝 하트 끈
+// 0.87.1 (260 C Q4): the kept text's __proto__ / constructor / prototype keys dropped (as rules.js scrub's BAD_KEY; not imported: config.js loads first)
+try { Object.assign(PREFS, JSON.parse(localStorage.getItem('toyhabitat.prefs') || '{}', (k, v) => k === '__proto__' || k === 'constructor' || k === 'prototype' ? undefined : v)); } catch { /* broken: defaults */ }
+tidyToy(PREFS); // 260 C 장난감 소리: a bad kept value back to on, small
 // the first pick: Chrome-family browsers tell the memory (GB, capped at 8): 2 or less 낮음, 4 or less 보통. Safari and Firefox
 // don't; there 2 cores or fewer is 보통. Otherwise 높음 (habitat.js still lowers the resolution if frames run long).
 if (!GFX[PREFS.gfx]) { const m = navigator.deviceMemory, c = navigator.hardwareConcurrency || 4; PREFS.gfx = m ? (m <= 2 ? 'low' : m <= 4 ? 'mid' : 'high') : c <= 2 ? 'mid' : 'high'; }

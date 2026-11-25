@@ -7,6 +7,14 @@ import * as THREE from 'three';
 import * as G from '../game/game.js';
 import { BALANCE as B, ACCESSORIES, HABITATS, G190, PROPS } from '../game/data.js';
 import { serOf, have as serHave, brkStamps, SOUND, collNo } from '../game/series.js'; // 199 B-11 ?g190
+// <sec263>
+import { SEC263 } from '../game/data.js'; import { SERIES } from '../game/series.js'; // 263 B · 267 B the series secret (trial flag)
+// the series secret's look (kept here, not in style.css; since 0.87.1 the <sec263> blocks ship, the cow secret on)
+if (SEC263 && typeof document !== 'undefined') document.head.append(Object.assign(document.createElement('style'), { textContent:
+  '.nstage.sec263{box-shadow:inset 0 0 0 3px #ffd24a,inset 0 0 60px rgba(255,210,74,.45)}.nstage.sec263 .nglow{background:radial-gradient(circle at 50% 54%,rgba(255,236,160,.9) 0 10%,rgba(255,200,60,.55) 24%,transparent 52%)}' +
+  '.ncard .secstamp{display:inline-block;transform:rotate(-6deg);font-weight:800;color:#fff;background:linear-gradient(135deg,#f6c445,#d99a12);border:2px solid #fff3b0;border-radius:8px;padding:2px 10px;box-shadow:0 1px 4px rgba(150,100,0,.4)}' +
+  '.ncard .secno{margin:2px 0 0;font-size:calc(30px*var(--fs));font-weight:800;line-height:1.1;color:#c48a0c;letter-spacing:.02em}.ncard .secser{margin-top:0}' }));
+// </sec263>
 import { SP, RAR, HAB, EGG, RANK, pityOf, variantOf, colorOf, shards, isNew, canSendBack, sendBackHearts, fits, habitatOf, key, eggGap, kindName, canLetGo } from '../game/rules.js';
 import { toast, hideToast, heart, clock, span, josa, tip, ask } from './hud.js';
 import { eggThumb, studio } from './thumbs.js';
@@ -142,13 +150,20 @@ export function initNest(nav) {
   function stageOff() {
     if (cur) { st.scene.remove(cur.look.obj); cur.look.dispose(); if (cur.egg) { st.scene.remove(cur.egg.group); cur.egg.dispose(); } cur = null; }
     live = false; stageEl.hidden = true; eggsEl.hidden = false; stageEl.classList.remove('secret'); st.glow.style.opacity = 0;
+    // <sec263>
+    stageEl.classList.remove('sec263');
+    // </sec263>
   }
   function show(a, egg = null) { // the figure (hidden until it pops out of the egg), framed to its size
-    const look = dress(a); look.obj.rotation.y = -Math.PI / 2 + 0.45; st.scene.add(look.obj);
+    let yaw = -Math.PI / 2 + 0.45;
+    // <sec263> 282 A: the 태엽 속 시크릿 turned to its side-back 3/4 (the works behind the glass, lineup a=rq), from the crack to the card
+    if (SEC263 && variantOf(a.species, a.variant)?.windup) yaw = 0.6; // 284: 0.6 rad, the gears' faces at cos 0.6 = 0.83 to the camera, the rump and the clear half in view
+    // </sec263>
+    const look = dress(a); look.obj.rotation.y = yaw; st.scene.add(look.obj);
     const hgt = Math.max(1.3, new THREE.Box3().setFromObject(look.obj).getSize(new THREE.Vector3()).y);
     st.cam.position.set(0, hgt * 0.75, hgt * 3.6); st.cam.lookAt(0, hgt * 0.42, 0);
     if (egg) { look.obj.visible = false; st.scene.add(egg.group); try { st.R.compile(st.scene, st.cam); } catch { /* drawn when it shows, as before */ } } // 69-1: the hidden figure's shaders made now (in the background where the browser can), not in the frame it breaks out
-    cur = { look, egg, t0: null };
+    cur = { look, egg, t0: null, yaw };
   }
   function frame(now) {
     if (!live) return; requestAnimationFrame(frame);
@@ -161,8 +176,12 @@ export function initNest(nav) {
         st.glow.style.opacity = glowAt(k); // 69-1: the rarity's light behind the egg, with the seams
         if (egg.hatch(k)) { st.scene.remove(egg.group); egg.dispose(); cur.egg = null; st.glow.style.opacity = 0; }
       }
-      look.update(dt); look.obj.rotation.y = -Math.PI / 2 + 0.45 + (calm() ? 0 : Math.sin(t * 0.7) * 0.35); // 27-7d 움직임 줄이기: no sway
-      look.fig.pose({ sq: 1 + Math.sin(t * 2.2) * 0.015, rot: 0, gait: 'still', ph: 0 });
+      look.update(dt); look.obj.rotation.y = cur.yaw + (calm() ? 0 : Math.sin(t * 0.7) * 0.35); // 27-7d 움직임 줄이기: no sway
+      const pz = { sq: 1 + Math.sin(t * 2.2) * 0.015, rot: 0, gait: 'still', ph: 0 };
+      // <sec263> 284: from the card on, the 태엽 속 시크릿's gears turn once with one glint (materials.js parts275, p.spin: seconds)
+      if (cur.spin0 && !calm()) pz.spin = (now - cur.spin0) / 1000; // 27-7d 움직임 줄이기: not this either
+      // </sec263>
+      look.fig.pose(pz);
     }
     st.R.render(st.scene, st.cam);
   }
@@ -196,12 +215,19 @@ export function initNest(nav) {
     const got = await Promise.all([loadModel(SP[r.animal.species].model), loadAcc(r.animal.acc)]).then(() => true, () => false); if (tok !== run) return; // another habitat's species: its model isn't loaded here yet
     if (!got) { busy = false; shown = null; return draw(); } // 168: offline and that model never fetched: the friend waits (pending) and its card comes back on the next open (resume)
     const light = RAR[r.rarity].shell; // the seams light up in its shell colour, the halo round the egg in its tier colour (the card's)
-    stageOn(); st.glow.style.setProperty('--gc', RAR[r.rarity].color); show(r.animal, makeEgg(eggMat(r.egg.rarity), light)); draw();
+    let sec = false;
+    // <sec263> 263 B: the series secret's egg: a gold light behind, its own wobble and gold seams (growth.js)
+    sec = !!(SEC263 && r.sec);
+    // </sec263>
+    stageOn(); st.glow.style.setProperty('--gc', RAR[r.rarity].color); show(r.animal, makeEgg(eggMat(r.egg.rarity), light, { sec })); draw();
+    // <sec263>
+    stageEl.classList.toggle('sec263', sec); if (sec) st.glow.style.setProperty('--gc', '#ffd24a');
+    // </sec263>
     await sleep(400); if (tok !== run) return;
     if (r.sure) {
       await gaugeIn(r.rarity); if (tok !== run) return;
       shown = { ...shown, [r.rarity]: 0 }; drawGauges();
-      st.scene.remove(cur.egg.group); cur.egg.dispose(); cur.egg = makeEgg(eggMat(r.rarity), light); st.scene.add(cur.egg.group); // now it is the guaranteed egg
+      st.scene.remove(cur.egg.group); cur.egg.dispose(); cur.egg = makeEgg(eggMat(r.rarity), light, { sec }); st.scene.add(cur.egg.group); // now it is the guaranteed egg
       stageEl.classList.remove('flash'); void stageEl.offsetWidth; stageEl.classList.add('flash');
       await sleep(700); if (tok !== run) return;
     }
@@ -210,7 +236,7 @@ export function initNest(nav) {
     await till(HATCH.crack); if (tok !== run) return;
     sfx('tok'); sfx('tok', 0.14); // 69-1 금: two small ticks as the seams run
     await till(HATCH.pop); if (tok !== run) return;
-    sfx('hatch'); cry(r.animal.species); await till(HATCH.pop + 0.15); if (tok !== run) return; // 26-2: the small bell (69-1: when it breaks)
+    sfx('hatch'); if (sec) sfx('level'); cry(r.animal); await till(HATCH.pop + 0.15); if (tok !== run) return; // 26-2: the small bell (69-1: when it breaks)
     const up = Object.keys(r.shards.after).filter(k => r.shards.after[k] > r.shards.before[k]);
     Promise.all(up.map(k => shellTo(k, r.egg.rarity))).then(() => { if (tok === run) { shown = null; drawGauges(); } });
     if (!up.length) { shown = null; drawGauges(); }
@@ -219,11 +245,14 @@ export function initNest(nav) {
   }
   function card(a, r = null) {
     const v = variantOf(a.species, a.variant), back = canSendBack(G.S, a), n = sendBackHearts(a), fresh = isNew(G.S, a), col = colorOf(a.species, a.variant, a.color);
+    // <sec263> 284: the card's start, only with a hatch (r): resume() shows a card again without one
+    if (SEC263 && v?.windup && r && cur) cur.spin0 = performance.now();
+    // </sec263>
     const newCol = !fresh && a.newColor; // a variant already met, in a colour not seen before (rules.js hatch)
     const gift = B.codexHeart && !G.S.codex[key(a.species, a.variant)]; // inbox 38: its cell is filled when it is kept (out or storage)
     const H = HAB[habitatOf(a)], away = H.id !== habId, open = G.S.unlocked.includes(H.id), room = fits(G.S, a); // inbox 20: never gone without a word
     cardEl.style.setProperty('--rc', RAR[v.rarity].color); // 75
-    cardEl.innerHTML = $t('<div class="nchips"><span class="rar">{0}</span>{1}{2}{3}{4}</div>\n<b class="nname">{5}{6}</b>\n{7}\n<p class="nwhy">{8} · {9} 동물 · {10}</p>\n{11}\n<div class="nbtns{12}">{13}{14}</div><p class="nload">서식지 준비 중…</p>', RAR[v.rarity].name, fresh ? '<i class="new">NEW</i>' : newCol ? $t('<i class="new">새 색!</i>') : '', gift ? `<i class="gift">♥+${B.codexHeart}</i>` : '', r?.sure ? $t('<span class="sure">조각으로 확정!</span>') : '', r?.newAcc ? $t('<i class="new">새 치장!</i>') : '', nameOf(a), col && v?.rarity !== 'common' ? ` <small>${col.name}</small>` : '', a.acc ? $t('<div class="nsecret"><em>시크릿!</em> {0} 나왔어요{1}{2}</div>', ACCESSORIES[a.acc].wear, '<i>✦</i>'.repeat(6), r?.newAcc ? $t('<small>처음 만난 치장이에요 · 치장 앨범에 남았어요</small>') : '') : '', SP[a.species].name, H.name, fresh ? $t('처음 만난 변종이에요') : newCol ? $t('처음 보는 색이에요') : back ? $t('이미 도감에 있는 변종이에요') : $t('이미 가진 변종이에요'), away ? `<p class="nwhy away">${!open ? $t('{0}{이/가} 열리면 옮길 수 있어요. 그때까지 보관함에서 기다려요.', H.name) : room ? $t('{0}에서 사는 동물이에요. {1}으로 보낼게요.', H.name, H.name) : $t('{0}에서 사는 동물이에요. {1}에 자리가 모자라 보관함에서 기다려요.', H.name, H.name)}</p>` : '', away && room && back ? ' three' : '', !room ? $t('<button class="go" data-store>보관함으로</button>') : away ? $t('<button class="sb" data-look>{0}에서 보기</button><button class="go" data-go>확인</button>', H.name) : $t('<button class="go" data-go>서식지로 보내기</button>'), back ? $t('<button class="sb" data-back>판매 <span class="hrt">♥</span>+{0}</button>', n) : ''); // inbox 64-A: the first board still being built (body.building, main.js)
+    cardEl.innerHTML = $t('<div class="nchips"><span class="rar">{0}</span>{1}{2}{3}{4}</div>\n<b class="nname">{5}{6}</b>\n{7}\n<p class="nwhy">{8} · {9} 동물 · {10}</p>\n{11}\n<div class="nbtns{12}">{13}{14}</div><p class="nload">서식지 준비 중…</p>', RAR[v.rarity].name, fresh ? '<i class="new">NEW</i>' : newCol ? $t('<i class="new">새 색!</i>') : '', gift ? `<i class="gift">♥+${B.codexHeart}</i>` : '', r?.sure ? $t('<span class="sure">조각으로 확정!</span>') : '', r?.newAcc ? $t('<i class="new">새 치장!</i>') : '', nameOf(a), col && v?.rarity !== 'common' ? ` <small>${col.name}</small>` : '', a.acc ? $t('<div class="nsecret"><em>치장 발견!</em> {0} 나왔어요{1}{2}</div>', ACCESSORIES[a.acc].wear, '<i>✦</i>'.repeat(6), r?.newAcc ? $t('<small>처음 만난 치장이에요 · 치장 앨범에 남았어요</small>') : '') : '', SP[a.species].name, H.name, fresh ? $t('처음 만난 변종이에요') : newCol ? $t('처음 보는 색이에요') : back ? $t('이미 도감에 있는 변종이에요') : $t('이미 가진 변종이에요'), away ? `<p class="nwhy away">${!open ? $t('{0}{이/가} 열리면 옮길 수 있어요. 그때까지 보관함에서 기다려요.', H.name) : room ? $t('{0}에서 사는 동물이에요. {1}으로 보낼게요.', H.name, H.name) : $t('{0}에서 사는 동물이에요. {1}에 자리가 모자라 보관함에서 기다려요.', H.name, H.name)}</p>` : '', away && room && back ? ' three' : '', !room ? $t('<button class="go" data-store>보관함으로</button>') : away ? $t('<button class="sb" data-look>{0}에서 보기</button><button class="go" data-go>확인</button>', H.name) : $t('<button class="go" data-go>서식지로 보내기</button>'), back ? $t('<button class="sb" data-back>판매 <span class="hrt">♥</span>+{0}</button>', n) : ''); // inbox 64-A: the first board still being built (body.building, main.js)
     if (G190) serCard(a, back);
     cardEl.dataset.id = a.id; cardEl.hidden = false; stageEl.classList.toggle('secret', !!a.acc);
   }
@@ -240,7 +269,7 @@ export function initNest(nav) {
       G.store(a.id); toast($t('{0} · {1}{은/는} 보관함에서 기다려요{2}', shut ? $t('{0}{이/가} 열리면 옮길 수 있어요', H.name) : $t('{0}에 자리가 모자라요', H.name), nm, gift), 3200);
       cardEl.hidden = true; stageOff(); busy = false; resume(); // 27-7a: nothing to see outside, so the nest stays open for the next egg (as 돌려보내기)
     } else if (go === 'brk') { // 199 B-11 분해: a duplicate into 교환 도장 (판매's other choice)
-      const r = G.breakDup(a.id); if (r) { sfx('wood'); toast($t('{0}{을/를} 분해했어요 · 도장 +{1} (모은 도장 {2})', nm, r.n, G.S.stamp)); }
+      const r = G.breakDup(a.id); if (r) { sfx('wood'); toast($t('{0}{을/를} 분해했어요 · 토큰 +{1} (모은 토큰 {2})', nm, r.n, G.S.stamp)); }
       cardEl.hidden = true; stageOff(); busy = false; resume();
     } else if (go === 'look') { // out in its own habitat, and the camera goes there to see it
       const home = habitatOf(a); G.release(a.id); close(); nav.go(home, a.id);
@@ -315,6 +344,14 @@ export function initNest(nav) {
     const k = key(a.species, a.variant), s = serOf(k), row = cardEl.querySelector('.nbtns');
     if (s) { const p = document.createElement('p'), n = serHave(G.S, s) + (G.S.codex[k] ? 0 : 1); p.className = 'nwhy nser';
       p.textContent = $t('{0} {1}/{2}{3}', s.name, n, s.cells.length, G.S.codex[k] ? '' : $t(' · 새 칸!')); row.before(p); }
+    // <sec263> 263 B · 267 B ⑤: the series secret's card: a gold stamp for the rarity chip, No.13 big (the cells + 1; a server-wide serial waits
+    // for the server, 265-7), its series
+    const sv = SEC263 && variantOf(a.species, a.variant)?.sec, S1 = sv && SERIES.find(x => x.id === sv);
+    if (S1) { const st = Object.assign(document.createElement('span'), { className: 'secstamp', textContent: $t('시크릿!') }), rar = cardEl.querySelector('.nchips .rar');
+      if (rar) rar.replaceWith(st); else cardEl.querySelector('.nchips')?.prepend(st);
+      row.before(Object.assign(document.createElement('p'), { className: 'secno', textContent: $t('No.{0}', S1.cells.length + 1) }),
+        Object.assign(document.createElement('p'), { className: 'nwhy secser', textContent: $t('{0} · 시크릿', S1.name) })); }
+    // </sec263>
     const no = G.S.codex[k] ? 0 : collNo(G.S, k); // 215 (3-13): 「나의 n번째 전설」, only its first (the card comes before the codex has it); 263 A: no series-secret number
     if (no) { const p = document.createElement('p'); p.className = 'nwhy cno'; p.textContent = $t('No.{0} · 나의 {1}번째 전설', no, no); row.before(p); }
     if (!back) return;

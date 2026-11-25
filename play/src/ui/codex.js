@@ -104,15 +104,15 @@ function detail(c) {
   const v = stage3d(), mats = codexCells(tab, G.S).filter(x => x.species === c.species && G.S.codex[x.key]); // the materials it has
   let stage = G.S.codex[c.key].adult != null ? 'adult' : 'baby', fresh = true;
   const box = document.createElement('div'); box.className = 'cdet pop c3dbox';
-  box.innerHTML = $t('<div><b></b><div class="c3d" role="img"></div><p class="sub">끌어서 돌리고, 두 손가락으로 크게 봐요</p>\n<span class="seg"><button data-st="baby">새끼</button><button data-st="adult">성체</button></span>{0}\n<p class="crec"></p>{1}<br><button class="back" data-shut>닫기</button></div>', mats.length > 1 ? `<div class="cmat">${mats.map(x => `<button data-m="${x.key}">${x.variant.name}</button>`).join('')}</div>` : '', from(c));
+  box.innerHTML = $t('<div><b></b><div class="c3d" role="img"></div><p class="sub">끌어서 돌리고, 두 손가락으로 크게 봐요</p>\n<span class="seg"><button data-st="baby">유체</button><button data-st="adult">성체</button></span>{0}\n<p class="crec"></p>{1}<br><button class="back" data-shut>닫기</button></div>', mats.length > 1 ? `<div class="cmat">${mats.map(x => `<button data-m="${x.key}">${x.variant.name}</button>`).join('')}</div>` : '', from(c));
   const wrap = box.querySelector('.c3d');
   const paint = async () => {
     const e = G.S.codex[c.key], adult = e.adult != null; if (!adult) stage = 'baby';
     box.querySelector('b').textContent = lookName(c.species.id, c.variant.id, displayColor(G.S, c.key));
-    wrap.setAttribute('aria-label', $t('{0} {1} 3D 모습', lookName(c.species.id, c.variant.id, displayColor(G.S, c.key)), stage === 'baby' ? $t('새끼') : $t('성체')));
-    for (const b of box.querySelectorAll('[data-st]')) { b.classList.toggle('on', b.dataset.st === stage); b.disabled = b.dataset.st === 'adult' && !adult; b.textContent = b.dataset.st === 'baby' ? $t('새끼') : adult ? $t('성체') : $t('성체 · ?'); }
+    wrap.setAttribute('aria-label', $t('{0} {1} 3D 모습', lookName(c.species.id, c.variant.id, displayColor(G.S, c.key)), stage === 'baby' ? $t('유체') : $t('성체')));
+    for (const b of box.querySelectorAll('[data-st]')) { b.classList.toggle('on', b.dataset.st === stage); b.disabled = b.dataset.st === 'adult' && !adult; b.textContent = b.dataset.st === 'baby' ? $t('유체') : adult ? $t('성체') : $t('성체 · ?'); }
     for (const b of box.querySelectorAll('[data-m]')) b.classList.toggle('on', b.dataset.m === c.key);
-    box.querySelector('.crec').innerHTML = $t('처음 만난 날: {0}<br>처음 깬 곳: {1}{2}', e.at ? new Date(e.at).toLocaleDateString(LOC) : $t('기록 없음'), HAB[e.h] ? HAB[e.h].name + $t(' 둥지') : $t('기록 없음'), adult ? '' : $t('<br><small>다 자라면 성체 모습도 볼 수 있어요</small>'));
+    box.querySelector('.crec').innerHTML = $t('처음 만난 날: {0}<br>처음 깬 곳: {1}{2}', e.at ? new Date(e.at).toLocaleDateString(LOC) : $t('기록 없음'), HAB[e.h] ? HAB[e.h].name + $t(' 둥지') : $t('기록 없음'), adult ? '' : $t('<br><small>성체가 되면 그 모습도 볼 수 있어요</small>'));
     if (!await loadModel(c.species.model).then(() => true, () => false) || !box.isConnected) return; // 168: offline, never fetched: no 3D yet (the next 새끼·성체 tap asks again)
     if (v.fig) { v.scene.remove(v.fig); v.fig.traverse(o => { o.skeleton?.dispose(); if (o.isPoints) o.geometry.dispose(); }); } // 195 B-10b M3: its bone texture (and a legendary's sparkles)
     const f = v.fig = makeFigure(c.species.id, c.variant.id, stage, null, displayColor(G.S, c.key)).obj;
@@ -142,10 +142,10 @@ function bar(habId, cells, n) {
   const next = HABITATS[HABITATS.findIndex(h => h.id === habId) + 1], L = next && unlockInfo(G.S, next.id);
   const left = L && !L.open && L.friends ? $t('{0}{이/가} 열리기까지 동물 {1}마리', next.name, Math.max(0, L.friends - L.got)) : L && !L.open && L.need ? $t('{0}{이/가} 열리기까지 도감 {1}칸{2}', next.name, Math.max(0, L.need - L.have), G.S.hearts < L.hearts ? $t(' · 하트 {0}개 더 <span style="white-space:nowrap">(동물을 쓰다듬으면 생겨요)</span>', L.hearts - G.S.hearts) : '') : '';
   const W = wholeOf(G.S, habId), R = COMPLETE[habId], i = G.S.whole?.[habId] || 0, at = R && i < R.length && Math.ceil(COMPLETE.at[i] * W.all - 1e-9);
-  const gift = at ? $t('<small>모으기 선물까지 {0}칸: {1}</small>', at - W.got, R[i] === 'expand' ? $t('땅 넓히기 한 번 무료{0}', ZONES[habId]?.[levelOf(G.S, habId)] ? ` (${ZONES[habId][levelOf(G.S, habId)].name})` : '') : $t('큰 소품 「{0}」', PROP[R[i]]?.name)) : R ? $t('<small>모으기 선물을 다 받았어요</small>') : '';
+  const gift = at ? $t('<small>컬렉션 보상까지 {0}칸: {1}</small>', at - W.got, R[i] === 'expand' ? $t('땅 넓히기 한 번 무료{0}', ZONES[habId]?.[levelOf(G.S, habId)] ? ` (${ZONES[habId][levelOf(G.S, habId)].name})` : '') : $t('큰 소품 「{0}」', PROP[R[i]]?.name)) : R ? $t('<small>컬렉션 보상을 다 받았어요</small>') : '';
   const ng = wanderersOf(habId).length, nm = W.all - cells.length - ng; // 133: what 모으기 counts besides the egg friends (the 도감 n/N above)
   const inc = ng && nm ? $t('· 손님·신수 포함') : ng ? $t('· 손님 포함') : nm ? $t('· 신수 포함') : '';
-  return $t('<div class="cbar">{0} 모으기 {1}% <span style="white-space:nowrap">{2}</span><u><i style="width:{3}%"></i></u>{4}{5}</div>', HAB[habId].name, Math.round(W.got / W.all * 100), inc, W.got / W.all * 100, gift, left ? `<small>${left}</small>` : ''); // inbox 154 C: its n/N is the head's now (shown once)
+  return $t('<div class="cbar">{0} 수집률 {1}% <span style="white-space:nowrap">{2}</span><u><i style="width:{3}%"></i></u>{4}{5}</div>', HAB[habId].name, Math.round(W.got / W.all * 100), inc, W.got / W.all * 100, gift, left ? `<small>${left}</small>` : ''); // inbox 154 C: its n/N is the head's now (shown once)
 }
 
 const tabs = () => $t('<div class="ctabs">{0}<button data-tab="album"{1}>치장 앨범</button></div>', HABITATS.map(h => `<button ${open(h.id) ? `data-tab="${h.id}"` : `data-lock="${h.id}" class="lock"`}${h.id === tab ? ' class="on"' : ''}>${h.name}${open(h.id) ? '' : ' 🔒'}</button>`).join(''), tab === 'album' ? ' class="on"' : '');
@@ -179,7 +179,7 @@ function fillScenes() {
 }
 function drawAlbum() {
   const ids = Object.keys(ACCESSORIES), got = ids.filter(id => G.S.album[id]);
-  el.innerHTML = $t('<div class="chead"><b>치장 앨범</b><span>모은 치장 {0}/{1}</span>{2}<button class="back" data-close>닫기</button></div>{3}\n<div class="cbody"><div class="crow">{4}</div>\n<p class="cnote">시크릿으로 처음 만난 동물이 남아요 · 도감 수에는 들어가지 않아요</p></div>', got.length, ids.length, nightBtn(), tabs(), ids.map(id => { const e = G.S.album[id];
+  el.innerHTML = $t('<div class="chead"><b>치장 앨범</b><span>모은 치장 {0}/{1}</span>{2}<button class="back" data-close>닫기</button></div>{3}\n<div class="cbody"><div class="crow">{4}</div>\n<p class="cnote">치장마다 처음 만난 동물이 남아요 · 도감 수에는 들어가지 않아요</p></div>', got.length, ids.length, nightBtn(), tabs(), ids.map(id => { const e = G.S.album[id];
     return `<div class="cell${e ? '' : ' unk'}"><img alt="${e ? ACCESSORIES[id].name : $t('아직 못 본 치장')}"><span>${e ? ACCESSORIES[id].name : '?'}</span>${e ? `<small>${lookName(e.species, e.variant, e.color)}<br>${new Date(e.at).toLocaleDateString(LOC)}</small>` : ''}</div>`; }).join(''));
   el.querySelectorAll('.cell img').forEach((img, i) => { const id = ids[i], e = G.S.album[id];
     (e ? figureThumb(e.species, e.variant, e.color ?? null, id, 'adult', night) : silhouetteThumb(SPECIES[0].id, id, night)).then(u => { img.src = u; }, () => {}); });

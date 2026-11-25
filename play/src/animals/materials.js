@@ -15,7 +15,7 @@ import { mergeGeometries, mergeVertices } from '../../vendor/utils/BufferGeometr
 export const eyeMat = new THREE.MeshPhysicalMaterial({ color: '#0b0b0d', roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.03 });
 
 // { body, accent, hoof } of a species' variant in colour cId (none or unknown = its first colour).
-// A legendary's look is its `mat`, any other variant's its id. over: look id -> the look to wear instead (84: MODELS meshy, on a Meshy body),
+// A variant's look is its `mat` if it has one (legendaries; 292 호일 풍선 in the quilling slot), else its id. over: look id -> the look to wear instead (84: MODELS meshy, on a Meshy body),
 export function variantMats(spId, vId, cId, over) {
   const v = variantOf(spId, vId), c = colorOf(spId, vId, cId), id = v?.mat || v?.id || 'solid', o = over?.[id];
   return looks(o ?? id, v?.rarity === 'common' ? { ...SP[spId].colors, ...c } : c ?? {});
@@ -240,7 +240,7 @@ const NIGHT_CLEAR = {
 };
 const clearMats = [];
 // bend: how far the view bends (x (1 + thickness)); rimK: the white outline's strength
-function clear({ key, tint, absorb = 1.6, inner = '#000000', dark = 0.62, color = '#000000', rough = 0.08, coat = 0, neutral = 0, pre = '', post = '', nrm = '', uniforms = {}, extra = {}, bend = 0.12, rimK = 0.75 }) {
+function clear({ key, fake = false, tint, absorb = 1.6, inner = '#000000', dark = 0.62, color = '#000000', rough = 0.08, coat = 0, neutral = 0, pre = '', post = '', nrm = '', uniforms = {}, extra = {}, bend = 0.12, rimK = 0.75 }) {
   const T = new THREE.Color(tint), I = new THREE.Color(inner), C = new THREE.Color(color);
   const m = new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: rough, metalness: 0, ior: 1.5, specularIntensity: 1, clearcoat: coat, clearcoatRoughness: 0.08, ...extra });
   const thick = sh => {
@@ -249,7 +249,7 @@ function clear({ key, tint, absorb = 1.6, inner = '#000000', dark = 0.62, color 
     sh.fragmentShader = 'varying float vThick;\nvarying vec3 vOp;\nvarying vec3 vRay;\n' + sh.fragmentShader;
   };
   m.customProgramCacheKey = () => 'clear-' + key;
-  if (QUALITY.glass === 'real') {
+  if (QUALITY.glass === 'real' && !fake) { // fake (278): keeps the screen-copy glass in either quality (its pre/post pattern)
     Object.assign(m, { transmission: 1, thickness: 1, attenuationColor: T, attenuationDistance: 1 / absorb });
     if (C.getHex()) m.color.copy(C).lerp(new THREE.Color('#ffffff'), 0.5);
     m.onBeforeCompile = sh => {
@@ -1659,67 +1659,8 @@ const BEADS138 = PL138 + AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.25, 
   float tw = step(0.93, h31(vec3(cl, row, F + 0.5))) * pow(max(0.0, sin(dot(normal, vec3(11.0, 8.0, 6.0)) + h31(vec3(row, cl, 3.0)) * 50.0)), 8.0);
   totalEmissiveRadiance += vec3(1.0) * (hl * 0.25 + tw * hl * mix(3.0, 1.5, uHab));
   roughnessFactor = mix(0.5, roughnessFactor, bead);`;
-// ---- 146 (inbox 146): two raised craft looks in place of 분청 물고기 and 마블링 종이 (retired: data.js RETIRED146; their GLSL
-// above stays). Both are things you could run a finger over, not pictures (inbox 146: the passed four are all raised).
-// fn146: put GLSL functions before main (as fn128)
-const fn146 = (m, code) => { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, r) => { prev.call(m, sh, r); sh.fragmentShader = sh.fragmentShader.replace('void main() {', code + 'void main() {'); }; return m; };
-// coil146: the paper coils near q (coil cells; J: how far each centre may stray per axis, 0 in y keeps them in rows), each a
-// strip of paper rolled up and stood on its edge on the card (round, or pinched to a teardrop toward a random tip), height H,
-// radius about 0.6 cells (rs: a scale; overlapping coils meet flat, as packed coils press together).
-// D: the eye's slide across the surface per unit of height (parallax), L: the light's. The coil the eye meets first wins (the
-// highest hit: its top, else its outer wall); between coils the card, in the coils' cast shadows.
-// a: x = the hit's height / H (-1: the card), y = how far out on the coil (0 middle, 1 rim), z = the angle round it, w = the
-// wall's light. b: x = the coil's random number, y = the card's shadow, z = the card's gap to the nearest coil, w = cluster
-const QFN146 = `void coil146(vec3 q, vec3 n, vec3 D, vec3 L, vec3 J, float cs, float rs, out vec4 a, out vec4 b) {
-  vec3 qi = floor(q), qf = fract(q); float best = -1.0, sh = 0.0, gap = 9.0; a = vec4(-1.0, 1.0, 0.0, 1.0); b = vec4(0.0, 0.0, 9.0, 0.5);
-  for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-    vec3 o = vec3(x, y, z), ci = qi + o, cp = o + 0.5 + (h33(ci) - 0.5) * J, r = qf - cp; float w = dot(r, n); r -= n * w;
-    float id = h31(ci + 0.37), R = (0.56 + 0.08 * h31(ci + 5.1)) * rs, R2 = R * R - 0.3 * w * w; if (R2 < 0.03 || abs(w) > 0.62) continue;
-    float Re = sqrt(R2), H = 0.22 + 0.06 * h31(ci + 9.7), tear = step(0.62, id) * 0.45;
-    vec3 tp = h33(ci + 2.3) - 0.5 + n.yzx * 0.01; tp = normalize(tp - n * dot(tp, n) + 1e-5); vec3 bt = cross(n, tp);
-    vec3 dl = L * H; float t = clamp(-dot(r, dl) / max(dot(dl, dl), 1e-5), 0.0, 1.0); sh = max(sh, 1.0 - smoothstep(Re - 0.12, Re + 0.03, length(r + dl * t)));
-    gap = min(gap, length(r) - Re);
-    vec3 dh = D * H, yy = r + dh; float al = dot(yy, tp), ac = dot(yy, bt), al2 = al > 0.0 ? al / (1.0 + tear) : al, u2 = clamp(al2 / Re, 0.0, 1.0);
-    float rho = length(vec2(al2, ac / (1.0 - 0.8 * tear * u2 * u2))) / Re, ht = -1.0;
-    if (rho < 1.0) ht = H;
-    else { float A = dot(dh, dh), B = dot(r, dh), C = dot(r, r) - Re * Re, dsc = B * B - A * C;
-      if (dsc >= 0.0 && A > 1e-5) { float u = (-B + sqrt(dsc)) / max(A, 1e-5); if (u >= 0.0 && u <= 1.0) { ht = u * H * 0.999; yy = r + dh * u; al = dot(yy, tp); ac = dot(yy, bt); rho = 1.0; } } }
-    float sc = ht < H ? ht : H + 0.5 * (1.0 - rho); // tops over walls; two tops: the nearer middle (packed coils press flat)
-    if (sc > best) { best = sc; float wl = dot(yy, L) / (Re * max(length(L), 0.35));
-      a = vec4(ht / H, rho, atan(ac, al), ht < H ? 0.55 + 0.45 * clamp(wl, -1.0, 1.0) : 1.0); b.x = id; b.w = vn3((qi + cp) * cs) + 0.3 * (id - 0.5); } }
-  b.y = sh; b.z = gap; }
-`;
-// 페이퍼 퀼링: the body covered in paper quilling on a card (the material's colour): coils of strip stood on edge, packed close
-// (11 to the body height on the torso, round ones and teardrops, a little uneven in height), small ones in rows round the legs
-// (20 to the height, below a strip run round on edge at y 0.27). Each coil's top the strip's spiral (a dark gap between the
-// turns, a hole in the middle), its outer wall where the eye sees past it (lit on the light's side), and a shadow cast on the
-// card. Colours in clusters over the body: uQ1..uQ3 (uRain 1: pastel rainbow; uGold 1: gold foil strips, metal). The accent
-// (mane, hooves, beak) all in uQA
-const QUILL146 = AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.2, 0.5, fwidth(p.y) * 9.0), dx = fade * (1.0 - 0.7 * uHab);
-  vec3 vo = normalize(vdir * normalMatrix), lo = normalize(normalize(vec3(-0.35, 0.8, 0.55)) * normalMatrix);
-  float vn = max(dot(vo, on), 0.45), ln = max(dot(lo, on), 0.35); vec3 D = (vo - on * dot(vo, on)) / vn, L = (lo - on * dot(lo, on)) / ln;
-  float y0 = 0.27, band = 1.0 - AA(abs(p.y - y0), 0.009), leg = step(p.y, y0); vec4 a, b;
-  if (leg > 0.5) coil146(p * 20.0, on, D, L, vec3(0.3, 0.0, 0.3), 0.0, 0.85, a, b); else coil146(p * 11.0, on, D, L, vec3(0.45), 0.1, 1.0, a, b);
-  float coil = step(0.0, a.x), k = b.w + 0.25 * (b.x - 0.5);
-  vec3 sc = k < 0.42 ? uQ1 : k < 0.62 ? uQ2 : uQ3;
-  if (uRain > 0.5) sc = mix(rainbow(b.w * 1.6 + 0.2 * b.x), vec3(1.0), 0.22);
-  if (uAcc > 0.5) sc = uQA * (0.92 + 0.16 * b.x);
-  vec3 card = uAcc > 0.5 ? uQA * 0.45 : diffuseColor.rgb;
-  float fw = fwidth(a.y), nt = clamp(0.2 / max(fw, 1e-4), 2.0, mix(7.0, 5.0, leg)); // far off fewer, wider turns (the coil still reads)
-  float s = a.y * nt + a.z / 6.2832, sf = 1.0 - smoothstep(0.35, 0.6, fw * nt);
-  float turn = abs(fract(s) - 0.5) * 2.0, gp = (1.0 - AA(1.0 - turn, 0.1)) * step(0.14, a.y) * sf * dx, hole = 1.0 - AA(a.y, 0.12);
-  float topf = step(0.999, a.x), ridge = 1.0 - AA(turn, 0.4);
-  vec3 col = sc * mix(1.0, mix(0.62, 1.06, ridge), dx * topf * sf * step(0.14, a.y));
-  col *= 1.0 - topf * max(gp * 0.4, hole * 0.6);
-  col *= mix(1.0, a.w, 1.0 - topf);
-  col *= mix(1.0, 0.82, (1.0 - topf) * (1.0 - smoothstep(0.0, 0.25, a.x)));
-  col *= 1.0 - 0.18 * topf * smoothstep(0.85, 1.0, a.y);
-  vec3 bg = card * (1.0 - 0.6 * b.y) * mix(0.3, 0.9, smoothstep(0.0, 0.2, b.z));
-  col = mix(bg, col, coil);
-  col = mix(col, (uAcc > 0.5 ? uQA : uQ1) * mix(0.8, 1.1, AA(p.y, y0 + 0.002)), band);
-  diffuseColor.rgb = col;
-  float hh = mix(mix(0.0, a.x - 0.25 * gp - 0.5 * hole * topf, coil), 1.0, band); BUMP115(hh, 0.0015 * dx)
-  float met = uGold * max(coil, band); metalnessFactor = met; roughnessFactor = mix(roughnessFactor, 0.3, met); lookStudio = 0.75 * met;`;
+// ---- 146 (inbox 146): 가죽 공예 in place of 마블링 종이 (retired: data.js RETIRED146; its GLSL above stays); a thing you could run
+// a finger over, not a picture (inbox 146: the passed four are all raised). (분청 물고기's slot: 호일 풍선 since 292, below)
 // 가죽 공예: a toy sewn from leather panels (the material's colour, each panel a shade off): a seam along the spine, one round
 // the neck (x 0.22), a cuff round the legs and lower body (y 0.22), an oval panel laid on each flank. Every seam a lap seam: the
 // upper panel's cut edge stands up (its thickness a dark burnished band, uEdge) and throws a shadow on the lower one; beside it
@@ -1768,13 +1709,25 @@ const LEATHER146 = AA127 + BUMP115 + `float fade = 1.0 - smoothstep(0.2, 0.55, f
   float bh = hh * 0.004 + (peb * 0.0012 - crease * 0.0015) * dx; BUMP115(bh, 1.0)
   roughnessFactor = mix(roughnessFactor, 0.62, stamp); metalnessFactor = uGold * thr; roughnessFactor = mix(roughnessFactor, 0.3, uGold * thr); lookStudio = 0.7 * uGold * thr;`;
 Object.assign(LOOKS, {
-  quilling: c => { const q = (b, a) => fn146(L127(phys(b, { roughness: 0.82, sheen: 0.3, sheenRoughness: 0.6, sheenColor: new THREE.Color('#ffffff') }), 'quill146', QUILL146,
-      { uQ1: c.q1, uQ2: c.q2, uQ3: c.q3, uQA: c.acc, uRain: c.rain ?? 0, uGold: c.gold ?? 0, uAcc: a }, { studio: 0 }), QFN146), accent = q(c.acc, 1);
-    return { body: q(c.body, 0), accent, hoof: accent }; },
   leather: c => { const l = (b, a) => L127(phys(b, { roughness: 0.48, clearcoat: 0.25, clearcoatRoughness: 0.35 }), 'leather146', LEATHER146,
       { uThread: c.thread, uEdge: c.edge, uGold: c.gold ?? 0, uAcc: a }, { studio: 0 }), accent = l(dk(c.body, 0.85), 1);
     return { body: l(c.body, 0), accent, hoof: accent }; },
 });
+// 호일 풍선 (292, in 페이퍼 퀼링's slot: data.js quilling, mat foil): a foil balloon: mirror foil, q1 at the top running to q2 at the feet (uRain 1: a pastel rainbow along
+// the body), soft dents all over as an inflated sheet has, and the weld where its two sheets meet round the middle (z 0): a
+// flat strip in the material's colour (wide enough to read on a codex card: chrome and 황금 복돼지 have none), the foil gathered into
+// creases across it either side; the top lit towards q3 (gold 1: the whole body paled towards q3, champagne, not 복돼지's yellow). The accent foil in acc, no weld
+const FOIL292 = AA127 + BUMP115 + `float sm = abs(p.z), cr = exp(-sm * 18.0) * smoothstep(0.2, 0.34, p.y) * (1.0 - uAcc), fl = (1.0 - AA(sm, 0.018)) * (1.0 - uAcc);
+  float wr = abs(vn3(vec3(p.xy * 34.0, 0.0)) - 0.5) + 0.5 * abs(vn3(vec3(p.xy * 71.0, 3.0)) - 0.5);
+  if (uAcc < 0.5) diffuseColor.rgb = uRain > 0.5 ? mix(rainbow(0.9 - p.x * 1.1 - p.y * 0.8), vec3(1.0), 0.35) : mix(mix(uQ2, diffuseColor.rgb, smoothstep(0.1, 0.55, p.y)), uQ3, max(smoothstep(0.6, 0.95, p.y) * 0.7, uGold * 0.4));
+  float hh = wr * cr * 0.016 * (1.0 - 0.6 * uHab) + (vn3(p * 5.0) + 0.5 * vn3(p * 11.0)) * 0.011 - fl * 0.004; BUMP115(hh, 1.0)
+  diffuseColor.rgb = mix(diffuseColor.rgb, uSeam, fl * 0.9); roughnessFactor = mix(roughnessFactor, 0.55, fl); metalnessFactor = mix(1.0, 0.2, fl); lookStudio *= 1.0 - 0.8 * fl;`;
+Object.assign(LOOKS, {
+  foil: c => { const f = a => L127(phys(a ? c.acc : c.q1, { roughness: 0.2, metalness: 1 }), 'foil292', FOIL292, { uQ2: c.q2, uQ3: c.q3, uSeam: c.body, uRain: c.rain ?? 0, uGold: c.gold ?? 0, uAcc: a }, { studio: 0.8 }), accent = f(1);
+    return { body: f(0), accent, hoof: accent }; },
+});
+// the foil's materials out of the cache and freed (tools pages; the game keeps them for its life, as every look)
+export const disposeFoil = () => { for (const [k, s] of cache) if (k.startsWith('foil{')) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); } };
 Object.assign(LOOKS, {
   wood: c => { const w = (b, g) => L127(phys(b, { roughness: 0.38, clearcoat: 0.5, clearcoatRoughness: 0.12 }), 'wood127', WOOD127, { uGrain: g }), accent = w(dk(c.body, 0.82), dk(c.grain, 0.82));
     return { body: w(c.body, c.grain), accent, hoof: accent }; },
@@ -3216,3 +3169,181 @@ LOOKS.lantern201 = c => ({ ...LOOKS.lantern(c), beak: phys('#4a4034', { roughnes
 // as dispose192: no caller yet (nothing tears the looks down); the 183 leg copies are dispose163's L183
 export const dispose198 = () => { for (const [k, s] of cache) if (/^((whitenight|charoite)198|lantern201)\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
   halo201?.dispose(); halo201 = null; };
+// <sec263> 263 B → 267 B → 275 B (the sec263 trial; 0.87.1 public, docs/design/secret-263.md 1절): the series secret, worn by it alone (data.js m1 extra
+// slot). 263's a · c and 267's b2 금박 클리어 · d 홀로그램 필름 dropped (267 B 겹침, 275: d 사용자 불합격), their code gone.
+// 275 B 태엽 속 시크릿: a wind-up toy cut open. The front half is the species' own vinyl (its 단색 look, its patches), the back half
+// (pattern x < CUT275) clear plastic over the works: a flat spiral mainspring, a big and a small brass gear, chunky as a toy's;
+// a metal key stands on the back. The cut face of the vinyl half shows through the clear one (its back faces, lit flat as the
+// cut plane), with a dark seam line where the two halves meet. own.pose: the key turns (slowly by itself, as on the shelf; walking,
+// a little faster and the gears with it; run down, still; winding back, fast the other way: walk.js pose.wind), the legs tick
+// (each step snaps then holds) and the body rocks a little. Left out of the release build with the flag (tools/build-web.mjs)
+// 278 (2판): the clear half is the body's own outline as a thin shell (little bend, a faint rim: 1판 read as a glass ball) with one
+// crisp seam where the halves meet; inside, chunky toy works in gold and silver: a 12-tooth gold gear meshing an 8-tooth silver
+// one (12 : 8 while walking, still when it stops), a thick steel mainspring on a gold hub under the key, and one steel axle
+// across the hips the hind legs hang on (their tops end just above it, cut flat: 1판 showed them as white lumps through the glass)
+const CUT275 = -0.06, TAIL275 = { cow: -0.585, pig: -0.505 }; // behind TAIL275 the tail alone (pattern slices, 275 B): it stays vinyl
+// 284 (3판, 「더 확실하게」): the works fill the clear half: a big gold 20-tooth wheel over the hind legs, a silver 14 under-right
+// of it and a silver 8 pinion above that one, on the gold mainspring's arbor under the key (one module: the teeth really mesh,
+// 20 : 14 : 8, each the other way round); steel arbors, ruby jewels on their ends. The inner wall dark navy (×0.5: the shell's far
+// inside and the cut face), so the gold and silver read; a thin silver frame of even width along the seam, the tail cut and the
+// glass's outline instead of 2판's white rim; the glass faintly blue, one reflection line along its top. The key ×1.3 and gold.
+// The card and the cabinet show it from its side-back 3/4 (nest.js · cabinet.js yaw 0.6); the card's start turns the gears once with one glint
+const WALL275 = 'vec3(0.19, 0.23, 0.30)'; // the inner wall (linear): 289 A dark grey-blue, ~×0.65 of the white vinyl on screen (284's navy ×0.5 read as 「a navy cow」)
+const FW275 = 0.012, FWS275 = 0.022; // the frame: along the cuts FW275 (pattern units, x H), along the outline FWS275 model units; never under ~1.3 px
+// 287 A (three cuts compared; 0.87.1: b alone, user OK 292, the others gone from the code: see w275 history): a 3판 (the back half); b on to the shoulder blade
+// (the cut just past the front legs, ~2/3 of the trunk); c the whole trunk (the head, the neck, the legs and one shoulder patch with
+// its spots stay vinyl). b · c carry the works on forward (the crank in works275): a gold 12-tooth crank wheel meshing the silver 14
+// (the other way round again, 14 : 12), its two pins 180° apart in slotted silver levers on the front legs' tops: the front legs swing
+// with the train, one crank turn a stride, and stop when it stops; the hind legs follow the same pins (each the front one across from it)
+const CR284 = true; // 0.87.1: b only (the crank on)
+const F284 = 0.15; // the front cut (pattern x): a 3판's, b model x ~0.53 (cow), c ~0.73 (the neck's foot)
+// the shoulder patch kept vinyl, per side [+z, -z]: pattern x, y, radius (null: none). c: +z alone. 289 A (b, 사용자 확정): the card and the
+// cabinet look at the +z side (287 A had it as -z: c's patch there showed only a sliver by the neck, its centre too high and forward of
+// the spot); b's patch is centred on the spot itself (found on the card: lower and further back), on +z alone (tried on both: on -z it hid
+// the crank and its levers, b's point, in the walk)
+const PAT284 = [[0.08, 0.56, 0.13], null];
+const PV284 = a => a ? `vec3(${a.join(', ')})` : 'vec3(9.0, 9.0, 1.0)';
+const PIN284 = (pe, pat) => PAT284 ? `vec3 ${pe}c = p.z > 0.0 ? ${PV284(PAT284[0])} : ${PV284(PAT284[1])}; float ${pe}r = ${pe}c.z, ${pe} = length(p.xy - ${pe}c.xy) / ${pe}r; bool ${pat} = ${pe} < 1.0; ` : '';
+const SILVER275 = 'vec3(0.56, 0.6, 0.66) * (0.55 + 0.5 * smoothstep(-0.5, 0.9, vn.y)) + vec3(0.45) * pow(max(vn.y, 0.0), 8.0)'; // lit from above
+const CUT275O = t => `${PIN284('pe', 'pat')}bool tl = p.x < ${F284.toFixed(3)}${PAT284 ? ' && !pat' : ''}; if (tl && p.x > ${t.toFixed(3)}) discard;
+  if (!gl_FrontFacing) { ${PAT284 ? 'if (!pat) ' : ''}normal = normalize(normalMatrix * vec3(tl ? 1.0 : -1.0, 0.0, 0.0)); diffuseColor.rgb = ${WALL275}; } // the cut faces: the inner wall
+  else { vec3 vn = normal; float dc = tl ? ${t.toFixed(3)} - p.x : ${PAT284 ? `pat ? (1.0 - pe) * per : ` : ''}p.x - ${F284.toFixed(3)}, pw = fwidth(dc), w = max(${FW275.toFixed(3)}, 1.3 * pw), f = 1.0 - smoothstep(w, w + pw, dc);
+    diffuseColor.rgb = mix(diffuseColor.rgb, ${SILVER275}, f); roughnessFactor = mix(roughnessFactor, 0.3, f); } // the frame's vinyl side`;
+// 282 A · 284: far off (the meadow draws without MSAA) 2판's thin white rim broke into bits along the shell's edge: it is gone at
+// every distance (rimK 0); the silver outline is FWS275 model units wide but never under 1.3 px (ppu: screen pixels per model unit;
+// vRefr.y / uInvRes.y: pixels per view unit at this depth, |vViewPosition| / |vRay|: the model's scale), and fades out under 40..70 ppu
+// (a figure under ~80 px tall), where even 1.3 px of it flickers as the figure walks; the cut frame stays (its edge is a straight line)
+const FRAME275 = (t) => `{ ${PIN284('pe', 'pat')}float ppu = vRefr.y / uInvRes.y * length(vViewPosition) / max(length(vRay), 1e-4);
+  float dc = ${PAT284 ? 'min(' : ''}min(${F284.toFixed(3)} - p.x, p.x - ${t.toFixed(3)})${PAT284 ? ', (pe - 1.0) * per)' : ''}, pw = fwidth(dc), w = max(${FW275.toFixed(3)}, 1.3 * pw), fe = 1.0 - smoothstep(w, w + pw, dc);
+  float ps = 0.5 * nv / max(fwidth(nv), 1e-5), ws = max(1.3, ${FWS275.toFixed(3)} * ppu), fs = (1.0 - smoothstep(ws, ws + 1.0, ps)) * smoothstep(40.0, 70.0, ppu);
+  float ry = abs(vn.y - 0.6), rw = max(0.02, 1.2 * fwidth(vn.y)), top = (1.0 - smoothstep(0.5 * rw, rw, ry)) * smoothstep(-0.2, 0.4, vn.z); // the reflection line
+  gl_FragColor.rgb = mix(gl_FragColor.rgb * vec3(0.95, 0.98, 1.03) + vec3(0.55) * top, ${SILVER275}, max(fe, fs)); }`;
+NIGHT_CLEAR.wind275cow = NIGHT_CLEAR.wind275pig = 'gl_FragColor.rgb += uNight * vec3(1.0, 0.86, 0.6) * 0.1 * (0.4 + 0.6 * nv) * (1.0 - fr);';
+NIGHT_LOOK.brass275 = NIGHT_LOOK.key275 = 'totalEmissiveRadiance += uNight * vec3(0.32, 0.22, 0.08);';
+NIGHT_LOOK.ruby275 = 'totalEmissiveRadiance += uNight * vec3(0.5, 0.04, 0.06);';
+// the card's one glint (284): shared by every windup figure's metal; parts275 sets t0 at the card's start, each frame works the value out
+const FL275 = { value: 0, t0: -1e9 };
+const GLINT275 = 'if (uFl275 > 0.0) totalEmissiveRadiance += vec3(1.0, 0.86, 0.55) * sin(3.1416 * uFl275) * (0.5 + 2.2 * pow(1.0 - nv, 2.0));';
+// the works for one body (model units, the body group's): made once per model stage and shared, freed by dispose263
+const geo275 = new Map();
+// a gear of n teeth on module mo (pitch radius mo n / 2, tips mo out, roots 1.25 mo in: any two of one module mesh), a tooth centred
+// on angle 0 (on i 2π/n), w thick, with lightening holes round the hub
+const gear275 = (mo, n, w, holes, hr = 0.24) => { const s = new THREE.Shape(), d = Math.PI * 2 / n, rp = mo * n / 2, ra = rp + mo, rr = rp - 1.25 * mo, pt = (a, k) => [Math.cos(a) * k, Math.sin(a) * k];
+  for (let i = 0; i < n; i++) for (const [f, k] of [[-0.32, rr], [-0.17, ra], [0.17, ra], [0.32, rr]]) s[i || f !== -0.32 ? 'lineTo' : 'moveTo'](...pt((i + f) * d, k));
+  s.holes.push(new THREE.Path().absarc(0, 0, Math.min(rr * 0.17, mo * 1.1), 0, Math.PI * 2, true));
+  for (let i = 0; i < holes; i++) s.holes.push(new THREE.Path().absarc(...pt((i + 0.5) * Math.PI * 2 / holes, rr * 0.56), rr * hr, 0, Math.PI * 2, true));
+  const g = new THREE.ExtrudeGeometry(s, { depth: w, bevelEnabled: true, bevelThickness: w * 0.12, bevelSize: mo * 0.12, bevelSegments: 2, curveSegments: 10 });
+  g.deleteAttribute('uv'); return g.translate(0, 0, -w / 2); };
+const merge275 = list => { const m = mergeGeometries(list.map(g => { const x = g.index ? g.toNonIndexed() : g; x.deleteAttribute('uv'); if (x !== g) g.dispose(); return x; })); for (const g of list) g.dispose(); return m; };
+const pin275 = (r, len) => new THREE.CylinderGeometry(r, r, len, 16).rotateX(Math.PI / 2);
+// gear b's turn (its tooth on angle 0 at turn 0) so it meshes gear a (na teeth, turned pa) along the line a → b at angle th
+const mesh275 = (pa, na, nb, th) => { const da = Math.PI * 2 / na, db = Math.PI * 2 / nb, e = pa - th - Math.round((pa - th) / da) * da; return th + Math.PI - e * na / nb - db / 2; };
+const N275 = { big: 20, mid: 14, pin: 8, crank: 12 }; // the train: the big turns ω, the middle -ω 20/14, the pinion +ω 20/8
+function works275(G, S, sp) {
+  if (geo275.has(G.body)) return geo275.get(G.body);
+  const b = G.body.boundingBox, a = G.body.attributes.position, H = b.max.y, cx = (b.min.x + b.max.x) / 2, xc = cx + CUT275 * H, xt = cx + TAIL275[sp] * H;
+  const band = (x, w, y) => { let y1 = -Infinity, z1 = 0; for (let i = 0; i < a.count; i++) if (Math.abs(a.getX(i) - x) < w && (y === undefined || Math.abs(a.getY(i) - y) < w)) { y1 = Math.max(y1, a.getY(i)); z1 = Math.max(z1, Math.abs(a.getZ(i))); } return { y1, z1 }; };
+  const xl = Math.min(...S.legs.x), hip = S.legs.hip, u = H / 1.959; // u: sizes set on the adult cow, scaled to this body
+  // one module: the big wheel's pitch circle 0.52 u across (60% of the cow's 0.87 deep rump); its tips 0.57 u
+  const mo = 0.026 * u, rp = n => mo * n / 2, w = 0.1 * u, gap = 0.004 * u;
+  const tip = rp(N275.big) + mo, gb = [Math.max(xc - 0.67 * u, xt + tip + 0.03 * u), hip + 0.37 * u]; // over the hind legs, clear of the tail cut
+  const t1 = -24 * Math.PI / 180, d1 = rp(N275.big) + rp(N275.mid) + gap, gm = [gb[0] + d1 * Math.cos(t1), gb[1] + d1 * Math.sin(t1)]; // the middle: down and forward
+  const t2 = 80 * Math.PI / 180, d2 = rp(N275.mid) + rp(N275.pin) + gap, gp = [gm[0] + d2 * Math.cos(t2), gm[1] + d2 * Math.sin(t2)]; // the pinion: up, under the key
+  const ph = { big: 0 }; ph.mid = mesh275(ph.big, N275.big, N275.mid, t1); ph.pin = mesh275(ph.mid, N275.mid, N275.pin, t2);
+  // the mainspring: a flat gold coil, 3.2 turns, round the pinion's arbor behind it (it drives the train; the key winds it)
+  const Rsp = 0.18 * u, coil = new THREE.Shape(), N = 180, r = t => Rsp * (0.3 + 0.7 * t), q = t => t * 3.2 * Math.PI * 2, tk = 0.022 * u;
+  for (let i = 0; i <= N; i++) { const t = i / N; coil[i ? 'lineTo' : 'moveTo'](Math.cos(q(t)) * (r(t) + tk / 2), Math.sin(q(t)) * (r(t) + tk / 2)); }
+  for (let i = N; i >= 0; i--) { const t = i / N; coil.lineTo(Math.cos(q(t)) * (r(t) - tk / 2), Math.sin(q(t)) * (r(t) - tk / 2)); }
+  const spring = new THREE.ExtrudeGeometry(coil, { depth: 0.07 * u, bevelEnabled: true, bevelThickness: 0.006 * u, bevelSize: 0.003 * u, bevelSegments: 1 }).translate(0, 0, -0.035 * u); spring.deleteAttribute('uv');
+  // the arbors: steel, across the body's width at each wheel, a ruby jewel on each near end (and the pinion's)
+  const sx = xc - 0.2 * u, top = band(sx, 0.03 * H).y1, kr0 = 0.05 * H, kr = kr0 * 1.3; // the key: 2판's place, 1.3 x its size
+  const arb = (x, y) => Math.min(0.32 * u, 0.8 * band(x, 0.05 * H, y).z1), zb = arb(...gb), zm = arb(...gm), zp = Math.max(w, 0.12 * u);
+  const jr = 0.03 * u, jewel = z => new THREE.SphereGeometry(jr, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(Math.PI / 2).translate(0, 0, z);
+  const az = 0.78 * band(xl, 0.06 * H, hip + 0.1 * u).z1, ar = 0.045 * u; // the hind legs' axle (2판)
+  const kparts = [new THREE.CylinderGeometry(kr * 0.22, kr * 0.22, kr * 2.6, 10).translate(0, kr * 0.5, 0), new THREE.CylinderGeometry(kr * 0.5, kr * 0.5, kr * 0.3, 16).translate(0, kr * 0.55, 0),
+    new THREE.BoxGeometry(kr * 0.9, kr * 0.5, kr * 0.28).translate(0, kr * 1.2, 0), ...[-1, 1].map(k => new THREE.TorusGeometry(kr * 0.62, kr * 0.2, 8, 20).translate(k * kr * 0.95, kr * 1.75, 0))];
+  const out = { big: gear275(mo, N275.big, w, 5), mid: gear275(mo, N275.mid, w, 7, 0.17), // 289 A: 7 holes (were 4): the card's 1.2 turns bring it back looking as it started (12/7 turns)
+    pin: gear275(mo, N275.pin, w * 1.2, 0), spring, key: merge275(kparts),
+    bigArbor: pin275(0.03 * u, zb * 2), midArbor: pin275(0.026 * u, zm * 2), pinArbor: pin275(0.024 * u, zp * 2),
+    bigHub: pin275(rp(N275.big) * 0.2, w * 1.3), midHub: pin275(rp(N275.mid) * 0.22, w * 1.3), springHub: pin275(Rsp * 0.24, 0.1 * u),
+    bigJewel: jewel(zb), midJewel: jewel(zm), pinJewel: jewel(zp), axle: pin275(ar, az * 2), nuts: merge275([-1, 1].map(k => pin275(ar * 1.7, ar * 1.2).translate(0, 0, k * az))),
+    ph, cap: hip + 0.03 * u, // the hind legs end here (model y): the axle shows through their tops
+    at: { big: [...gb, 0], mid: [...gm, 0], pin: [...gp, 0], spring: [...gp, -0.095 * u], key: [sx, top - kr0 * 0.35, 0], axle: [xl, hip, 0] } };
+  if (CR284) { // 287 A b · c (the crank): the crank wheel straight ahead of the 14; the front legs' pivot P (their axle), the pins r round C
+    const gc = [gm[0] + rp(N275.mid) + rp(N275.crank) + gap, gm[1]], xf = Math.max(...S.legs.x), zl = S.legs.z, D = Math.hypot(gc[0] - xf, gc[1] - hip), al = Math.atan2(gc[1] - hip, gc[0] - xf);
+    const r = D * Math.sin(0.38), zd = zl - 0.07 * u, pr = 0.022 * u, lt = 0.03 * u, s0 = D - r - 0.04 * u, s1 = D + r + 0.05 * u, rl = 0.016 * u, off = pr + 0.006 * u + rl / 2, azf = 0.78 * band(xf, 0.06 * H, hip + 0.1 * u).z1;
+    out.ph.crank = mesh275(out.ph.mid, N275.mid, N275.crank, 0); const pa = al - out.ph.crank; // the +z pin at angle al (straight out from P) at turn 0: the legs upright
+    const bar = (x0, x1, y, h) => new THREE.BoxGeometry(x1 - x0, h, lt).translate((x0 + x1) / 2, y, 0);
+    Object.assign(out, { crank: gear275(mo, N275.crank, w, 3), crankShaft: pin275(0.026 * u, zd * 2), crankDisc: merge275([1, -1].flatMap(k => [pin275(0.05 * u, lt).translate(0, 0, k * zd), new THREE.BoxGeometry(r + 0.05 * u, 0.05 * u, lt).translate(r / 2, 0, 0).rotateZ(pa + (k < 0 ? Math.PI : 0)).translate(0, 0, k * zd)])), // the crank arms (the 12 shows behind)
+      crankPins: merge275([1, -1].map(k => pin275(pr, 0.12 * u).translate(Math.cos(pa) * r * k, Math.sin(pa) * r * k, k * (zd + 0.04 * u)))),
+      lever: merge275([bar(0, s0, 0, 0.05 * u), bar(s0, s1, off, rl), bar(s0, s1, -off, rl), bar(s1, s1 + rl, 0, 2 * off + rl), pin275(0.035 * u, lt * 1.4)]).rotateZ(al), // a slotted bar out from P along al
+      faxle: pin275(ar, azf * 2), fnuts: merge275([-1, 1].map(k => pin275(ar * 1.7, ar * 1.2).translate(0, 0, k * azf))), zl,
+      phi: c => { const x = gc[0] - xf + r * Math.cos(al + c), y = gc[1] - hip + r * Math.sin(al + c), a = Math.atan2(y, x) - al; return a - Math.PI * 2 * Math.round(a / (Math.PI * 2)); } }); // a lever's turn, its pin c past al
+    Object.assign(out.at, { crank: [...gc, 0], faxle: [xf, hip, 0], lever: [xf, hip, 0] });
+  }
+  geo275.set(G.body, out); return out;
+}
+// a hind leg's vinyl in the clear half, cut flat at the top just above the axle (its back faces lit as that cap); one per sp and stage
+const leg275 = new Map();
+const legCut275 = (sp, hex, G, cap) => { const k = sp + '/' + G.body.uuid; if (leg275.has(k)) return leg275.get(k);
+  const m = toyBody(hex); m.side = THREE.DoubleSide;
+  look(m, 'wind275l' + sp + cap.toFixed(4), `if (p.y > ${(cap / G.body.boundingBox.max.y).toFixed(4)}) discard;
+  if (!gl_FrontFacing) { normal = normalize(normalMatrix * vec3(0.0, 1.0, 0.0)); diffuseColor.rgb = ${WALL275}; }`);
+  leg275.set(k, m); return m; };
+const wind275 = (sp, hex) => { const c = { ...SP[sp].colors, body: hex };
+  const L = plain(toyBody(hex), c), leg = L.body, cut = m => { m.side = THREE.DoubleSide; return look(m, 'wind275o' + sp, CUT275O(TAIL275[sp])); };
+  const inside = `${PIN284('pe4', 'pat4')}if (p.x > ${F284.toFixed(3)} || p.x < ${TAIL275[sp].toFixed(3)}${PAT284 ? ' || pat4' : ''}) discard;`;
+  // fake: its own screen-copy glass in either quality (1판 남은 문제: real glass dropped `pre`, so the whole body clouded over)
+  const glass = clear({ key: 'wind275' + sp, fake: true, tint: '#e2ecf8', absorb: 0.5, dark: 0, bend: 0.03, rough: 0.05, coat: 0, extra: { specularIntensity: 0.1 }, neutral: 0, rimK: 0, pre: inside, post: FRAME275(TAIL275[sp]) });
+  // 284: the shell's far inside, dark (the glass shows it behind the works)
+  const wall = toyBody('#ffffff'); wall.side = THREE.BackSide; look(wall, 'wind275w' + sp, inside + ` diffuseColor.rgb = ${WALL275};`); // (BackSide: three.js already turns its normal inward)
+  const metal = (hex, k, o) => { const m = look(phys(hex, { metalness: 1, roughness: 0.26, ...o }), k, GLINT275, { uFl275: 0 }, { studio: 0.45 }), ob = m.onBeforeCompile;
+    m.onBeforeCompile = sh => { ob(sh); sh.uniforms.uFl275 = FL275; }; return m; };
+  const brass = metal('#dcaa48', 'brass275'), steel = metal('#d2d6dc', 'steel275', { roughness: 0.2 }), steel2 = metal('#a8aeb8', 'steeld275', { roughness: 0.22 }), key = metal('#e4b650', 'key275', { roughness: 0.18 });
+  const ruby = look(phys('#b0102a', { roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.05 }), 'ruby275', 'totalEmissiveRadiance += vec3(0.16, 0.0, 0.02);', {}, { studio: 0.5 });
+  const body = cut(toyBody(hex)), accent = cut(L.accent);
+  return { ...L, body, accent, w275leg: leg, w275glass: glass, w275wall: wall, w275brass: brass, w275steel: steel, w275steel2: steel2, w275key: key, w275ruby: ruby,
+    parts: (root, G, S) => parts275(root, G, S, { sp, hex, body, leg, glass, wall, brass, steel, steel2, key, ruby }) }; };
+function parts275(body, G, S, m) {
+  const W = works275(G, S, m.sp), legs = body.children.filter(o => o.userData.front !== undefined), hind = legCut275(m.sp, m.hex, G, W.cap);
+  for (const l of legs) for (const o of l.children) if (o.material === m.body) o.material = l.userData.front && !CR284 ? m.leg : hind; // front legs whole; the hind ones end on the axle (287 A b · c: all four)
+  for (const g of [G.body, G.accent]) if (g) body.add(new THREE.Mesh(g, m.wall), wear(new THREE.Mesh(g, m.glass))); // 287 A: the accent too (the body has holes where its patches sit: 3판 showed the far ones as white holes)
+  const at = (k, ...ps) => { const g = new THREE.Group(); g.position.fromArray(W.at[k]); for (const [geo, mat] of ps) g.add(new THREE.Mesh(geo, mat)); body.add(g); return g; }; // in a group: merge() leaves it
+  const big = at('big', [W.big, m.brass], [W.bigHub, m.steel], [W.bigArbor, m.steel], [W.bigJewel, m.ruby]), mid = at('mid', [W.mid, m.steel], [W.midHub, m.steel2], [W.midArbor, m.steel], [W.midJewel, m.ruby]);
+  const pin = at('pin', [W.pin, m.steel2], [W.pinArbor, m.steel], [W.pinJewel, m.ruby]), spring = at('spring', [W.spring, m.brass], [W.springHub, m.steel]);
+  const key = at('key', [W.key, m.key]); at('axle', [W.axle, m.steel], [W.nuts, m.brass]);
+  const crank = CR284 && at('crank', [W.crank, m.brass], [W.crankShaft, m.steel], [W.crankDisc, m.steel2], [W.crankPins, m.brass]); // 287 A b · c
+  if (crank) at('faxle', [W.faxle, m.steel], [W.fnuts, m.brass]);
+  const levers = crank ? [1, -1].map(k => { const g = at('lever', [W.lever, m.steel]); g.position.z = k * W.zl; return g; }) : [];
+  let stand = true, rot = 0, lph = null; // (crank) the legs on the pins unless lying, digging or the like; the body's pitch; the last walk phase
+  // speeds (rad/s): kv the key's, gv the big wheel's, eased to their targets kT, gT over tau s (284: run down, slowly; winding, fast)
+  let ka = 0, ga = 0, kv = 0.7, gv = 0, kT = 0.7, gT = 0, tau = 0.1, spin = 0, spun = false, last = 0;
+  const turn = () => { const g = ga + spin; big.rotation.z = W.ph.big + g; mid.rotation.z = W.ph.mid - g * N275.big / N275.mid; pin.rotation.z = W.ph.pin + g * N275.big / N275.pin;
+    if (!crank) return; const c = g * N275.big / N275.crank, a = [W.phi(c), W.phi(c + Math.PI)]; crank.rotation.z = W.ph.crank + c; // a: the +z pin's lever, the -z one's
+    levers[0].rotation.z = a[0]; levers[1].rotation.z = a[1]; if (stand) for (const l of legs) l.rotation.z = a[l.userData.pair ? 0 : 1] - rot; };
+  key.children[0].onBeforeRender = () => { const t = performance.now() / 1000, d = last ? Math.min(0.1, t - last) : 0, e = 1 - Math.exp(-d / tau); last = t;
+    kv += (kT - kv) * e; gv += (gT - gv) * e; ka += kv * d; ga += gv * d;
+    const f = (t - FL275.t0) / 0.9; FL275.value = f > 0 && f < 1 ? f : 0;
+    key.rotation.y = ka; spring.rotation.z = -ka * 0.6; turn(); };
+  turn();
+  return { pose(p) {
+    if (p.spin !== undefined) { // 284: the card's start (nest.js): the big wheel once round in 1.2 s, the rest with it; one glint
+      if (!spun) { spun = true; FL275.t0 = performance.now() / 1000 - p.spin; }
+      const k = Math.min(1, p.spin / 1.2); spin = Math.PI * 2 * (crank ? 1.2 : 1) * k * k * (3 - 2 * k); // (crank: 1.2 round, the crank twice: the legs end upright; 289 A: every wheel ends on its own look: big 24 teeth · 5 holes ×6, middle 24 · 7 holes ×12, pinion 3 turns, crank 2)
+    }
+    if (crank) { rot = p.rot || 0; stand = !p.lie && !p.dig && !p.tuck && !p.spr && (!p.gait || p.gait === 'walk' || p.gait === 'still');
+      if (p.gait === 'walk' && lph !== null) { const d = p.ph - lph, e = d - Math.round(d); if (Math.abs(e) < 0.2) ga += e * Math.PI * 2 * N275.crank / N275.big; } // one crank turn a stride (289 A: a jump in ph, another state's restart, is no step)
+      lph = p.gait === 'walk' ? p.ph : null; turn(); }
+    if (p.wind === undefined) return; // the shelf, the card, the nest: the key alone, slowly
+    [kT, gT, tau] = { walk: [2.4, 1.5, 0.1], stop: [0, 0, 0.25], wind: [-9, 0, 0.06], rest: [0, 0, 0.1] }[p.wind] || [0, 0, 0.1]; if (crank) gT = 0; // (crank: the train turns with the steps)
+    const s = Math.sin(p.ph * Math.PI * 2);
+    if (p.wind === 'walk' && p.gait === 'walk') { if (!crank) { const q = Math.max(-1, Math.min(1, s * 2.4)); for (const l of legs) l.rotation.z = (l.userData.pair ? 1 : -1) * q * 0.38 - p.rot; } body.rotation.x = 0.045 * s; }
+    else body.rotation.x = p.wind === 'wind' ? 0.012 * Math.sin(performance.now() / 22) : 0;
+  } };
+}
+Object.assign(LOOKS, { windcow275: () => wind275('cow', '#fbf8f2') }); // each species' first 단색
+// as dispose198: no caller yet (the looks live as long as the page)
+export const dispose263 = () => { for (const [k, s] of cache) if (/^wind(cow|pig)275\{/.test(k)) { for (const m of new Set(Object.values(s))) m.dispose?.(); cache.delete(k); }
+  for (const g of geo275.values()) for (const x of Object.values(g)) if (x?.isBufferGeometry) x.dispose(); geo275.clear();
+  for (const m of leg275.values()) m.dispose(); leg275.clear(); };
+// </sec263>

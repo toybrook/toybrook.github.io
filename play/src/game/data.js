@@ -193,7 +193,7 @@ export const RARITIES = [
 ];
 // 75 해서 얻는 등급 (kind 'earned', no odds): got by playing, each with its own rules file. Add freely.
 export const EARNED_TIERS = [
-  { id: 'wanderer', kind: 'earned', name: $t('떠돌이'), color: '#7a9a5a' }, // 66-1 떠돌이 손님 (game/guests.js)
+  { id: 'wanderer', kind: 'earned', name: $t('방랑자'), color: '#7a9a5a' }, // 66-1 떠돌이 손님 (game/guests.js)
   { id: 'myth', kind: 'earned', name: $t('신수'), color: '#c8452e' }, // 14-1 MYTHIC (rules.js mythTick)
   // 66-3: rows to come, the same frame (a GUESTS entry with tier: 'season' / 'sky' fills one). soon: no cells yet, the codex shows no row
   { id: 'season', kind: 'earned', name: $t('계절 손님'), color: '#d88a3a', soon: true },
@@ -245,7 +245,7 @@ export const ACCESSORIES = {
   scarf: { name: $t('목도리'), wear: $t('목도리를 두르고'), slot: 'neck', file: 'assets/models/acc_scarf.glb', colors: { body: '#d84b4b', accent: '#fff3e2' } },
   // 28-6b: nineteen more (24). also: a second slot it takes (the medal hangs on the chest, so the otter's pebble gives way);
   // glow: its materials that shine softly by night (emissive x the night, plain vinyl by day)
-  crown: { name: $t('꼬마 왕관'), wear: $t('꼬마 왕관을 쓰고'), slot: 'head', file: 'assets/models/acc_crown.glb', colors: { body: '#f2c14e', center: '#e2465a' } },
+  crown: { name: $t('미니 왕관'), wear: $t('미니 왕관을 쓰고'), slot: 'head', file: 'assets/models/acc_crown.glb', colors: { body: '#f2c14e', center: '#e2465a' } },
   beret: { name: $t('베레모'), wear: $t('베레모를 쓰고'), slot: 'head', file: 'assets/models/acc_beret.glb', colors: { body: '#3d4f86' } },
   beanie: { name: $t('방울 털모자'), wear: $t('방울 털모자를 쓰고'), slot: 'head', file: 'assets/models/acc_beanie.glb', colors: { body: '#4f9bd9', accent: '#fff3e2' } },
   partyhat: { name: $t('고깔 파티모자'), wear: $t('고깔 파티모자를 쓰고'), slot: 'head', file: 'assets/models/acc_partyhat.glb', colors: { body: '#f07aa8', accent: '#ffe066' } },
@@ -261,7 +261,7 @@ export const ACCESSORIES = {
   heartglasses: { name: $t('하트 선글라스'), wear: $t('하트 선글라스를 끼고'), slot: 'eye', file: 'assets/models/acc_heartglasses.glb', colors: { body: '#e8507a', accent: '#7a2140' } },
   monocle: { name: $t('외눈 안경'), wear: $t('외눈 안경을 끼고'), slot: 'eye', file: 'assets/models/acc_monocle.glb', colors: { body: '#d9b04a', center: '#d9b04a' } },
   goggles: { name: $t('물안경'), wear: $t('물안경을 쓰고'), slot: 'eye', file: 'assets/models/acc_goggles.glb', colors: { body: '#3fbfc0', accent: '#1d4f63' } },
-  backpack: { name: $t('꼬마 배낭'), wear: $t('꼬마 배낭을 메고'), slot: 'back', file: 'assets/models/acc_backpack.glb', colors: { body: '#e07a3a', accent: '#f6d06a' } },
+  backpack: { name: $t('미니 배낭'), wear: $t('미니 배낭을 메고'), slot: 'back', file: 'assets/models/acc_backpack.glb', colors: { body: '#e07a3a', accent: '#f6d06a' } },
   cape: { name: $t('망토'), wear: $t('망토를 두르고'), slot: 'back', file: 'assets/models/acc_cape.glb', colors: { body: '#c8343f', accent: '#f2c14e' } },
   wings: { name: $t('반짝 날개'), wear: $t('반짝 날개를 달고'), slot: 'back', glow: ['body', 'accent'], file: 'assets/models/acc_wings.glb', colors: { body: '#fbf6ff', accent: '#ffe9a8' } },
 };
@@ -550,7 +550,7 @@ export const PAT = {
 };
 export const PART_NAME = { head: $t('머리'), back: $t('등'), rump: $t('엉덩이') };
 // 69-2 자라며 배우는 몸짓: a baby on land (walk.js) picks these up as its growth gauge passes `at` (shown once: play.js)
-export const GROW_ACTS = [{ at: 1 / 3, id: 'twirl', name: $t('제자리에서 빙글 도는 법') }, { at: 2 / 3, id: 'bounce', name: $t('통통 뛰는 법') }];
+export const GROW_ACTS = [{ at: 1 / 3, id: 'twirl', name: $t('제자리에서 빙글 도는 법') }, { at: 2 / 3, id: 'bounce', name: $t('점프 동작') }];
 // 170 B: what a friend learns at each 정 레벨 past the two above (Lv4..Lv10; words on the level-up line, as 69-2's)
 export const AFF_ACTS = [null, null, null, null, $t('반갑게 고개를 끄덕이는 법'), $t('나란히 걸어 주는 법'), $t('기분 좋게 기지개 켜는 법'), $t('살금살금 따라오는 법'), $t('꾸벅꾸벅 조는 척하는 법'), $t('깡충 두 번 뛰는 법'), $t('가장 반가운 인사를 하는 법')];
 
@@ -875,6 +875,24 @@ export const Y247 = { old: [4, 5, 7, 8, 9], from: [0, 0, 0, 0, 0, 1, 2, 2, 3, 4]
 const add120 = (id, list) => (SPECIES.find(s => s.id === id).extra ??= []).push(...list.map(([v, rarity, name, gone]) => ({ id: v, rarity, tier: 'often', name, mono: true, ...gone && { gone } })));
 add120('rabbit', [['mint115', 'heroic', $t('박하사탕'), true], ['firefly115', 'heroic', $t('반딧불'), true]]);
 add120('sheep', [['cloud115', 'rare', $t('뭉게구름'), true], ['nightsky115', 'heroic', $t('밤하늘')]]);
+// <sec263> 263 B → 267 B → 275 B trial flag (g190 + sec263; 0.87.1: public in the build, the cow; docs/design/secret-263.md): the series secret redone, one per series, a
+// material only it wears, rolled only in crack() on a series cell's hatch (not a gift egg). 275 B 태엽 속 시크릿 (materials.js wind275):
+// cow by default, pig the other candidate (both slots there, for the photos); any other value turns it off (267 B, 263 B review).
+// 267's b2 · d gone (275: d 사용자 불합격). The whole block (flag, odds, slots) is left out of both builds (tools/build-web.mjs)
+export const SEC263 = G190 ? 'cow' : ''; // release build: 0.87.1, the 스켈레톤 태엽 소 ⓑ (user OK 292) // 286 A③: pig off (the series-1 secret is the cow alone)
+export const SEC263_P = 0.0075; // 267 B ②: a series cell's hatch turns into the secret at this (not in BALANCE: its odds stay as they are)
+// series id -> { cells (the same as series.js SERIES, check-eggs compares), sec: 'species:variant' }; filled only with the flag
+export const SEC263_CELLS = {};
+export const secFor = (sp, v) => { for (const id in SEC263_CELLS) { const C = SEC263_CELLS[id]; if (C.cells.includes(sp + ':' + v)) { const [species, variant] = C.sec.split(':'); return { species, variant }; } } return null; };
+// the candidate slots (new, gone: no egg hatches them, the codex shows one only to its owner; the published ones stay as they are).
+// windup: walk.js runs it down and winds it back (275 B); 287 A: named by the user 스켈레톤 태엽 (the card: 스켈레톤 태엽 소)
+if (SEC263) {
+  // 286 A③ / 0.87.1: the cow alone (the pig candidate's slot gone from the code; w275 history)
+  (SPECIES.find(s => s.id === 'cow').extra ??= []).push({ id: 'windcow275', rarity: 'heroic', tier: 'often', name: $t('스켈레톤 태엽'), mono: true, gone: true, sec: 'm1', windup: true });
+  SEC263_CELLS.m1 = { cells: ['horse:spots', 'sheep:spots', 'rabbit:spots', 'pig:spots', 'cow:spots', 'chicken:spots', 'horse:stripes', 'rabbit:twotone', 'sheep:velvet', 'pig:jelly', 'cow:marble', 'chicken:quilling'],
+    sec: 'cow:windcow275' };
+}
+// </sec263>
 // 125-A: nothing behind ?m89 now: the arctic fox adult (104·110) went public above; 구미호 116·121 and the 117 dinosaurs dropped (user
 // 11/17; files and looks kept: pilot89_gumiho*.glb, materials.js gumiho*)
 if (M89) {
@@ -1076,12 +1094,14 @@ export const SHARED127 = [
     { id: 'mint', name: $t('민트'), body: '#aee6d0' }, { id: 'lavender', name: $t('라벤더'), body: '#cbb8ee' }, { id: 'lemon', name: $t('레몬'), body: '#f2e48a' }) },
   // 138 B (inbox 138, 사용자: 「꽃무늬 남발, 더 기발하게」): the six heroic looks redone in place, no flowers (same slot, tier, wave)
   // 146 (inbox 146, 사용자 11/18: 「분청 물고기·마블링 너무 별로, 아예 다른 걸로」): two raised craft looks in the retired two's slots
-  // (rarity, tier, wave kept). 페이퍼 퀼링: coils of paper strip on edge (q1..q3 the strips, body the backing card; rain 1: pastel
-  // rainbow strips; gold 1: gold foil strips); acc: the accent's (mane, hooves, beak) one strip colour
-  { id: 'quilling', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('페이퍼 퀼링'), colors: c3(
+  // (rarity, tier, wave kept). 292 (inbox 283·292, 사용자 11/24 「싹 다 빼줘」, 11/25 c): the first of them remade in place as 호일 풍선
+  // (materials.js LOOKS.foil): the id stays quilling (saves, codex keys, eggs' marks, the series cell chicken:quilling), so do rarity,
+  // tier, wave, colours and odds; only mat and the names changed (rules.js fromSave owes a save that held one the line, flags.q283).
+  // q1 the top running to q2 at the feet, body the weld round the middle (rain 1: pastel rainbow); acc: the accent's (mane, hooves, beak) foil
+  { id: 'quilling', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('호일 풍선'), mat: 'foil', colors: c3(
     { id: 'pastel', name: $t('무지개 파스텔'), body: '#f6f1e6', q1: '#f4b6c8', q2: '#a8d8f0', q3: '#fbe7a4', acc: '#c4a6e2', rain: 1 },
     { id: 'sea', name: $t('바다'), body: '#eef5f4', q1: '#7cc2ee', q2: '#8edcc0', q3: '#fafcfb', acc: '#4f96c6' },
-    { id: 'gold', name: $t('금박지'), body: '#1f2238', q1: '#e2bb52', q2: '#c9973a', q3: '#f2dc96', acc: '#b07f2c', gold: 1 }) },
+    { id: 'gold', name: $t('샴페인 골드'), body: '#1f2238', q1: '#e2bb52', q2: '#c9973a', q3: '#f2dc96', acc: '#b07f2c', gold: 1 }) },
   { id: 'marquetry', rarity: 'heroic', tier: 'normal', wave: 2, name: $t('쪽매 나무'), colors: c3(
     { id: 'maple', name: $t('메이플·호두'), light: '#e6c48e', dark: '#6e4528' }, { id: 'cherry', name: $t('체리·흑단'), light: '#c47a50', dark: '#2e221c' }, { id: 'birch', name: $t('자작·청록 물들임'), light: '#efe2c4', dark: '#2f7c78' }) },
   { id: 'xstitch', rarity: 'heroic', tier: 'normal', wave: 1, name: $t('십자수'), colors: c3(
@@ -1311,7 +1331,7 @@ export const PROPS = [
   { id: 'ev_snowman', name: $t('첫눈 눈사람'), as: 'snowman', price: 0, r: 0.88, k: 1.3, gift: $t('첫눈 이벤트'), ev: 'firstsnow' },
   { id: 'ev_icelamp', name: $t('눈꽃 등불'), as: 'icelamp', price: 0, r: 0.44, k: 1.7, light: true, small: true, gift: $t('첫눈 이벤트'), ev: 'firstsnow' },
   { id: 'ev_bigsnowman', name: $t('첫눈 기념 큰 눈사람'), as: 'snowman', price: 0, r: 1.35, k: 2, gift: $t('첫눈 이벤트'), ev: 'firstsnow' },
-  { id: 'ev_album', name: $t('눈 속의 친구 액자'), as: 'icelamp', price: 0, r: 0.7, k: 2.7, light: true, gift: $t('첫눈 이벤트'), ev: 'firstsnow' },
+  { id: 'ev_album', name: $t('눈 속의 동물 액자'), as: 'icelamp', price: 0, r: 0.7, k: 2.7, light: true, gift: $t('첫눈 이벤트'), ev: 'firstsnow' },
   // 15-2: the rest of 첫눈's shop (ev_snowman is also the one built with 3 taps, EVENTS build)
   { id: 'ev_slide', name: $t('눈 미끄럼틀'), as: 'snowslide', price: 0, r: 2.3, open: true, gift: $t('첫눈 이벤트'), ev: 'firstsnow' },
   { id: 'ev_flakelamp', name: $t('큰 눈꽃 가로등'), price: 0, r: 0.6, light: true, gift: $t('첫눈 이벤트'), ev: 'firstsnow' },
@@ -1325,7 +1345,7 @@ export const PROPS = [
 ];
 // 66-1 손님 선물 (guests-data.js GUEST_PROPS): only from a guest's 대만족; drawn with an existing prop's model (as), its size and light
 for (const g of GUEST_PROPS) { const A = PROPS.find(p => p.id === g.as);
-  PROPS.push({ id: g.id, name: g.name, as: g.as, habitat: g.hab, price: 0, r: A.r, ...A.k && { k: A.k }, ...A.small && { small: true }, ...A.light && { light: true }, ...A.water && { water: true }, gift: $t('떠돌이 손님') }); }
+  PROPS.push({ id: g.id, name: g.name, as: g.as, habitat: g.hab, price: 0, r: A.r, ...A.k && { k: A.k }, ...A.small && { small: true }, ...A.light && { light: true }, ...A.water && { water: true }, gift: $t('방랑자 손님') }); }
 // 199 B-11 (?g190 only): the series' prize and the first request's gift, an existing prop's model (as), never sold
 if (G190) PROPS.push({ id: 'ser_m1', name: $t('초원 시리즈 진열장'), price: 0, r: 0.95, k: 1.3, gift: $t('시리즈 완성') }, // 215: its own model (props.js decorModel 'ser_m1')
   { id: 'req_r1', name: $t('몽실이의 소풍 매트'), as: 'picnic', price: 0, r: 1.3, open: true, gift: $t('의뢰') },
@@ -1389,7 +1409,7 @@ export const EVENTS = [
     track: [{ at: 15, hearts: 20 }, { at: 35, hearts: 15 }, { at: 60, hearts: 30 }, { at: 90, prop: 'ev_icelamp' }, { at: 125, hearts: 40 }, // 227 A: the candy steps as their ♥ (사탕 1 = ♥15)
       { at: 165, hearts: 30 }, { at: 205, hearts: 50 }, { at: 245, prop: 'ev_sled' }, { at: 290, hearts: 60 }, { at: 330, prop: 'ev_bigsnowman' }],
     // need: hab, night, sky, prop (one of a list) placed in that habitat, ball (a snowball fight on screen, photo.js)
-    album: { name: $t('눈 속의 친구'), prop: 'ev_album', slots: [
+    album: { name: $t('눈 속의 동물'), prop: 'ev_album', slots: [
       { id: 'snowman', name: $t('눈사람 옆에서'), need: { prop: ['ev_snowman', 'ev_snowfam', 'ev_bigsnowman'] } },
       { id: 'ball', name: $t('눈싸움 한 판'), need: { ball: true } },
       { id: 'cover', name: $t('눈 덮인 초원'), need: { hab: 'meadow' } },
@@ -1508,7 +1528,7 @@ export const FIRST2 = { days: 7, hearts: 20, praise: 2, tasks: [ // praise: ♥ 
   { id: 'yard', text: $t('나의 뜰 가 보기'), hearts: 5 },
   { id: 'ser', text: $t('시리즈 칸 3개 채우기'), hearts: 10, g190: 1 },
   { id: 'req', text: $t('첫 의뢰 들어주기'), hearts: 5, g190: 1 },
-  { id: 'swap', text: $t('도장으로 교환해 보기'), hearts: 10, g190: 1 }] };
+  { id: 'swap', text: $t('토큰으로 교환해 보기'), hearts: 10, g190: 1 }] };
 // 28-5 소품 색: each prop's palette (pal: its own, else toy; rails none). 0: as made; the rest: the key colour of its model turned
 // to that one (meadow/props.js recolor). 크기: sz 0 보통, 1 작게, 2 크게, 3 아주 크게 (its model, footprint and cells x sizeF)
 export const PALETTES = {
@@ -1564,7 +1584,7 @@ export const SCENES = [
   { id: 'campfire_reindeer', name: $t('순록의 모닥불'), prop: 'campfire', sp: 'reindeer', hint: $t('뿔 달린 동물이 불 앞에…') },
   { id: 'train_ride', name: $t('기차 타기'), prop: 'train', hint: $t('장난감 기차가 다닐 때…') },
   { id: 'tunnel_cow', name: $t('소의 터널'), prop: 'tunnel', sp: 'cow', hint: $t('풀 터널로 얼룩무늬가…') },
-  { id: 'tunnel_polarBear', name: $t('북극곰의 터널'), prop: 'tunnel', sp: 'polarBear', hint: $t('아기 때만 터널에 쏙 들어가는 하얀 동물이…') },
+  { id: 'tunnel_polarBear', name: $t('북극곰의 터널'), prop: 'tunnel', sp: 'polarBear', hint: $t('유체일 때만 터널에 쏙 들어가는 하얀 동물이…') },
   { id: 'tower_up', name: $t('전망대 오르기'), prop: 'tower', hint: $t('전망대 꼭대기에서…') },
   { id: 'gym_play', name: $t('큰 놀이터'), prop: 'gym', hint: $t('큰 놀이터 위에서…') },
   { id: 'carousel_ride', name: $t('회전 놀이기구'), prop: 'carousel', hint: $t('빙글빙글 도는 것에…') },
@@ -1588,7 +1608,7 @@ export const SETS = [
   { id: 'water', name: $t('물가'), props: ['lily', 'duckhouse', 'boat', 'stepping'] },
   { id: 'night', name: $t('밤빛'), props: ['lantern', 'jar', 'mushlamp', 'starlamp'] },
   { id: 'play', name: $t('놀이터'), props: ['swing', 'pinwheel', 'mailbox', 'gazebo'] },
-  { id: 'friends', name: $t('놀이 친구'), props: ['seesaw', 'ball', 'hammock', 'feeder', 'campfire'] }, // 28-2 (its level: PACE play)
+  { id: 'friends', name: $t('놀이 소품'), props: ['seesaw', 'ball', 'hammock', 'feeder', 'campfire'] }, // 28-2 (its level: PACE play)
   { id: 'toys', name: $t('누르는 장난감'), props: ['musicbox', 'bubbles', 'lights', 'fireworks', 'pinhill', 'bell'] }, // 28-3 (its level: PACE play)
   { id: 'train', name: $t('장난감 기차'), props: ['rail', 'railcurve', 'railfork', 'railbridge'] }, // 28-4 (its level: PACE play)
   { id: 'home', name: $t('집 꾸미기'), props: ['table', 'shelf', 'platform', 'doll'] }, // 28-5 (its level: PACE play)

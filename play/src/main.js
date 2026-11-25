@@ -4,6 +4,7 @@ import { $t, LANG, LANGS, localize, ko, SEP, esc } from './i18n/i18n.js';
 import * as G from './game/game.js';
 import { HAB, outIn, habitatOf, unlockInfo, firstEgg, spotMode } from './game/rules.js';
 import { BALANCE, HABITATS, ZONES, PROPS, F170, TUT181, S186, G190, FEST } from './game/data.js';
+import { CAB_TASTE } from './game/series.js'; // 281 ②
 import { initWorldMap } from './worldmap/worldmap.js';
 import { z143on } from './habitat/zones.js'; // 145 B: the new zone cards under ?z143
 import { zzz, heart, overlayOpen, toast, josa, closeTop, topWindow, lockText, tip, TIPS, resetTips, ask } from './ui/hud.js';
@@ -13,7 +14,7 @@ import * as BK from './ui/backup.js';
 import { iosSafariTab } from './game/backup.js';
 import { initPhoto } from './ui/photo.js';
 import { ASSETS, DEBUG, TOSS, VERSION, FEEDBACK_URL, FEEDBACK_FIELD, RATING, PREFS, savePrefs, OFFLINE, calm, applyLook, VIEW } from './config.js';
-import { applySound, sfx } from './ui/sound.js';
+import { applySound, sfx, toy } from './ui/sound.js';
 import { watch, track, loaded } from './ui/stats.js';
 import { openCode } from './ui/mail.js'; // inbox 41 B 우편함
 import { initAttend, todayRow, takeToday, weekOn, weekCells } from './ui/attend.js'; // inbox 41 C 출석부
@@ -26,7 +27,7 @@ import { initArt, place as artPlace, retRow as artRow, open as artOpen, tapped a
 import { newsOf as wildNews } from './game/wild.js'; // 17-3 정원이 숨 쉬어요
 
 const $ = id => document.getElementById(id), mapImg = $('mapimg');
-if (S186) for (const e of document.querySelectorAll('[data-t]')) if (e.innerHTML.includes('성장 사탕을 주면')) e.innerHTML = e.innerHTML.replace('성장 사탕을 주면 새끼 모습 그대로 있어요.', '동물 카드에서 「크기 고정」을 켜면 새끼 모습 그대로 있어요.'); // 203 D4 (?rc200): the help's last line, before localize (en/ja have the new line too)
+if (S186) for (const e of document.querySelectorAll('[data-t]')) if (e.innerHTML.includes('성장 사탕을 주면')) e.innerHTML = e.innerHTML.replace('성장 사탕을 주면 유체 모습 그대로 있어요.', '동물 카드에서 「크기 고정」을 켜면 유체 모습 그대로 있어요.'); // 203 D4 (?rc200): the help's last line, before localize (en/ja have the new line too)
 localize(document); // 119: index.html's own text in the chosen language (the code's text goes through $t)
 if (document.documentElement.dataset.ui187) { // 199 D (?ui187): no picture emoji in the words on screen (♥ the coin and ©®™ kept; ✓✕★☆✦ are not emoji): every text node, as it is written
   const EMO = /[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}️‍⃣]/gu, KEEP = new Set('♥©®™');
@@ -93,7 +94,9 @@ const idle = f => (window.requestIdleCallback || setTimeout)(f, { timeout: 2000 
 // 67-2: 시작 tapped by then: not until the board is up (enter) or the map is opened (back): nothing on screen shows it
 const fresh = firstEgg(G.S), mapUp = () => mapUp.p ??= (mapImg.src = ASSETS.worldmap, mapImg.decode().catch(() => {}));
 // 76: a player back (past the intro card) opens straight into the habitat they were in last (the map is fetched after it)
-const backTo = !fresh && (G.S.flags.betaIntro || PREFS.introAt === VERSION) && (h => HAB[h]?.ready && G.S.unlocked.includes(h) ? h : HABITATS[0].id)(G.S.flags.lastHab);
+// 281 ①: last in an empty 나의 뜰 (nothing placed, no one staying): the habitat with the most friends out instead (ties: the first)
+const busiest = () => HABITATS.map(h => h.id).filter(h => h !== 'yard' && HAB[h]?.ready && G.S.unlocked.includes(h)).reduce((a, h) => outIn(G.S, h).length > outIn(G.S, a).length ? h : a, HABITATS[0].id);
+const backTo = !fresh && (G.S.flags.betaIntro || PREFS.introAt === VERSION) && (h => h === 'yard' && G.yardEmpty() ? busiest() : HAB[h]?.ready && G.S.unlocked.includes(h) ? h : HABITATS[0].id)(G.S.flags.lastHab);
 if (fresh) code().catch(() => {}).then(() => cur || mapUp());
 // 170 A (?f170): a new player's start cover (the meadow still and the egg) stays under the intro card until the habitat's loading screen, the same still, takes over
 const bootOff = () => { const boot = $('boot'); if (!boot || boot.classList.contains('done')) return; boot.classList.add('done'); setTimeout(() => boot.remove(), 400); };
@@ -161,7 +164,7 @@ function moved(then) {
   const n = G.S.flags.mv214.n * BALANCE.candy.price, el = document.createElement('section'); G.flag('mv214', 0); // 0: rules.js fromSave drops it
   el.id = 'zoneCard'; el.className = 'intro pop lvup m214'; el.innerHTML = '<div><h2></h2><button data-close></button></div>';
   const box = el.firstChild, ok = box.lastChild; box.firstChild.textContent = $t('새 버전으로 바뀌었어요'); el.setAttribute('aria-label', box.firstChild.textContent);
-  for (const t of [$t('동물·소품·♥는 모두 그대로 옮겼어요.'), $t('들꽃 도감은 없어졌어요. 이미 받은 보상은 그대로예요.'), n > 0 && $t('가지고 있던 사탕은 「크기 고정」으로 바뀌었어요. 사탕 값 ♥{0}{을/를} 돌려드렸어요.', n), $t('사탕으로 멈춰 둔 아기는 크기 고정이 켜진 채 그대로예요.')]) {
+  for (const t of [$t('동물·소품·♥는 모두 그대로 옮겼어요.'), $t('들꽃 도감은 없어졌어요. 이미 받은 보상은 그대로예요.'), n > 0 && $t('가지고 있던 사탕은 「크기 고정」으로 바뀌었어요. 사탕 값 ♥{0}{을/를} 돌려드렸어요.', n), $t('사탕으로 멈춰 둔 유체는 크기 고정이 켜진 채 그대로예요.')]) {
     if (!t) continue; const p = document.createElement('p'); p.className = 'sub'; p.textContent = t; box.insertBefore(p, ok); }
   ok.textContent = $t('알겠어요'); ok.onclick = () => { el.remove(); then(); firstDone(); }; // 돌아왔어요 waited for it (away; and for 194's card, if then() put it up)
   $('habitat').append(el); sfx('level');
@@ -183,7 +186,7 @@ async function enter(id) {
   api.setActive(true); play.attach(api, id);
   if (G.S.refit?.includes(id)) G.refit(id, api.decor.refit(G.S.props)); // inbox 42 A: the board grew (rules.js to11): what no longer fits moves
   if (!SEE) artPlace(id); // 17-2: the 작품 made while away, on this board's empty ground
-  await api.warm().catch(() => {}); loadBar(false); const n194 = () => { if (G.S.note194 && spotMode(id) && !SEE && cur === id) note194(); }; if (S186 && G.S.flags.mv214 && !SEE && cur === id) moved(n194); else { n194(); firstDone(); } idle(mapUp); return true; // 194 0-5 // 168: shaders made ahead or not, the curtain lifts (style.css hides the buttons while it shows); 202: these two were inside the comment since 168
+  await api.warm().catch(() => {}); loadBar(false); const n194 = () => { if (G.S.note194 && spotMode(id) && !SEE && cur === id) note194(); }; if (S186 && G.S.flags.mv214 && !SEE && cur === id) moved(n194); else { n194(); firstDone(); } if (id === 'yard') yard281(); idle(mapUp); return true; // 194 0-5 // 168: shaders made ahead or not, the curtain lifts (style.css hides the buttons while it shows); 202: these two were inside the comment since 168
 }
 const mapUi = initWorldMap(world, { enter });
 G.on(ev => { if (ev.some(e => e.type === 'unlock' || e.type === 'reset')) mapUi.refresh(); });
@@ -214,10 +217,29 @@ function note194() {
     if (b.dataset.spots != null) $('decorBtn').click(); else if (b.dataset.yard != null) { $('back').click(); enter('yard'); } };
   $('habitat').append(el); sfx('level');
 }
+// 281 ②: the empty yard (nothing placed, no one staying), once a load, no other card up: 「뜰 꾸미기 시작」. 놓기 puts
+// 숲속 오두막 맛보기 (series.js cabTaste: given now if not yet) out of the yard's storage near the middle, then opens 꾸미기;
+// none of it left (sold, or the build without it): 꾸미기 only. Again from 돌아왔어요 closing (it was up when the yard opened)
+let yd281 = false;
+function yard281() {
+  if (yd281 || SEE || cur !== 'yard' || !G.yardEmpty() || !ret.hidden || !intro.hidden || !news.hidden || $('zoneCard')) return;
+  yd281 = true; const el = document.createElement('section'); el.id = 'zoneCard'; el.className = 'intro pop lvup y281'; el.setAttribute('aria-label', $t('뜰 꾸미기 시작'));
+  el.innerHTML = '<div><h2></h2><p class="sub"></p><div class="nbtns"><button class="sb" data-close></button><button class="go" data-go></button></div></div>';
+  el.querySelector('h2').textContent = $t('뜰 꾸미기 시작'); el.querySelector('.sub').textContent = $t('아직 빈 뜰이에요. 통나무 의자와 울타리부터 놓아 볼까요?');
+  el.querySelector('[data-close]').textContent = $t('나중에'); el.querySelector('[data-go]').textContent = $t('놓기');
+  el.onclick = e => { const b = e.target.closest('button'); if (!b) return; el.remove(); if (b.dataset.go == null) return;
+    if (cur === 'yard' && api) { G.cabTaste(); const at = [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2], [3, 2], [-3, 2], [3, -2], [-3, -2]], put = [];
+      for (const id of CAB_TASTE) { const p = G.S.props.find(p => p.prop === id && p.hab === 'yard' && !p.placed && !put.some(q => q.uid === p.uid)); if (!p) continue;
+        const s = at.find(([x, z]) => api.decor.fitAll([...put, { prop: id, x, z, rot: 0 }]).every(Boolean)); if (s) put.push({ uid: p.uid, prop: id, x: s[0], z: s[1], rot: 0 }); }
+      for (const p of put) G.placeProp(p.uid, p.x, p.z, p.rot);
+      $('decorBtn').click(); if (put.length) api.near281(put.reduce((a, p) => a + p.x, 0) / put.length, put.reduce((a, p) => a + p.z, 0) / put.length); return; } // 294: 꾸미기 opens as before, and the camera (which it sent to the decor view) glides to the placed props instead
+    $('decorBtn').click(); };
+  $('habitat').append(el); sfx('level');
+}
 // 28-1: 「새 구역: 과수원」 and what one can see there, in a line (ZONES)
 function zoneCard(id, L, free) {
   const z = ZONES[id]?.[L - 1], el = document.createElement('section'); el.id = 'zoneCard'; el.className = 'intro pop lvup'; el.setAttribute('aria-label', $t('새 구역'));
-  el.innerHTML = $t('<div><h2>새 구역: {0}</h2><p class="sub">{1}</p><p class="sub">땅 넓히기 {2}단계 · {3}</p><button data-close>좋아요</button></div>', z.name, z143on(z.id) && z.line143 || z.line, L, free ? $t('모으기 선물로 무료') : `♥-${BALANCE.expand.price[L - 1]}`);
+  el.innerHTML = $t('<div><h2>새 구역: {0}</h2><p class="sub">{1}</p><p class="sub">땅 넓히기 {2}단계 · {3}</p><button data-close>좋아요</button></div>', z.name, z143on(z.id) && z.line143 || z.line, L, free ? $t('컬렉션 보상으로 무료') : `♥-${BALANCE.expand.price[L - 1]}`);
   el.querySelector('[data-close]').onclick = () => el.remove(); $('habitat').append(el); sfx('level');
 }
 G.on(ev => {
@@ -286,10 +308,20 @@ const retAttend = () => G.attendDue() && G.S.attend.n > 0; // a new player's fir
 const retHome = () => cur || G.S.flags.lastHab || HABITATS[0].id;
 function away(eggs) { // eggs: { habitat id: eggs laid meanwhile }
   retEggs = eggs;
+  if (G.S.flags.q283 === 1) { if (calm214()) showRet(); else retWait = true; return; } // 292: the one line is owed: the card comes up even with nothing else
   if (!Object.values(eggs).some(Boolean) && !G.S.animals.some(a => a.card) && !retAttend() && !G.S.cards.some(c => c.new) && !mythDue() && !mythNightDue() && !retSky() && !newsDue && !artDue(retHome()).length && !wildNews(G.S)) return; // nothing new: no card
   if (calm214()) showRet(); else retWait = true;
 }
 function showRet() {
+  // 292 (283 c): 「페이퍼 퀼링이 호일 풍선으로 새로 만들어졌어요」, once, to a save that held one (rules.js flags.q283 1; 2 from here).
+  // The card as it would be (or an empty one), then this row at its top, its words through textContent; no 「›」 (it goes nowhere,
+  // a tap only closes the card), and 「가지고 있던 동물도…」 only to one who still has one (not to one who has it in the codex only)
+  if (G.S.flags.q283 === 1) { G.flag('q283', 2); showRet();
+    if (ret.hidden) ret.innerHTML = $t('<div><h2>돌아왔어요</h2><ul>{0}</ul>\n<div class="nbtns"><button class="go" data-close>확인</button></div></div>', '');
+    const li = document.createElement('li'), b = li.appendChild(document.createElement('button')), i = b.appendChild(document.createElement('i')), s = b.appendChild(document.createElement('span'));
+    b.dataset.go = 'q283'; i.setAttribute('aria-hidden', 'true'); i.textContent = '🎁'; s.textContent = $t('페이퍼 퀼링이 호일 풍선으로 새로 만들어졌어요');
+    if (G.S.animals.some(a => a.variant === 'quilling')) s.appendChild(document.createElement('small')).textContent = $t('가지고 있던 동물도 새 모습이에요');
+    ret.querySelector('ul').prepend(li); ret.hidden = false; return; }
   const eggs = retEggs, now = G.now(), ready = G.S.slots.filter(s => s && now >= s.end).length, grown = G.S.animals.filter(a => a.card), att = retAttend() && todayRow();
   const n = Object.values(eggs).reduce((a, b) => a + b, 0), most = Object.keys(eggs).sort((a, b) => eggs[b] - eggs[a])[0];
   const back = G.S.cards.filter(c => c.new), names = [...new Set(back.map(c => esc(c.nm)))]; // 13-1: postcards not seen, at the top (137 A: escaped, they go into ret.innerHTML)
@@ -308,7 +340,7 @@ function showRet() {
   if (BK.due(now) && G.S.flags.backupNag !== today) { rows.push(['💾', $t('백업해 두면 기기를 바꿔도 이어서 할 수 있어요'), $t('설정 › 내 저장 백업'), 'backup']); G.flag('backupNag', today); }
   if (top) rows.push(['📰', $t('새 소식 {0}', VERSION), esc(top), 'news']); // 133: last. Opened on the older build, the new one reloads in (offline.js fresh) and this row is the only new one: the rows above stay put
   ret.innerHTML = $t('<div><h2>돌아왔어요</h2><ul>{0}</ul>\n<div class="nbtns"><button class="go" data-close>확인</button></div></div>', rows.map(([i, t, sub, k]) => `<li><button data-go="${k}"${k === 'attend' ? ` class="take" data-take="${$t('받기')}"` : ''}><i aria-hidden="true">${i}</i><span>${t}<small>${sub}</small></span></button>${
-    (k === 'attend' || k === 'd2') && wk ? weekCells() : k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => $t('<span><img class="b" alt="새끼"><b>→</b><img alt="성체"></span>')).join('')}${grown.length > 3 ? `<b>${$t(' 외 {0}', grown.length - 3).trim()}</b>` : ''}</p>` : ''}</li>`).join(''));
+    (k === 'attend' || k === 'd2') && wk ? weekCells() : k === 'grown' ? `<p class="minis">${grown.slice(0, 3).map(() => $t('<span><img class="b" alt="유체"><b>→</b><img alt="성체"></span>')).join('')}${grown.length > 3 ? `<b>${$t(' 외 {0}', grown.length - 3).trim()}</b>` : ''}</p>` : ''}</li>`).join(''));
   ret.dataset.wild = wn ? JSON.stringify([wn.hab, wn.at]) : ''; if (wn) G.wildSeen();
   ret.dataset.eggs = most || ''; ret.dataset.grown = grown[0] ? habitatOf(grown[0]) : ''; retGrown = grown.map(a => a.id);
   if (grown.length) code().then(() => import('./ui/thumbs.js')).then(({ figureThumb: f }) => ret.querySelectorAll('.minis > span').forEach((p, i) => { const a = grown[i], [b, c] = p.querySelectorAll('img');
@@ -322,7 +354,7 @@ ret.onclick = async e => {
   ret.hidden = true;
   if (retAttend()) { const t = takeToday(retHome()); if (t) toast($t('오늘 출석 · {0}', t), 2600); }
   const first = retGrown[0]; if (retGrown.length) { G.grownSeen(retGrown); retGrown = []; }
-  if (d.go == null) return;
+  if (d.go == null || d.go === 'q283') { if (cur === 'yard') setTimeout(yard281); return; } // 281 ②: closed on the yard (a row that goes elsewhere: no card); 292: the q283 row is only read: the card closes
   if (d.go === 'd2') { ret.dataset.eggs = Object.keys(G.S.nests).find(h => G.S.nests[h].eggs.some(e => e.now)) || ''; d.go = 'eggs'; } // taken above (retAttend)
   if (d.go === 'backup') return BK.open();
   if (d.go === 'news') { news.hidden = false; return; }
@@ -367,8 +399,8 @@ if (!SEE) { const eggs = {}; for (const e of offline) if (e.type === 'egg') eggs
 // 21-1 설정: choices kept in this browser apart from the save (config.js PREFS); the habitat reads them every frame
 const PREF_ROWS = [['lang', $t('언어'), Object.entries(LANGS)], // 119: each language in its own name; a change reloads
   ['time', $t('시간'), [['real', $t('실제 시간')], ['day', $t('항상 낮')]]], ['weather', $t('날씨 효과'), [[true, $t('켜기')], [false, $t('끄기')]]], // 21-2: 끄기 = always clear (for slow phones)
-  ['mute', $t('소리'), [[false, $t('켜기')], [true, $t('모두 끄기')]]]]; // 26-2
-const VOLS = [['vAll', $t('전체')], ['vAmb', $t('배경 소리')], ['vFx', $t('효과음')], ['vAnimal', $t('동물 소리')]];
+  ['mute', $t('소리'), [[false, $t('켜기')], [true, $t('모두 끄기')]]], ['toy', $t('장난감 소리'), [[true, $t('켜기')], [false, $t('끄기')]]]]; // 26-2; 260 C
+const VOLS = [['vAll', $t('전체')], ['vAmb', $t('배경 소리')], ['vFx', $t('효과음')], ['vToy', $t('장난감 소리 크기')]];
 // 26-3: after the sound. 움직임 줄이기 shows the device's choice until one is picked; 진동 only where the browser can (Android)
 const PC = matchMedia('(pointer:fine)').matches; // 74: 책상 모드 is for a desk
 const LOOK_ROWS = [['gfx', $t('그래픽 품질'), [['low', $t('낮음')], ['mid', $t('보통')], ['high', $t('높음')]]], ['saver', $t('배터리 절약'), [[false, $t('끄기')], [true, $t('켜기')]]], ['smooth', $t('부드럽게(120)'), [[false, $t('끄기')], [true, $t('켜기')]]], // 212 C P2
@@ -383,7 +415,7 @@ const segRow = ([k, name, opts]) => { const now = k === 'lang' ? LANG : k === 'c
   return `<div class="row"><b>${name}</b><div class="seg">${opts.map(([v, t]) => `<button data-k="${k}" data-v="${v}"${now === v ? ' class="on"' : ''}>${t}</button>`).join('')}</div></div>`; };
 const prefs = $('prefs'), rows = $('prefRows'), help = $('help');
 const drawPrefs = () => { rows.innerHTML = PREF_ROWS.map(segRow).join('')
-  + VOLS.map(([k, name]) => `<label class="row vol"><b>${name}</b><input type="range" min="0" max="100" step="5" data-vol="${k}" value="${Math.round(PREFS[k] * 100)}"${PREFS.mute ? ' disabled' : ''}><output>${Math.round(PREFS[k] * 100)}%</output></label>`).join('')
+  + VOLS.map(([k, name]) => `<label class="row vol"><b>${name}</b><input type="range" min="0" max="100" step="5" data-vol="${k}" value="${Math.round(PREFS[k] * 100)}"${PREFS.mute || k === 'vToy' && !PREFS.toy ? ' disabled' : ''}><output>${Math.round(PREFS[k] * 100)}%</output></label>`).join('')
   + LOOK_ROWS.map(segRow).join('')
   + (cur && PC ? $t('<div class="row"><b>책상 모드</b><div class="seg"><button data-act="desk">켜기</button>{0}</div></div>', window.documentPictureInPicture ? $t('<button data-act="pip">항상 위 작은 창</button>') : '') : '') // 16-3 (작은 창: PC Chrome only)
   + $t('<div class="row"><b>내 저장 백업</b><div class="seg"><button data-act="backup"{0}>백업 · 불러오기</button></div></div>', BK.due() ? ' class="new"' : '')
@@ -423,7 +455,7 @@ rows.onclick = e => {
   if (d.k === 'gfx' && was !== opt[0]) regfx(); // 26-3: the habitat is built again at the new quality
 };
 rows.oninput = e => { const k = e.target.dataset.vol; if (!k) return; PREFS[k] = e.target.value / 100; e.target.nextElementSibling.value = e.target.value + '%'; applySound(); };
-rows.onchange = e => { if (e.target.dataset.vol) { savePrefs(); sfx('tap'); } }; // let go of the slider: keep it, and a tap to hear how loud
+rows.onchange = e => { const k = e.target.dataset.vol; if (k) { savePrefs(); if (k !== 'vToy' || !toy('vinyl', 'tap')) sfx('tap'); } }; // 260 C: 장난감 소리 크기 plays a toy's 뽁 // let go of the slider: keep it, and a tap to hear how loud
 // inbox 20 C3: every first-time tip in one place (74: from 설정 › 처음 안내)
 const openHelp = () => {
   help.innerHTML = $t('<div><h2>도움말</h2><dl>{0}</dl>\n<div class="nbtns"><button class="sb" data-act="tips">안내 다시 보기</button><button class="go" data-close>닫기</button></div></div>', Object.values(TIPS).map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join(''));

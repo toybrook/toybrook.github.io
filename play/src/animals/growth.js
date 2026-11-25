@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { toyMat } from '../habitat/toyKit.js';
 import { wear } from './materials.js';
 
-export const STAGE_NAME = { egg: $t('알'), baby: $t('새끼'), adult: $t('성체') };
+export const STAGE_NAME = { egg: $t('알'), baby: $t('유체'), adult: $t('성체') };
 export const HATCH = { crack: 0.45, glow: 0.8, pop: 1.15, end: 1.85 }; // seconds after the tap (69-1: crack 0.75 -> 0.45, glow new)
 
 // Egg profile: blunt, slightly wider bottom. Height 1.2, base at y=0.
@@ -75,27 +75,31 @@ export function dropPose(t) {
 
 // mat: the rarity body material (shared, so a hatching egg compiles no new shader). light: the colour the seams light up in
 // (69-1: the rarity that really came out; none: they stay dark)
-export function makeEgg(mat, light) {
+export function makeEgg(mat, light, opt = {}) { // opt.sec: 263 B the series secret's egg (the block below)
   const group = new THREE.Group(), pivot = new THREE.Group();
   const nest = new THREE.Mesh(EGG.nest, nestMat); group.add(nest, pivot);
   nest.renderOrder = 4; // after glass: the back of the nest seen through a glass egg read as a line of liquid half-way up
   pivot.position.y = 0.06;
   const whole = wear(new THREE.Mesh(EGG.whole, mat)); pivot.add(whole);
   const shards = EGG.shards.map(s => { const m = new THREE.Group(), o = wear(new THREE.Mesh(s.g, mat)); o.position.copy(s.c).negate(); m.add(o); m.position.copy(s.c); m.visible = false; pivot.add(m); return m; });
-  const seamMat = new THREE.MeshBasicMaterial({ color: SEAM, toneMapped: false }), lit = light ? new THREE.Color(light).lerp(new THREE.Color('#fff'), 0.35) : SEAM;
+  let s0 = SEAM, lit = light ? new THREE.Color(light).lerp(new THREE.Color('#fff'), 0.35) : SEAM, k0 = 0, rock = t => 0.2 * Math.sin(t * 22);
+  // <sec263> 263 B: the series secret's egg: a still beat, then three slow big rocks; gold seams
+  if (opt.sec) { s0 = new THREE.Color('#ffd24a'); lit = new THREE.Color('#fff3b0'); k0 = 0.15; rock = t => 0.26 * Math.sin((t - 0.15) * 9); }
+  // </sec263>
+  const seamMat = new THREE.MeshBasicMaterial({ color: s0, toneMapped: false });
   const seams = EGG.seams.map((g, i) => { const m = new THREE.Mesh(g, seamMat); m.visible = false; m.userData.d = i ? 0.06 + i * 0.03 : 0; pivot.add(m); return m; });
   return {
     group, dispose: () => seamMat.dispose(), // 195 B-10b M4: its own material (the geometry, EGG, is shared)
     // t = seconds since the tap. Returns true once the shell is gone.
     hatch(t) {
       if (t < HATCH.pop) { // wobble (builds up, rocks on the base), easing into a tremble while the seams run and light up
-        const k = ss(t, 0, 0.15), c = ss(t, HATCH.crack - 0.08, HATCH.crack + 0.08);
-        pivot.rotation.z = (0.2 * Math.sin(t * 22) * k) * (1 - c) + 0.05 * Math.sin(t * 70) * c; pivot.rotation.x = 0.08 * Math.sin(t * 17) * k * (1 - c);
+        const k = ss(t, k0, k0 + 0.15), c = ss(t, HATCH.crack - 0.08, HATCH.crack + 0.08);
+        pivot.rotation.z = (rock(t) * k) * (1 - c) + 0.05 * Math.sin(t * 70) * c; pivot.rotation.x = 0.08 * Math.sin(t * 17) * k * (1 - c);
         for (const m of seams) { // 금: each seam drawn in from its start (the ring first, then the edges down the sides)
           const q = ss(t, HATCH.crack + m.userData.d, HATCH.glow), n = m.geometry.index.count, r = 6 * m.geometry.parameters.radialSegments;
           m.visible = q > 0; m.geometry.setDrawRange(0, Math.ceil(q * n / r) * r);
         }
-        seamMat.color.copy(SEAM).lerp(lit, glowAt(t)); // 예고 빛: the seams take the rarity's light
+        seamMat.color.copy(s0).lerp(lit, glowAt(t)); // 예고 빛: the seams take the rarity's light
         return false;
       }
       whole.visible = false; for (const m of seams) m.visible = false;

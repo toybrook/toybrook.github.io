@@ -10,6 +10,10 @@ import { $t } from '../i18n/i18n.js';
 import * as THREE from 'three';
 import * as G from '../game/game.js';
 import { HABITATS, S186, G190 } from '../game/data.js';
+// <sec263>
+import { SEC263 } from '../game/data.js'; // 263 B · 267 B the series secret (trial flag)
+let spot = null, dot = null; // the light over the series secret (made once, at 0 when unused: no shader recompiles, 263 B review); the gold dot where it will stand (밤에 보기, 12/12 and none yet)
+// </sec263>
 import { SERIES, have as serHave } from '../game/series.js';
 import { codexCells, colorsOf, displayColor, variantsOf, key, lookName } from '../game/rules.js';
 import { studio, nightLights } from './thumbs.js';
@@ -64,6 +68,9 @@ function setup() {
   const hemi = new THREE.HemisphereLight('#fff6e8', '#b48a5c', 0.6); scene.add(hemi);
   const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 200), root = new THREE.Group(); scene.add(root);
   st = { S, R, scene, cam, root, hemi, last: 0, fN: 0, fT: 0 };
+  // <sec263>
+  if (SEC263) { spot = new THREE.SpotLight('#ffe2a0', 0, 0, 0.42, 0.7, 1); scene.add(spot, spot.target); } // its own scene: lives as long as the page, as hemi
+  // </sec263>
   // drag sideways = slide the shelf under the finger, up and down = more shelves; a tap picks a figure
   let down = null; const cv = R.domElement; cv.style.touchAction = 'none';
   cv.addEventListener('pointerdown', e => { const s = shelfAt(e); down = { x: e.clientX, y: e.clientY, cy: cam.position.y, s, off: s?.g.position.x, moved: false }; cv.setPointerCapture(e.pointerId); });
@@ -104,13 +111,20 @@ function figure(c, sil, acc = null) { // acc: 215 the series' secret, as it came
 }
 async function build() {
   const want = sig(); if (want === built) return; built = want;
-  const ser = serOf(), M = ser && G.S.ser?.[ser.id], cells = cellsNow(), sec = null, sps = [...new Set([...cells, ...sec ? [sec] : []].map(c => c.species))];
+  const ser = serOf(), M = ser && G.S.ser?.[ser.id], cells = cellsNow(); let sec = null;
+  // <sec263> 263 B: the series' secret, in the middle of the fifth shelf
+  if (SEC263 && M?.sec) sec = cellsOf1(M.sec) ?? null;
+  // </sec263>
+  const sps = [...new Set([...cells, ...sec ? [sec] : []].map(c => c.species))];
   const prize = M?.got ? await import('../habitat/meadow/props.js').then(m => m.decorModel, () => null) : null; // 215: shared materials (props.js dm), its own geometries
   if (!await Promise.all([...sps.map(s => loadModel(s.model)), M?.sec?.acc && loadAcc(M.sec.acc)]).then(() => true, () => false)) { if (built === want) built = ''; return; } // 168: offline, a model never fetched: no shelves yet, the next open or change tries again
   if (want !== sig()) return;
   st.root.traverse(o => { o.skeleton?.dispose(); if (o.isPoints) o.geometry.dispose(); }); /* a legendary's sparkles (figure.js effect): its own geometry, a shared material */ for (const x of own) x.dispose(); own = []; // 195 B-10b M1 (was clear() alone: ~470 KB a build)
   st.root.clear(); figs = []; fx = []; star = null; shelves = [];
-  const groups = ser ? [0, 1, 2, 3].map(r => cells.slice(r * 3, r * 3 + 3)).concat(M?.got ? [[]] : []) : sps.map(sp => cells.filter(c => c.species === sp)); // 215: a series three to a shelf; 263 A: no secret shelf, a fifth shelf only for the prize
+  // <sec263>
+  if (spot) spot.intensity = 0; dot = null;
+  // </sec263>
+  const groups = ser ? [0, 1, 2, 3].map(r => cells.slice(r * 3, r * 3 + 3)).concat(M?.got || sec ? [[]] : []) : sps.map(sp => cells.filter(c => c.species === sp)); // 215: a series three to a shelf; 263 A: no secret shelf, a fifth shelf only for the prize
   const rows = groups.length;
   const top = rows * SY, all = cells.every(c => G.S.codex[c.key]);
   st.root.add(box(W + 0.5, top + 0.5, 0.2, panel, 0, top / 2 - 0.1, -0.85), box(0.25, top + 0.5, 1.8, wood, -W / 2 - 0.12, top / 2 - 0.1, 0),
@@ -126,7 +140,21 @@ async function build() {
     });
     const fades = [1, -1].map(s => { const m = new THREE.Mesh(fadeGeo, fadeMat); m.scale.x = s; m.position.set(-s * (W / 2 - 0.375), y + (SY - 0.14) / 2, 0.88); st.root.add(m); return m; });
     const s = { g, fades, y, min: Math.min(0, W - 0.5 - mine.length * SX), key: tab + row }; shelves.push(s); slide(s, offs[s.key] ?? 0);
-    if (secRow && prize) { const p = prize(ser.prize); p.traverse(o => { if (o.isMesh) own.push(o.geometry); }); p.scale.setScalar(1.05); p.position.set(W / 2 - 1.1, y, -0.2); p.rotation.y = -0.35; st.root.add(p); } // 215: the prize, on the secret's shelf
+    if (secRow && prize) { const p = prize(ser.prize); p.traverse(o => { if (o.isMesh) own.push(o.geometry); }); p.scale.setScalar(1.05); p.position.set(W / 2 - (sec ? 0.8 : 1.1), y, -0.2); p.rotation.y = -0.35; st.root.add(p); } // 215: the prize, on the secret's shelf
+    // <sec263> 263 B: the secret at x = 0 under its light: the spot, a gold disc at its feet, a faint beam (no shadows); all 12 and no secret
+    // yet: one small gold dot in the empty middle, blinking by night only (frame)
+    if (SEC263 && secRow && sec) {
+      const f = figure(sec, false); f.position.set(0, y, 0.1); f.userData = { c: sec, got: true, ph: 0, yaw: sec.variant.windup ? 0.6 : undefined }; g.add(f); figs.push(f); // 282 A · 284: the 태엽 속 시크릿 from its side-back 3/4 (the works face on), as nest.js
+      spot.intensity = 9; spot.position.set(0, y + SY - 0.25, 0.7); spot.target.position.set(0, y, 0.1); spot.target.updateMatrixWorld();
+      const glow = o => ours(new THREE.MeshBasicMaterial({ color: '#ffcf5a', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, ...o }));
+      const disc = new THREE.Mesh(ours(new THREE.CircleGeometry(0.62, 40)), glow({ opacity: 0.45 })); disc.rotation.x = -Math.PI / 2; disc.position.set(0, y + 0.006, 0.1);
+      const beam = new THREE.Mesh(ours(new THREE.ConeGeometry(0.62, SY - 0.3, 32, 1, true)), glow({ opacity: 0.09, side: THREE.DoubleSide })); beam.position.set(0, y + (SY - 0.3) / 2, 0.1);
+      st.root.add(disc, beam);
+    } else if (SEC263 && secRow && M?.got) {
+      dot = new THREE.Mesh(ours(new THREE.SphereGeometry(0.045, 12, 8)), ours(new THREE.MeshBasicMaterial({ color: '#ffd24a', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })));
+      dot.position.set(0, y + 0.45, 0.1); dot.visible = night; st.root.add(dot);
+    }
+    // </sec263>
     if (full && !secRow) { // sparkles drifting up along the shelf
       const n = Math.round(W * 2.5), pos = new Float32Array(n * 3), pts = new THREE.Points(ours(new THREE.BufferGeometry()), ours(new THREE.PointsMaterial({ map: sparkTex, size: 0.32, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })));
       for (let i = 0; i < n; i++) pos.set([(Math.random() - 0.5) * W, y + Math.random() * SY * 0.8, 0.3 + Math.random() * 0.6], i * 3);
@@ -167,16 +195,19 @@ function pick(f) {
   if (!got) { bar.innerHTML = $t('<p>아직 못 찾은 변종이에요</p>'); return; }
   const all = colorsOf(c.species.id, c.variant.id), seen = G.S.colors[c.key] || [], cur = displayColor(G.S, c.key);
   const held = G.S.animals.filter(a => a.hold && key(a.species, a.variant) === c.key).length, kid = G.S.codex[c.key].adult == null;
-  bar.innerHTML = $t('<p><b>{0}</b> · 본 색 {1}/{2}{3}{4}</p><div>{5}</div>', lookName(c.species.id, c.variant.id, cur), seen.length, all.length, kid ? $t(' · 아직 새끼 모습만 봤어요') : '', held ? (S186 ? $t(' · 크기 고정 {0}마리', held) : $t(' · 성장 멈춤 {0}마리', held)) : '', all.filter(x => seen.includes(x.id))
+  bar.innerHTML = $t('<p><b>{0}</b> · 본 색 {1}/{2}{3}{4}</p><div>{5}</div>', lookName(c.species.id, c.variant.id, cur), seen.length, all.length, kid ? $t(' · 아직 유체 모습만 봤어요') : '', held ? (S186 ? $t(' · 크기 고정 {0}마리', held) : $t(' · 성장 멈춤 {0}마리', held)) : '', all.filter(x => seen.includes(x.id))
     .map(x => `<button data-c="${x.id}"${x.id === cur ? ' class="on"' : ''}><u style="background:${swatch(x)}"></u>${x.name}</button>`).join('') || $t('<small>색이 하나뿐인 변종이에요</small>'));
 }
 
 function frame(now) {
   if (!live) return; requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - st.last) / 1000), t = now / 1000, still = calm(); st.last = now; // 27-7d 움직임 줄이기: no sway, rising sparkles or turning star
-  for (const f of figs) f.rotation.y = -Math.PI / 2 + 0.45 + (still ? 0 : Math.sin(t * 0.5 + f.userData.ph) * 0.35);
+  for (const f of figs) f.rotation.y = (f.userData.yaw ?? -Math.PI / 2 + 0.45) + (still ? 0 : Math.sin(t * 0.5 + f.userData.ph) * 0.35);
   if (!still) for (const p of fx) { const a = p.geometry.attributes.position; for (let i = 0; i < a.count; i++) { let y = a.getY(i) + dt * 0.25; if (y > p.userData.y + SY * 0.85) y = p.userData.y + 0.05; a.setY(i, y); } a.needsUpdate = true; p.material.opacity = 0.65 + 0.35 * Math.sin(t * 3 + p.userData.seed); }
   if (star && !still) star.rotation.y = t * 0.8;
+  // <sec263>
+  if (dot) { dot.visible = night; dot.material.opacity = still ? 0.9 : 0.25 + 0.75 * Math.max(0, Math.sin(t * 2.4)); } // 263 B
+  // </sec263>
   st.R.render(st.scene, st.cam);
   st.fN++; st.fT += dt;
   if (DEBUG && st.fT >= 1) { el.querySelector('#cfps').textContent = $t('FPS {0} · 드로콜 {1} · 피규어 {2} · 실루엣 {3}', (st.fN / st.fT).toFixed(0), st.R.info.render.calls, figs.filter(f => f.userData.got).length, figs.filter(f => !f.userData.got).length); st.fN = st.fT = 0; }

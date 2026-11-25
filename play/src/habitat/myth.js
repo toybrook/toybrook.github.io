@@ -11,7 +11,8 @@ import { blocked, free } from '../animals/crowd.js';
 import { blobSlot } from '../animals/walk.js';
 import { hourNow } from './daylight.js';
 import { calm } from '../config.js';
-import { sfx } from '../ui/sound.js';
+import { sfx, toy } from '../ui/sound.js';
+import { MYTH_FAM } from '../ui/toy-sound.js';
 
 const lay = g => g.rotateX(-Math.PI / 2);
 const HOOF = lay(new THREE.RingGeometry(0.17, 0.34, 18, 1, Math.PI + 0.55, Math.PI * 2 - 1.1)), SPOT = lay(new THREE.CircleGeometry(0.13, 10)); // a hoofprint: its heel open behind
@@ -106,7 +107,7 @@ export function mythLayer({ scene, ctx, U, ui, open, nearest, gather, idle, plac
     const k = smooth((c.t - 0.8) / 3.6), [x0, z0] = c.from, y = 24 * (1 - k) ** 1.6;
     me.x = x0 + (c.lx - x0) * k; me.z = z0 + (c.lz - z0) * k; me.gait = k < 1 ? 'run' : 'still';
     if (k < 1) { me.yaw = Math.atan2(-(c.lz - z0), c.lx - x0); me.ph += dt * 1.2; }
-    else if (!c.down) { c.down = true; puff(me.x, me.z, '#ffd9a0'); puff(me.x, me.z, '#ff9a4a'); sfx('place'); }
+    else if (!c.down) { c.down = true; puff(me.x, me.z, '#ffd9a0'); puff(me.x, me.z, '#ff9a4a'); if (!toy(MYTH_FAM.firemane, 'drop', { r: 0.39 })) sfx('place'); } // 260 C: its 팅 as it lands
     me.rear = smooth((c.t - 4.7) / 0.5) * smooth((T - 1.4 - c.t) / 0.6); if (me.rear) me.ph += dt * 0.9;
     if (c.t > T - 1.6) me.yaw += wrap(-ctx.az + 0.7 - me.yaw) * Math.min(1, dt * 2.5); // 3/4 to the camera
     place(); F.obj.position.y += y;
@@ -220,7 +221,7 @@ export function guestLayer(m, { scene, ctx, ui, open, nearest, view, puff }) {
   function cutTick(dt) { // the unicorn glides down onto its spot; the white deer walks in along its prints
     const c = cutS; c.t = Math.max(c.t + dt, (performance.now() - c.at) / 1e3); const k = smooth((c.t - 0.6) / (c.T - 2.4)), [x0, z0] = c.from;
     me.x = x0 + (c.lx - x0) * k; me.z = z0 + (c.lz - z0) * k; me.gait = k < 1 ? 'walk' : 'still'; if (k < 1) { me.yaw = Math.atan2(-(c.lz - z0), c.lx - x0); me.ph += dt * 0.75; }
-    else if (!c.down) { c.down = true; puff(me.x, me.z, uni ? '#ffe6f4' : '#ffffff'); sfx('place'); }
+    else if (!c.down) { c.down = true; puff(me.x, me.z, uni ? '#ffe6f4' : '#ffffff'); if (!toy('glass', 'drop')) sfx('place'); } // 260 C: the unicorn's / deer's 땡
     if (c.t > c.T - 1.6) me.yaw += wrap(-ctx.az + 0.7 - me.yaw) * Math.min(1, dt * 2.5); // 3/4 to the camera
     place(); if (uni) F.obj.position.y += 14 * (1 - k) ** 1.6;
     if (c.t >= c.T) { cutS = null; stand(2, 4); c.done?.(); }
