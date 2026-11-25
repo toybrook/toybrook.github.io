@@ -73,6 +73,15 @@
       },
       "title_en": "Week 2 gift code",
       "title_ja": "2週目のギフトコード"
+    },
+    {
+      "code": "TOYBROOK3",
+      "title": "3주차 선물 코드",
+      "rewards": {
+        "legendEggs": 1
+      },
+      "title_en": "Week 3 gift code",
+      "title_ja": "3週目のギフトコード"
     }
   ]
 }
