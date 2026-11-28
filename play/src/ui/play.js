@@ -218,9 +218,9 @@ export function initPlay(nav) {
     if (e.what === 'arrive' && here) { const g = G.guestOf(e.id);
       if (e.pair != null && G.S.guests.list.some(o => o.pair === e.pair && o.id < e.id)) return; // the pair: one note for both
       const two = e.pair != null && G.S.guests.list.filter(o => o.pair === e.pair);
-      const h0 = habId; whenClear(() => { if (!G.guestOf(e.id) || habId !== h0) return;
-        toast(two ? $t('손님 둘이 함께 왔어요 · 둘의 소원이 서로 달라요. 눌러서 보상을 보고 골라 주세요') : $t('{0}{이/가} 놀러 왔어요 · 눌러서 소원을 들어 보세요', nm), 3200, true);
-        if (e.big != null) setTimeout(() => say($t('{0}{이/가} 큰 소원을 들고 왔어요 ({1}/{2}) · 눌러서 보세요', nm, e.big + 1, GUEST.big), 3600), 3300); }); // 66-2 큰 소원: after the arrival note
+      const h0 = habId, still = () => G.guestOf(e.id) && habId === h0; // 334 ⑤: news (say): under a window it waits, none dropped; gone by its turn: skipped
+      say(() => still() && (two ? $t('손님 둘이 함께 왔어요 · 둘의 소원이 서로 달라요. 눌러서 보상을 보고 골라 주세요') : $t('{0}{이/가} 놀러 왔어요 · 눌러서 소원을 들어 보세요', nm)), 3200, true);
+      if (e.big != null) say(() => still() && $t('{0}{이/가} 큰 소원을 들고 왔어요 ({1}/{2}) · 눌러서 보세요', nm, e.big + 1, GUEST.big), 3600); // 66-2 큰 소원: after the arrival note
       if (g?.tut != null && !(TUT228 && ['hatch', 'name', 'pet', 'feed'].includes(step181(G.S, G.now())))) setTimeout(() => { const r = G.withGuests().find(x => x.wg === e.id); if (r && hab?.look(r.id)) showBubble(r); }, 900); // the tutorial's guest: the camera goes to it
     }
     if (e.what === 'wish') fly(at(e.id), e.hearts); // a wish met for the first time: its small burst
@@ -247,8 +247,8 @@ export function initPlay(nav) {
     if (e.what === 'step' && e.s < e.n) later(3700, () => say($t('큰 소원 {0}/{1} · {2}: 「내일 또 올게」', e.s, e.n, nm), 3600));
     if (e.what === 'settle') later(3700, () => { say($t('{0}{이/가} 여기 살기로 했어요 · 방랑자 동물{1}', nm, e.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 4800); sfx('level'); });
     if (e.what === 'dayEnd' && hab) dusk(e.k); // 69-3 하루 마무리
-    if (e.what === 'hello') toast($t('방랑자 손님이 찾아오기 시작했어요 · 소원을 들어주면 하트와 알을 두고 가요'), 4200, true);
-    if (e.what === 'tutDone') { const R = e.night && rosterOf({ k: e.night }); toast(R ? $t('오늘 밤 손님 · 「{0}」{이/가} 올지도 몰라요', R.name) : $t('손님맞이를 다 익혔어요 · 이제 손님이 가끔 찾아와요'), 4200, true); }
+    if (e.what === 'hello') say($t('방랑자 손님이 찾아오기 시작했어요 · 소원을 들어주면 하트와 알을 두고 가요'), 4200);
+    if (e.what === 'tutDone') { const R = e.night && rosterOf({ k: e.night }); say(R ? $t('오늘 밤 손님 · 「{0}」{이/가} 올지도 몰라요', R.name) : $t('손님맞이를 다 익혔어요 · 이제 손님이 가끔 찾아와요'), 4200, true); }
   }
 
   // 69-3 하루 마무리: the day's guests are done. A short sunset over the habitat (no button: it fades by itself, taps go through)
@@ -268,12 +268,14 @@ export function initPlay(nav) {
     if (grown.length && hab) setTimeout(cards, 2200); // after the growing (figure.js: about 1.5 s), the "성체가 됐어요" card
     else if (ev.some(e => e.type === 'pal') && hab) setTimeout(cards, 1200); // 17-1 단짝 card
     const eggs = ev.filter(e => e.type === 'egg').length;
-    if (eggs && hab) toast(eggs > 1 ? $t('둥지에 알이 {0}개 생겼어요', eggs) : $t('둥지에 알이 생겼어요'));
-    for (const e of ev) { // later ones matter more: they win the toast
-      if (e.type === 'stored') toast($t('서식지 자리가 모자라 오래된 동물이 보관함으로 갔어요 (최대 {0}마리)', capOf(G.S, habitatOf(e.animal))), 3200);
-      if (e.type === 'unlock' && !(TUT228 && (e.habitat === 'yard' || step181(G.S, G.now())))) { toast($t('{0}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 월드맵에서 가 보세요', HAB[e.habitat].name), 3200); tip('unlock', '#habName'); } // 236 B Q16: the yard's own guide says it; none over the first day's steps
-      if (e.type === 'strollBack' && hab) { const a = e.animal, nm = nameOf(a); if (!a.stored && habitatOf(a) === habId) hab.drop(a); toast($t('{0}{이/가} 산책에서 돌아왔어요 · ♥+{1}{2}', nm, e.card.hearts, a.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 3000); } // 13-1
-      if (e.type === 'whole') { const r = e.reward; toast($t('{0} 컬렉션 보상 {1}/3: {2}', HAB[e.habitat].name, e.step, r === 'expand' ? $t('다음 땅 넓히기가 무료예요') : $t('큰 소품 「{0}」{이/가} 보관함에 왔어요', PROP[r]?.name)), 3600); } // 66-3
+    if (eggs && hab) say(eggs > 1 ? $t('둥지에 알이 {0}개 생겼어요', eggs) : $t('둥지에 알이 생겼어요'), 2200, false); // 330 ②-1: under a window it waits
+    // 333 ②-1: 보관 · 열림 · 완성 (and 친밀도 · 업적) are news too: under a window they wait, then each in turn (none dropped); the same line twice in one go, once
+    const told = new Set(), news = (t, ms) => { if (!told.has(t)) { told.add(t); say(t, ms, false); } };
+    for (const e of ev) {
+      if (e.type === 'stored') news($t('서식지 자리가 모자라 오래된 동물이 보관함으로 갔어요 (최대 {0}마리)', capOf(G.S, habitatOf(e.animal))), 3200);
+      if (e.type === 'unlock' && !(TUT228 && (e.habitat === 'yard' || step181(G.S, G.now())))) { news($t('{0}의 잠금이 풀렸어요! 위의 서식지 이름을 눌러 월드맵에서 가 보세요', HAB[e.habitat].name), 3200); tip('unlock', '#habName'); } // 236 B Q16: the yard's own guide says it; none over the first day's steps
+      if (e.type === 'strollBack' && hab) { const a = e.animal, nm = nameOf(a); if (!a.stored && habitatOf(a) === habId) hab.drop(a); say($t('{0}{이/가} 산책에서 돌아왔어요 · ♥+{1}{2}', nm, e.card.hearts, a.stored ? $t(' · 자리가 없어 보관함에 있어요') : ''), 3000, false); } // 13-1
+      if (e.type === 'whole') { const r = e.reward; news($t('{0} 컬렉션 보상 {1}/3: {2}', HAB[e.habitat].name, e.step, r === 'expand' ? $t('다음 땅 넓히기가 무료예요') : $t('큰 소품 「{0}」{이/가} 보관함에 왔어요', PROP[r]?.name)), 3600); } // 66-3
       if (e.type === 'reset' && hab) { bubble.hidden = true; bubbleFor = null; hint(); }
       if (e.type === 'affLevel' && hab) affUp(e, ev);
     }
@@ -283,7 +285,7 @@ export function initPlay(nav) {
     const a = e.animal; if (ev.some(x => x.type === 'grown' && x.animal === a) || ev.findLast(x => x.type === 'affLevel') !== e) return; // many at once (back after a while): the last one only
     const p = habitatOf(a) === habId && !a.stored && hab.where(a.id); if (p) for (let i = 0; i < 3; i++) setTimeout(() => heart(p[0] + (i - 1) * 44, p[1] + 34 - 14 * (i % 2), 'rim'), i * 120); // beside it, under the card that opens above it
     const nm = nameOf(a), act = actOf(e.level);
-    toast(e.level >= 10 ? $t('{0} 친밀도 MAX · Lv10', nm) : act ? $t('{0} 친밀도가 올랐어요 · Lv{1} · {2}{을/를} 배웠어요', nm, e.level, act) : $t('{0} 친밀도가 올랐어요 · Lv{1}', nm, e.level), 2800, true);
+    say(e.level >= 10 ? $t('{0} 친밀도 MAX · Lv10', nm) : act ? $t('{0} 친밀도가 올랐어요 · Lv{1} · {2}{을/를} 배웠어요', nm, e.level, act) : $t('{0} 친밀도가 올랐어요 · Lv{1}', nm, e.level), 2800, true);
     if (bubbleFor?.id === a.id && !bubble.hidden) showBubble(bubbleFor);
   }
   G.on(events);
@@ -347,7 +349,7 @@ export function initPlay(nav) {
   const note = $('sceneNote'); let noteAt = -Infinity, noteT = 0;
   const hideNote = () => { note.hidden = true; clearTimeout(noteT); };
   const got = (list, r) => { let h = 0; for (const s of list) h += G.seeScene(s.id, r?.species) || 0;
-    if (h) toast($t('새 놀이 장면 「{0}」{1} · 도감에 담았어요 ♥+{2}', list[0].name, list.length > 1 ? $t(' 외 {0}개', list.length - 1) : '', h), 2800, true); };
+    if (h) say($t('새 놀이 장면 「{0}」{1} · 도감에 담았어요 ♥+{2}', list[0].name, list.length > 1 ? $t(' 외 {0}개', list.length - 1) : '', h), 2800, true); }; // 334 ⑤: news: under a card it waits
   function scene(e, quiet) {
     if (F170 && hab && !quiet && e.who?.length) G.affPlay(e.who.map(w => w.rec?.id)); // 170 B: a play scene's friends
     if (!hab || document.hidden) return; const list = scenesOf(e).filter(s => !G.S.scenes[s.id]); if (!list.length) return;
@@ -373,7 +375,7 @@ export function initPlay(nav) {
   // 113 단짝 놀이 (habitat.js ctx.onDuo): the two together on the prop they like: the hearts (the first time ♥20, then a few once a day)
   function duo(a, b, kind) {
     const h = G.palPlay(a, b); if (!h || !hab) return; const [na, nb] = [a, b].map(id => nameOf(G.S.animals.find(r => r.id === id))), P = PROP[kind]?.name ?? '';
-    toast($t('{0}{과/와} {1}{이/가} {2}에서 함께 놀아요 ♥+{3}', na, nb, P, h), 2800, true); fly(hab.where(a), h);
+    say($t('{0}{과/와} {1}{이/가} {2}에서 함께 놀아요 ♥+{3}', na, nb, P, h), 2800); fly(hab.where(a), h);
   }
   return {
     onTap, events, scene, duo, onPropTap, onEdit, onPaint, onSweep, onCarry, onLetGo,

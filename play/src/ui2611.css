@@ -1,0 +1,302 @@
+/* 303 ?ui2611 단계 1: 글꼴·색 토큰, ① 메인 ② 부화 무대 ③ 친구 시트 (docs/design/ui-2611 시안의 숫자). index.html loads it only with
+   ?ui2611 (data-ui2611="1", or "low": ?q=low · 그래픽 낮음 · no backdrop-filter → opaque panels, nothing moving). Every rule is under
+   [data-ui2611] and names a stage-1 part, so the other windows (단계 2) keep their look; the fonts go only on these parts.
+   DOM and CSS only: no three.js draw is added (the hatch stage's canvas is the one nest.js already has, made clear) */
+:root[data-ui2611]{
+  --u26-ink:#2B2622;--u26-ink2:#3A332C;--u26-ink3:#5E554C;--u26-bg:#FFFBF5;--u26-card:#FBF3E8;--u26-fill:#F1EADF;--u26-track:#EFE6DA;
+  --u26-edge:#8A8178;--u26-line:#D8D0C4;--u26-line2:#EEE7DD;--u26-acc:#D85A22;--u26-accT:#C04E1C;--u26-green:#6FA34A;
+  --u26-panel:rgba(255,251,245,.9);--u26-blur:blur(12px);--u26-sh:0 4px 16px rgba(43,38,34,.12);
+  --u26-fj:'Jua','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
+  --u26-fg:'Gowun Dodum','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
+}
+/* ja: Jua's kana and kanji are drawn the Korean way; Japanese takes only Jua's Latin and numbers, and 316 ⑦ M PLUS Rounded 1c (OFL, fonts/fonts-ja.css: 700 only since 317 2611c ①; the 400 description text takes the 700 face) for kana · kanji */
+@font-face{font-family:'U26 Jua Latin';font-style:normal;font-weight:400;font-display:swap;src:url(../fonts/jua.181.woff2) format('woff2');unicode-range:U+0000-00FF,U+2026}
+html.ja[data-ui2611]{--u26-fj:'U26 Jua Latin','M PLUS Rounded 1c','Hiragino Maru Gothic ProN','Hiragino Sans','Yu Gothic UI','Meiryo',sans-serif;--u26-fw:700;--u26-fg:'M PLUS Rounded 1c','Hiragino Sans','Yu Gothic UI','Meiryo',sans-serif}
+:root[data-ui2611=low]{--u26-panel:rgba(255,251,245,.96);--u26-blur:none}
+
+/* 글꼴: Jua (400 only, no faux bold) for titles, names, buttons, numbers; Gowun Dodum for descriptions */
+[data-ui2611] :is(#habName b,#hearts b,#lvPill,.u26grp button,.dock .back,.nestbtn,#nestPill button,.u26time,.u26st,.u26st :is(b,button),#nest .nsheet:has(.u26st) :is(.nname,.ncard .rar,.u26rw,.nbtns button),.fsheet :is(.fhead b,.fhead span,.fbar,.frow b,.frow em,.u26n)){font-family:var(--u26-fj);font-weight:var(--u26-fw,400)!important;font-synthesis:none}
+[data-ui2611] :is(#nest .nsheet:has(.u26st) .nwhy,.fsheet :is(.frow small,.u26find input)){font-family:var(--u26-fg);font-weight:400}
+
+/* ── ① 메인: 위 ── */
+[data-ui2611] #habitat>.bar{left:calc(14px + var(--sa-l));right:calc(14px + var(--sa-r));top:calc(14px + var(--sa-t));gap:0;padding:0}
+[data-ui2611] #habitat>.bar::before{display:none}
+/* 왼쪽 알약: 이름 | ♥ 숫자 (src/ui/ui2611.js puts the two in one .u26pill) */
+[data-ui2611] .u26pill{display:flex;align-items:center;flex:0 1 auto;min-width:0;height:44px;padding:0 14px 0 4px;border-radius:22px;background:var(--u26-panel);-webkit-backdrop-filter:var(--u26-blur);backdrop-filter:var(--u26-blur);box-shadow:var(--u26-sh)}
+[data-ui2611] #habitat>.bar .u26pill :is(#habName,#hearts){height:44px;min-height:44px;background:none;color:var(--u26-ink)}
+[data-ui2611] #habitat>.bar .u26pill #habName{gap:4px;padding:0 10px 0 0}
+[data-ui2611] #habitat>.bar #habName::before{order:-2;width:26px;height:20px;margin-right:-4px}
+[data-ui2611] #habitat>.bar #habName::after{content:'';order:-1;flex:none;width:16px;height:16px;background:var(--u26-green);-webkit-mask:var(--u26-leaf) center/contain no-repeat;mask:var(--u26-leaf) center/contain no-repeat}
+[data-ui2611]:is(:lang(en),:lang(ja)) #habitat>.bar #habName::after{display:none} /* room for Meadow · Snowfield · 325 ② わたしの庭 (the leaf is only a mark) */
+[data-ui2611] #habitat>.bar #habName b{min-width:2.1em;font-size:calc(17px*var(--fs))}
+[data-ui2611] #habitat>.bar .u26pill #hearts{flex:none;gap:5px;padding:0 0 0 11px;background:linear-gradient(var(--u26-line),var(--u26-line)) 0 50%/1px 16px no-repeat}
+[data-ui2611] #habitat>.bar #hearts span{width:15px;height:15px;background:var(--u26-acc);-webkit-mask:var(--u26-heartf) center/contain no-repeat;mask:var(--u26-heartf) center/contain no-repeat}
+[data-ui2611] #habitat>.bar #hearts b{font-size:calc(15px*var(--fs))}
+:root[data-ui2611]{
+  --u26-leaf:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M20 4C11 4 5 8 5 15c0 1.6.4 3 1 4.2C7.6 14.8 11 11.5 15 9.5c-3.6 2.6-6.4 6-7.6 10.2C8.6 20.5 10 21 11.6 21 18 21 20 14 20 4z'/></svg>");
+  --u26-heartf:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 21l-1.5-1.3C5.4 15.4 2 12.3 2 8.5 2 5.4 4.4 3 7.5 3c1.7 0 3.4.8 4.5 2.1C13.1 3.8 14.8 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.8-3.4 6.9-8.5 11.2z'/></svg>");
+  --u26-egg:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2.5c-4 0-7 6.2-7 11 0 4.3 3 7.5 7 7.5s7-3.2 7-7.5c0-4.8-3-11-7-11z'/></svg>");
+  --u26-clock:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'><circle cx='12' cy='12' r='8.5'/><path d='M12 7.5V12l3 2'/></svg>");
+  --u26-search:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round'><circle cx='11' cy='11' r='6.5'/><path d='M16 16l4.5 4.5'/></svg>");
+  --u26-chev:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232B2622' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M7 10l5 5 5-5'/></svg>");
+}
+/* 레벨 고리 칩 (below the pill; BETA rides in it) */
+[data-ui2611] #habitat>.bar #lvPill{position:absolute;left:0;top:60px;flex-direction:row;align-items:center;min-height:0;height:34px;padding:2px 10px 2px 3px;gap:6px;border-radius:18px;background:var(--u26-panel);-webkit-backdrop-filter:var(--u26-blur);backdrop-filter:var(--u26-blur);box-shadow:var(--u26-sh);color:var(--u26-ink2);font-size:calc(13px*var(--fs))} /* 333 ②-3: 50 → 60px: its top (and its ::after tap edge, -5px) clear of the icon row's 54px boxes (it ran 4px under 전체 보기 at 360–390) */
+[data-ui2611] #lvPill::after{content:'';position:absolute;inset:-5px 0}
+[data-ui2611] #lvPill>:is(b,i){display:none}
+[data-ui2611] #lvPill .u26ring{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:conic-gradient(var(--u26-acc) 0 var(--p,0%),var(--u26-track) var(--p,0%));font-style:normal;color:var(--u26-ink);font-size:calc(12px*var(--fs));line-height:1;position:relative;isolation:isolate}
+[data-ui2611] #lvPill .u26ring::before{content:'';position:absolute;inset:4px;border-radius:50%;background:var(--u26-bg);z-index:-1}
+[data-ui2611] #lvPill .btag{margin:0 0 0 2px;padding:0 5px;border-radius:6px;background:var(--u26-fill);box-shadow:none;color:var(--u26-ink3);font-family:system-ui,sans-serif;font-size:calc(9px*var(--fs));letter-spacing:.06em}
+[data-ui2611] #habitat>.bar.tight2 #lvPill .btag{font-size:calc(9px*var(--fs));padding:0 5px}
+/* 오른쪽: 이름 달린 아이콘 묶음 */
+[data-ui2611] .u26grp{display:flex;margin-left:auto;padding:0 3px;border-radius:20px;background:var(--u26-panel);-webkit-backdrop-filter:var(--u26-blur);backdrop-filter:var(--u26-blur);box-shadow:var(--u26-sh)}
+[data-ui2611] #habitat>.bar .u26grp :is(#overview,#serBtn,#mailBtn,#prefsBtn){flex-direction:column;justify-content:center;gap:3px;width:auto;min-width:44px;max-width:48px;height:54px;padding:0 1px;font-size:calc(11px*var(--fs));line-height:1.1;color:var(--u26-ink2);overflow:hidden}
+[data-ui2611]:lang(en) #habitat>.bar .u26grp :is(#overview,#serBtn,#mailBtn,#prefsBtn){font-size:calc(10px*var(--fs));letter-spacing:-.2px} /* Mailbox · Settings in 48px */
+[data-ui2611]:lang(ja) #habitat>.bar .u26grp :is(#overview,#serBtn,#mailBtn,#prefsBtn){gap:2px;font-size:calc(10px*var(--fs));line-height:1.05;white-space:normal;text-align:center} /* a label on two lines if it must (328 ①-5: ja 전체 보기 is ぜんたい, one line) */
+[data-ui2611] #habitat>.bar .u26grp :is(#overview,#serBtn,#mailBtn,#prefsBtn)::before{width:20px;height:20px;color:var(--u26-ink)}
+[data-ui2611] .u26grp :is(#overview,#serBtn,.u26lb){white-space:nowrap;text-overflow:ellipsis}
+[data-ui2611] .u26lb{display:block;max-width:100%;overflow:hidden}
+
+/* ── ① 메인: 아래 바 5칸 + 알 모양 둥지 ── */
+[data-ui2611] #habitat::after{left:calc(14px + var(--sa-l));right:calc(14px + var(--sa-r));bottom:calc(16px + var(--sa-b));height:74px;border-radius:26px;background:var(--u26-panel);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 8px 24px rgba(43,38,34,.16)}
+[data-ui2611=low] #habitat::after{background:var(--u26-panel);-webkit-backdrop-filter:none;backdrop-filter:none}
+[data-ui2611] .dock{bottom:calc(16px + var(--sa-b))}
+[data-ui2611] .dock.l{left:calc(14px + var(--sa-l));right:calc(50% + (100% - 28px)/10)}
+[data-ui2611] .dock.r{right:calc(14px + var(--sa-r));left:calc(50% + (100% - 28px)/10)}
+[data-ui2611] .dock .back{height:74px;gap:4px;color:var(--u26-ink2);font-size:calc(12px*var(--fs))}
+[data-ui2611] .dock .back::before{width:24px;height:24px;color:var(--u26-ink)}
+[data-ui2611] .dock #friendsBtn span{font-family:var(--u26-fj);color:var(--u26-ink3);font-size:calc(11px*var(--fs))}
+[data-ui2611] .back.new::after{right:calc(50% - 21px);top:10px;width:9px;height:9px;box-sizing:border-box;background:var(--u26-acc);box-shadow:0 0 0 2px var(--u26-bg)}
+[data-ui2611] .nestbtn{left:calc(50% - 35px);bottom:calc(31px + var(--sa-b));width:70px;height:84px;justify-content:flex-end;padding:0 0 12px;border:4px solid var(--u26-bg);border-radius:50% 50% 46% 46%/58% 58% 42% 42%;box-sizing:border-box;color:#fff;font-size:calc(13px*var(--fs));box-shadow:0 10px 22px rgba(216,90,34,.38);
+  background:radial-gradient(ellipse 7px 9px at 32% 30%,rgba(255,255,255,.35) 96%,transparent),radial-gradient(ellipse 5px 6px at 68% 22%,rgba(255,255,255,.3) 96%,transparent),radial-gradient(ellipse 6px 5px at 70% 52%,rgba(255,255,255,.28) 96%,transparent),var(--u26-accT)}
+[data-ui2611] .nestbtn.ready{border:4px solid var(--u26-bg);box-shadow:0 10px 22px rgba(216,90,34,.38);background:radial-gradient(ellipse 7px 9px at 32% 30%,rgba(255,255,255,.35) 96%,transparent),radial-gradient(ellipse 5px 6px at 68% 22%,rgba(255,255,255,.3) 96%,transparent),radial-gradient(ellipse 6px 5px at 70% 52%,rgba(255,255,255,.28) 96%,transparent),var(--u26-accT)}
+[data-ui2611] .nestbtn::before,[data-ui2611] .nestbtn svg{display:none}
+[data-ui2611] .nestbtn i{right:-10px;top:-4px;min-width:24px;height:24px;line-height:20px;box-sizing:border-box;padding:0 5px;border:2px solid var(--u26-bg);border-radius:12px;background:var(--u26-ink);color:#fff;box-shadow:none;font-weight:400;font-size:calc(12px*var(--fs))}
+/* 「알 N개 바로 까기」 + 다음 알 시간 (the old line is kept for its words but not shown) */
+[data-ui2611] .npill{bottom:calc(128px + var(--sa-b));gap:8px}
+[data-ui2611] .npill:has(>*){padding:0;background:none;box-shadow:none}
+[data-ui2611] .npill>.pill{display:none}
+[data-ui2611] .npill :is(.u26go,.u26time,.back){display:inline-flex;align-items:center;gap:6px;height:44px;min-height:44px;padding:0 16px;border-radius:22px;font-size:calc(14px*var(--fs))}
+[data-ui2611] .npill :is(.u26go,.back){border:0;background:var(--u26-ink);color:#fff;box-shadow:0 6px 16px rgba(43,38,34,.28);cursor:pointer}
+[data-ui2611] .u26go::before{content:'';width:16px;height:16px;background:#FFC9A8;-webkit-mask:var(--u26-egg) center/contain no-repeat;mask:var(--u26-egg) center/contain no-repeat}
+[data-ui2611] .u26time{padding:0 14px;border:0;background:var(--u26-panel);-webkit-backdrop-filter:var(--u26-blur);backdrop-filter:var(--u26-blur);box-shadow:var(--u26-sh);color:var(--u26-ink2);font-size:calc(13px*var(--fs));font-variant-numeric:tabular-nums;cursor:pointer}
+[data-ui2611] .u26time::before{content:'';width:15px;height:15px;background:var(--u26-ink3);-webkit-mask:var(--u26-clock) center/contain no-repeat;mask:var(--u26-clock) center/contain no-repeat}
+[data-ui2611] .npill [hidden]{display:none}
+
+/* ── ② 부화 무대 (the nest's stage is open: #nstage shown). Colours: 303 deep · light · text per rarity ── */
+[data-ui2611] .u26st{display:none}
+[data-ui2611] #nest .nsheet{--u26t:calc(64px + var(--sa-t));--u26h:min(400px,47dvh);--u26-d:#3B332D;--u26-l:#7C6B5C;--u26-t:#F3E6D6}
+[data-ui2611] #nest .nsheet[data-u26r=common]{--u26-d:#3E4A57;--u26-l:#7D8C9B;--u26-t:#DCE4EC}
+[data-ui2611] #nest .nsheet[data-u26r=rare]{--u26-d:#173E6B;--u26-l:#3F7FC2;--u26-t:#BFE0FF}
+[data-ui2611] #nest .nsheet[data-u26r=heroic]{--u26-d:#2E2160;--u26-l:#6A4EB8;--u26-t:#D9C9FF}
+[data-ui2611] #nest .nsheet[data-u26r=legendary]{--u26-d:#5A3A08;--u26-l:#C48A1C;--u26-t:#FFE3A1}
+[data-ui2611] #nest .nsheet[data-u26r=other]{--u26-d:color-mix(in srgb,var(--u26-x) 40%,#17110d);--u26-l:var(--u26-x);--u26-t:color-mix(in srgb,var(--u26-x) 22%,#fff)}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])){position:absolute;inset:0;padding:0;border-radius:0;color:#fff;background:radial-gradient(circle at 50% 36%,var(--u26-l) 0%,var(--u26-d) 64%);box-shadow:none;overflow:hidden;animation:none}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) .u26st{display:block;position:absolute;inset:0;pointer-events:none}
+/* 빛살 · 받침대 · 반짝이 */
+[data-ui2611] .u26rays{position:absolute;left:calc(50% - 380px);top:calc(var(--u26t) + var(--u26h)*.5 - 380px);width:760px;height:760px;border-radius:50%;opacity:.9;background:repeating-conic-gradient(rgba(255,255,255,.07) 0deg 7deg,transparent 7deg 22deg);-webkit-mask:radial-gradient(circle,#000 30%,transparent 70%);mask:radial-gradient(circle,#000 30%,transparent 70%);animation:u26spin 60s linear infinite}
+@keyframes u26spin{to{transform:rotate(1turn)}}
+[data-ui2611] .u26ped{position:absolute;left:calc(50% - 125px);top:calc(var(--u26t) + var(--u26h)*.73 - 28px);width:250px;height:56px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.5),rgba(255,255,255,.14));box-shadow:0 0 0 3px var(--u26-t),0 0 40px var(--u26-l)}
+[data-ui2611] .u26sp i{position:absolute;font-style:normal;line-height:1;color:var(--u26-t);animation:u26tw 2.4s ease-in-out infinite alternate}
+[data-ui2611] .u26sp i:nth-child(1){left:calc(50% - 133px);top:calc(var(--u26t) + 86px);font-size:14px}
+[data-ui2611] .u26sp i:nth-child(2){left:calc(50% + 105px);top:calc(var(--u26t) + 64px);font-size:9px;animation-delay:-.6s}
+[data-ui2611] .u26sp i:nth-child(3){left:calc(50% + 123px);top:calc(var(--u26t) + 236px);font-size:12px;animation-delay:-1.2s}
+[data-ui2611] .u26sp i:nth-child(4){left:calc(50% - 121px);top:calc(var(--u26t) + 266px);font-size:8px;animation-delay:-1.8s}
+[data-ui2611] .u26sp i:nth-child(5){left:calc(50% + 55px);top:calc(var(--u26t) + 32px);font-size:6px;animation-delay:-.3s}
+@keyframes u26tw{from{opacity:.35}to{opacity:1}}
+html.calm[data-ui2611] :is(.u26rays,.u26sp i),[data-ui2611=low] :is(.u26rays,.u26sp i){animation:none}
+@media (prefers-reduced-motion:reduce){[data-ui2611] :is(.u26rays,.u26sp i){animation:none}}
+/* 위 줄: 시리즈 이름 · 점 12 | 남은 알 N · 모두 까기 (× stays at the right end) */
+[data-ui2611] .u26top{position:absolute;top:calc(12px + var(--sa-t));left:calc(20px + var(--sa-l));right:calc(60px + var(--sa-r));display:flex;align-items:center;justify-content:space-between;gap:8px;pointer-events:auto;z-index:3}
+[data-ui2611] .u26ser{display:flex;flex-direction:column;gap:7px;min-width:0}
+[data-ui2611] .u26ser b{font-weight:400;font-size:calc(14px*var(--fs));color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-ui2611] .u26dots{display:flex;gap:4px}
+[data-ui2611] .u26dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.22)}
+[data-ui2611] .u26dots i.on{background:var(--u26-t)}
+[data-ui2611] .u26all{flex:none;display:inline-flex;align-items:center;gap:4px;height:44px;padding:0 14px;border:0;border-radius:22px;background:rgba(0,0,0,.24);color:#fff;font:inherit;font-size:calc(13px*var(--fs));white-space:nowrap;cursor:pointer}
+[data-ui2611] .u26all::after{content:'\203A';font-size:1.3em;line-height:1}
+[data-ui2611] .u26top [hidden]{display:none}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) .chead{position:absolute;top:var(--sa-t);right:calc(8px + var(--sa-r));padding:10px 0;z-index:4;background:none}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) .chead>:not([data-close]),[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) :is(#ntabs,#ngift,#nfetch,#nslots){display:none}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) .chead [data-close]{color:rgba(255,255,255,.88)}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) .ntop{position:absolute;left:0;right:0;top:var(--u26t);height:var(--u26h);margin:0;border:0;border-radius:0;background:none;overflow:visible;z-index:2}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) .nstage.secret{box-shadow:none}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) .nlow{position:absolute;left:calc(24px + var(--sa-l));right:calc(24px + var(--sa-r));top:calc(var(--u26t) + var(--u26h));bottom:calc(24px + var(--sa-b));margin:0;display:flex;flex-direction:column;z-index:2;min-height:0}
+[data-ui2611] #nest .nsheet:has(>.ntop>#nstage:not([hidden])) .nlow:has(>#ncard:not([hidden])) #ngauges{display:grid;align-self:stretch;margin-top:auto;padding-top:12px;gap:8px;text-align:left} /* 318 ② · 323 ② · 330 ②-3: the 조각 판 small in the card (ui2611.js puts it before the big button), in the gap under the words; was the trial file's only, now shipped */
+[data-ui2611] #nest .nlow:has(>#ncard:not([hidden])) #ngauges .gauge{padding:4px 10px;gap:6px;border-radius:12px;min-height:0}
+[data-ui2611] #nest .nlow:has(>#ncard:not([hidden])) #ngauges .gauge svg{width:20px;height:29px}
+[data-ui2611] #nest .nlow:has(>#ncard:not([hidden])) #ngauges .gauge small{display:none}
+[data-ui2611] .crow:has(>.cell[data-k]){grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:max(56px,calc((100% - 24px)/5));gap:6px;overflow-x:auto;overscroll-behavior-x:contain} /* 328 ①-3: 도감 one species = one row of 5 (4 columns dropped the 5th); under 5×56px + gaps the row scrolls sideways, the names keep 12px */
+[data-ui2611] :is(.nbtns,.sbtns,.sbar,.t2btns) .go:not(:disabled),[data-ui2611] .next170.go{background:var(--u26-accT)} /* 328 ①-1: the orange 확인 · 좋아요 · 받기 buttons (#e8805f, white 2.73:1) take accT, white 4.83:1; the hatch stage's white .go and the result card's ink .go come later and stay */
+[data-ui2611] .fx{z-index:999} /* 328 ①-4: the floating ♥ · z (hud.js fx, in 2611 put in #stage) go under the top bar (1000) and the dock (1001), over the 3D view */
+[data-ui2611] body:has(#nest:not([hidden]) #nstage:not([hidden])) .toast{top:calc(64px + var(--sa-t))!important} /* 323 ②: on the hatch stage a toast goes under 남은 알 · 닫기 (hud.js put it at the bottom edge, over 서식지로 보내기) */
+[data-ui2611] body:has(:is(section.codex,#friends):not([hidden])) .toast{top:calc(8px + var(--sa-t))!important} /* 328 ①-2: a full sheet (도감 · 보관함 · 엽서 · 진열장 · 친구들) is up: the toast sits on its head row under the safe area, not over its chips and lines; CSS, so a toast already up when the sheet opens moves too (the hatch stage's rule above wins there) */
+/* 카드: 등급 글 · 이름 · 한 줄 · 보상 줄 · 큰 흰 버튼 + 글자 버튼 (No. 숨김) */
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard:not([hidden]){position:static;flex:1;min-height:0;padding:0;gap:0;border:0;border-radius:0;background:none;box-shadow:none;color:#fff;justify-content:flex-start}
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard :is(.cno,.secno,.nwhy.nser,.nwhy.cno,.nchips>:not(.rar)){display:none}
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard .rar{padding:5px 14px;border-radius:14px;background:rgba(0,0,0,.35);box-shadow:none;color:var(--u26-t);font-size:calc(13px*var(--fs));letter-spacing:4px;line-height:1.3}
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard .rar::before{display:none}
+[data-ui2611] #nest .nsheet:has(.u26st) .nname{margin-top:12px;font-size:calc(30px*var(--fs));line-height:1.15;color:#fff;max-width:100%;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+[data-ui2611] #nest .nsheet:has(.u26st) .nname small{display:block;font-size:calc(15px*var(--fs));color:rgba(255,255,255,.88);font-weight:400}
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard :is(.nwhy,.nsecret){margin-top:8px;font-size:calc(15px*var(--fs));line-height:1.4;color:rgba(255,255,255,.88)}
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard .nwhy.away{color:var(--u26-t)}
+[data-ui2611] .u26rw{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;margin:16px 0 0;font-size:calc(14px*var(--fs));color:#fff}
+[data-ui2611] .u26rw span+span::before{content:'';display:inline-block;width:3px;height:3px;margin:0 10px;border-radius:50%;background:rgba(255,255,255,.6);vertical-align:middle}
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard .nbtns{margin-top:auto;padding-top:12px;flex-wrap:wrap;gap:0}
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard .nbtns .go{order:-1;flex:1 0 100%;min-height:58px;border-radius:29px;background:#fff;color:var(--u26-d);font-size:calc(19px*var(--fs));box-shadow:0 10px 30px rgba(0,0,0,.25)}
+[data-ui2611] #nest .nsheet:has(.u26st) .ncard .nbtns .sb{flex:1 1 0;min-width:0;min-height:44px;margin-top:6px;padding:0 6px;border:0;border-radius:22px;background:none;box-shadow:none;color:rgba(255,255,255,.88);font-size:calc(15px*var(--fs));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── ③ 친구 시트 ── */
+[data-ui2611] #friends{background:rgba(43,38,34,.25)}
+[data-ui2611] #friends .fsheet{position:relative;display:flex;flex-direction:column;height:calc(100% - 118px - var(--sa-t));box-sizing:border-box;padding:10px calc(18px + var(--sa-r)) 0 calc(18px + var(--sa-l));border-radius:28px 28px 0 0;background:var(--u26-bg);color:var(--u26-ink);box-shadow:0 -8px 30px rgba(43,38,34,.18)}
+[data-ui2611] #friends .fsheet::before{content:'';flex:none;align-self:center;width:40px;height:5px;border-radius:3px;background:#E2DBD1}
+[data-ui2611] #friends :is(.fsum,[data-fsp],[data-rar],.frow .ptag){display:none}
+[data-ui2611] :is(.camb,.see .camb){left:auto;right:calc(14px + var(--sa-r));top:calc(74px + var(--sa-t));transform:none} /* 정면: under the right icons, clear of the level chip and the friends sheet */
+[data-ui2611] #friends .fhead{margin-top:14px;padding:0;gap:8px;align-items:baseline}
+[data-ui2611] #friends .fhead b{font-size:calc(24px*var(--fs));color:var(--u26-ink)}
+[data-ui2611] #friends .fhead span{font-size:calc(14px*var(--fs));color:var(--u26-ink3)}
+[data-ui2611] #friends .fhead .back{align-self:center}
+[data-ui2611] .u26prog{flex:none;margin-top:10px;height:6px;border-radius:3px;background:var(--u26-track);overflow:hidden}
+[data-ui2611] .u26prog i{display:block;height:100%;border-radius:3px;background:var(--u26-green)}
+[data-ui2611] .u26find{flex:none;display:flex;align-items:center;gap:8px;margin-top:12px;height:44px;padding:0 14px;border-radius:14px;background:var(--u26-fill)}
+[data-ui2611] .u26find>i{flex:none;width:18px;height:18px;background:var(--u26-ink3);-webkit-mask:var(--u26-search) center/contain no-repeat;mask:var(--u26-search) center/contain no-repeat}
+[data-ui2611] .u26find input{flex:1;min-width:0;height:100%;border:0;background:none;color:var(--u26-ink);font-size:16px;outline-offset:2px;-webkit-appearance:none;appearance:none}
+[data-ui2611] .u26find input::placeholder{color:var(--u26-ink3);opacity:1}
+[data-ui2611] .u26sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+[data-ui2611] #friends .fbar{flex:none;margin-top:12px;padding:0;gap:0;flex-wrap:nowrap;border-bottom:1px solid var(--u26-line2)}
+[data-ui2611] #friends .fbar .seg{display:flex;gap:14px;background:none;border-radius:0;overflow:visible}
+[data-ui2611] #friends .fbar .seg button{position:relative;min-width:44px;min-height:44px;padding:0;border-radius:0;background:none;box-shadow:none;color:var(--u26-ink3);font-size:calc(15px*var(--fs));white-space:nowrap}
+[data-ui2611] #friends .fbar .seg button.on{color:var(--u26-ink);background:none;box-shadow:none}
+[data-ui2611] #friends .fbar .seg button.on::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2.5px;border-radius:2px;background:var(--u26-ink)}
+[data-ui2611] #friends .fbar .u26n{font-size:calc(13px*var(--fs));color:inherit}
+[data-ui2611] #friends .fbar [data-sort]{margin:0 0 4px auto;flex:none;max-width:132px;height:44px;min-height:44px;padding:0 30px 0 14px;border-radius:20px;background:var(--u26-fill) var(--u26-chev) right 10px center/16px no-repeat;color:var(--u26-ink);font-family:var(--u26-fj);font-size:16px;-webkit-appearance:none;appearance:none;text-overflow:ellipsis}
+[data-ui2611] #friends .flist{flex:1;max-height:none;min-height:0;margin-top:16px;padding:0 0 calc(16px + var(--sa-b));display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:12px;row-gap:18px;align-content:start}
+[data-ui2611] #friends .frow{position:relative;display:block;min-width:0;border:0;border-radius:0;background:none;box-shadow:none}
+[data-ui2611] #friends .frow+.frow{border:0;border-radius:0}
+[data-ui2611] #friends .frow[hidden]{display:none}
+[data-ui2611] #friends .frow .fgo{display:flex;flex-direction:column;align-items:stretch;gap:0;width:100%;min-height:0;padding:0;text-align:left;color:var(--u26-ink)}
+[data-ui2611] #friends .frow img{width:100%;height:auto;aspect-ratio:1;box-sizing:border-box;border-radius:18px;background:var(--u26-card);border-bottom:4px solid var(--u26-rc,#8A8178);object-fit:contain}
+[data-ui2611] #friends .frow .fgo>div{margin-top:6px;min-width:0}
+[data-ui2611] #friends .frow b{display:block;height:auto;font-size:calc(14px*var(--fs));line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:none;line-clamp:none}
+[data-ui2611] #friends .frow small{display:block;font-size:calc(11px*var(--fs));color:var(--u26-ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-ui2611] #friends .frow em{order:3;margin-top:2px;padding:0;gap:5px;font-size:calc(12px*var(--fs));color:var(--u26-ink3);white-space:nowrap;overflow:hidden}
+[data-ui2611] #friends .frow em::before{background:var(--u26-rc,#8A8178)}
+[data-ui2611] #friends .frow .fmore{position:absolute;right:0;top:0;width:44px;height:44px;border-radius:0 18px 0 14px;color:var(--u26-ink3)}
+[data-ui2611] #friends .frow.card{background:none;box-shadow:none}
+[data-ui2611] #friends .frow.card::after{content:'NEW';position:absolute;left:8px;top:8px;padding:2px 7px;border-radius:8px;background:var(--u26-accT);color:#fff;font-family:var(--u26-fj);font-size:10px;line-height:1.4;pointer-events:none}
+[data-ui2611] #friends .fnote{flex:none;margin:8px 0 calc(10px + var(--sa-b));color:var(--u26-ink3)}
+
+/* ══ 단계 2 (2611b): 나머지 화면 — 둥지·도감·보관함·진열장·꾸미기·설정·도움말·새 소식·우편·손님·축제·돌아왔어요·말풍선·토스트·월드맵·정면 ══
+   The other windows are painted by ui187.css (조용한 판) through its tokens; here the same tokens take the 303 numbers, so every
+   sheet and card follows at once, and a few rules below take away its outlines (no border lines) and set the two fonts. */
+/* 2611b: orange words on a card (#FBF3E8) or the fill (#F1EADF): #C04E1C is 4.39 · 4.04 there, this is 5.24 · 4.82 */
+:root[data-ui2611]{--u26-accD:#AC4618}
+:root[data-ui2611][data-ui187]{--u-bg:var(--u26-bg);--u-bga:var(--u26-panel);--u-fill:var(--u26-fill);--u-ink:var(--u26-ink);--u-ink2:var(--u26-ink3);--u-acc:var(--u26-accT);
+  --u-line:var(--u26-track);--u-th:var(--u26-card);--u-bd:transparent;--u-sh2:0 1px 3px rgba(43,38,34,.06);--u-sb:var(--u26-fill);--u-sbi:var(--u26-ink);--u-sbb:var(--u26-line);
+  --u-r:20px;--u-sh:var(--u26-sh);--u-dim:rgba(43,38,34,.25)}
+/* 글꼴: Gowun Dodum underneath, Jua for titles, names, buttons, numbers (400 only: Gowun and Jua have no bold, and none is drawn) */
+[data-ui2611] :is(#stage,#bubble),[data-ui2611] :is(#stage,#bubble) *{font-synthesis:none}
+[data-ui2611] :is(#stage,#bubble){font-family:var(--u26-fg)}
+[data-ui2611] :is(#stage,#bubble) :is(h1,h2,h3,h4,b,strong,th,summary,button,select,.label,.rar,.srar,.nname,.zz,.lvl,.pill,.cell i:not(.sfav)){font-family:var(--u26-fj);font-weight:var(--u26-fw,400)!important}
+[data-ui2611] :is(#stage,#bubble) :is(button,.label) :is(small,p,span:not([class])){font-family:var(--u26-fg)}
+/* 시트·카드: big rounded tops, no outlines */
+[data-ui2611] :is(.nsheet:not(.fsheet),.decor,.codex,.intro:is(.prefs,.help,.news,.fmenu,#intro)>div){border-radius:28px 28px 0 0}
+[data-ui2611] .intro:not(:is(.prefs,.help,.news,.fmenu,#intro))>div{border-radius:24px}
+[data-ui2611] :is(.chead,.fhead,.dhead) b,[data-ui2611] .intro h2{font-size:calc(22px*var(--fs))}
+[data-ui2611] :is(.chead,.fhead,.dhead) span{font-size:calc(14px*var(--fs))}
+[data-ui2611] :is(.chead,.fhead,.dhead) .back:not([data-close]),[data-ui2611] :is(.nbtns .sb,.sbtns .sb,.dtools button:not(.on),.bubble button.sub,.fmenu .col button:not(.sb):not([data-shut]),.dbrush button:not(.on)){border-radius:22px;box-shadow:none}
+[data-ui2611] :is(.chead,.fhead,.dhead) .back:not([data-close]){border:0;padding:0 14px;min-height:44px;margin:0}
+[data-ui2611] .ctier .mq{position:relative;border:0}[data-ui2611] .ctier .mq::after{content:'';position:absolute;inset:-10px} /* the 24px 「?」: a 44px touch area, same look */
+[data-ui2611] .chead .back.on{box-shadow:inset 0 0 0 2px var(--u26-ink)}
+[data-ui2611] :is(.ctabs button,.dtabs button,.sfilt .pick){border-radius:22px}
+[data-ui2611] .sfilt .pick{padding:0 12px}
+[data-ui2611] :is(.seg button.on,.prefs .seg button.on){background:#fff;color:var(--u26-ink);box-shadow:0 1px 4px rgba(43,38,34,.14)} /* 316: dark words on the white chosen cell (style.css gave them #fff7e8) */
+[data-ui2611] :is(.fbar,.sfilt,.cdet,.prefs) .seg{border-radius:22px}
+[data-ui2611] :is(.npill .back,.nbtns .go,.sbtns .go,.tip button[data-close],.bubble button),[data-ui2611] .intro button:not(.sb):not([data-shut]):not(#prefsClose){border-radius:22px}
+[data-ui2611] .cbody h2.ctier{border-top:0}
+[data-ui2611] .frow+.frow{border-top:0}
+/* 떠 있는 작은 판 (정면·사진·진열장·태그·토스트·월드맵 이름표): the glass panel of the top bar */
+[data-ui2611] :is(.camb .back,.tools .back,.fb,.label,.tag,.scnote,.toast,.beta){background:var(--u26-panel);-webkit-backdrop-filter:var(--u26-blur);backdrop-filter:var(--u26-blur);box-shadow:var(--u26-sh);color:var(--u26-ink)}
+[data-ui2611] :is(.camb .back,.tools .back,.fb){min-height:44px;border-radius:22px;padding:0 16px;font-size:calc(14px*var(--fs))}
+[data-ui2611] .label{display:flex;align-items:center;min-height:32px;padding:0 12px;border-radius:16px;font-size:calc(13px*var(--fs))} /* a name on the map: its .spot (the island, 200×170) is what a finger presses */
+[data-ui2611] .toast{border-radius:22px;padding:11px 18px;font-size:calc(14px*var(--fs))}
+[data-ui2611] .toast.small{padding:7px 14px;font-size:calc(12.5px*var(--fs))}
+/* 말풍선: 동물 · 처음 안내 (.tip) · 첫날 안내 (.tutsay) */
+[data-ui2611] :is(.tip,.bubble){border-radius:20px;color:var(--u26-ink)}
+[data-ui2611] .tip b{color:var(--u26-accD)}
+[data-ui2611] .tutsay{background:var(--u26-bg);color:var(--u26-ink);border-radius:22px;box-shadow:0 6px 24px rgba(43,38,34,.22)}
+[data-ui2611] .tutsay p{font-family:var(--u26-fj);font-weight:var(--u26-fw,400)}
+[data-ui2611] .tutsay :is(small,.tutskip){color:var(--u26-ink3)}
+[data-ui2611] .tutsay .tutlater{border-radius:22px;background:var(--u26-fill);color:var(--u26-ink);font-family:var(--u26-fj);font-weight:var(--u26-fw,400)}
+/* 돌아왔어요 · 우편 · 소식 줄 */
+[data-ui2611] .ret li button{border:0;border-radius:18px;background:var(--u26-card);color:var(--u26-ink)}
+[data-ui2611] .ret li button::after{color:var(--u26-ink3)}
+[data-ui2611] .ret li small{color:var(--u26-ink3)}
+[data-ui2611] .ret li button.take::after{background:var(--u26-accT);border-radius:14px;color:#fff} /* 328 ①-1: 받기 white on accT 4.83:1 (it took .ret li button::after ink3, 1.51:1) */
+[data-ui2611] .ret p.note{color:var(--u26-ink3)}
+/* 단계 1 남은 것: en 375 「Mead…」 — on a narrow phone the English labels and the pill give back a few px each so Meadow fits (a long name keeps …) · 325 ②: ja わたしの庭 the same */
+@media (max-width:380px){
+  [data-ui2611]:lang(en) #habitat>.bar .u26grp :is(#overview,#serBtn,#mailBtn,#prefsBtn){max-width:44px;letter-spacing:-.3px}
+  [data-ui2611]:is(:lang(en),:lang(ja)) .u26pill{padding-right:10px}
+  [data-ui2611]:is(:lang(en),:lang(ja)) #habitat>.bar .u26pill #habName{padding-right:7px}
+  [data-ui2611]:is(:lang(en),:lang(ja)) #habitat>.bar .u26pill #hearts{padding-left:8px}
+  [data-ui2611]:is(:lang(en),:lang(ja)) #habitat>.bar #habName b{font-size:calc(16px*var(--fs))}
+  [data-ui2611] #habitat>.bar .u26grp:has(>#serBtn:not([hidden])) :is(#overview,#serBtn,#mailBtn,#prefsBtn){min-width:44px;max-width:44px;padding-inline:0} /* 325 ②: with 4 icons (시리즈 on) the row gives the name 16px (나의 뜰 · My Yard whole at 360) · 330 ②-4: each box (what a tap hits) 44px side by side, no overlap (328 had them step 40px, 2px under each neighbour): the row's own 3px ends go */
+  [data-ui2611] #habitat>.bar .u26grp:has(>#serBtn:not([hidden])){padding:0}
+  [data-ui2611] #habitat>.bar:has(>.u26grp>#serBtn:not([hidden])){left:calc(10px + var(--sa-l));right:calc(10px + var(--sa-r))} /* 330 ②-4: and the bar's sides 14 → 10px, so 나의 뜰 · My Yard stay whole at 360 */
+  [data-ui2611] #habitat>.bar .u26pill:has(~.u26grp>#serBtn:not([hidden])) #habName::after{display:none} /* 325 ②: and the leaf goes (ko 나의 뜰 at 360; en · ja have none) */
+  [data-ui2611] #habitat>.bar .u26grp:has(>#serBtn:not([hidden])) .back.new::after{right:calc(50% - 17px)} /* 325 ②: the 40px button keeps its new-dot inside (overflow:hidden cut it) */
+  [data-ui2611]:lang(ja) #habitat>.bar #habName b{white-space:normal;line-height:1.05;font-size:calc(15px*var(--fs))} /* 325 ②: わたしの庭 on two lines like ぜんたい/を見る, not わたしの… */
+}
+/* 소식·우편·축제·손님 목록 줄 (.news li) · 축제 탭 · 코드 칸 */
+[data-ui2611] .news li{border:0;border-radius:18px;background:var(--u26-card);color:var(--u26-ink);font-family:var(--u26-fj);font-weight:var(--u26-fw,400)}
+[data-ui2611] .news li :is(small,p){font-family:var(--u26-fg)}
+[data-ui2611] .news h2 small,[data-ui2611] :is(.mail li small,.visit p.sub,.visit .vhd,.ev h3,.myth p.sub,.fmenu .sub){color:var(--u26-ink3)}
+[data-ui2611] :is(.mail li small.gift,.ev .evc b,.ev ol li b){color:var(--u26-accD)}
+[data-ui2611] .mail li button{border-radius:22px;background:var(--u26-accT);color:#fff}
+[data-ui2611] .mail li button:disabled{background:var(--u26-fill);color:var(--u26-ink3)}
+[data-ui2611] :is(.mail input,.bk textarea){border:0;border-radius:14px;background:var(--u26-fill);color:var(--u26-ink);box-shadow:inset 0 0 0 1px var(--u26-edge)} /* 2611b 검토 3: the box edge 3.2:1 on its fill, 3.7:1 on the panel (WCAG 1.4.11) */
+[data-ui2611] .ev li.next{box-shadow:inset 0 0 0 2px var(--u26-accT)}
+[data-ui2611] .ev li.evbuild{background:#EEF4F9}
+[data-ui2611] .ev .evtabs{gap:0;padding:3px;border-radius:22px;background:var(--u26-fill)}
+[data-ui2611] .ev .evtabs button{min-height:44px;border:0;border-radius:20px;background:none;color:var(--u26-ink3)}
+[data-ui2611] .ev .evtabs button.on{background:#fff;color:var(--u26-ink);box-shadow:0 1px 4px rgba(43,38,34,.14)}
+[data-ui2611] .ev li em{color:var(--u26-accD)}
+[data-ui2611] .visit .vgarden button{background:var(--u26-fill);color:var(--u26-ink);border-radius:22px}
+[data-ui2611] .fmenu .col button.sb{background:none;color:var(--u26-ink3)}
+/* 둥지: 빈 칸은 점선 대신 옅은 칠, 조각 게이지의 등급 테두리는 친구 카드처럼 아래 4px 띠로 */
+[data-ui2611] :is(.nslot.empty,.negg.ph){border:0;background:var(--u26-fill);box-shadow:none}
+[data-ui2611] .nslot.empty :is(b,small){color:var(--u26-ink3)}
+[data-ui2611] .gauge[data-k]{box-shadow:inset 0 -4px 0 var(--gc)}
+/* 316 u316: 부화 무대(.nsheet color:#fff) 안의 조각 카드 제목이 흰 글자를 물려받아 크림 바탕에 안 보이던 것 → 진한 글자 */
+[data-ui2611] .gauge b{color:var(--u26-ink)}
+[data-ui2611] .ser .cell.sec.unk{border:0;background:var(--u26-fill)}
+/* 누름 44px: 시리즈 「바꾸기」 (32px, its look kept: a wider touch area) · 설정 소리 막대 */
+[data-ui2611] .ser .cell .sswap{position:relative;border-radius:16px;box-shadow:none}[data-ui2611] .ser .cell .sswap::after{content:'';position:absolute;inset:-6px 0}
+[data-ui2611] .prefs input[type=range]{min-height:44px;margin-block:0}
+/* ── 316 (ui2611 단계 1·2 답) ── */
+/* ⑨ 우편 숫자 배지 (9+까지): the number takes the dot's place */
+[data-ui2611] #habitat>.bar #mailBtn{position:relative}
+[data-ui2611] #habitat>.bar #mailBtn.u26has::after{display:none}
+[data-ui2611] #mailBtn .u26mn{position:absolute;top:3px;left:calc(50% + 3px);min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:var(--u26-accT);box-shadow:0 0 0 2px var(--u26-bg);color:#fff;font-family:var(--u26-fj);font-weight:var(--u26-fw,400);font-size:11px;line-height:18px;text-align:center;letter-spacing:0;font-variant-numeric:tabular-nums}
+[data-ui2611] #mailBtn .u26mn[hidden]{display:none}
+/* ④ 친구 시트: 검색 + 「필터」 한 줄, 필터를 누르면 종·등급 고르개 줄 */
+[data-ui2611] .u26srow{flex:none;display:flex;gap:8px;margin-top:12px}
+[data-ui2611] .u26srow .u26find{flex:1;min-width:0;margin-top:0}
+[data-ui2611] .u26fb{flex:none;min-width:44px;height:44px;padding:0 30px 0 14px;border:0;border-radius:14px;background:var(--u26-fill) var(--u26-chev) right 10px center/16px no-repeat;color:var(--u26-ink);font-family:var(--u26-fj);font-weight:var(--u26-fw,400);font-size:calc(15px*var(--fs));white-space:nowrap;cursor:pointer}
+[data-ui2611] .u26fb[aria-expanded=true]{background-color:#fff;box-shadow:var(--u26-sh)}
+[data-ui2611] .u26fb.on{color:var(--u26-accD)}
+[data-ui2611] .u26fpan{flex:none;display:flex;gap:8px;margin-top:8px}
+[data-ui2611] .u26fpan[hidden]{display:none}
+[data-ui2611] #friends .u26fpan :is([data-fsp],[data-rar]){display:block;flex:1 1 0;min-width:0;height:44px;margin:0;padding:0 30px 0 14px;border:0;border-radius:14px;background:var(--u26-fill) var(--u26-chev) right 10px center/16px no-repeat;color:var(--u26-ink);font-family:var(--u26-fj);font-weight:var(--u26-fw,400);font-size:16px;-webkit-appearance:none;appearance:none;text-overflow:ellipsis}
+/* ② 모두 까기 결과: one card, a row per friend (the mail card's rows) */
+[data-ui2611] .u26res>div{width:100%;max-width:340px;box-sizing:border-box}
+[data-ui2611] .u26res h2{font-family:var(--u26-fj);font-weight:var(--u26-fw,400)}
+[data-ui2611] .u26res li{position:relative;padding:8px 12px 8px 8px;box-shadow:inset 4px 0 0 var(--u26-rc)}
+[data-ui2611] .u26res li img{flex:none;width:52px;height:52px;border-radius:14px;background:var(--u26-fill);object-fit:contain}
+[data-ui2611] .u26res li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+[data-ui2611] .u26res li small{display:block;font-size:calc(12px*var(--fs));color:var(--u26-ink3)}
+[data-ui2611] .u26res li .u26rr{display:inline-flex;align-items:center;gap:5px;color:var(--u26-ink)}
+[data-ui2611] .u26res li .u26rr::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--u26-rc)}
+[data-ui2611] .u26res li .new{margin-right:6px;padding:1px 7px;border-radius:9px;background:var(--u26-accT);color:#fff;font-style:normal;font-size:calc(11px*var(--fs))}
+[data-ui2611] .u26res .nbtns .go{width:100%;min-height:48px;border:0;border-radius:24px;background:var(--u26-ink);color:#fff;font-family:var(--u26-fj);font-weight:var(--u26-fw,400)}

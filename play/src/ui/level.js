@@ -7,7 +7,7 @@ import * as G from '../game/game.js';
 import { BALANCE as B, SETS, BRUSHES, G190 } from '../game/data.js';
 import { PROP, HAB, xpAt, unlocksBetween, growStage, slotsAt } from '../game/rules.js';
 import { GUESTS } from '../game/guests-data.js';
-import { overlayOpen, topWindow, tip, toast, resting } from './hud.js';
+import { overlayOpen, topWindow, tip, say, resting } from './hud.js';
 import { ACH, ACH_BY } from '../game/achieve.js';
 import { sfx } from './sound.js';
 const propThumb = (...a) => import('./thumbs.js').then(m => m.propThumb(...a)); // 26-1: three.js comes after the first screen
@@ -77,8 +77,8 @@ export function initLevel(getApi) {
     if (topWindow() || overlayOpen() || document.body.classList.contains('photo') || document.body.classList.contains('skyview')) return; // 16-2: not over the sky
     const onMap = !$('world').classList.contains('hidden') || !$('loading').hidden; // inbox 43: a card left from the last visit waits for the habitat (on the map it would eat the 초원 tap)
     const xa = B.level.xp.achieve;
-    if (got.length === 1) toast($t('업적 「{0}」 · {1} · XP +{2}', got[0].title, got[0].text, xa), 3200);
-    else if (got.length) toast($t('업적 {0}개를 달성했어요 · XP +{1} · 위의 Lv에서 볼 수 있어요', got.length, got.length * xa), 3200);
+    if (got.length === 1) say($t('업적 「{0}」 · {1} · XP +{2}', got[0].title, got[0].text, xa), 3200, false); // 333 ②-1: in the news line, after any before it
+    else if (got.length) say($t('업적 {0}개를 달성했어요 · XP +{1} · 위의 Lv에서 볼 수 있어요', got.length, got.length * xa), 3200, false);
     got = [];
     const since = G.now() - (G.S.flags.lvCard?.at || 0); // a clock set back (since < 0) does not hold the card
     if (!pend || !card.hidden || (since >= 0 && since < GAP) || onMap || resting()) return; // inbox 43

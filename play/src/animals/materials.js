@@ -499,10 +499,10 @@ const MOONWATER = `vec3 c = cells(p * 4.0 + 1.3); float rr = c.x * 6.0 - uTime *
   float rip = ring * (1.0 - smoothstep(0.12, 0.42, c.x)) * step(0.4, c.z);
   diffuseColor.rgb = mix(uBase * (0.92 + 0.16 * fbm3(p * 3.0)), vec3(0.72, 0.78, 0.92), rip * 0.21); roughnessFactor = mix(0.6, 0.4, rip); metalnessFactor = rip * 0.15;
   totalEmissiveRadiance += vec3(0.7, 0.78, 1.0) * rip * 0.075 + uBase * 0.35 * pow(1.0 - nv, 2.0);`;
-// 초승달 조약돌 (the moon otter's item): a silver pebble glowing softly from inside, breathing slowly, faint craters
+// 초승달 (the moon otter's item; 328: the ☾ pendant on its cord): silvery sky blue (328②, was white) glowing softly from inside, breathing slowly, faint craters
 const MOONSTONE = `float n = fbm3(p * 9.0);
   diffuseColor.rgb *= 0.9 + 0.1 * n;
-  totalEmissiveRadiance += vec3(0.8, 0.87, 1.0) * (0.42 + 0.07 * sin(uTime * 1.5)) * (0.75 + 0.25 * nv) * (0.9 + 0.1 * n);`;
+  totalEmissiveRadiance += vec3(0.55, 0.76, 1.0) * (0.42 + 0.07 * sin(uTime * 1.5)) * (0.75 + 0.25 * nv) * (0.9 + 0.1 * n);`;
 // 눈꽃 수정 (백조): clear ice crystal (fake glass), lit a little from inside, most where we look straight in, and frosted
 // toward the outline; on the wings the feather tips are cut gems: facets (each cell tilts the normal its own way) with
 // bright edges. No cracks. The beak and feet are frosted ice (FROST); the snowflakes falling round it are figure.js
@@ -1040,7 +1040,7 @@ const LOOKS = { // c = the colour entry (its values: body, second, tint, ink, ..
     return { body: jade, hoof: jade, accent: look(phys('#d93a30', { roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.04 }), 'coral', CORAL, {}, { studio: 0 }), horn: shine('#ffc75a') }; },
   moonwater: () => { const o = base => look(phys('#ffffff', { roughness: 0.6 }), 'moonwater', MOONWATER, { uBase: base }), body = o('#28386e');
     return { body, accent: o('#6676a0'), hoof: body, beak: toyMat('#14161e'),
-      item: { body: look(phys('#e4ebf6', { roughness: 0.22, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.05 }), 'moonstone', MOONSTONE), accent: body, halo: '#dce6ff' } }; }, // the paws holding it are the otter's
+      item: { body: look(phys('#9ec4e8', { roughness: 0.22, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.05 }), 'moonstone', MOONSTONE), accent: body, cord: shine('#cfd8ea', 0.32), halo: '#b8d6f6', haloW: 0.015 } }; }, // 319·326④·328②: the cord's navy strand is the otter's, its silver strand and bail cord; the ☾ pendant's halo a thin shell (0.05 round it read from the side as a white tag)
   crystal: () => { const ice = look(phys('#d6e8f8', { roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.1 }), 'frost', FROST), o = { tint: '#cfe6ff', absorb: 1.0, inner: '#9cc8ff', dark: 0.45, rough: 0.05, coat: 1, neutral: 0.6 };
     return { body: clear({ key: 'crystal', ...o, post: CRYSTAL_POST }), wing: clear({ key: 'crystalwing', ...o, nrm: FACETS, post: CRYSTAL_POST + FACET_EDGE }),
       accent: ice, hoof: ice, beak: ice, nostril: phys('#2a3550', { roughness: 0.1, clearcoat: 1 }) }; },

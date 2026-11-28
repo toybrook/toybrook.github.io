@@ -453,6 +453,8 @@ rows.onclick = e => {
   const opt = [...PREF_ROWS, ...LOOK_ROWS].find(r => r[0] === d.k)[2].find(o => String(o[0]) === d.v), was = PREFS[d.k];
   PREFS[d.k] = opt[0]; savePrefs(); applyLook(); drawPrefs(); applySound();
   if (d.k === 'gfx' && was !== opt[0]) regfx(); // 26-3: the habitat is built again at the new quality
+  const R26 = document.documentElement.dataset; // rc0880 검토 3: the ui2611 look follows 그래픽 낮음 now (as index.html's 303 script at load)
+  if (d.k === 'gfx' && R26.ui2611) R26.ui2611 = PREFS.gfx === 'low' || /[?&]q=low\b/.test(location.search) || !CSS.supports('backdrop-filter', 'blur(1px)') && !CSS.supports('-webkit-backdrop-filter', 'blur(1px)') ? 'low' : '1';
 };
 rows.oninput = e => { const k = e.target.dataset.vol; if (!k) return; PREFS[k] = e.target.value / 100; e.target.nextElementSibling.value = e.target.value + '%'; applySound(); };
 rows.onchange = e => { const k = e.target.dataset.vol; if (k) { savePrefs(); if (k !== 'vToy' || !toy('vinyl', 'tap')) sfx('tap'); } }; // 260 C: 장난감 소리 크기 plays a toy's 뽁 // let go of the slider: keep it, and a tap to hear how loud

@@ -180,6 +180,8 @@ export function draw(o) {
   pill.classList.toggle('mini', mini);
   if (pill.hidden) { board.hidden = true; ask.hidden ||= !fin; return; }
   const tp = q('.tip'); let py = ''; if (vis(tp)) { pill.style.top = ''; const a = pill.getBoundingClientRect(), b = tp.getBoundingClientRect(); if (b.top < a.bottom && b.bottom > a.top) py = Math.round(b.bottom + 8) + 'px'; } // 258 B 추가: a hud tip card (자라기 …) up top: the line under it, not on its lines
+  // 339 ⑦: the line not over the level chip's 「· 다음까지 n%」: under the chip when they meet
+  if (!py && vis($('lvPill'))) { pill.style.top = ''; const a = pill.getBoundingClientRect(), b = $('lvPill').getBoundingClientRect(); if (b.top < a.bottom && b.bottom > a.top && b.left < a.right && b.right > a.left) py = Math.round(b.bottom + 6) + 'px'; }
   if (pill.style.top !== py) pill.style.top = py;
   const next = nextRow(S), t = lead ? o.line : mini ? '' : next ? $t('다음: {0}', ROW[next]) : '';
   if (lab.textContent !== t) { lab.textContent = t; pill.classList.remove('turn'); void pill.offsetWidth; pill.classList.add('turn'); }

@@ -116,7 +116,7 @@ export function initNest(nav) {
       t.textContent = !s ? $t('빈 칸') : ready ? $t('부화!') : clock(s.end - now);
       const from = eggHome(s?.egg.type), there = from && from.id !== habId ? from.name + ' ' : '';
       sub.textContent = !s ? $t('알을 눌러 넣어요') : ready ? $t('{0}눌러서 부화', there) : $t('{0}{1} 알', there, RAR[s.egg.rarity].name);
-      b.ariaLabel = $t('부화 칸 {0}: {1}', i + 1, !s ? $t('비어 있음') : $t('{0} 알, {1}', RAR[s.egg.rarity].name, ready ? $t('눌러서 부화') : span(s.end - now) + $t(' 남음')));
+      b.ariaLabel = t.textContent + ' ' + sub.textContent + ' · ' + $t('부화 칸 {0}: {1}', i + 1, !s ? $t('비어 있음') : $t('{0} 알, {1}', RAR[s.egg.rarity].name, ready ? $t('눌러서 부화') : span(s.end - now) + $t(' 남음'))); // 328 ⑥(b): the name starts with what the slot shows (부화! 눌러서 부화 …), then which slot
     });
   }
   function drawGauges() {
@@ -134,6 +134,12 @@ export function initNest(nav) {
   // ---- the hatch stage: its own small renderer, lit like the habitat, alive only while the sheet shows it
   let st = null, cur = null, live = false, last = 0;
   function stageOn() {
+    // <ui2611>
+    if (!st && document.documentElement.dataset.ui2611) { // 303 ?ui2611: a clear canvas (no floor shadow) over src/ui/ui2611.js's stage block; the same figure, camera and light
+      const { R, scene } = studio({ alpha: true }), cam = new THREE.PerspectiveCamera(28, 1, 0.1, 100); R.setClearColor(0, 0);
+      st = { R, scene, cam, shadow: null, glow: Object.assign(document.createElement('div'), { className: 'nglow' }) }; stageEl.append(R.domElement, st.glow);
+    }
+    // </ui2611>
     if (!st) {
       const { R, scene } = studio(), cam = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
       const cv = Object.assign(document.createElement('canvas'), { width: 64, height: 64 }), g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -287,7 +293,7 @@ export function initNest(nav) {
   async function resume() { const p = pending(); if (!p) return draw(); busy = true; const tok = run; const got = await Promise.all([loadModel(SP[p.species].model), loadAcc(p.acc)]).then(() => true, () => false); if (tok !== run || el.hidden) return; if (!got) { busy = false; return draw(); } stageOn(); show(p); card(p); draw(); } // an unanswered card (closed sheet, reload) comes back
 
   function open() {
-    if (!habId) return;
+    if (!habId || !el.hidden) return; // 317 ⑤: already open (a second nestBtn click or play.openNest): no second draw · resume over the stage's egg, figure and cover
     el.hidden = false; sig = {}; tab = HAB[habId].nest;
     if (!G.S.flags.nestTapped) { hideToast(); G.flag('nestTapped'); }
     draw(); resume();

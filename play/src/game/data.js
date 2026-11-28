@@ -239,11 +239,11 @@ export const SHARED_VARIANTS = [
 // on an adult. Own colours (keyed by GLB material name), never the variant's. Any animal can hatch wearing one (BALANCE.secret).
 export const ACCESSORIES = {
   strawhat: { name: $t('밀짚모자'), wear: $t('밀짚모자를 쓰고'), slot: 'head', file: 'assets/models/acc_strawhat.glb', colors: { body: '#ebc46e', accent: '#d9573f' } },
-  ribbon: { name: $t('리본'), wear: $t('리본을 달고'), slot: 'neck', file: 'assets/models/acc_ribbon.glb', colors: { body: '#ee5577' } },
+  ribbon: { name: $t('리본'), wear: $t('리본을 달고'), slot: 'neck', also: 'lace', file: 'assets/models/acc_ribbon.glb', colors: { body: '#ee5577' } },
   flowercrown: { name: $t('꽃 화관'), wear: $t('꽃 화관을 쓰고'), slot: 'head', file: 'assets/models/acc_flowercrown.glb', colors: { body: '#6fae55', accent: '#ffb7cc', center: '#ffd54a' } },
   sunglasses: { name: $t('선글라스'), wear: $t('선글라스를 끼고'), slot: 'eye', file: 'assets/models/acc_sunglasses.glb', colors: { body: '#26232a', accent: '#2c3e58' } },
-  scarf: { name: $t('목도리'), wear: $t('목도리를 두르고'), slot: 'neck', file: 'assets/models/acc_scarf.glb', colors: { body: '#d84b4b', accent: '#fff3e2' } },
-  // 28-6b: nineteen more (24). also: a second slot it takes (the medal hangs on the chest, so the otter's pebble gives way);
+  scarf: { name: $t('목도리'), wear: $t('목도리를 두르고'), slot: 'neck', also: 'lace', file: 'assets/models/acc_scarf.glb', colors: { body: '#d84b4b', accent: '#fff3e2' } },
+  // 28-6b: nineteen more (24). also: a second slot it takes (328: every neck one takes 'lace', so the otter's cord necklace gives way);
   // glow: its materials that shine softly by night (emissive x the night, plain vinyl by day)
   crown: { name: $t('미니 왕관'), wear: $t('미니 왕관을 쓰고'), slot: 'head', file: 'assets/models/acc_crown.glb', colors: { body: '#f2c14e', center: '#e2465a' } },
   beret: { name: $t('베레모'), wear: $t('베레모를 쓰고'), slot: 'head', file: 'assets/models/acc_beret.glb', colors: { body: '#3d4f86' } },
@@ -252,11 +252,11 @@ export const ACCESSORIES = {
   mushroom: { name: $t('버섯 모자'), wear: $t('버섯 모자를 쓰고'), slot: 'head', file: 'assets/models/acc_mushroom.glb', colors: { body: '#d9473f', accent: '#fff6e8' } },
   headphones: { name: $t('헤드폰'), wear: $t('헤드폰을 쓰고'), slot: 'eye', also: 'head', file: 'assets/models/acc_headphones.glb', colors: { body: '#7fc8c0', accent: '#f4f1ea' } },
   earmuffs: { name: $t('귀마개'), wear: $t('귀마개를 하고'), slot: 'eye', also: 'head', file: 'assets/models/acc_earmuffs.glb', colors: { body: '#c9b8e8', accent: '#ffc4d6' } },
-  bowtie: { name: $t('나비넥타이'), wear: $t('나비넥타이를 매고'), slot: 'neck', file: 'assets/models/acc_bowtie.glb', colors: { body: '#d8433f', accent: '#fffaf0' } },
-  bell: { name: $t('방울 목걸이'), wear: $t('방울 목걸이를 달고'), slot: 'neck', file: 'assets/models/acc_bell.glb', colors: { body: '#c8463c', accent: '#f2c14e' } },
-  pearls: { name: $t('진주 목걸이'), wear: $t('진주 목걸이를 걸고'), slot: 'neck', file: 'assets/models/acc_pearls.glb', colors: { body: '#e8dccb', center: '#fbf4ea' } },
-  bandana: { name: $t('반다나'), wear: $t('반다나를 두르고'), slot: 'neck', file: 'assets/models/acc_bandana.glb', colors: { body: '#3a78c8' } },
-  medal: { name: $t('메달'), wear: $t('메달을 걸고'), slot: 'neck', also: 'chest', file: 'assets/models/acc_medal.glb', colors: { body: '#f2c14e', accent: '#3f74c9' } },
+  bowtie: { name: $t('나비넥타이'), wear: $t('나비넥타이를 매고'), slot: 'neck', also: 'lace', file: 'assets/models/acc_bowtie.glb', colors: { body: '#d8433f', accent: '#fffaf0' } },
+  bell: { name: $t('방울 목걸이'), wear: $t('방울 목걸이를 달고'), slot: 'neck', also: 'lace', file: 'assets/models/acc_bell.glb', colors: { body: '#c8463c', accent: '#f2c14e' } },
+  pearls: { name: $t('진주 목걸이'), wear: $t('진주 목걸이를 걸고'), slot: 'neck', also: 'lace', file: 'assets/models/acc_pearls.glb', colors: { body: '#e8dccb', center: '#fbf4ea' } },
+  bandana: { name: $t('반다나'), wear: $t('반다나를 두르고'), slot: 'neck', also: 'lace', file: 'assets/models/acc_bandana.glb', colors: { body: '#3a78c8' } },
+  medal: { name: $t('메달'), wear: $t('메달을 걸고'), slot: 'neck', also: 'lace', file: 'assets/models/acc_medal.glb', colors: { body: '#f2c14e', accent: '#3f74c9' } },
   glasses: { name: $t('동그란 안경'), wear: $t('동그란 안경을 쓰고'), slot: 'eye', file: 'assets/models/acc_glasses.glb', colors: { body: '#6b4a34' } },
   heartglasses: { name: $t('하트 선글라스'), wear: $t('하트 선글라스를 끼고'), slot: 'eye', file: 'assets/models/acc_heartglasses.glb', colors: { body: '#e8507a', accent: '#7a2140' } },
   monocle: { name: $t('외눈 안경'), wear: $t('외눈 안경을 끼고'), slot: 'eye', file: 'assets/models/acc_monocle.glb', colors: { body: '#d9b04a', center: '#d9b04a' } },
@@ -268,7 +268,7 @@ export const ACCESSORIES = {
 // A legendary's own item (its `item`, inbox 10), held at the model's attach slot like an accessory but in the look's
 // materials (materials.js LOOKS: `item`); baked by tools/bake-props.mjs. A secret accessory in the same slot wins.
 export const LEGEND_ITEMS = {
-  moonstone: { slot: 'chest', file: 'assets/models/prop_moonstone.glb' }, // 수달: a glowing crescent pebble held to the chest
+  moonstone: { slot: 'lace', file: 'assets/models/prop_moonstone319.glb' }, // 수달 (328, 0.88.0; was a pebble held to the chest, prop_moonstone.glb): a ☾ pendant on a twisted cord round the neck (319·326④·328②)
   yuzu: { slot: 'head', file: 'assets/models/prop_yuzu.glb' },            // 카피바라: a yuzu on the head
 };
 
@@ -398,8 +398,11 @@ export const MODELS = {
   otter: {
     move: 'walk', walk: { hop: 0.15, trot: 1.6, roam: 0.6, water: 'swim', wet: 0.5, float: 0.6 },
     files: { baby: 'assets/models/otter_baby.glb', adult: 'assets/models/otter_adult.glb' },
-    baby: sized('otter', 'baby', { h: 1.639, r: 0.4, seg: [-0.966, 0.599], legs: { hip: 0.34, x: [0.24, -0.42], z: 0.19 }, attach: { head: { p: [0.44, 1.56, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.36, 0.86, 0], r: [0, 0, -0.9], s: 1.2 }, back: { p: [-0.2, 0.92, 0], r: [0, 0, 0], s: 0.85 }, eye: { p: [0.5, 1.32, 0], r: [0, 0, 0], s: 1.3 }, chest: { p: [0.62, 0.6, 0], r: [0, 0, 0], s: 0.85 } } }), // chest x 0.56 -> 0.62, adult 0.72 -> 0.8: the pebble out in front of the belly (inbox 12)
-    adult: sized('otter', 'adult', { h: 1.512, r: 0.403, seg: [-1.212, 0.917], legs: { hip: 0.4, x: [0.4, -0.48], z: 0.2 }, attach: { head: { p: [0.78, 1.48, 0], r: [0, 0, -0.1], s: 0.95 }, neck: { p: [0.57, 1.02, 0], r: [0, 0, -0.84], s: 1.15 }, back: { p: [-0.1, 1.08, 0], r: [0, 0, 0], s: 0.95 }, eye: { p: [0.84, 1.33, 0], r: [0, 0, 0], s: 1.05 }, chest: { p: [0.8, 0.6, 0], r: [0, 0, 0], s: 1 } } }),
+    baby: sized('otter', 'baby', { h: 1.639, r: 0.4, seg: [-0.966, 0.599], legs: { hip: 0.34, x: [0.24, -0.42], z: 0.19 }, attach: { head: { p: [0.44, 1.56, 0], r: [0, 0, -0.1], s: 1.15 }, neck: { p: [0.36, 0.86, 0], r: [0, 0, -0.9], s: 1.2 }, back: { p: [-0.2, 0.92, 0], r: [0, 0, 0], s: 0.85 }, eye: { p: [0.5, 1.32, 0], r: [0, 0, 0], s: 1.3 }, chest: { p: [0.62, 0.6, 0], r: [0, 0, 0], s: 0.85 }, lace: { p: [0.311, 0.9, 0], r: [0, 0, -0.57], s: 1.083, pend: [0.945, [0.2955, 0, -0.084]] } } }), // chest x 0.56 -> 0.62, adult 0.72 -> 0.8: the pebble out in front of the belly (inbox 12)
+    adult: sized('otter', 'adult', { h: 1.512, r: 0.403, seg: [-1.212, 0.917], legs: { hip: 0.4, x: [0.4, -0.48], z: 0.2 }, attach: { head: { p: [0.78, 1.48, 0], r: [0, 0, -0.1], s: 0.95 }, neck: { p: [0.57, 1.02, 0], r: [0, 0, -0.84], s: 1.15 }, back: { p: [-0.1, 1.08, 0], r: [0, 0, 0], s: 0.95 }, eye: { p: [0.84, 1.33, 0], r: [0, 0, 0], s: 1.05 }, chest: { p: [0.8, 0.6, 0], r: [0, 0, 0], s: 1 }, lace: { p: [0.575, 1.014, 0], r: [0, 0, -0.84], s: 1.15 } } }),
+    // 328 (319·326④·328②, user OK): lace: the 달빛 물결 necklace's cord ring, its centre and plane fitted to each neck (the baby's neck slot
+    // cuts its back, so not that one); chest: the old pebble's (nothing in it now). pend: figure.js sizes the item's 'body' mesh (the ☾)
+    // 0.945 about its bail on the cord ([0.2955, 0, -0.084], PEN/BAIL in tools/bake-props.mjs worked out), so the baby's is 1.3x 315c's too
   },
   swan: {
     move: 'swim', legMat: 'hoof', // the cygnet's leg stub the shank's colour (figure.js)

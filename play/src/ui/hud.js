@@ -26,12 +26,16 @@ export function toast(text, ms = 2200, small = false) {
 }
 export const hideToast = () => toastEl.classList.remove('on');
 // inbox 102: news in turn, one line at a time (small): each waits for the one before it to go
+// 330 ②-1: say is the habitat's news (기뻐해요 ♥ · 알 · 산책 …): with a window up (보관함 · 도감 …) it waits for it to close (it covered the
+// window's head), then each in turn; the hearts are counted already. What a window's own buttons did is toast(), at once
 let line = Promise.resolve();
-export const say = (text, ms = 3000) => { line = line.then(() => { toast(text, ms, true); return new Promise(r => setTimeout(r, ms)); }); };
+const clear = () => new Promise(r => { const k = () => topWindow() ? setTimeout(k, 500) : r(); k(); });
+// 334 ⑤: text may be a function, asked when its turn comes (a guest gone by then: falsy, skipped, no wait)
+export const say = (text, ms = 3000, small = true) => { line = line.then(clear).then(() => { const t = typeof text === 'function' ? text() : text; if (!t) return; toast(t, ms, small); return new Promise(r => setTimeout(r, ms)); }); };
 
 function fx(cls, text, x, y, ms) {
   const e = document.createElement('div'); e.className = 'fx ' + cls; e.textContent = text;
-  e.style.left = x + 'px'; e.style.top = y + 'px'; document.body.appendChild(e); setTimeout(() => e.remove(), ms);
+  e.style.left = x + 'px'; e.style.top = y + 'px'; (document.documentElement.dataset.ui2611 && document.getElementById('stage') || document.body).appendChild(e); setTimeout(() => e.remove(), ms); // 328 ①-4: in 2611 into #stage (.wrap is fixed: its own layer), so z 999 is under the top bar's 1000; in body it went over all of #wrap
 }
 
 export const heart = (x, y, cls = '') => fx('heart ' + cls, '♥', x, y, 1300); // cls 'rim': 176 the 정 레벨-up hearts, a white rim over pink friends
@@ -68,6 +72,9 @@ export function ask(text, ok = $t('확인'), no = $t('취소')) {
 
 // the windows, top first; each closes with its own close button (so its own code runs)
 const TOPS = ['#desk', '#ask', '.tip', '#intro', '#news', '#lvup', '#zoneCard', '#artCard', '#story', '#cmpz', '#lvSheet', '#achSheet', '#share', '#backup', '#mail', '#visit', '#skySheet', '#oddsSheet', '#event', '#prefs', '#help', '#habMenu', '#ret', '#myth', '#grown', '#homeHint', '#n170', '#fmenu', '#friends', '.cdet', '#codex', '#cards', '#store', '#cab', '#nest', '#decor', '#snap'];
+// <ui2611>
+if (document.documentElement.dataset.ui2611) TOPS.unshift('#u26res'); // 316 ②: the 모두 까기 result card (src/ui/ui2611.js) is the top window: Esc · back close it, not the nest under it
+// </ui2611>
 const SHUT = '[data-close],[data-shut],[data-done],[data-cancel]';
 const shown = el => el && !el.hidden && !el.closest('[hidden]') && !el.closest('.scene.hidden') && !el.closest('[data-lock]'); // 64-A: ui/first.js locks
 // 248 B: a window card (.intro.pop: 첫눈 이벤트 · 우편함 · 설정 …) is up: the bubble over an animal or 손님 goes under it (it was drawn on top)

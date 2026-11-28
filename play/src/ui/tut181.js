@@ -128,7 +128,7 @@ function plan181(S, k, now) {
   }
   if (k === 'end') { const go = q('#ncard [data-go]'); return vis(go) ? { t: go, text: '', fing: 'tap', c: 'end_card' } : null; } // the 3rd egg's card still open; then 170's end card
   if (!a) return null;
-  if (k === 'name') { const c = $('n170'), i = q('input.fname', c); return vis(i) ? { t: i.value.trim() ? q('button.go', c) : i, text: $t('{0}에게 이름을 지어 줘요', nm(a)), fing: 'tap', near: c, c: i.value.trim() ? 'name_save' : 'name' } : null; }
+  if (k === 'name') { const c = $('n170'); if (!c) return null; const i = q('input.fname', c); return vis(i) ? { t: i.value.trim() ? q('button.go', c) : i, text: $t('{0}에게 이름을 지어 줘요', nm(a)), fing: 'tap', near: c, c: i.value.trim() ? 'name_save' : 'name' } : null; }
   if (k === 'pet' || k === 'aff') {
     if (k === 'pet' && mode === 'again' && ((S.stats.pet || 0) > mk.pet || vis($('bubble')) && !mk.bub)) return next(), null;
     if (!vis($('bubble'))) mk.bub = false;

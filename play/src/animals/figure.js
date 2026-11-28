@@ -80,7 +80,8 @@ export const loadModel = id => loading[id] ??= (async () => {
     for (const k of items) {
       const sl = S.attach?.[LEGEND_ITEMS[k].slot]; if (!sl) continue;
       const mx = new THREE.Matrix4().compose(new THREE.Vector3(...sl.p), new THREE.Quaternion().setFromEuler(new THREE.Euler(...sl.r)), new THREE.Vector3().setScalar(sl.s));
-      g.items[k] = Object.fromEntries(Object.entries(itemGeo[k]).map(([n, geo]) => [n, withOp(geo.clone().applyMatrix4(mx), H, cx)]));
+      const pend = sl.pend && (g => g.translate(...sl.pend[1].map(v => -v)).scale(sl.pend[0], sl.pend[0], sl.pend[0]).translate(...sl.pend[1])); // 326④: the 'body' mesh alone sized about a point (its bail on the cord)
+      g.items[k] = Object.fromEntries(Object.entries(itemGeo[k]).map(([n, geo]) => [n, withOp((pend && n === 'body' ? pend(geo.clone()) : geo.clone()).applyMatrix4(mx), H, cx)]));
     }
     out[stage] = g;
   }
@@ -311,7 +312,7 @@ export function makeFigure(spId, vId, stage, acc = null, color = null) {
   if (G.items[V?.item] && !taken.has(LEGEND_ITEMS[V.item].slot)) // the item in the look's materials (`item`; none = its body), unless a secret accessory has the slot
     for (const [name, geo] of Object.entries(G.items[V.item])) {
       const o = mesh(geo, m.item?.[name] || m.body, 3); body.add(o);
-      if (name === 'body' && m.item?.halo) { const h = new THREE.Mesh(geo, haloMat(m.item.halo, 0.05)); h.renderOrder = 5; o.add(h); } // a glow round it
+      if (name === 'body' && m.item?.halo) { const h = new THREE.Mesh(geo, haloMat(m.item.halo, m.item.haloW ?? 0.05)); h.renderOrder = 5; o.add(h); } // a glow round it
     }
   for (const [acc, at] of on) { // the accessory keeps its own colours, whatever the variant; a baby's slot is sized for a baby
     const f = sp.fit?.[gk(acc)] || {}, fit = { ...f, ...f[stage] }, a = new THREE.Group(); // data.js fit
